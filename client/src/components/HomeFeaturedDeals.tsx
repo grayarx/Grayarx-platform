@@ -29,40 +29,45 @@ export default function HomeFeaturedDeals() {
   if (topDeals.length === 0) return null;
 
   return (
-    <section className="py-16 border-y border-primary/10">
+    <section className="relative py-16 md:py-20">
       <div className="container">
-        <div className="flex items-end justify-between gap-4 mb-8">
+        <div className="flex items-end justify-between gap-4 mb-8 md:mb-10">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">
               Price intelligence
             </p>
-            <h2 className="font-display text-2xl md:text-3xl font-bold">Best deals right now</h2>
+            <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
+              Best deals right now
+            </h2>
           </div>
-          <Button asChild variant="outline" className="border-primary/25 shrink-0">
+          <Button asChild variant="outline" className="border-primary/25 shrink-0 hidden sm:inline-flex">
             <Link href="/showroom?sort=best_deals">
               View all <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
+
         <div className="grid md:grid-cols-3 gap-5">
           {topDeals.map(({ v, score }, i) => (
             <motion.div
               key={v.id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.06 }}
+              transition={{ delay: i * 0.07, duration: 0.5 }}
             >
               <Link
                 href={`/showroom/${v.id}`}
-                className="block card-premium rounded-2xl border border-primary/15 p-4 hover:border-primary/40 transition-all"
+                className="group block h-full rounded-2xl border border-primary/15 bg-card/50 p-5 backdrop-blur-sm transition-all hover:border-primary/35 hover:bg-card/70 hover:shadow-lg hover:shadow-primary/5"
               >
-                <h3 className="font-display font-semibold truncate">{v.title}</h3>
-                <p className="text-lg font-bold text-primary mt-1">
+                <h3 className="font-display font-semibold truncate group-hover:text-primary transition-colors">
+                  {v.title}
+                </h3>
+                <p className="text-lg font-bold text-primary mt-1.5">
                   {formatVehiclePrice(Number(v.price))}
                 </p>
                 {score && (
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <DealScoreBadge score={score} showDelta />
                   </div>
                 )}
@@ -70,6 +75,12 @@ export default function HomeFeaturedDeals() {
             </motion.div>
           ))}
         </div>
+
+        <Button asChild variant="outline" className="border-primary/25 w-full mt-6 sm:hidden">
+          <Link href="/showroom?sort=best_deals">
+            View all deals <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     </section>
   );
