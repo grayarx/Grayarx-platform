@@ -1,11 +1,19 @@
-const CACHE_NAME = "grayarx-v1";
-const RUNTIME_CACHE = "grayarx-runtime";
+const CACHE_NAME = "grayarx-v2";
+const RUNTIME_CACHE = "grayarx-runtime-v2";
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
-  "/favicon.ico",
   "/manifest.json",
 ];
+
+/** Brand icons must always revalidate — stale SW cache caused wrong tab favicon */
+const BRAND_ICON_PATHS = new Set([
+  "/favicon-32.png",
+  "/favicon.ico",
+  "/icon-96x96.png",
+  "/icon-192x192.png",
+  "/icon-512x512.png",
+  "/logo-icon.png",
+  "/logo.svg",
+]);
 
 // Install event - cache static assets
 self.addEventListener("install", (event) => {
@@ -45,6 +53,12 @@ self.addEventListener("fetch", (event) => {
 
   // Skip chrome extensions and external requests
   if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return;
+  }
+
+  // Always fetch fresh brand icons (tab favicon / nav emblem)
+  if (BRAND_ICON_PATHS.has(url.pathname)) {
+    event.respondWith(fetch(request));
     return;
   }
 
