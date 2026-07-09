@@ -1,0 +1,546 @@
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import {
+  Search,
+  Globe,
+  Mail,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Download,
+  Send,
+  Eye,
+  Edit2,
+  Trash2,
+} from "lucide-react";
+
+export function AdminSiphoResearchDashboard() {
+  const [activeTab, setActiveTab] = useState("pending");
+  const [selectedProspect, setSelectedProspect] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterTier, setFilterTier] = useState<string>("all");
+  const [researchInProgress, setResearchInProgress] = useState(false);
+
+  const fullProspectResearch = trpc.siphoEnhanced.fullProspectResearch.useMutation();
+  const listPendingDrafts = trpc.siphoEnhanced.listPendingDrafts.useQuery();
+  const getResearchHistory = trpc.siphoEnhanced.getResearchHistory.useQuery({ limit: 20 });
+  const getProspectDetails = trpc.siphoEnhanced.getProspectDetails.useQuery(
+    { prospectId: selectedProspect || "" },
+    { enabled: !!selectedProspect }
+  );
+  const approveEmailDraft = trpc.siphoEnhanced.approveEmailDraft.useMutation();
+  const rejectEmailDraft = trpc.siphoEnhanced.rejectEmailDraft.useMutation();
+
+  const handleResearchProspect = async (companyName: string, website: string, region: string) => {
+    setResearchInProgress(true);
+    try {
+      const result = await fullProspectResearch.mutateAsync({
+        companyName,
+        website: website || undefined,
+        region,
+      });
+
+      if (result.success) {
+        toast.success(`Research completed for ${companyName}`);
+        setSelectedProspect(result.prospectId);
+      }
+    } catch (error) {
+      toast.error("Failed to research prospect");
+    } finally {
+      setResearchInProgress(false);
+    }
+  };
+
+  const handleApproveEmail = async (prospectId: string, emailDraftId: string) => {
+    try {
+      const result = await approveEmailDraft.mutateAsync({
+        prospectId,
+        emailDraftId,
+      });
+
+      if (result.success) {
+        toast.success("Email approved and queued for sending");
+      }
+    } catch (error) {
+      toast.error("Failed to approve email");
+    }
+  };
+
+  const handleRejectEmail = async (prospectId: string, emailDraftId: string) => {
+    try {
+      const result = await rejectEmailDraft.mutateAsync({
+        prospectId,
+        emailDraftId,
+        reason: "Needs revision",
+      });
+
+      if (result.success) {
+        toast.success("Email rejected - Sipho will generate alternative");
+      }
+    } catch (error) {
+      toast.error("Failed to reject email");
+    }
+  };
+
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case "platinum":
+        return "bg-purple-900 text-purple-200";
+      case "gold":
+        return "bg-yellow-900 text-yellow-200";
+      case "silver":
+        return "bg-slate-600 text-slate-200";
+      case "bronze":
+        return "bg-orange-900 text-orange-200";
+      default:
+        return "bg-slate-700 text-slate-200";
+    }
+  };
+
+  const getTierIcon = (tier: string) => {
+    const icons = {
+      platinum: "💎",
+      gold: "🏆",
+      silver: "⭐",
+      bronze: "📌",
+    };
+    return icons[tier as keyof typeof icons] || "📍";
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Sipho Research Dashboard</h1>
+          <p className="text-slate-400">Deep company research and personalized outreach</p>
+        </div>
+        <Search className="w-12 h-12 text-gold" />
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Prospects Researched</p>
+              <p className="text-3xl font-bold text-white mt-2">24</p>
+              <p className="text-slate-400 text-sm mt-1">This month</p>
+            </div>
+            <Search className="w-8 h-8 text-gold" />
+          </div>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Pending Approval</p>
+              <p className="text-3xl font-bold text-white mt-2">5</p>
+              <p className="text-orange-400 text-sm mt-1">Awaiting review</p>
+            </div>
+            <Clock className="w-8 h-8 text-orange-400" />
+          </div>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Emails Sent</p>
+              <p className="text-3xl font-bold text-white mt-2">18</p>
+              <p className="text-green-400 text-sm mt-1">High tier prospects</p>
+            </div>
+            <Mail className="w-8 h-8 text-green-400" />
+          </div>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Avg Prospect Score</p>
+              <p className="text-3xl font-bold text-white mt-2">76</p>
+              <p className="text-slate-400 text-sm mt-1">out of 100</p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-blue-400" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Research Form */}
+      <Card className="bg-slate-800 border-slate-700 p-6">
+        <h2 className="text-xl font-bold text-white mb-4">Research New Prospect</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label className="text-slate-200">Company Name</Label>
+            <Input
+              id="companyName"
+              placeholder="e.g., Premium Auto Sales"
+              className="bg-slate-700 border-slate-600 text-white mt-2"
+            />
+          </div>
+
+          <div>
+            <Label className="text-slate-200">Website (Optional)</Label>
+            <Input
+              id="website"
+              type="url"
+              placeholder="https://example.com"
+              className="bg-slate-700 border-slate-600 text-white mt-2"
+            />
+          </div>
+
+          <div>
+            <Label className="text-slate-200">Region</Label>
+            <Select>
+              <SelectTrigger className="bg-slate-700 border-slate-600 text-white mt-2">
+                <SelectValue placeholder="Select region" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="johannesburg">Johannesburg</SelectItem>
+                <SelectItem value="cape-town">Cape Town</SelectItem>
+                <SelectItem value="durban">Durban</SelectItem>
+                <SelectItem value="pretoria">Pretoria</SelectItem>
+                <SelectItem value="bloemfontein">Bloemfontein</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Button
+          onClick={() =>
+            handleResearchProspect(
+              (document.getElementById("companyName") as HTMLInputElement)?.value || "",
+              (document.getElementById("website") as HTMLInputElement)?.value || "",
+              "johannesburg"
+            )
+          }
+          disabled={researchInProgress}
+          className="w-full mt-4 bg-gold text-slate-900 hover:bg-yellow-400"
+        >
+          {researchInProgress ? "Researching..." : "Start Research"}
+        </Button>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-slate-800 border-slate-700">
+          <TabsTrigger value="pending">Pending Approval (5)</TabsTrigger>
+          <TabsTrigger value="sent">Sent (18)</TabsTrigger>
+          <TabsTrigger value="history">History (24)</TabsTrigger>
+        </TabsList>
+
+        {/* Pending Drafts Tab */}
+        <TabsContent value="pending" className="space-y-4">
+          <Card className="bg-slate-800 border-slate-700 p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Pending Email Drafts</h2>
+
+            <div className="space-y-4">
+              {listPendingDrafts.data?.map((draft: any) => (
+                <div
+                  key={draft.prospectId}
+                  onClick={() => setSelectedProspect(draft.prospectId)}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                    selectedProspect === draft.prospectId
+                      ? "border-gold bg-slate-700"
+                      : "border-slate-600 hover:border-slate-500"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-white font-semibold">{draft.companyName}</p>
+                        <Badge className={getTierColor(draft.tier)}>
+                          {getTierIcon(draft.tier)} {draft.tier}
+                        </Badge>
+                      </div>
+                      <p className="text-slate-400 text-sm">Score: {draft.score}/100</p>
+                    </div>
+                    <p className="text-slate-400 text-xs">
+                      {new Date(draft.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <p className="text-slate-300 text-sm mb-3 line-clamp-2">
+                    <strong>Subject:</strong> {draft.emailDraft.subject}
+                  </p>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApproveEmail(draft.prospectId, "draft-1");
+                      }}
+                      className="bg-green-900 text-green-200 hover:bg-green-800"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectEmail(draft.prospectId, "draft-1");
+                      }}
+                      className="bg-red-900 text-red-200 hover:bg-red-800"
+                    >
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Sent Tab */}
+        <TabsContent value="sent">
+          <Card className="bg-slate-800 border-slate-700 p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Sent Emails</h2>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-700">
+                    <TableHead className="text-slate-300">Company</TableHead>
+                    <TableHead className="text-slate-300">Tier</TableHead>
+                    <TableHead className="text-slate-300">Score</TableHead>
+                    <TableHead className="text-slate-300">Sent Date</TableHead>
+                    <TableHead className="text-slate-300">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[
+                    {
+                      company: "Premium Auto Sales",
+                      tier: "gold",
+                      score: 82,
+                      date: "2026-05-20",
+                      status: "sent",
+                    },
+                    {
+                      company: "Elite Motors",
+                      tier: "silver",
+                      score: 75,
+                      date: "2026-05-19",
+                      status: "sent",
+                    },
+                  ].map((row, idx) => (
+                    <TableRow key={idx} className="border-slate-700">
+                      <TableCell className="text-white">{row.company}</TableCell>
+                      <TableCell>
+                        <Badge className={getTierColor(row.tier)}>
+                          {getTierIcon(row.tier)} {row.tier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">{row.score}</TableCell>
+                      <TableCell className="text-slate-300">{row.date}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-900 text-green-200">Sent</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history">
+          <Card className="bg-slate-800 border-slate-700 p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Research History</h2>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-700">
+                    <TableHead className="text-slate-300">Company</TableHead>
+                    <TableHead className="text-slate-300">Tier</TableHead>
+                    <TableHead className="text-slate-300">Score</TableHead>
+                    <TableHead className="text-slate-300">Status</TableHead>
+                    <TableHead className="text-slate-300">Researched</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {getResearchHistory.data?.map((history: any) => (
+                    <TableRow key={history.prospectId} className="border-slate-700">
+                      <TableCell className="text-white">{history.companyName}</TableCell>
+                      <TableCell>
+                        <Badge className={getTierColor(history.tier)}>
+                          {getTierIcon(history.tier)} {history.tier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">{history.score}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            history.status === "approved"
+                              ? "bg-green-900 text-green-200"
+                              : "bg-yellow-900 text-yellow-200"
+                          }
+                        >
+                          {history.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-300">
+                        {new Date(history.researchedAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Selected Prospect Details */}
+      {selectedProspect && getProspectDetails.data && (
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Prospect Details</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Company Info */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Company Information</h3>
+              <div className="space-y-2 text-slate-300 text-sm">
+                <p>
+                  <strong>Name:</strong> {getProspectDetails.data.companyInfo.name}
+                </p>
+                <p>
+                  <strong>Website:</strong>{" "}
+                  <a
+                    href={getProspectDetails.data.companyInfo.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gold hover:underline"
+                  >
+                    {getProspectDetails.data.companyInfo.website}
+                  </a>
+                </p>
+                <p>
+                  <strong>Years in Business:</strong>{" "}
+                  {getProspectDetails.data.companyInfo.yearsInBusiness}
+                </p>
+                <p>
+                  <strong>Location:</strong> {getProspectDetails.data.companyInfo.location}
+                </p>
+              </div>
+            </div>
+
+            {/* Website Analysis */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Website Analysis</h3>
+              <div className="space-y-2 text-slate-300 text-sm">
+                <p>
+                  <strong>UI Quality:</strong>{" "}
+                  <Badge className="bg-yellow-900 text-yellow-200">
+                    {getProspectDetails.data.websiteAnalysis.uiQuality}
+                  </Badge>
+                </p>
+                <p>
+                  <strong>Lead Capture:</strong>{" "}
+                  {getProspectDetails.data.websiteAnalysis.leadCaptureMethod.join(", ")}
+                </p>
+                <p>
+                  <strong>Inventory:</strong>{" "}
+                  {getProspectDetails.data.websiteAnalysis.inventoryPresentation}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pain Points & Opportunities */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Pain Points</h3>
+              <ul className="space-y-2">
+                {getProspectDetails.data.websiteAnalysis.painPoints.map(
+                  (point: string, idx: number) => (
+                    <li key={idx} className="text-slate-300 text-sm flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                      {point}
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Opportunities</h3>
+              <ul className="space-y-2">
+                {getProspectDetails.data.websiteAnalysis.opportunities.map(
+                  (opp: string, idx: number) => (
+                    <li key={idx} className="text-slate-300 text-sm flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                      {opp}
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+          </div>
+
+          {/* Email Draft */}
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-3">Email Draft</h3>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-slate-200">Subject</Label>
+                <Input
+                  value={getProspectDetails.data.emailDraft.subject}
+                  readOnly
+                  className="bg-slate-700 border-slate-600 text-white mt-2"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Body</Label>
+                <Textarea
+                  value={getProspectDetails.data.emailDraft.body}
+                  readOnly
+                  className="bg-slate-700 border-slate-600 text-white mt-2 min-h-[200px]"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button className="bg-green-900 text-green-200 hover:bg-green-800 flex-1">
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Approve & Send
+                </Button>
+                <Button className="bg-red-900 text-red-200 hover:bg-red-800 flex-1">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+                <Button variant="ghost" className="text-blue-400 hover:text-blue-300">
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}

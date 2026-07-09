@@ -1,0 +1,409 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { Zap, Globe, MessageSquare, Settings } from "lucide-react";
+
+const agentCustomizationSchema = z.object({
+  personalityTone: z.enum(["professional", "friendly", "casual", "formal"]),
+  responseStyle: z.enum(["concise", "detailed", "balanced"]),
+  languages: z.array(z.string()).min(1, "Select at least one language"),
+  customInstructions: z.string().optional(),
+  enableAutoRespond: z.boolean().default(true),
+  enableLeadQualification: z.boolean().default(true),
+  enableFollowUp: z.boolean().default(true),
+  maxResponseTime: z.coerce.number().min(1).max(3600).default(300),
+});
+
+type AgentCustomizationForm = z.infer<typeof agentCustomizationSchema>;
+
+const LANGUAGES = [
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "af", name: "Afrikaans", flag: "🇿🇦" },
+  { code: "zu", name: "Zulu", flag: "🇿🇦" },
+  { code: "xh", name: "Xhosa", flag: "🇿🇦" },
+  { code: "st", name: "Sotho", flag: "🇿🇦" },
+  { code: "tn", name: "Tswana", flag: "🇿🇦" },
+  { code: "ve", name: "Venda", flag: "🇿🇦" },
+];
+
+const TONE_DESCRIPTIONS = {
+  professional: "Formal, business-like tone suitable for corporate clients",
+  friendly: "Warm and approachable tone that builds rapport",
+  casual: "Relaxed and conversational tone for informal interactions",
+  formal: "Very formal and respectful tone for premium clients",
+};
+
+const STYLE_DESCRIPTIONS = {
+  concise: "Short, direct responses that get straight to the point",
+  detailed: "Comprehensive responses with full context and explanations",
+  balanced: "Mix of concise and detailed based on the situation",
+};
+
+export function AIAgentCustomizationUI() {
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  const form = useForm<AgentCustomizationForm>({
+    resolver: zodResolver(agentCustomizationSchema),
+    defaultValues: {
+      personalityTone: "professional",
+      responseStyle: "balanced",
+      languages: ["en"],
+      enableAutoRespond: true,
+      enableLeadQualification: true,
+      enableFollowUp: true,
+      maxResponseTime: 300,
+    },
+  });
+
+  const handleSubmit = async (data: AgentCustomizationForm) => {
+    try {
+      toast.success("AI agent configuration saved");
+    } catch (error) {
+      toast.error("Failed to save configuration");
+    }
+  };
+
+  const handleLanguageToggle = (code: string) => {
+    const newLanguages = selectedLanguages.includes(code)
+      ? selectedLanguages.filter((l) => l !== code)
+      : [...selectedLanguages, code];
+
+    if (newLanguages.length > 0) {
+      setSelectedLanguages(newLanguages);
+      form.setValue("languages", newLanguages);
+    }
+  };
+
+  const currentTone = form.watch("personalityTone");
+  const currentStyle = form.watch("responseStyle");
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700 rounded-lg p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">AI Agent Customization</h2>
+            <p className="text-slate-400">
+              Customize how your AI agents interact with customers
+            </p>
+          </div>
+          <Zap className="w-8 h-8 text-gold" />
+        </div>
+      </div>
+
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {/* Personality Tone */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="w-5 h-5 text-gold" />
+            <h3 className="text-lg font-bold text-white">Personality Tone</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {Object.entries(TONE_DESCRIPTIONS).map(([tone, description]) => (
+              <label
+                key={tone}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                  currentTone === tone
+                    ? "border-gold bg-slate-700"
+                    : "border-slate-600 hover:border-slate-500"
+                }`}
+              >
+                <input
+                  type="radio"
+                  {...form.register("personalityTone")}
+                  value={tone}
+                  className="mr-3"
+                />
+                <p className="text-white font-semibold capitalize">{tone}</p>
+                <p className="text-slate-400 text-sm">{description}</p>
+              </label>
+            ))}
+          </div>
+
+          <div className="bg-slate-700 p-4 rounded-lg">
+            <p className="text-slate-300 text-sm">
+              <strong>Preview:</strong> "Thank you for your interest in our vehicles. How can I assist you today?"
+            </p>
+          </div>
+        </Card>
+
+        {/* Response Style */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings className="w-5 h-5 text-gold" />
+            <h3 className="text-lg font-bold text-white">Response Style</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {Object.entries(STYLE_DESCRIPTIONS).map(([style, description]) => (
+              <label
+                key={style}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                  currentStyle === style
+                    ? "border-gold bg-slate-700"
+                    : "border-slate-600 hover:border-slate-500"
+                }`}
+              >
+                <input
+                  type="radio"
+                  {...form.register("responseStyle")}
+                  value={style}
+                  className="mr-3"
+                />
+                <p className="text-white font-semibold capitalize">{style}</p>
+                <p className="text-slate-400 text-sm">{description}</p>
+              </label>
+            ))}
+          </div>
+        </Card>
+
+        {/* Languages */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-gold" />
+            <h3 className="text-lg font-bold text-white">Languages</h3>
+          </div>
+
+          <p className="text-slate-400 text-sm mb-4">
+            Select all languages your AI agent should support
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {LANGUAGES.map((lang) => (
+              <label
+                key={lang.code}
+                className={`p-3 border-2 rounded-lg cursor-pointer transition flex items-center gap-2 ${
+                  selectedLanguages.includes(lang.code)
+                    ? "border-gold bg-slate-700"
+                    : "border-slate-600 hover:border-slate-500"
+                }`}
+              >
+                <Checkbox
+                  checked={selectedLanguages.includes(lang.code)}
+                  onCheckedChange={() => handleLanguageToggle(lang.code)}
+                />
+                <span className="text-lg">{lang.flag}</span>
+                <span className="text-white text-sm">{lang.name}</span>
+              </label>
+            ))}
+          </div>
+
+          {selectedLanguages.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {selectedLanguages.map((code) => {
+                const lang = LANGUAGES.find((l) => l.code === code);
+                return (
+                  <Badge key={code} className="bg-gold text-slate-900">
+                    {lang?.flag} {lang?.name}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* Response Settings */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Response Settings</h3>
+
+          <div className="space-y-4">
+            <label className="flex items-start p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+              <Checkbox
+                {...form.register("enableAutoRespond")}
+                className="mr-3 mt-1"
+              />
+              <div>
+                <p className="text-white font-semibold">Auto-Respond to Inquiries</p>
+                <p className="text-slate-400 text-sm">
+                  Automatically respond to customer inquiries 24/7
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+              <Checkbox
+                {...form.register("enableLeadQualification")}
+                className="mr-3 mt-1"
+              />
+              <div>
+                <p className="text-white font-semibold">Lead Qualification</p>
+                <p className="text-slate-400 text-sm">
+                  Qualify leads by asking relevant questions
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+              <Checkbox
+                {...form.register("enableFollowUp")}
+                className="mr-3 mt-1"
+              />
+              <div>
+                <p className="text-white font-semibold">Follow-up Reminders</p>
+                <p className="text-slate-400 text-sm">
+                  Send follow-up messages to inactive leads
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-slate-200">Max Response Time (seconds)</Label>
+            <Input
+              {...form.register("maxResponseTime")}
+              type="number"
+              min="1"
+              max="3600"
+              className="bg-slate-700 border-slate-600 text-white mt-2"
+            />
+            <p className="text-slate-400 text-sm mt-1">
+              Default: 300 seconds (5 minutes)
+            </p>
+          </div>
+        </Card>
+
+        {/* Custom Instructions */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Custom Instructions</h3>
+
+          <Label className="text-slate-200">Special Guidelines (Optional)</Label>
+          <Textarea
+            {...form.register("customInstructions")}
+            placeholder="e.g., Always mention our trade-in program, emphasize warranty coverage, ask about financing preferences..."
+            className="bg-slate-700 border-slate-600 text-white mt-2 min-h-[120px]"
+          />
+          <p className="text-slate-400 text-sm mt-2">
+            Provide specific instructions for how your AI agent should behave
+          </p>
+        </Card>
+
+        {/* Agent Capabilities Preview */}
+        <Card className="bg-gradient-to-r from-gold/10 to-yellow-500/10 border border-gold/20 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Agent Capabilities</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">💬</span>
+              <div>
+                <p className="text-white font-semibold">Natural Conversations</p>
+                <p className="text-slate-400 text-sm">
+                  Engage customers with human-like conversations
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🎯</span>
+              <div>
+                <p className="text-white font-semibold">Lead Qualification</p>
+                <p className="text-slate-400 text-sm">
+                  Automatically qualify and score leads
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📱</span>
+              <div>
+                <p className="text-white font-semibold">Multi-Channel</p>
+                <p className="text-slate-400 text-sm">
+                  Respond via Email, SMS, WhatsApp, and Web
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🌍</span>
+              <div>
+                <p className="text-white font-semibold">Multilingual</p>
+                <p className="text-slate-400 text-sm">
+                  Support multiple South African languages
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⏰</span>
+              <div>
+                <p className="text-white font-semibold">24/7 Availability</p>
+                <p className="text-slate-400 text-sm">
+                  Never miss a customer inquiry
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📊</span>
+              <div>
+                <p className="text-white font-semibold">Analytics</p>
+                <p className="text-slate-400 text-sm">
+                  Track performance and optimize responses
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Submit Button */}
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => form.reset()}
+            className="flex-1"
+          >
+            Reset to Defaults
+          </Button>
+          <Button
+            type="submit"
+            className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400"
+          >
+            Save Configuration
+          </Button>
+        </div>
+      </form>
+
+      {/* FAQ */}
+      <Card className="bg-slate-800 border-slate-700 p-6">
+        <h3 className="text-lg font-bold text-white mb-4">Frequently Asked Questions</h3>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-white font-semibold mb-1">Can I change these settings later?</p>
+            <p className="text-slate-400 text-sm">
+              Yes, you can update your AI agent configuration at any time from the settings panel.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-white font-semibold mb-1">How do languages work?</p>
+            <p className="text-slate-400 text-sm">
+              Your AI agent will automatically detect the customer's language and respond accordingly.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-white font-semibold mb-1">What if I need a custom agent?</p>
+            <p className="text-slate-400 text-sm">
+              Contact our support team at support@grayarx.com for premium customization options.
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

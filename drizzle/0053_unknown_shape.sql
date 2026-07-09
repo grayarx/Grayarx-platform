@@ -1,0 +1,41 @@
+CREATE TABLE `pilot_campaigns` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`name` varchar(255) NOT NULL,
+	`subject` varchar(255) NOT NULL,
+	`html_content` text NOT NULL,
+	`text_content` text,
+	`sender_name` varchar(255) NOT NULL,
+	`sender_email` varchar(320) NOT NULL,
+	`status` enum('draft','scheduled','sending','sent','paused','failed') NOT NULL DEFAULT 'draft',
+	`scheduled_at` timestamp,
+	`sent_at` timestamp,
+	`total_recipients` int DEFAULT 0,
+	`success_count` int DEFAULT 0,
+	`failure_count` int DEFAULT 0,
+	`bounce_count` int DEFAULT 0,
+	`open_count` int DEFAULT 0,
+	`click_count` int DEFAULT 0,
+	`created_by` int NOT NULL,
+	`created_at` timestamp DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `pilot_campaigns_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `pilot_recipients` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`campaign_id` int NOT NULL,
+	`dealership_name` varchar(255) NOT NULL,
+	`contact_name` varchar(255) NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`phone` varchar(32),
+	`status` enum('pending','sent','failed','bounced','unsubscribed') NOT NULL DEFAULT 'pending',
+	`sent_at` timestamp,
+	`failure_reason` text,
+	`opened_at` timestamp,
+	`clicked_at` timestamp,
+	`clicked_link` varchar(500),
+	`metadata` json,
+	`created_at` timestamp DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `pilot_recipients_id` PRIMARY KEY(`id`)
+);

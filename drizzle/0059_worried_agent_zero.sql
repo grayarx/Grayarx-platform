@@ -1,0 +1,1 @@
+ALTER TABLE `dealership_subscriptions` MODIFY COLUMN `usage_data` json;

@@ -1,0 +1,1 @@
+ALTER TABLE `agent_activity` MODIFY COLUMN `agentId` enum('email','calling','booking','prospector','improvement','whatsapp','accountant','fallback') NOT NULL;

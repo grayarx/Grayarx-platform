@@ -1,0 +1,498 @@
+/**
+ * WhatsApp Business API Service
+ * Handles WhatsApp messaging for dealership enquiries and customer communication
+ * Uses Meta WhatsApp Cloud API for real message delivery
+ */
+
+import {
+  createWhatsappMessage,
+  getOrCreateWhatsappConversation,
+  updateWhatsappMessageStatus,
+  enqueueWhatsappMessage,
+  logWhatsappWebhook,
+} from "../db";
+
+interface WhatsAppMessage {
+  phone: string;
+  message: string;
+  type: "customer_enquiry" | "dealership_response" | "automated_reply";
+  vehicleId?: string;
+  dealershipId?: string;
+}
+
+interface WhatsAppTemplate {
+  name: string;
+  language: string;
+  parameters?: Record<string, string>;
+}
+
+interface MetaMessageResponse {
+  messages: Array<{
+    id: string;
+    message_status: string;
+  }>;
+}
+
+/**
+ * Format phone number to E.164 format for WhatsApp
+ */
+function formatPhoneNumber(phone: string): string {
+  // Remove common formatting
+  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+
+  // If it starts with +, remove it
+  if (cleaned.startsWith("+")) {
+    cleaned = cleaned.substring(1);
+  }
+
+  // If it starts with 0 (South Africa), replace with 27
+  if (cleaned.startsWith("0")) {
+    cleaned = "27" + cleaned.substring(1);
+  }
+
+  // If it doesn't start with country code, assume South Africa
+  if (!cleaned.startsWith("27") && cleaned.length === 9) {
+    cleaned = "27" + cleaned;
+  }
+
+  return cleaned;
+}
+
+/**
+ * Send WhatsApp message via Meta API
+ */
+export async function sendWhatsAppMessage(
+  message: WhatsAppMessage
+): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}> {
+  try {
+    // Accept either env name — docs use PHONE_NUMBER_ID; older code used BUSINESS_PHONE_ID.
+    const whatsappBusinessPhoneId =
+      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
+      console.warn("[WhatsAppService] WhatsApp credentials missing");
+      return { success: false, error: "WhatsApp credentials not configured" };
+    }
+
+    // Format phone number
+    const formattedPhone = formatPhoneNumber(message.phone);
+
+    // Get or create conversation
+    const dealershipId = message.dealershipId ? Number(message.dealershipId) : 0;
+    if (dealershipId > 0) {
+      try {
+        await getOrCreateWhatsappConversation(
+          dealershipId,
+          formattedPhone,
+          message.vehicleId ? Number(message.vehicleId) : undefined
+        );
+      } catch (error) {
+        console.error("[WhatsAppService] Failed to create conversation:", error);
+      }
+    }
+
+    // Call Meta WhatsApp Cloud API (facebook graph — not Instagram)
+    const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: formattedPhone,
+      type: "text",
+      text: {
+        preview_url: false,
+        body: message.message,
+      },
+    };
+
+    console.log(`[WhatsApp] Sending to +${formattedPhone}: ${message.message.substring(0, 50)}...`);
+
+    const response = await fetch(metaUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${whatsappAccessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[WhatsApp] API Error:", errorData);
+      return {
+        success: false,
+        error: `WhatsApp API error: ${response.status} ${JSON.stringify(errorData)}`,
+      };
+    }
+
+    const data = (await response.json()) as MetaMessageResponse;
+    const metaMessageId = data.messages?.[0]?.id;
+
+    if (!metaMessageId) {
+      return {
+        success: false,
+        error: "No message ID returned from WhatsApp API",
+      };
+    }
+
+    // Store message in database
+    if (dealershipId > 0) {
+      try {
+        await createWhatsappMessage({
+          conversationId: dealershipId, // Will be updated to actual conversation ID
+          direction: "outbound",
+          messageType: "text",
+          content: message.message,
+          metaMessageId,
+          status: "sent",
+        });
+      } catch (error) {
+        console.error("[WhatsAppService] Failed to store message:", error);
+      }
+    }
+
+    console.log(`[WhatsApp] Message sent successfully: ${metaMessageId}`);
+
+    return {
+      success: true,
+      messageId: metaMessageId,
+    };
+  } catch (error) {
+    console.error("[WhatsAppService] Error sending WhatsApp message:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Send WhatsApp template message via Meta API
+ */
+export async function sendWhatsAppTemplate(
+  phone: string,
+  template: WhatsAppTemplate
+): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}> {
+  try {
+    const whatsappBusinessPhoneId =
+      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
+      console.warn("[WhatsAppService] WhatsApp credentials missing");
+      return { success: false, error: "WhatsApp credentials not configured" };
+    }
+
+    const formattedPhone = formatPhoneNumber(phone);
+
+    const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: formattedPhone,
+      type: "template",
+      template: {
+        name: template.name,
+        language: {
+          code: template.language,
+        },
+        parameters: template.parameters
+          ? {
+              body: {
+                parameters: Object.values(template.parameters),
+              },
+            }
+          : undefined,
+      },
+    };
+
+    console.log(`[WhatsApp] Sending template ${template.name} to +${formattedPhone}`);
+
+    const response = await fetch(metaUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${whatsappAccessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[WhatsApp] Template API Error:", errorData);
+      return {
+        success: false,
+        error: `WhatsApp API error: ${response.status}`,
+      };
+    }
+
+    const data = (await response.json()) as MetaMessageResponse;
+    const metaMessageId = data.messages?.[0]?.id;
+
+    if (!metaMessageId) {
+      return {
+        success: false,
+        error: "No message ID returned from WhatsApp API",
+      };
+    }
+
+    console.log(`[WhatsApp] Template sent successfully: ${metaMessageId}`);
+
+    return {
+      success: true,
+      messageId: metaMessageId,
+    };
+  } catch (error) {
+    console.error("[WhatsAppService] Error sending WhatsApp template:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Handle incoming WhatsApp message from customer (called by webhook)
+ * Uses multilingual Nala pipeline (same as web showroom chat).
+ *
+ * When `alreadyPersisted` is true (webhook path), skip writing the inbound
+ * row again — the webhook already stored it with the Meta message id.
+ */
+export async function handleIncomingWhatsAppMessage(
+  phone: string,
+  message: string,
+  dealershipId: string,
+  options?: { alreadyPersisted?: boolean },
+): Promise<{
+  success: boolean;
+  response?: string;
+  error?: string;
+}> {
+  try {
+    const formattedPhone = formatPhoneNumber(phone);
+    const dealershipIdNum = Number(dealershipId);
+
+    const { listVehicles, getVehicle } = await import("../db");
+    const { getDealershipById } = await import("../db");
+    const {
+      resolveNalaReply,
+      parseVehicleTitleFromMessage,
+      vehicleRowToContext,
+    } = await import("./nalaReplyOrchestrator");
+
+    const dealership = await getDealershipById(dealershipIdNum);
+    const dealerName = dealership?.name ?? "GrayArx Dealership";
+
+    let vehicleId: number | undefined;
+    const parsedTitle = parseVehicleTitleFromMessage(message);
+    if (parsedTitle) {
+      const all = await listVehicles(200);
+      const hay = parsedTitle.toLowerCase();
+      const match = all.find((v) => (v.title ?? "").toLowerCase().includes(hay) || hay.includes((v.title ?? "").toLowerCase().slice(0, 20)));
+      if (match?.id) vehicleId = Number(match.id);
+    }
+
+    const conversation = await getOrCreateWhatsappConversation(
+      dealershipIdNum,
+      formattedPhone,
+      vehicleId,
+    );
+
+    if (vehicleId && !conversation.vehicleId) {
+      vehicleId = conversation.vehicleId ?? vehicleId;
+    } else if (conversation.vehicleId) {
+      vehicleId = conversation.vehicleId;
+    }
+
+    // Webhook path already persisted the inbound with metaMessageId — avoid duplicates.
+    if (!options?.alreadyPersisted) {
+      await createWhatsappMessage({
+        conversationId: conversation.id,
+        direction: "inbound",
+        messageType: "text",
+        content: message,
+        status: "delivered",
+      });
+    }
+
+    let vehicleCtx = null;
+    if (vehicleId) {
+      const row = await getVehicle(vehicleId);
+      if (row) vehicleCtx = vehicleRowToContext(row);
+    }
+
+    const result = await resolveNalaReply({
+      message,
+      vehicle: vehicleCtx,
+      dealershipName: dealerName,
+      channel: "whatsapp",
+      includeDealScore: true,
+    });
+
+    console.log(
+      `[WhatsApp Nala] +${formattedPhone} lang=${result.language} intent=${result.intent}`,
+    );
+
+    if (result.isBookingIntent) {
+      const bookingHint =
+        result.language === "af"
+          ? "\n\nVir 'n toetsrit, stuur jou naam en wanneer jy beskikbaar is — ons span bevestig binnekort."
+          : "\n\nFor a test drive, send your name and when you're available — our team will confirm shortly.";
+      result.reply = result.reply + bookingHint;
+    }
+
+    await sendWhatsAppMessage({
+      phone: formattedPhone,
+      message: result.reply,
+      type: "automated_reply",
+      dealershipId,
+      vehicleId: vehicleId ? String(vehicleId) : undefined,
+    });
+
+    return { success: true, response: result.reply };
+  } catch (error) {
+    console.error("[WhatsAppService] Error handling incoming message:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Parse enquiry type from customer message
+ */
+function parseEnquiryType(
+  message: string
+): "vehicle_enquiry" | "test_drive" | "price_enquiry" | "finance" | "other" {
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    lowerMessage.includes("test drive") ||
+    lowerMessage.includes("drive") ||
+    lowerMessage.includes("book")
+  ) {
+    return "test_drive";
+  }
+
+  if (
+    lowerMessage.includes("price") ||
+    lowerMessage.includes("cost") ||
+    lowerMessage.includes("how much")
+  ) {
+    return "price_enquiry";
+  }
+
+  if (
+    lowerMessage.includes("finance") ||
+    lowerMessage.includes("loan") ||
+    lowerMessage.includes("payment")
+  ) {
+    return "finance";
+  }
+
+  if (
+    lowerMessage.includes("interested") ||
+    lowerMessage.includes("want") ||
+    lowerMessage.includes("looking")
+  ) {
+    return "vehicle_enquiry";
+  }
+
+  return "other";
+}
+
+/**
+ * Send WhatsApp notification to dealership about new lead
+ */
+export async function notifyDealershipWhatsApp(
+  dealershipPhone: string,
+  leadData: {
+    customerName: string;
+    customerPhone: string;
+    vehicleInterest?: string;
+    message?: string;
+  }
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const notification = `
+🔔 New Lead Alert!
+Name: ${leadData.customerName}
+Phone: ${leadData.customerPhone}
+${leadData.vehicleInterest ? `Vehicle: ${leadData.vehicleInterest}` : ""}
+${leadData.message ? `Message: ${leadData.message}` : ""}
+    `.trim();
+
+    const result = await sendWhatsAppMessage({
+      phone: dealershipPhone,
+      message: notification,
+      type: "customer_enquiry",
+    });
+
+    return { success: result.success, error: result.error };
+  } catch (error) {
+    console.error("[WhatsAppService] Error notifying dealership:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Validate webhook signature from Meta.
+ * Meta sends `X-Hub-Signature-256: sha256=<hex>` — strip the prefix before compare.
+ */
+export function validateWhatsAppWebhookSignature(
+  signature: string,
+  payload: string,
+  appSecret: string
+): boolean {
+  if (!signature || !appSecret) return false;
+
+  const crypto = require("crypto") as typeof import("crypto");
+  const expectedHex = crypto
+    .createHmac("sha256", appSecret)
+    .update(payload)
+    .digest("hex");
+
+  const providedHex = signature.startsWith("sha256=")
+    ? signature.slice("sha256=".length)
+    : signature;
+
+  try {
+    const expected = Buffer.from(expectedHex, "hex");
+    const provided = Buffer.from(providedHex, "hex");
+    if (expected.length === 0 || expected.length !== provided.length) return false;
+    return crypto.timingSafeEqual(expected, provided);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Process message delivery status update from webhook
+ */
+export async function processMessageStatusUpdate(
+  metaMessageId: string,
+  status: "sent" | "delivered" | "read" | "failed"
+): Promise<void> {
+  try {
+    // Find message by metaMessageId and update status
+    // This would require a database query helper
+    console.log(`[WhatsApp] Message ${metaMessageId} status: ${status}`);
+  } catch (error) {
+    console.error("[WhatsAppService] Error processing status update:", error);
+  }
+}

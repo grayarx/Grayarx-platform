@@ -1,0 +1,60 @@
+CREATE TABLE `chatbot_conversations` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`dealershipId` int NOT NULL,
+	`chatbotType` enum('web','whatsapp') NOT NULL,
+	`customerId` varchar(100) NOT NULL,
+	`customerName` varchar(255),
+	`customerEmail` varchar(320),
+	`customerPhone` varchar(32),
+	`language` varchar(8) NOT NULL DEFAULT 'en',
+	`messageCount` int NOT NULL DEFAULT 0,
+	`lastMessage` text,
+	`conversationStatus` enum('active','completed','abandoned') NOT NULL DEFAULT 'active',
+	`inventoryViewed` json,
+	`testDriveBooked` tinyint NOT NULL DEFAULT 0,
+	`testDriveId` int,
+	`preApprovalSubmitted` tinyint NOT NULL DEFAULT 0,
+	`preApprovalId` int,
+	`leadId` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `chatbot_conversations_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `chatbot_deployments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`dealershipId` int NOT NULL,
+	`deploymentType` enum('web','whatsapp','both') NOT NULL DEFAULT 'web',
+	`webChatbotEnabled` tinyint NOT NULL DEFAULT 1,
+	`webChatbotLanguages` json,
+	`webChatbotPosition` varchar(16) DEFAULT 'bottom-right',
+	`webChatbotTheme` varchar(32) DEFAULT 'dark',
+	`whatsappChatbotEnabled` tinyint NOT NULL DEFAULT 0,
+	`whatsappPhoneNumber` varchar(20),
+	`whatsappBusinessAccountId` varchar(100),
+	`whatsappAccessToken` varchar(500),
+	`whatsappWebhookUrl` varchar(500),
+	`whatsappVerifyToken` varchar(100),
+	`autoRespondEnabled` tinyint NOT NULL DEFAULT 1,
+	`businessHoursOnly` tinyint NOT NULL DEFAULT 0,
+	`offHoursMessage` text,
+	`totalConversations` int NOT NULL DEFAULT 0,
+	`totalLeadsGenerated` int NOT NULL DEFAULT 0,
+	`totalTestDrivesBooked` int NOT NULL DEFAULT 0,
+	`totalPreApprovalsSubmitted` int NOT NULL DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `chatbot_deployments_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `chatbot_messages` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`conversationId` int NOT NULL,
+	`dealershipId` int NOT NULL,
+	`role` enum('customer','chatbot','agent') NOT NULL,
+	`messageType` enum('text','image','document','location','quick_reply') NOT NULL DEFAULT 'text',
+	`content` text NOT NULL,
+	`metadata` json,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `chatbot_messages_id` PRIMARY KEY(`id`)
+);

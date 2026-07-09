@@ -1,0 +1,21 @@
+CREATE TABLE `kagiso_proposed_patches` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`findingId` int NOT NULL,
+	`category` enum('stale_copy','seo_meta','safe_constant') NOT NULL,
+	`patchType` enum('replace_text') NOT NULL DEFAULT 'replace_text',
+	`title` varchar(255) NOT NULL,
+	`rationale` text NOT NULL,
+	`filePath` varchar(512) NOT NULL,
+	`findText` text NOT NULL,
+	`replaceText` text NOT NULL,
+	`diffPreview` text NOT NULL,
+	`status` enum('proposed','applied','rejected','failed','stale') NOT NULL DEFAULT 'proposed',
+	`errorMessage` text,
+	`appliedAt` timestamp,
+	`appliedBy` int,
+	`rejectedAt` timestamp,
+	`rejectedBy` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `kagiso_proposed_patches_id` PRIMARY KEY(`id`)
+);

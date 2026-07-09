@@ -1,0 +1,1 @@
+ALTER TABLE `vehicles` ADD `externalRef` varchar(128);

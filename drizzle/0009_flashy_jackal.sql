@@ -1,0 +1,1 @@
+ALTER TABLE `improvement_actions` MODIFY COLUMN `category` enum('agent_quality','lead_conversion','prospect_cadence','inventory_freshness','language_coverage','booking_followup','calling_followup','new_agent_proposal','general') NOT NULL;

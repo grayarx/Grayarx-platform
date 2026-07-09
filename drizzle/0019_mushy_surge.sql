@@ -1,0 +1,1 @@
+ALTER TABLE `upgrade_roadmap` MODIFY COLUMN `status` enum('pending','approved_for_build','in_progress','completed','dismissed','auto_resolved') NOT NULL DEFAULT 'pending';

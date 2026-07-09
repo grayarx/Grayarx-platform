@@ -1,0 +1,659 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { ChevronRight, ChevronLeft, CheckCircle2, Clock } from "lucide-react";
+
+const dealershipInfoSchema = z.object({
+  dealershipName: z.string().min(2, "Dealership name must be at least 2 characters"),
+  address: z.string().min(5, "Address must be at least 5 characters"),
+  city: z.string().min(2, "City is required"),
+  phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number"),
+  email: z.string().email("Invalid email address"),
+  mondayOpen: z.string(),
+  mondayClose: z.string(),
+  tuesdayOpen: z.string(),
+  tuesdayClose: z.string(),
+  wednesdayOpen: z.string(),
+  wednesdayClose: z.string(),
+  thursdayOpen: z.string(),
+  thursdayClose: z.string(),
+  fridayOpen: z.string(),
+  fridayClose: z.string(),
+  saturdayOpen: z.string(),
+  saturdayClose: z.string(),
+  sundayOpen: z.string(),
+  sundayClose: z.string(),
+});
+
+const vehicleImportSchema = z.object({
+  importType: z.enum(["manual", "csv"]),
+  csvFile: z.instanceof(File).optional(),
+  vehicleCount: z.number().optional(),
+});
+
+const teamMemberSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["admin", "manager", "salesperson"]),
+  name: z.string().optional(),
+});
+
+const agentCustomizationSchema = z.object({
+  personalityTone: z.enum(["professional", "friendly", "casual", "formal"]),
+  languages: z.array(z.string()).min(1, "Select at least one language"),
+  responseStyle: z.enum(["concise", "detailed", "balanced"]),
+  customInstructions: z.string().optional(),
+});
+
+const integrationSchema = z.object({
+  stripeEnabled: z.boolean(),
+  smsEnabled: z.boolean(),
+  emailEnabled: z.boolean(),
+  whatsappEnabled: z.boolean(),
+});
+
+const confirmationSchema = z.object({
+  termsAccepted: z.boolean().refine((val) => val, "You must accept the terms"),
+  privacyAccepted: z.boolean().refine((val) => val, "You must accept the privacy policy"),
+});
+
+type DealershipInfoForm = z.infer<typeof dealershipInfoSchema>;
+type VehicleImportForm = z.infer<typeof vehicleImportSchema>;
+type TeamMemberForm = z.infer<typeof teamMemberSchema>;
+type AgentCustomizationForm = z.infer<typeof agentCustomizationSchema>;
+type IntegrationForm = z.infer<typeof integrationSchema>;
+type ConfirmationForm = z.infer<typeof confirmationSchema>;
+
+export function OnboardingWizard() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [dealershipInfo, setDealershipInfo] = useState<DealershipInfoForm | null>(null);
+  const [vehicleImportData, setVehicleImportData] = useState<VehicleImportForm | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberForm[]>([]);
+  const [agentCustomization, setAgentCustomization] = useState<AgentCustomizationForm | null>(null);
+  const [integrations, setIntegrations] = useState<IntegrationForm | null>(null);
+
+  const startSession = trpc.onboarding.startSession.useMutation();
+  const completeOnboarding = trpc.onboarding.completeOnboarding.useMutation();
+
+  const dealershipForm = useForm<DealershipInfoForm>({
+    resolver: zodResolver(dealershipInfoSchema),
+  });
+
+  const vehicleForm = useForm<VehicleImportForm>({
+    resolver: zodResolver(vehicleImportSchema),
+    defaultValues: { importType: "manual" },
+  });
+
+  const teamMemberForm = useForm<TeamMemberForm>({
+    resolver: zodResolver(teamMemberSchema),
+  });
+
+  const agentForm = useForm<AgentCustomizationForm>({
+    resolver: zodResolver(agentCustomizationSchema),
+    defaultValues: {
+      personalityTone: "professional",
+      responseStyle: "balanced",
+      languages: ["en"],
+    },
+  });
+
+  const integrationForm = useForm<IntegrationForm>({
+    resolver: zodResolver(integrationSchema),
+    defaultValues: {
+      stripeEnabled: true,
+      smsEnabled: true,
+      emailEnabled: true,
+      whatsappEnabled: true,
+    },
+  });
+
+  const confirmationForm = useForm<ConfirmationForm>({
+    resolver: zodResolver(confirmationSchema),
+  });
+
+  const handleStep1Submit = async (data: DealershipInfoForm) => {
+    setDealershipInfo(data);
+    await startSession.mutateAsync({ dealershipName: data.dealershipName });
+    setCurrentStep(2);
+    toast.success("Dealership info saved");
+  };
+
+  const handleStep2Submit = async (data: VehicleImportForm) => {
+    setVehicleImportData(data);
+    setCurrentStep(3);
+    toast.success("Vehicle import configured");
+  };
+
+  const handleAddTeamMember = async (data: TeamMemberForm) => {
+    setTeamMembers([...teamMembers, data]);
+    teamMemberForm.reset();
+    toast.success(`${data.email} invited`);
+  };
+
+  const handleStep3Next = () => {
+    if (teamMembers.length === 0) {
+      toast.warning("Add at least one team member or skip this step");
+      return;
+    }
+    setCurrentStep(4);
+  };
+
+  const handleStep4Submit = async (data: AgentCustomizationForm) => {
+    setAgentCustomization(data);
+    setCurrentStep(5);
+    toast.success("Agent customization saved");
+  };
+
+  const handleStep5Submit = async (data: IntegrationForm) => {
+    setIntegrations(data);
+    setCurrentStep(6);
+    toast.success("Integrations configured");
+  };
+
+  const handleStep6Submit = async (data: ConfirmationForm) => {
+    try {
+      await completeOnboarding.mutateAsync({ sessionId: `session-${Date.now()}` });
+      toast.success("Onboarding completed! Redirecting to dashboard...");
+      setTimeout(() => {
+        window.location.href = "/dealer/dashboard";
+      }, 1500);
+    } catch (error) {
+      toast.error("Failed to complete onboarding");
+    }
+  };
+
+  const progress = (currentStep / 6) * 100;
+
+  const steps = [
+    { number: 1, title: "Dealership Info", icon: "🏢" },
+    { number: 2, title: "Vehicle Import", icon: "🚗" },
+    { number: 3, title: "Team Members", icon: "👥" },
+    { number: 4, title: "AI Agent Setup", icon: "🤖" },
+    { number: 5, title: "Integrations", icon: "🔗" },
+    { number: 6, title: "Confirmation", icon: "✅" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Welcome to GrayArx</h1>
+          <p className="text-slate-400">Let's set up your dealership in just 6 steps</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex justify-between mb-3">
+            {steps.map((step) => (
+              <div
+                key={step.number}
+                className={`flex flex-col items-center cursor-pointer transition-all ${
+                  currentStep >= step.number ? "opacity-100" : "opacity-50"
+                }`}
+                onClick={() => currentStep > step.number && setCurrentStep(step.number)}
+              >
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
+                    currentStep === step.number
+                      ? "bg-gold text-slate-900"
+                      : currentStep > step.number
+                        ? "bg-green-500 text-white"
+                        : "bg-slate-700 text-slate-400"
+                  }`}
+                >
+                  {currentStep > step.number ? (
+                    <CheckCircle2 className="w-5 h-5" />
+                  ) : currentStep === step.number ? (
+                    <Clock className="w-5 h-5" />
+                  ) : (
+                    step.number
+                  )}
+                </div>
+                <span className="text-xs text-slate-400 text-center hidden md:block">{step.title}</span>
+              </div>
+            ))}
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+
+        {/* Step Content */}
+        <Card className="bg-slate-800 border-slate-700 p-6 md:p-8">
+          {/* Step 1: Dealership Info */}
+          {currentStep === 1 && (
+            <form onSubmit={dealershipForm.handleSubmit(handleStep1Submit)} className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">Dealership Information</h2>
+
+              <div>
+                <Label className="text-slate-200">Dealership Name</Label>
+                <Input
+                  {...dealershipForm.register("dealershipName")}
+                  placeholder="e.g., John's Auto Sales"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+                {dealershipForm.formState.errors.dealershipName && (
+                  <p className="text-red-400 text-sm mt-1">{dealershipForm.formState.errors.dealershipName.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Address</Label>
+                <Input
+                  {...dealershipForm.register("address")}
+                  placeholder="123 Main Street"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-200">City</Label>
+                  <Input
+                    {...dealershipForm.register("city")}
+                    placeholder="Johannesburg"
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-200">Phone</Label>
+                  <Input
+                    {...dealershipForm.register("phone")}
+                    placeholder="+27 11 123 4567"
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Email</Label>
+                <Input
+                  {...dealershipForm.register("email")}
+                  type="email"
+                  placeholder="info@dealership.co.za"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h3 className="text-white font-semibold mb-3">Business Hours</h3>
+                <div className="space-y-2">
+                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                    <div key={day} className="flex items-center gap-2">
+                      <span className="text-slate-300 w-20 text-sm">{day}</span>
+                      <Input
+                        {...dealershipForm.register(`${day.toLowerCase()}Open` as any)}
+                        type="time"
+                        className="bg-slate-600 border-slate-500 text-white w-24"
+                      />
+                      <span className="text-slate-400">to</span>
+                      <Input
+                        {...dealershipForm.register(`${day.toLowerCase()}Close` as any)}
+                        type="time"
+                        className="bg-slate-600 border-slate-500 text-white w-24"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400">
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 2: Vehicle Import */}
+          {currentStep === 2 && (
+            <form onSubmit={vehicleForm.handleSubmit(handleStep2Submit)} className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">Vehicle Import</h2>
+
+              <div className="space-y-3">
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <input
+                    type="radio"
+                    {...vehicleForm.register("importType")}
+                    value="manual"
+                    className="mr-3"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Manual Entry</p>
+                    <p className="text-slate-400 text-sm">Add vehicles one by one</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <input
+                    type="radio"
+                    {...vehicleForm.register("importType")}
+                    value="csv"
+                    className="mr-3"
+                  />
+                  <div>
+                    <p className="text-white font-medium">CSV Upload</p>
+                    <p className="text-slate-400 text-sm">Import from AutoTrader or Cars.co.za</p>
+                  </div>
+                </label>
+              </div>
+
+              {vehicleForm.watch("importType") === "csv" && (
+                <div>
+                  <Label className="text-slate-200">Upload CSV File</Label>
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    {...vehicleForm.register("csvFile")}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                  <p className="text-slate-400 text-sm mt-2">
+                    Supported formats: AutoTrader, Cars.co.za
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(1)}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button type="submit" className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400">
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 3: Team Members */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">Invite Team Members</h2>
+
+              <form onSubmit={teamMemberForm.handleSubmit(handleAddTeamMember)} className="space-y-3">
+                <div>
+                  <Label className="text-slate-200">Email</Label>
+                  <Input
+                    {...teamMemberForm.register("email")}
+                    type="email"
+                    placeholder="team@dealership.co.za"
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-slate-200">Name (Optional)</Label>
+                  <Input
+                    {...teamMemberForm.register("name")}
+                    placeholder="John Smith"
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-slate-200">Role</Label>
+                  <Select {...teamMemberForm.register("role")}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="salesperson">Salesperson</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button type="submit" className="w-full bg-slate-700 hover:bg-slate-600">
+                  Add Team Member
+                </Button>
+              </form>
+
+              {teamMembers.length > 0 && (
+                <div className="mt-6 space-y-2">
+                  <h3 className="text-white font-semibold">Invited Members ({teamMembers.length})</h3>
+                  {teamMembers.map((member, idx) => (
+                    <div key={idx} className="p-3 bg-slate-700 rounded-lg flex justify-between items-center">
+                      <div>
+                        <p className="text-white">{member.email}</p>
+                        <p className="text-slate-400 text-sm">{member.role}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setTeamMembers(teamMembers.filter((_, i) => i !== idx))}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(2)}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleStep3Next}
+                  className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400"
+                >
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: AI Agent Customization */}
+          {currentStep === 4 && (
+            <form onSubmit={agentForm.handleSubmit(handleStep4Submit)} className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">AI Agent Customization</h2>
+
+              <div>
+                <Label className="text-slate-200">Personality Tone</Label>
+                <Select {...agentForm.register("personalityTone")}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="casual">Casual</SelectItem>
+                    <SelectItem value="formal">Formal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Response Style</Label>
+                <Select {...agentForm.register("responseStyle")}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="concise">Concise</SelectItem>
+                    <SelectItem value="detailed">Detailed</SelectItem>
+                    <SelectItem value="balanced">Balanced</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Languages</Label>
+                <div className="space-y-2 mt-2">
+                  {["en", "af", "zu", "xh", "st", "tn", "ve"].map((lang) => (
+                    <label key={lang} className="flex items-center text-slate-300">
+                      <Checkbox className="mr-2" />
+                      {lang === "en" ? "English" : lang === "af" ? "Afrikaans" : lang.toUpperCase()}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Custom Instructions (Optional)</Label>
+                <Textarea
+                  {...agentForm.register("customInstructions")}
+                  placeholder="Any special instructions for the AI agent..."
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(3)}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button type="submit" className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400">
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 5: Integrations */}
+          {currentStep === 5 && (
+            <form onSubmit={integrationForm.handleSubmit(handleStep5Submit)} className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">Integration Setup</h2>
+
+              <div className="space-y-3">
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3" defaultChecked />
+                  <div>
+                    <p className="text-white font-medium">Stripe Payments</p>
+                    <p className="text-slate-400 text-sm">Accept payments from customers</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3" defaultChecked />
+                  <div>
+                    <p className="text-white font-medium">SMS Notifications</p>
+                    <p className="text-slate-400 text-sm">Send SMS updates to customers</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3" defaultChecked />
+                  <div>
+                    <p className="text-white font-medium">Email Campaigns</p>
+                    <p className="text-slate-400 text-sm">Send branded emails to leads</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3" defaultChecked />
+                  <div>
+                    <p className="text-white font-medium">WhatsApp Integration</p>
+                    <p className="text-slate-400 text-sm">Communicate via WhatsApp</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(4)}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button type="submit" className="flex-1 bg-gold text-slate-900 hover:bg-yellow-400">
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 6: Confirmation */}
+          {currentStep === 6 && (
+            <form onSubmit={confirmationForm.handleSubmit(handleStep6Submit)} className="space-y-4">
+              <h2 className="text-xl font-bold text-white mb-4">Review & Go Live</h2>
+
+              <div className="bg-slate-700 p-4 rounded-lg space-y-3">
+                <div>
+                  <p className="text-slate-400 text-sm">Dealership Name</p>
+                  <p className="text-white font-semibold">{dealershipInfo?.dealershipName}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm">Team Members</p>
+                  <p className="text-white font-semibold">{teamMembers.length} invited</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm">Vehicle Import</p>
+                  <p className="text-white font-semibold">{vehicleImportData?.importType === "csv" ? "CSV Upload" : "Manual Entry"}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-start p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3 mt-1" {...confirmationForm.register("termsAccepted")} />
+                  <div>
+                    <p className="text-white">I agree to the Terms of Service</p>
+                    <p className="text-slate-400 text-sm">Read our terms</p>
+                  </div>
+                </label>
+
+                <label className="flex items-start p-3 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700 transition">
+                  <Checkbox className="mr-3 mt-1" {...confirmationForm.register("privacyAccepted")} />
+                  <div>
+                    <p className="text-white">I agree to the Privacy Policy</p>
+                    <p className="text-slate-400 text-sm">POPIA compliant</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(5)}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={completeOnboarding.isPending}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {completeOnboarding.isPending ? "Processing..." : "Go Live"} ✨
+                </Button>
+              </div>
+            </form>
+          )}
+        </Card>
+
+        {/* Footer */}
+        <div className="text-center mt-6 text-slate-400 text-sm">
+          <p>Step {currentStep} of 6 • All information is secure and POPIA compliant</p>
+        </div>
+      </div>
+    </div>
+  );
+}

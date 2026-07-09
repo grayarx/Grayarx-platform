@@ -1,0 +1,1 @@
+DROP TABLE `bee_scorecard`;

@@ -1,0 +1,1 @@
+ALTER TABLE `support_agents` MODIFY COLUMN `personalityTone` enum('formal','casual','friendly','urgent') NOT NULL DEFAULT 'friendly';

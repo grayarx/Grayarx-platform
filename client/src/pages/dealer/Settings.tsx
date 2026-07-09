@@ -1,0 +1,360 @@
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Settings2,
+  MessageCircle,
+  Sparkles,
+  Loader2,
+  Save,
+  AlertTriangle,
+  Wrench,
+  Upload,
+  CheckCircle2,
+  Eye,
+} from "lucide-react";
+import { Link } from "wouter";
+import DealerShell from "@/components/DealerShell";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProgressBar } from "@/components/LoadingAnimations";
+import { OWNER_PHONE_E164 } from "@/lib/contact";
+
+export default function DealerSettings() {
+  const utils = trpc.useUtils();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const { data: deployment, isLoading: loadingDeployment } = trpc.chatbot.getDeployment.useQuery();
+  const { data: suspicious, isLoading: loadingSuspicious } =
+    trpc.inventoryImport.suspiciousPriceCount.useQuery();
+
+  const [webChatEnabled, setWebChatEnabled] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [repairCsv, setRepairCsv] = useState<string | null>(null);
+  const [repairFileName, setRepairFileName] = useState<string | null>(null);
+  const [repairProgress, setRepairProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (deployment) {
+      setWebChatEnabled(deployment.webChatbotEnabled);
+      setWhatsappEnabled(deployment.whatsappChatbotEnabled);
+      setWhatsappPhone(deployment.whatsappPhoneNumber ?? OWNER_PHONE_E164);
+    } else if (!loadingDeployment) {
+      setWhatsappPhone(OWNER_PHONE_E164);
+    }
+  }, [deployment, loadingDeployment]);
+
+  const saveMutation = trpc.chatbot.updateDeployment.useMutation({
+    onSuccess: () => {
+      utils.chatbot.getDeployment.invalidate();
+      utils.showroom.contactOptions.invalidate();
+      toast.success("Showroom settings saved");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const repairMutation = trpc.inventoryImport.repairPrices.useMutation({
+    onSuccess: (res) => {
+      setRepairProgress(100);
+      setTimeout(() => setRepairProgress(null), 600);
+      utils.inventoryImport.suspiciousPriceCount.invalidate();
+      utils.dealer.listVehicles.invalidate();
+      utils.showroom.list.invalidate();
+      toast.success(
+        `Fixed ${res.updated} price${res.updated === 1 ? "" : "s"}` +
+          (res.notFound ? ` · ${res.notFound} not matched` : "") +
+          (res.alreadyCorrect ? ` · ${res.alreadyCorrect} already correct` : ""),
+      );
+    },
+    onError: (e) => {
+      setRepairProgress(null);
+      toast.error(e.message);
+    },
+  });
+
+  const handleSave = () => {
+    if (whatsappEnabled && !whatsappPhone.trim()) {
+      toast.error("Enter a WhatsApp number before enabling WhatsApp icons");
+      return;
+    }
+    saveMutation.mutate({
+      deploymentType:
+        webChatEnabled && whatsappEnabled
+          ? "both"
+          : whatsappEnabled
+            ? "whatsapp"
+            : "web",
+      webChatbotEnabled: webChatEnabled,
+      whatsappChatbotEnabled: whatsappEnabled,
+      whatsappPhoneNumber: whatsappPhone.trim() || undefined,
+    });
+  };
+
+  const loadRepairFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRepairCsv(String(reader.result ?? ""));
+      setRepairFileName(file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleRepair = () => {
+    if (!repairCsv?.trim()) {
+      toast.error("Upload the same CSV you imported originally");
+      return;
+    }
+    setRepairProgress(10);
+    repairMutation.mutate({ csv: repairCsv });
+    const id = setInterval(() => {
+      setRepairProgress((p) => (p === null || p >= 90 ? p : p + 6));
+    }, 300);
+    setTimeout(() => clearInterval(id), 60_000);
+  };
+
+  const suspiciousCount = suspicious?.count ?? 0;
+
+  return (
+    <DealerShell
+      title="Settings"
+      subtitle="Control what buyers see on your public showroom — contact icons, chat options, and inventory fixes."
+    >
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Showroom contact icons */}
+        <Card className="border-primary/15">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Settings2 className="h-5 w-5 text-primary" />
+              Showroom contact icons
+            </CardTitle>
+            <CardDescription>
+              Choose which contact buttons appear on vehicle photos in your public showroom.
+              Nala opens a contextual chat about the exact car the buyer clicked.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {loadingDeployment ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading settings…
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#25D366]/15 flex items-center justify-center shrink-0">
+                      <MessageCircle className="h-5 w-5 text-[#25D366]" />
+                    </div>
+                    <div>
+                      <Label htmlFor="whatsapp-toggle" className="text-sm font-semibold">
+                        WhatsApp icon
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Green button on each vehicle — opens WhatsApp with a pre-filled message.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="whatsapp-toggle"
+                    checked={whatsappEnabled}
+                    onCheckedChange={setWhatsappEnabled}
+                  />
+                </div>
+
+                {whatsappEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-2"
+                  >
+                    <Label htmlFor="whatsapp-phone">WhatsApp number</Label>
+                    <Input
+                      id="whatsapp-phone"
+                      value={whatsappPhone}
+                      onChange={(e) => setWhatsappPhone(e.target.value)}
+                      placeholder="+27 79 491 5187"
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Include country code. Buyers will message this number directly.
+                    </p>
+                  </motion.div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <Label htmlFor="webchat-toggle" className="text-sm font-semibold">
+                        Web chat icon
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Gold sparkle button — opens the enquiry form for that vehicle.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="webchat-toggle"
+                    checked={webChatEnabled}
+                    onCheckedChange={setWebChatEnabled}
+                  />
+                </div>
+
+                {/* Preview */}
+                <div className="rounded-xl border border-primary/20 bg-card/50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                    Preview on showroom
+                  </p>
+                  <div className="relative aspect-[16/10] rounded-lg bg-muted overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent" />
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      {whatsappEnabled && (
+                        <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center">
+                          <MessageCircle className="h-3.5 w-3.5 text-white fill-white" />
+                        </div>
+                      )}
+                      {webChatEnabled && (
+                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                      )}
+                      {!whatsappEnabled && !webChatEnabled && (
+                        <span className="text-xs text-muted-foreground">No icons enabled</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full btn-gold"
+                  onClick={handleSave}
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save showroom settings
+                    </>
+                  )}
+                </Button>
+
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/showroom">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View live showroom
+                  </Link>
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* R1 price repair */}
+        <Card className="border-amber-500/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Wrench className="h-5 w-5 text-amber-400" />
+              Fix R1 prices
+            </CardTitle>
+            <CardDescription>
+              If vehicles imported at R1 by mistake, re-upload the original CSV to patch prices
+              without re-importing everything.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!loadingSuspicious && suspiciousCount > 0 && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-200">
+                    {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} priced at R1 or less
+                  </p>
+                  <p className="text-xs text-amber-200/70 mt-1">
+                    These could show incorrect prices on your showroom. Upload your source CSV below
+                    to fix them in one click.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!loadingSuspicious && suspiciousCount === 0 && (
+              <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                No suspicious R1 prices detected in your inventory.
+              </div>
+            )}
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") fileRef.current?.click();
+              }}
+              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/25 hover:border-primary/50 hover:bg-primary/5 px-6 py-8 cursor-pointer transition-all"
+            >
+              <Upload className="h-8 w-8 text-primary/60 mb-2" />
+              <p className="text-sm font-medium">
+                {repairFileName ?? "Upload original CSV"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Same file you used for the bulk import
+              </p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) loadRepairFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
+            {repairProgress !== null && (
+              <ProgressBar progress={repairProgress} label="Repairing prices…" animated />
+            )}
+
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleRepair}
+              disabled={!repairCsv || repairMutation.isPending}
+            >
+              {repairMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Repairing prices…
+                </>
+              ) : (
+                <>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Repair prices from CSV
+                </>
+              )}
+            </Button>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Matches vehicles by stock ID, then make/model/year, then title. Only updates vehicles
+              currently priced at R1 or less — won&apos;t overwrite correct prices.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </DealerShell>
+  );
+}

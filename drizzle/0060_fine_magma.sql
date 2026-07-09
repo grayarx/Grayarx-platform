@@ -1,0 +1,1 @@
+ALTER TABLE `popia_consent_signatures` MODIFY COLUMN `form_version` varchar(20) NOT NULL DEFAULT '1.0';

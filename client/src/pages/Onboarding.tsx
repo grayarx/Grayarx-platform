@@ -1,0 +1,272 @@
+import { useState } from "react";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import Logo from "@/components/Logo";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { CheckCircle2, ArrowRight } from "lucide-react";
+
+const REGIONS = [
+  "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
+  "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape",
+];
+
+/**
+ * All 11 SA official languages, in constitutional order.
+ * Kept in sync with `shared/languages.ts`.
+ */
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "af", label: "Afrikaans" },
+  { code: "nr", label: "isiNdebele" },
+  { code: "xh", label: "isiXhosa" },
+  { code: "zu", label: "isiZulu" },
+  { code: "nso", label: "Sepedi (Northern Sotho)" },
+  { code: "st", label: "Sesotho" },
+  { code: "tn", label: "Setswana" },
+  { code: "ss", label: "siSwati" },
+  { code: "ve", label: "Tshivenḓa" },
+  { code: "ts", label: "Xitsonga" },
+];
+
+export default function Onboarding() {
+  const [submitted, setSubmitted] = useState<{ reference: string } | null>(null);
+  const submit = trpc.publicOnboarding.submit.useMutation({
+    onSuccess: (r: any) => setSubmitted({ reference: r.reference }),
+    onError: (e) => toast.error(e.message),
+  });
+
+  const [form, setForm] = useState({
+    dealershipName: "",
+    ownerName: "",
+    ownerEmail: "",
+    ownerPhone: "",
+    region: "",
+    monthlyVolume: "",
+    primaryLanguage: "en",
+    brandsCarried: "",
+    csvUrl: "",
+    notes: "",
+  });
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Navigation />
+        <section className="pt-32 pb-20">
+          <div className="container max-w-xl text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-8">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            <h1 className="font-display text-4xl font-bold">Thanks — we've got it.</h1>
+            <p className="text-muted-foreground mt-4">
+              Our team will review your application within one business day. You'll receive
+              a welcome email at <span className="text-primary">{form.ownerEmail}</span> with
+              next steps.
+            </p>
+            <div className="card-premium rounded-2xl border border-primary/10 p-6 mt-8 text-left">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Your reference number
+              </div>
+              <div className="font-mono text-2xl font-bold text-primary mt-1">
+                {submitted.reference}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Keep this for your records. Quote it when calling or emailing support.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="mt-8">
+              <a href="/">Back to home</a>
+            </Button>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navigation />
+      <section className="pt-24 pb-20">
+        <div className="container max-w-2xl">
+          <div className="text-center mb-10">
+            <Logo size={64} glow className="mx-auto" />
+            <h1 className="font-display text-4xl md:text-5xl font-bold mt-6">
+              Onboard your dealership
+            </h1>
+            <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
+              Tell us a bit about your business. Our team reviews every application and
+              gets back within one business day.
+            </p>
+          </div>
+
+          <Card className="card-premium">
+            <CardContent className="p-6 md:p-8 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dealershipName">Dealership name *</Label>
+                  <Input
+                    id="dealershipName"
+                    value={form.dealershipName}
+                    onChange={(e) => setForm({ ...form, dealershipName: e.target.value })}
+                    placeholder="ABC Motors"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="region">Region *</Label>
+                  <Select
+                    value={form.region}
+                    onValueChange={(v) => setForm({ ...form, region: v })}
+                  >
+                    <SelectTrigger id="region" className="mt-1">
+                      <SelectValue placeholder="Select region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REGIONS.map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ownerName">Owner name *</Label>
+                  <Input
+                    id="ownerName"
+                    value={form.ownerName}
+                    onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
+                    placeholder="Sipho Khumalo"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ownerEmail">Email *</Label>
+                  <Input
+                    id="ownerEmail"
+                    type="email"
+                    value={form.ownerEmail}
+                    onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })}
+                    placeholder="sipho@abcmotors.co.za"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ownerPhone">Phone *</Label>
+                  <Input
+                    id="ownerPhone"
+                    value={form.ownerPhone}
+                    onChange={(e) => setForm({ ...form, ownerPhone: e.target.value })}
+                    placeholder="+27 82 123 4567"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="monthlyVolume">Monthly vehicle sales</Label>
+                  <Input
+                    id="monthlyVolume"
+                    type="number"
+                    value={form.monthlyVolume}
+                    onChange={(e) => setForm({ ...form, monthlyVolume: e.target.value })}
+                    placeholder="25"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="primaryLanguage">Primary language *</Label>
+                  <Select
+                    value={form.primaryLanguage}
+                    onValueChange={(v) => setForm({ ...form, primaryLanguage: v })}
+                  >
+                    <SelectTrigger id="primaryLanguage" className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map((l) => (
+                        <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="brandsCarried">Brands you sell</Label>
+                  <Input
+                    id="brandsCarried"
+                    value={form.brandsCarried}
+                    onChange={(e) => setForm({ ...form, brandsCarried: e.target.value })}
+                    placeholder="Toyota, VW, Ford"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="csvUrl">Stock CSV link (optional)</Label>
+                <Input
+                  id="csvUrl"
+                  value={form.csvUrl}
+                  onChange={(e) => setForm({ ...form, csvUrl: e.target.value })}
+                  placeholder="https://autotrader.co.za/dealer/abc/export.csv"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Paste a public link to your AutoTrader / Cars.co.za stock export. We'll import it automatically.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="notes">Anything else?</Label>
+                <Textarea
+                  id="notes"
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  placeholder="Tell us about your current sales process, pain points, or anything we should know."
+                  className="mt-1"
+                  rows={4}
+                />
+              </div>
+
+              <Button
+                className="btn-gold w-full h-12 font-semibold"
+                disabled={
+                  submit.isPending ||
+                  !form.dealershipName ||
+                  !form.ownerName ||
+                  !form.ownerEmail ||
+                  !form.ownerPhone ||
+                  !form.region
+                }
+                onClick={() => submit.mutate(form)}
+              >
+                {submit.isPending ? "Submitting…" : "Submit application"}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+
+              <p className="text-xs text-muted-foreground text-center">
+                By submitting, you agree to our{" "}
+                <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>{" "}
+                and consent to processing your data for the purpose of evaluating this application.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+      <Footer />
+    </div>
+  );
+}

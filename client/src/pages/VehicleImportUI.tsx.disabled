@@ -1,0 +1,435 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+
+const vehicleSchema = z.object({
+  make: z.string().min(1, "Make is required"),
+  model: z.string().min(1, "Model is required"),
+  year: z.coerce.number().min(1900).max(2100),
+  price: z.coerce.number().positive("Price must be positive"),
+  mileage: z.coerce.number().min(0),
+  color: z.string().min(1, "Color is required"),
+  fuelType: z.enum(["petrol", "diesel", "hybrid", "electric"]),
+  transmission: z.enum(["manual", "automatic"]),
+  vin: z.string().optional(),
+});
+
+type VehicleForm = z.infer<typeof vehicleSchema>;
+
+export function VehicleImportUI() {
+  const [importType, setImportType] = useState<"csv" | "manual">("csv");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [vehicles, setVehicles] = useState<VehicleForm[]>([]);
+  const [validationErrors, setValidationErrors] = useState<any[]>([]);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const validateCSV = trpc.vehicleImport.validateCSV.useMutation();
+  const importVehicles = trpc.vehicleImport.importVehicles.useMutation();
+  const parseAutotrader = trpc.vehicleImport.parseAutotraderCSV.useMutation();
+  const parseCarsCoZA = trpc.vehicleImport.parseCarsCoZACSV.useMutation();
+
+  const manualForm = useForm<VehicleForm>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: {
+      fuelType: "petrol",
+      transmission: "automatic",
+    },
+  });
+
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCsvFile(file);
+    const text = await file.text();
+
+    try {
+      const result = await validateCSV.mutateAsync({
+        csvContent: text,
+        importType: "manual",
+      });
+
+      if (result.success) {
+        setVehicles(result.vehicles.map((v) => v.vehicle));
+        setValidationErrors(result.errors);
+        toast.success(`${result.validCount} vehicles ready to import`);
+      } else {
+        toast.error(result.error);
+        setValidationErrors(result.validationErrors);
+      }
+    } catch (error) {
+      toast.error("Failed to validate CSV");
+    }
+  };
+
+  const handleAutotraderParse = async () => {
+    if (!csvFile) {
+      toast.error("Please upload a CSV file first");
+      return;
+    }
+
+    try {
+      const text = await csvFile.text();
+      const result = await parseAutotrader.mutateAsync({ csvContent: text });
+
+      if (result.success) {
+        setVehicles(result.vehicles);
+        toast.success(`Parsed ${result.count} vehicles from AutoTrader`);
+      }
+    } catch (error) {
+      toast.error("Failed to parse AutoTrader CSV");
+    }
+  };
+
+  const handleCarsCoZAParse = async () => {
+    if (!csvFile) {
+      toast.error("Please upload a CSV file first");
+      return;
+    }
+
+    try {
+      const text = await csvFile.text();
+      const result = await parseCarsCoZA.mutateAsync({ csvContent: text });
+
+      if (result.success) {
+        setVehicles(result.vehicles);
+        toast.success(`Parsed ${result.count} vehicles from Cars.co.za`);
+      }
+    } catch (error) {
+      toast.error("Failed to parse Cars.co.za CSV");
+    }
+  };
+
+  const handleAddManualVehicle = async (data: VehicleForm) => {
+    setVehicles([...vehicles, data]);
+    manualForm.reset();
+    toast.success("Vehicle added");
+  };
+
+  const handleImportVehicles = async () => {
+    if (vehicles.length === 0) {
+      toast.error("No vehicles to import");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await importVehicles.mutateAsync({
+        vehicles,
+        importType: "manual",
+      });
+
+      setImportProgress(100);
+      toast.success(`${result.importedCount} vehicles imported successfully`);
+      setVehicles([]);
+      setCsvFile(null);
+    } catch (error) {
+      toast.error("Failed to import vehicles");
+    } finally {
+      setIsImporting(false);
+      setImportProgress(0);
+    }
+  };
+
+  const handleRemoveVehicle = (index: number) => {
+    setVehicles(vehicles.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Import Type Selection */}
+      <Card className="bg-slate-800 border-slate-700 p-6">
+        <h2 className="text-xl font-bold text-white mb-4">Import Type</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition"
+            style={{ borderColor: importType === "csv" ? "#d4af37" : "rgb(55, 65, 81)" }}>
+            <input
+              type="radio"
+              name="importType"
+              value="csv"
+              checked={importType === "csv"}
+              onChange={(e) => setImportType(e.target.value as "csv")}
+              className="mr-3"
+            />
+            <div>
+              <p className="text-white font-semibold">CSV Upload</p>
+              <p className="text-slate-400 text-sm">Import from AutoTrader or Cars.co.za</p>
+            </div>
+          </label>
+
+          <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition"
+            style={{ borderColor: importType === "manual" ? "#d4af37" : "rgb(55, 65, 81)" }}>
+            <input
+              type="radio"
+              name="importType"
+              value="manual"
+              checked={importType === "manual"}
+              onChange={(e) => setImportType(e.target.value as "manual")}
+              className="mr-3"
+            />
+            <div>
+              <p className="text-white font-semibold">Manual Entry</p>
+              <p className="text-slate-400 text-sm">Add vehicles one by one</p>
+            </div>
+          </label>
+        </div>
+      </Card>
+
+      {/* CSV Upload Section */}
+      {importType === "csv" && (
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Upload CSV File</h3>
+
+          <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center mb-4">
+            <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleCSVUpload}
+              className="hidden"
+              id="csv-upload"
+            />
+            <label htmlFor="csv-upload" className="cursor-pointer">
+              <p className="text-white font-semibold">Click to upload or drag and drop</p>
+              <p className="text-slate-400 text-sm">CSV files from AutoTrader or Cars.co.za</p>
+            </label>
+          </div>
+
+          {csvFile && (
+            <div className="bg-slate-700 p-3 rounded-lg mb-4">
+              <p className="text-white text-sm">
+                <strong>File:</strong> {csvFile.name}
+              </p>
+            </div>
+          )}
+
+          {csvFile && (
+            <div className="flex gap-2 mb-4">
+              <Button
+                onClick={handleAutotraderParse}
+                disabled={parseAutotrader.isPending}
+                className="flex-1 bg-slate-700 hover:bg-slate-600"
+              >
+                {parseAutotrader.isPending ? "Parsing..." : "Parse as AutoTrader"}
+              </Button>
+              <Button
+                onClick={handleCarsCoZAParse}
+                disabled={parseCarsCoZA.isPending}
+                className="flex-1 bg-slate-700 hover:bg-slate-600"
+              >
+                {parseCarsCoZA.isPending ? "Parsing..." : "Parse as Cars.co.za"}
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Manual Entry Section */}
+      {importType === "manual" && (
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Add Vehicle Manually</h3>
+
+          <form onSubmit={manualForm.handleSubmit(handleAddManualVehicle)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-slate-200">Make</Label>
+                <Input
+                  {...manualForm.register("make")}
+                  placeholder="e.g., Toyota"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Model</Label>
+                <Input
+                  {...manualForm.register("model")}
+                  placeholder="e.g., Corolla"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Year</Label>
+                <Input
+                  {...manualForm.register("year")}
+                  type="number"
+                  placeholder="2023"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Price (ZAR)</Label>
+                <Input
+                  {...manualForm.register("price")}
+                  type="number"
+                  placeholder="250000"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Mileage (km)</Label>
+                <Input
+                  {...manualForm.register("mileage")}
+                  type="number"
+                  placeholder="50000"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Color</Label>
+                <Input
+                  {...manualForm.register("color")}
+                  placeholder="e.g., Black"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Fuel Type</Label>
+                <Select {...manualForm.register("fuelType")}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="petrol">Petrol</SelectItem>
+                    <SelectItem value="diesel">Diesel</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="electric">Electric</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-slate-200">Transmission</Label>
+                <Select {...manualForm.register("transmission")}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="automatic">Automatic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <Label className="text-slate-200">VIN (Optional)</Label>
+                <Input
+                  {...manualForm.register("vin")}
+                  placeholder="Vehicle Identification Number"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full bg-gold text-slate-900 hover:bg-yellow-400">
+              Add Vehicle
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <Card className="bg-red-900/20 border-red-700 p-4">
+          <div className="flex gap-2 mb-2">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <h4 className="text-red-400 font-semibold">Import Errors</h4>
+          </div>
+          <div className="space-y-1">
+            {validationErrors.map((error, idx) => (
+              <p key={idx} className="text-red-300 text-sm">
+                Row {error.rowNumber}: {error.errors.join(", ")}
+              </p>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Vehicle Preview Table */}
+      {vehicles.length > 0 && (
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">
+            Vehicles to Import ({vehicles.length})
+          </h3>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-700">
+                  <TableHead className="text-slate-300">Make</TableHead>
+                  <TableHead className="text-slate-300">Model</TableHead>
+                  <TableHead className="text-slate-300">Year</TableHead>
+                  <TableHead className="text-slate-300">Price</TableHead>
+                  <TableHead className="text-slate-300">Mileage</TableHead>
+                  <TableHead className="text-slate-300">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {vehicles.map((vehicle, idx) => (
+                  <TableRow key={idx} className="border-slate-700">
+                    <TableCell className="text-white">{vehicle.make}</TableCell>
+                    <TableCell className="text-white">{vehicle.model}</TableCell>
+                    <TableCell className="text-white">{vehicle.year}</TableCell>
+                    <TableCell className="text-white">R{vehicle.price.toLocaleString()}</TableCell>
+                    <TableCell className="text-white">{vehicle.mileage.toLocaleString()} km</TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveVehicle(idx)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        Remove
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {isImporting && (
+            <div className="mt-4">
+              <Progress value={importProgress} className="h-2" />
+              <p className="text-slate-400 text-sm mt-2">Importing vehicles...</p>
+            </div>
+          )}
+
+          <Button
+            onClick={handleImportVehicles}
+            disabled={isImporting || importVehicles.isPending}
+            className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isImporting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2" /> Import {vehicles.length} Vehicles
+              </>
+            )}
+          </Button>
+        </Card>
+      )}
+    </div>
+  );
+}
