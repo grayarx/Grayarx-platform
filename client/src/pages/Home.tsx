@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
+  Bot,
   Car,
   CheckCircle2,
   Handshake,
@@ -18,12 +19,21 @@ import LeadCaptureFormOptimized from "@/components/LeadCaptureFormOptimized";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { trpc } from "@/lib/trpc";
-import { buildEditorialPanels, pickHeroImage } from "@/lib/showroomImagery";
-import { LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
+import { buildEditorialPanels } from "@/lib/showroomImagery";
+import { LOCAL_EDITORIAL_IMAGES, LUXURY_HERO_FALLBACK } from "@shared/imagePipeline";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
+import { AGENTS } from "@shared/agents";
 import { useMemo } from "react";
+
+const HERO_AGENTS = [
+  AGENTS.whatsapp,
+  AGENTS.email,
+  AGENTS.booking,
+  AGENTS.tradein,
+] as const;
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -134,11 +144,9 @@ const TRUST_POINTS = [
 
 export default function Home() {
   const { data: inventory } = trpc.showroom.list.useQuery();
+  const liveCount = (inventory ?? []).filter((v) => v.status === "available" || !v.status).length;
 
-  const heroSrc = useMemo(
-    () => pickHeroImage(inventory ?? []),
-    [inventory],
-  );
+  const heroSrc = LUXURY_HERO_FALLBACK;
 
   const editorialPanels = useMemo(() => {
     const live = buildEditorialPanels(inventory ?? []);
@@ -155,7 +163,7 @@ export default function Home() {
     title: "GrayArx — Dealership Operating System",
     description:
       "Deal scores, trade-in intelligence, and finance for South African dealerships. Built to outsell classifieds.",
-    ogImage: "https://www.grayarx.com/hero-car.jpg",
+    ogImage: "https://www.grayarx.com/corvette-exterior.jpg",
     ogUrl: "https://www.grayarx.com/",
     ogType: "website",
     themeColor: "#060608",
@@ -183,58 +191,100 @@ export default function Home() {
             staticAsset={heroSrc.startsWith("/")}
             sizes="100vw"
             className="img-premium absolute inset-0 h-full w-full"
-            fallbackSrc="/hero-car.jpg"
+            fallbackSrc="/corvette-exterior.jpg"
           />
         </div>
         <div className="hero-cinematic-veil-full" />
 
         <div className="relative z-10 container w-full pb-16 md:pb-24 pt-28 md:pt-32">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-4xl"
-          >
-            <span className="status-pill font-tech inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] mb-8">
-              <span className="status-dot" />
-              Next-gen dealership OS
-            </span>
+          <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-16 items-end">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="status-pill font-tech inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] mb-8">
+                <span className="status-dot" />
+                South Africa&apos;s dealership OS
+              </span>
 
-            <p className="tagline-xl text-white mb-2">
-              Intensity.
-              <br />
-              <span className="text-cyber-gradient">Scored.</span>
-            </p>
+              <p className="tagline-xl text-white mb-2">
+                Precision.
+                <br />
+                <span className="text-cyber-gradient">At scale.</span>
+              </p>
 
-            <h1 className="font-serif text-xl sm:text-2xl md:text-3xl font-light text-white/75 max-w-2xl leading-relaxed mb-10 tracking-wide">
-              Deal scores, trade-in intelligence, and finance — one futuristic stack built to
-              outsell classifieds.
-            </h1>
+              <h1 className="font-serif text-xl sm:text-2xl md:text-[1.65rem] font-light text-white/80 max-w-xl leading-relaxed mb-10 tracking-wide">
+                Deal scores, AI agents, and a showroom that outsells classifieds — built for how
+                SA dealers actually sell.
+              </h1>
 
-            <div className="flex flex-wrap gap-4 mb-10">
-              <Button asChild className="btn-gold h-12 px-10 text-sm font-semibold uppercase tracking-wider">
-                <Link href="/trade-in">
-                  Value my trade-in <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="btn-cyber h-12 px-10 text-sm font-semibold uppercase tracking-wider bg-transparent"
-              >
-                <Link href="/showroom?sort=best_deals">Browse scored deals</Link>
-              </Button>
-            </div>
+              <div className="flex flex-wrap gap-4 mb-10">
+                <Button asChild className="btn-gold h-12 px-10 text-sm font-semibold uppercase tracking-wider">
+                  <Link href="/showroom?sort=best_deals">
+                    Browse scored deals <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="btn-cyber h-12 px-10 text-sm font-semibold uppercase tracking-wider bg-transparent"
+                >
+                  <Link href="/onboarding">Start free pilot</Link>
+                </Button>
+              </div>
 
-            <ul className="flex flex-wrap gap-x-8 gap-y-3 text-xs font-tech uppercase tracking-[0.15em] text-white/50">
-              {["Free pilot", "No credit card", "SA-built"].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
+              <ul className="flex flex-wrap gap-x-8 gap-y-3 text-xs font-tech uppercase tracking-[0.15em] text-white/50">
+                {["Free pilot", "No credit card", "POPIA ready"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.85, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="home-hero-stats hidden sm:block"
+            >
+              <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-xl p-6 md:p-8 shadow-2xl">
+                <p className="font-tech text-[10px] uppercase tracking-[0.28em] text-primary/80 mb-6">
+                  Live platform
+                </p>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="font-display text-3xl md:text-4xl font-bold text-white tabular-nums">
+                      {liveCount > 0 ? liveCount : "—"}
+                    </p>
+                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
+                      Vehicles scored
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-display text-3xl md:text-4xl font-bold text-cyber-gradient">11</p>
+                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
+                      SA languages
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-display text-3xl md:text-4xl font-bold text-white">24/7</p>
+                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
+                      WhatsApp & chat
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-display text-3xl md:text-4xl font-bold text-white">&lt;60s</p>
+                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
+                      Lead alert SLA
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
 
           {/* Scroll hint */}
           <motion.div
@@ -248,6 +298,56 @@ export default function Home() {
             </span>
             <div className="h-12 w-px bg-gradient-to-b from-primary/50 to-transparent" />
           </motion.div>
+        </div>
+      </section>
+
+      {/* AI team strip */}
+      <section className="relative border-y border-primary/10 bg-[#08080a]/90 py-10 md:py-14">
+        <div className="container">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+            <div>
+              <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-2">
+                Your AI sales team
+              </p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
+                Always on. Always on-brand.
+              </h2>
+            </div>
+            <Link
+              href="/dealer/agents"
+              className="font-tech text-xs uppercase tracking-[0.2em] text-primary hover:text-primary/80 inline-flex items-center gap-2"
+            >
+              Meet the agents <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {HERO_AGENTS.map((agent, i) => (
+              <motion.div
+                key={agent.id}
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: i * 0.06 }}
+                className="home-agent-card group rounded-xl border border-white/8 bg-white/[0.03] p-5 hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <img
+                    src={agent.avatarUrl}
+                    alt=""
+                    className="h-11 w-11 rounded-full object-cover ring-2 ring-primary/20"
+                    loading="lazy"
+                  />
+                  <div>
+                    <p className="font-semibold text-sm">{agent.displayName}</p>
+                    <p className="font-tech text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
+                      {agent.role}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                  {agent.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -278,16 +378,17 @@ export default function Home() {
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid md:grid-cols-2 gap-3 md:gap-4 editorial-bento">
             {editorialPanels.map((panel, i) => (
               <motion.div
                 key={`${panel.title}-${i}`}
                 {...fadeUp}
                 transition={{ ...fadeUp.transition, delay: i * 0.1 }}
+                className={cn(i === 0 && "md:col-span-2")}
               >
                 <Link
                   href={panel.href}
-                  className="editorial-panel group block rounded-xl md:rounded-2xl border border-white/5 holo-card"
+                  className={cn("editorial-panel group block rounded-xl md:rounded-2xl border border-white/5 holo-card", i === 0 && "min-h-[380px] md:min-h-[480px]")}
                 >
                   <OptimizedImage
                     src={panel.image}

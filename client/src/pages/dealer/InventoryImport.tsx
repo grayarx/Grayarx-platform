@@ -11,7 +11,6 @@ import {
   Car,
   Gauge,
   Fuel,
-  Wrench,
 } from "lucide-react";
 import { Link } from "wouter";
 import DealerShell from "@/components/DealerShell";
@@ -59,8 +58,6 @@ export default function InventoryImportPage() {
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
-  const { data: suspicious } = trpc.inventoryImport.suspiciousPriceCount.useQuery();
-  const suspiciousCount = suspicious?.count ?? 0;
 
   const [preview, setPreview] = useState<{
     totalRows: number;
@@ -147,7 +144,7 @@ export default function InventoryImportPage() {
         parts.push(`Imported ${res.created} vehicle${res.created === 1 ? "" : "s"}`);
       }
       if (res.repaired && res.repaired > 0) {
-        parts.push(`repaired ${res.repaired} R1 price${res.repaired === 1 ? "" : "s"}`);
+        parts.push(`updated ${res.repaired} price${res.repaired === 1 ? "" : "s"}`);
       }
       toast.success(
         parts.length > 0 ? parts.join(" · ") + "." : "No new vehicles to import.",
@@ -163,27 +160,6 @@ export default function InventoryImportPage() {
       toast.error(e.message);
     },
   });
-
-  const repairMutation = trpc.inventoryImport.repairPrices.useMutation({
-    onSuccess: (res) => {
-      utils.dealer.listVehicles.invalidate();
-      utils.showroom.list.invalidate();
-      utils.inventoryImport.suspiciousPriceCount.invalidate();
-      toast.success(
-        `Fixed ${res.updated} R1 price${res.updated === 1 ? "" : "s"}` +
-          (res.notFound ? ` · ${res.notFound} not matched` : ""),
-      );
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const handleRepairR1 = () => {
-    if (!csv.trim()) {
-      toast.error("Load your CSV first");
-      return;
-    }
-    repairMutation.mutate({ csv });
-  };
 
   const handleImport = () => {
     setImportProgress(5);
@@ -251,21 +227,7 @@ export default function InventoryImportPage() {
           <strong className="text-foreground">Required:</strong>{" "}
           <span className="font-mono text-foreground">title</span> (or{" "}
           <span className="font-mono">make + model</span>) and a valid{" "}
-          <span className="font-mono">price</span>. Rows without a price are skipped — we never
-          default to R1.
-          {suspiciousCount > 0 && (
-            <>
-              {" "}
-              <span className="text-amber-300">
-                {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} in your inventory
-                still show R1 —{" "}
-                <Link href="/dealer/fix-r1-prices" className="underline hover:text-amber-200">
-                  fix them in bulk
-                </Link>
-                .
-              </span>
-            </>
-          )}
+          <span className="font-mono">price</span>. Re-importing the same file updates any vehicles that were missing prices.
         </CardContent>
       </Card>
 
@@ -562,31 +524,10 @@ export default function InventoryImportPage() {
                       disabled={isImporting}
                     >
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {suspiciousCount > 0 ? "Import / repair R1 prices" : "Import"}{" "}
-                      {preview.validRows.length} vehicle
+                      Import {preview.validRows.length} vehicle
                       {preview.validRows.length === 1 ? "" : "s"}
                       {mirrorPhotos ? " + save photos" : ""}
                     </Button>
-                    {suspiciousCount > 0 && (
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        onClick={handleRepairR1}
-                        disabled={repairMutation.isPending || !csv.trim()}
-                      >
-                        {repairMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Repairing R1 prices…
-                          </>
-                        ) : (
-                          <>
-                            <Wrench className="mr-2 h-4 w-4" />
-                            Repair {suspiciousCount} R1 price{suspiciousCount === 1 ? "" : "s"} only
-                          </>
-                        )}
-                      </Button>
-                    )}
                     <p className="text-center text-xs text-muted-foreground">
                       After import, open{" "}
                       <Link href="/dealer/csv-photo" className="text-primary underline">
@@ -609,7 +550,7 @@ export default function InventoryImportPage() {
                         `${lastImport.created} vehicle${lastImport.created === 1 ? "" : "s"} imported`}
                       {lastImport.created > 0 && lastImport.repaired > 0 && " · "}
                       {lastImport.repaired > 0 &&
-                        `${lastImport.repaired} R1 price${lastImport.repaired === 1 ? "" : "s"} repaired`}
+                        `${lastImport.repaired} price${lastImport.repaired === 1 ? "" : "s"} updated`}
                       {lastImport.created === 0 && lastImport.repaired === 0 && "Import complete"}
                     </p>
                     {lastImport.failed.length > 0 && (

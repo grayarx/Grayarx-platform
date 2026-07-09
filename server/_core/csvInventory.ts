@@ -52,15 +52,25 @@ const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
     "price",
     "price zar",
     "price in zar",
+    "price_zar",
+    "price inc vat",
+    "price incl vat",
+    "price including vat",
+    "price ex vat",
+    "web price",
+    "advertised price",
     "asking price",
     "selling price",
     "list price",
     "retail price",
+    "retail",
     "amount",
     "amount zar",
     "priced at",
     "vehicle price",
     "sale price",
+    "total price",
+    "value",
   ],
   km: ["km", "kms", "mileage", "mileage km", "odometer", "odometer km", "odo"],
   fuel: ["fuel", "fuel type", "fueltype"],
@@ -131,6 +141,40 @@ function toNumber(raw: string | undefined): number | null {
   return resolved > 0 ? resolved : null;
 }
 
+/** Parse vehicle price — rejects POA placeholders and R1 junk values. */
+function parsePrice(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (
+    /^(poa|p\.o\.a\.?|tba|tbc|n\/a|na|nil|none|ask|enquire|inquire|contact|call|negotiable)$/i.test(
+      trimmed,
+    )
+  ) {
+    return null;
+  }
+  const n = toNumber(raw);
+  if (n === null || n <= 1) return null;
+  return n;
+}
+
+function inferPriceColumnIndex(header: string[], sampleRows: string[][]): number | null {
+  if (sampleRows.length === 0) return null;
+  let bestIdx: number | null = null;
+  let bestScore = 0;
+  for (let col = 0; col < header.length; col++) {
+    let hits = 0;
+    for (const row of sampleRows) {
+      const p = parsePrice(row[col]);
+      if (p !== null && p >= 10_000) hits++;
+    }
+    if (hits > bestScore) {
+      bestScore = hits;
+      bestIdx = col;
+    }
+  }
+  return bestScore >= Math.max(1, Math.floor(sampleRows.length * 0.4)) ? bestIdx : null;
+}
+
 export function parseInventoryCsv(csv: string): ImportPreview {
   const lines = csv
     .replace(/\r\n/g, "\n")
@@ -154,6 +198,12 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     const idx = resolveColumn(header, HEADER_ALIASES[key]);
     if (idx !== null) colIndex[key] = idx;
   });
+
+  const sampleRows = lines.slice(1, Math.min(lines.length, 12)).map((l) => splitCsvLine(l));
+  if (colIndex.price === undefined) {
+    const inferred = inferPriceColumnIndex(header, sampleRows);
+    if (inferred !== null) colIndex.price = inferred;
+  }
 
   // Title is mandatory for a usable vehicle row, but we can synthesise it
   // from make+model+year if missing.
@@ -199,9 +249,9 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       continue;
     }
 
-    const priceNum = toNumber(get("price"));
+    const priceNum = parsePrice(get("price"));
     if (priceNum === null) {
-      skippedRows.push({ index: i, reason: "Missing or invalid price" });
+      skippedRows.push({ index: i, reason: "Missing or invalid price (need a real ZAR amount, not POA/R1)" });
       continue;
     }
 

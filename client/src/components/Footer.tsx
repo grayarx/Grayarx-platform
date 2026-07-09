@@ -50,6 +50,7 @@ export default function Footer() {
               <li><Link href="/dpa" className="hover:text-primary transition-colors">Data Processing</Link></li>
               <li><Link href="/aup" className="hover:text-primary transition-colors">Acceptable Use</Link></li>
               <li><Link href="/sla" className="hover:text-primary transition-colors">SLA (99.5%)</Link></li>
+              <li><Link href="/credit-disclaimer" className="hover:text-primary transition-colors">Credit Disclaimer</Link></li>
             </ul>
           </div>
 

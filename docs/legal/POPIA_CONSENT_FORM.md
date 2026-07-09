@@ -15,6 +15,8 @@ By signing this Form, you confirm that you understand your obligations under POP
 
 ## 2. Dealership Information
 
+Complete this section for each signing dealership:
+
 | Field | Details |
 |---|---|
 | **Dealership Name** | [TO BE COMPLETED BY DEALERSHIP] |
@@ -23,6 +25,17 @@ By signing this Form, you confirm that you understand your obligations under POP
 | **Contact Email** | [TO BE COMPLETED BY DEALERSHIP] |
 | **Contact Phone** | [TO BE COMPLETED BY DEALERSHIP] |
 | **Registered Address** | [TO BE COMPLETED BY DEALERSHIP] |
+
+## 2.1 Processor (GrayArx) Details
+
+| Field | Details |
+|---|---|
+| **Legal Name** | GrayArx (Pty) Ltd |
+| **Enterprise Number** | 2026/407647/07 |
+| **Tax Reference** | 9172598295 |
+| **VAT Status** | Not VAT-registered (July 2026) |
+| **Registered Address** | Sjampanije Street, Roodepoort, Gauteng 1736, South Africa |
+| **Information Officer** | privacy@grayarx.com |
 
 ---
 
@@ -162,9 +175,8 @@ The dealership acknowledges that GrayArx shares personal information with the fo
 - **Amazon Web Services (AWS)** — Cloud hosting and data storage
 - **Stripe** — Payment processing
 - **Twilio** — SMS delivery
-- **SendGrid** — Email delivery
-- **Google Analytics** — Analytics and usage tracking
-- **Manus Forge API** — AI/LLM services
+- **Resend** — Email delivery
+- **OpenAI** — AI/LLM services (when enabled)
 
 All sub-processors are bound by confidentiality agreements and process data only as instructed.
 

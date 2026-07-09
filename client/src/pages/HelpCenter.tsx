@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "How do the AI agents work?",
-    a: "Each agent handles a specific job: Mia (email), Themba (calls), Lerato (bookings), Sipho (prospecting), Kagiso (improvements), and Nala (WhatsApp). Click any agent card on the Agents page to see their live activity feed.",
+    a: "Each agent handles a specific job: Nala (WhatsApp), Mia (email), Lerato (bookings), Sipho (prospecting), Tumi (trade-in), and Kagiso (improvements). Outbound AI calling is a future opt-in — not part of the pilot. Click any agent card on the Agents page to see their live activity feed.",
   },
   {
     q: "Why didn't I receive a confirmation email?",

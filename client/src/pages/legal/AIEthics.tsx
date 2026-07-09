@@ -9,12 +9,12 @@ export default function AIEthics() {
     >
       <h2>Our principles</h2>
       <p>
-        GrayArx's AI agents work autonomously on behalf of dealerships — sending emails, taking calls, and booking meetings with real customers. That responsibility demands clear principles. These commitments apply to every model and feature we ship.
+        GrayArx's AI agents work autonomously on behalf of dealerships — drafting emails, WhatsApp replies, and booking requests with real customers. That responsibility demands clear principles. These commitments apply to every model and feature we ship.
       </p>
 
       <h2>1. Disclosure</h2>
       <p>
-        Our AI agents identify themselves as AI when asked directly. Voice agents use natural-sounding speech but do not impersonate specific human employees. Email agents sign communications with the dealership name and include a clear contact path to a human team member.
+        Our AI agents identify themselves as AI when asked directly. Email and WhatsApp agents sign communications with the dealership name and include a clear contact path to a human team member. Outbound voice calling is only offered when a dealership explicitly opts in.
       </p>
 
       <h2>2. Human in the loop</h2>

@@ -87,9 +87,17 @@ export function grayArxEmailHeader(subtitle = "AI Platform"): string {
 </table>`;
 }
 
-export function grayArxEmailFooter(): string {
+export function grayArxEmailFooter(opts?: { marketingUnsubscribe?: boolean }): string {
   const url = grayArxAppUrl();
   const host = url.replace(/^https?:\/\//, "");
+  const unsubscribe = opts?.marketingUnsubscribe
+    ? `<span style="display:block;font-size:11px;color:#9ca3af;line-height:1.5;margin-top:12px;max-width:520px;margin-left:auto;margin-right:auto;">
+        You received this because your dealership contact email is listed publicly for business enquiries.
+        Reply <strong>unsubscribe</strong> or email
+        <a href="mailto:hello@grayarx.com?subject=Unsubscribe%20pilot%20outreach" style="color:#d4af37;text-decoration:none;">hello@grayarx.com</a>
+        to opt out of further pilot outreach (POPIA s.69).
+      </span>`
+    : "";
   return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background-color:#0a0a0c;">
   <tr>
@@ -97,14 +105,19 @@ export function grayArxEmailFooter(): string {
   </tr>
   <tr>
     <td align="center" style="padding:24px 32px;font-family:${FONT};">
-      <span style="display:block;font-size:12px;color:#6b7280;line-height:1.5;margin-bottom:8px;">© ${new Date().getFullYear()} GrayArx · POPIA compliant</span>
+      <span style="display:block;font-size:12px;color:#6b7280;line-height:1.5;margin-bottom:8px;">© ${new Date().getFullYear()} GrayArx (Pty) Ltd · POPIA compliant · AI-assisted communications disclosed</span>
       <span style="display:block;font-size:12px;line-height:1.5;">
+        <a href="${url}/privacy-policy" style="color:#d4af37;text-decoration:none;">Privacy</a>
+        <span style="color:#4b5563;">&nbsp;·&nbsp;</span>
+        <a href="${url}/terms" style="color:#d4af37;text-decoration:none;">Terms</a>
+        <span style="color:#4b5563;">&nbsp;·&nbsp;</span>
         <a href="${url}" style="color:#d4af37;text-decoration:none;">${host}</a>
         <span style="color:#4b5563;">&nbsp;·&nbsp;</span>
         <a href="${url}/help" style="color:#d4af37;text-decoration:none;">Help</a>
         <span style="color:#4b5563;">&nbsp;·&nbsp;</span>
         <a href="tel:+27794915187" style="color:#d4af37;text-decoration:none;">079 491 5187</a>
       </span>
+      ${unsubscribe}
     </td>
   </tr>
 </table>`;
@@ -134,7 +147,11 @@ export function grayArxEmailBullet(text: string): string {
 }
 
 /** Full-width email shell — pass inner body rows as HTML string */
-export function grayArxEmailLayout(bodyHtml: string, headerSubtitle = "AI Platform"): string {
+export function grayArxEmailLayout(
+  bodyHtml: string,
+  headerSubtitle = "AI Platform",
+  opts?: { marketingUnsubscribe?: boolean },
+): string {
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -155,7 +172,7 @@ export function grayArxEmailLayout(bodyHtml: string, headerSubtitle = "AI Platfo
             <td style="padding:36px 32px 32px;font-family:${FONT};">${bodyHtml}</td>
           </tr>
           <tr>
-            <td style="padding:0;">${grayArxEmailFooter()}</td>
+            <td style="padding:0;">${grayArxEmailFooter(opts)}</td>
           </tr>
         </table>
       </td>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Settings2,
@@ -6,9 +6,6 @@ import {
   Sparkles,
   Loader2,
   Save,
-  AlertTriangle,
-  Wrench,
-  Upload,
   CheckCircle2,
   Eye,
   Palette,
@@ -23,27 +20,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProgressBar } from "@/components/LoadingAnimations";
 import { OWNER_PHONE_E164 } from "@/lib/contact";
 import type { ShowroomThemeId } from "@shared/showroomThemes";
 
 export default function DealerSettings() {
   const utils = trpc.useUtils();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: deployment, isLoading: loadingDeployment } = trpc.chatbot.getDeployment.useQuery();
   const { data: appearance, isLoading: loadingAppearance } = trpc.dealer.getAppearance.useQuery();
-  const { data: suspicious, isLoading: loadingSuspicious } =
-    trpc.inventoryImport.suspiciousPriceCount.useQuery();
 
   const [webChatEnabled, setWebChatEnabled] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [showroomTheme, setShowroomTheme] = useState<ShowroomThemeId>("classic");
   const [brandAccentColor, setBrandAccentColor] = useState("#d4af37");
-  const [repairCsv, setRepairCsv] = useState<string | null>(null);
-  const [repairFileName, setRepairFileName] = useState<string | null>(null);
-  const [repairProgress, setRepairProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (appearance) {
@@ -80,25 +70,6 @@ export default function DealerSettings() {
     onError: (e) => toast.error(e.message),
   });
 
-  const repairMutation = trpc.inventoryImport.repairPrices.useMutation({
-    onSuccess: (res) => {
-      setRepairProgress(100);
-      setTimeout(() => setRepairProgress(null), 600);
-      utils.inventoryImport.suspiciousPriceCount.invalidate();
-      utils.dealer.listVehicles.invalidate();
-      utils.showroom.list.invalidate();
-      toast.success(
-        `Fixed ${res.updated} price${res.updated === 1 ? "" : "s"}` +
-          (res.notFound ? ` · ${res.notFound} not matched` : "") +
-          (res.alreadyCorrect ? ` · ${res.alreadyCorrect} already correct` : ""),
-      );
-    },
-    onError: (e) => {
-      setRepairProgress(null);
-      toast.error(e.message);
-    },
-  });
-
   const handleSave = () => {
     if (whatsappEnabled && !whatsappPhone.trim()) {
       toast.error("Enter a WhatsApp number before enabling WhatsApp icons");
@@ -117,34 +88,10 @@ export default function DealerSettings() {
     });
   };
 
-  const loadRepairFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      setRepairCsv(String(reader.result ?? ""));
-      setRepairFileName(file.name);
-    };
-    reader.readAsText(file);
-  };
-
-  const handleRepair = () => {
-    if (!repairCsv?.trim()) {
-      toast.error("Upload the same CSV you imported originally");
-      return;
-    }
-    setRepairProgress(10);
-    repairMutation.mutate({ csv: repairCsv });
-    const id = setInterval(() => {
-      setRepairProgress((p) => (p === null || p >= 90 ? p : p + 6));
-    }, 300);
-    setTimeout(() => clearInterval(id), 60_000);
-  };
-
-  const suspiciousCount = suspicious?.count ?? 0;
-
   return (
     <DealerShell
       title="Settings"
-      subtitle="Control your public showroom look, contact icons, chat options, and inventory fixes."
+      subtitle="Control your public showroom look and contact icons."
     >
       <Card className="border-primary/15 mb-6">
         <CardHeader>
@@ -219,7 +166,7 @@ export default function DealerSettings() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="max-w-2xl">
         {/* Showroom contact icons */}
         <Card className="border-primary/15">
           <CardHeader>
@@ -353,105 +300,6 @@ export default function DealerSettings() {
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
-
-        {/* R1 price repair */}
-        <Card className="border-amber-500/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Wrench className="h-5 w-5 text-amber-400" />
-              Fix R1 prices
-            </CardTitle>
-            <CardDescription>
-              If vehicles imported at R1 by mistake, re-upload the original CSV to patch prices
-              without re-importing everything.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!loadingSuspicious && suspiciousCount > 0 && (
-              <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-200">
-                    {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} priced at R1 or less
-                  </p>
-                  <p className="text-xs text-amber-200/70 mt-1">
-                    These could show incorrect prices on your showroom. Upload your source CSV below
-                    to fix them in one click.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {!loadingSuspicious && suspiciousCount === 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-300">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                No suspicious R1 prices detected in your inventory.
-              </div>
-            )}
-
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") fileRef.current?.click();
-              }}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/25 hover:border-primary/50 hover:bg-primary/5 px-6 py-8 cursor-pointer transition-all"
-            >
-              <Upload className="h-8 w-8 text-primary/60 mb-2" />
-              <p className="text-sm font-medium">
-                {repairFileName ?? "Upload original CSV"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Same file you used for the bulk import
-              </p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) loadRepairFile(f);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-
-            {repairProgress !== null && (
-              <ProgressBar progress={repairProgress} label="Repairing prices…" animated />
-            )}
-
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={handleRepair}
-              disabled={!repairCsv || repairMutation.isPending}
-            >
-              {repairMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Repairing prices…
-                </>
-              ) : (
-                <>
-                  <Wrench className="mr-2 h-4 w-4" />
-                  Repair prices from CSV
-                </>
-              )}
-            </Button>
-
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Matches vehicles by stock ID, then make/model/year, then title. Only updates vehicles
-              currently priced at R1 or less — won&apos;t overwrite correct prices. Or use the
-              dedicated{" "}
-              <Link href="/dealer/fix-r1-prices" className="text-primary underline">
-                Fix R1 prices
-              </Link>{" "}
-              page.
-            </p>
           </CardContent>
         </Card>
       </div>

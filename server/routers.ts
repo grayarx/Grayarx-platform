@@ -112,7 +112,7 @@ import {
   listMarketGuideLive,
 } from "./db";
 import { storagePut } from "./storage";
-import { AGENTS, AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
+import { AGENTS, AGENT_LIST, PILOT_AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
 import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
@@ -1451,74 +1451,23 @@ export const appRouter = router({
         const prospect = await getProspect(input.id);
         if (!prospect) return { success: false, error: "Prospect not found" } as const;
 
-        // Mark queued first so the dashboard reflects the handoff immediately.
+        // Pilot: queue for human follow-up — outbound AI calling is opt-in only (future).
         await updateProspectStatus(prospect.id, "queued_for_call");
         await logAgentActivity({
           agentId: "prospector",
           action: "handoff",
           subjectType: "prospect",
           subjectId: prospect.id,
-          summary: `Sipho handed ${prospect.dealershipName} (score ${prospect.score}) to Themba for an outbound call.`,
+          summary: `Sipho flagged ${prospect.dealershipName} (score ${prospect.score}) for your team to follow up.`,
           payload: { rationale: prospect.rationale, phone: prospect.phone },
         });
 
-        if (!prospect.phone) {
-          return { success: true, queued: true, called: false, reason: "No phone number on prospect" } as const;
-        }
-
-        // Log the attempt up front so we have an audit row even on failure.
-        const attemptId = await createCallAttempt({
-          prospectId: prospect.id,
-          provider: "twilio",
-          toNumber: prospect.phone,
-          fromNumber: process.env.TWILIO_FROM_NUMBER ?? null,
-          status: "queued",
-          notes: prospect.rationale ?? null,
-        });
-        const insertedId = (attemptId as unknown as { insertId?: number })?.insertId;
-
-        const result = await placeOutboundCall({
-          toNumber: prospect.phone,
-          prospectName: prospect.dealershipName,
-          rationale: prospect.rationale ?? undefined,
-        });
-
-        if ("skipped" in result && result.skipped) {
-          if (insertedId) {
-            await updateCallAttempt(insertedId, { status: "skipped", errorMessage: result.reason });
-          }
-          await logAgentActivity({
-            agentId: "calling",
-            action: "call_skipped",
-            subjectType: "prospect",
-            subjectId: prospect.id,
-            summary: `Themba queued ${prospect.dealershipName} but couldn't dial — ${result.reason}`,
-          });
-          return { success: true, queued: true, called: false, reason: result.reason } as const;
-        }
-        if ("ok" in result && result.ok) {
-          await logAgentActivity({
-            agentId: "calling",
-            action: "call_initiated",
-            subjectType: "prospect",
-            subjectId: prospect.id,
-            summary: `Themba is calling ${prospect.dealershipName} on ${prospect.phone}.`,
-            payload: { sid: result.sid, status: result.status },
-          });
-          if (insertedId) {
-            await updateCallAttempt(insertedId, {
-              status: "initiated",
-              providerCallSid: result.sid,
-            });
-          }
-          await updateProspectStatus(prospect.id, "called");
-          return { success: true, queued: true, called: true, sid: result.sid } as const;
-        }
-        const errorMsg = "error" in result ? result.error : "Unknown calling error";
-        if (insertedId) {
-          await updateCallAttempt(insertedId, { status: "failed", errorMessage: errorMsg });
-        }
-        return { success: false, queued: true, called: false, error: errorMsg } as const;
+        return {
+          success: true,
+          queued: true,
+          called: false,
+          reason: "Outbound AI calling is not enabled in the pilot — follow up via email, WhatsApp, or your own phone.",
+        } as const;
       }),
 
     callHistory: protectedProcedure
@@ -1636,14 +1585,15 @@ export const appRouter = router({
      * live status (action count + last action) so the UI can render cards.
      */
     list: protectedProcedure.query(async ({ ctx }) => {
-      if (!isFounderOrAdmin(ctx.user)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+      if (!isDealerConsoleUser(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
       }
+      const roster = PILOT_AGENT_LIST;
       const stats = await getAgentStats();
       const empty = { actionCount: 0, lastActionAt: null as number | null };
       return {
         primaryInbox: PRIMARY_INBOX,
-        agents: AGENT_LIST.map((persona) => {
+        agents: roster.map((persona) => {
           const s = stats[persona.id] ?? empty;
           return {
             ...persona,
@@ -1667,14 +1617,16 @@ export const appRouter = router({
           .optional(),
       )
       .query(async ({ input, ctx }) => {
-        if (!isFounderOrAdmin(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        if (!isDealerConsoleUser(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
         }
         const rows = await listAgentActivity({
-          agentId: input?.agentId,
+          agentId: input?.agentId === "calling" ? undefined : input?.agentId,
           limit: input?.limit ?? 100,
         });
-        return rows.map((r) => ({
+        return rows
+          .filter((r) => r.agentId !== "calling")
+          .map((r) => ({
           id: r.id,
           agentId: r.agentId,
           action: r.action,
@@ -1707,8 +1659,14 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        if (!isFounderOrAdmin(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        if (!isDealerConsoleUser(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
+        }
+        if (input.agentId === "calling") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Outbound calling is not enabled in the pilot.",
+          });
         }
         const persona = AGENTS[input.agentId];
         const who = ctx.user.name || ctx.user.email || "Dealer";
@@ -4161,6 +4119,16 @@ export const appRouter = router({
 
 function isFounderOrAdmin(user: any): boolean {
   return user && (user.role === "founder" || user.role === "admin");
+}
+
+function isDealerConsoleUser(user: any): boolean {
+  return (
+    user &&
+    (user.role === "founder" ||
+      user.role === "admin" ||
+      user.role === "dealer_owner" ||
+      user.role === "dealer_consultant")
+  );
 }
 
 export type AppRouter = typeof appRouter;

@@ -124,7 +124,9 @@ ${bullets.map((b) => grayArxEmailBullet(escapeHtml(b))).join("")}
   <span style="font-size:13px;color:#6b7280;">Founder, GrayArx</span>
 </p>`;
 
-  return grayArxEmailLayout(body, "Dealership Operating System");
+  return grayArxEmailLayout(body, "Dealership Operating System", {
+    marketingUnsubscribe: true,
+  });
 }
 
 export function generateSegmentPilotEmailText(vars: TemplateVars): string {
@@ -149,7 +151,12 @@ Questions: reply here or WhatsApp 079 491 5187.
 
 Henrique Marx
 Founder, GrayArx
-${appUrl}`;
+${appUrl}
+
+---
+GrayArx (Pty) Ltd · POPIA compliant
+Privacy: ${appUrl}/privacy-policy · Terms: ${appUrl}/terms
+Unsubscribe from pilot outreach: reply "unsubscribe" or email hello@grayarx.com`;
 }
 
 export function subjectForSegment(segment: PilotOutreachSegment): string {

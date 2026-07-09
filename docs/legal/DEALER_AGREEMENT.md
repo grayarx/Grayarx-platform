@@ -8,7 +8,7 @@
 ## 1. Parties & Definitions
 
 ### 1.1 Parties
-- **"GrayArx"** means GrayArx (Pty) Ltd, a South African private company
+- **"GrayArx"** means GrayArx (Pty) Ltd (Enterprise No. **2026/407647/07**), a South African private company registered on 23 May 2026, with registered address at Sjampanije Street, Roodepoort, Gauteng 1736, South Africa. Tax reference: **9172598295**. GrayArx is **not VAT-registered**; subscription fees are quoted and invoiced excluding VAT unless registration status changes.
 - **"Dealer"** means the motor vehicle dealership entering into this Agreement
 - **"Agreement"** means this Dealer Agreement, including all exhibits and schedules
 

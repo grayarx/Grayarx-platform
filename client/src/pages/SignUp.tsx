@@ -9,7 +9,7 @@ import { FormErrorBoundary } from "@/components/FormErrorBoundary";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Signup() {
   const { user, isLoading } = useAuth();
@@ -21,6 +21,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const signupMutation = trpc.auth.signupWithEmail.useMutation();
@@ -42,6 +43,11 @@ export default function Signup() {
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!acceptTerms) {
+      setError("Please accept the Terms of Service and Privacy Policy");
       return;
     }
 
@@ -187,9 +193,29 @@ export default function Signup() {
 
         <FormErrorBoundary error={error} onDismiss={() => setError(null)} />
 
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <Checkbox
+            id="acceptTerms"
+            checked={acceptTerms}
+            onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+            className="mt-0.5 border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <span className="text-xs text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
+            I agree to the{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy-policy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !acceptTerms}
           className="btn-gold w-full h-12 font-semibold uppercase tracking-wider text-sm mt-2"
         >
           {isSubmitting ? (

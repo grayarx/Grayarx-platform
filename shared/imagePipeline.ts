@@ -5,7 +5,7 @@
 
 export const IMAGE_WIDTHS = [480, 768, 1200, 1600, 1920] as const;
 
-export const LUXURY_HERO_FALLBACK = "/hero-car.jpg";
+export const LUXURY_HERO_FALLBACK = "/corvette-exterior.jpg";
 
 export const LOCAL_EDITORIAL_IMAGES = [
   LUXURY_HERO_FALLBACK,
@@ -35,6 +35,26 @@ export function isStockPhotoUrl(url: string): boolean {
     u.includes("placeholder") ||
     u.includes("picsum.photos")
   );
+}
+
+/** Configurator / stock renders that carry vendor watermarks — not for public hero use */
+export function isWatermarkedRenderUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  return (
+    u.includes("imagin.studio") ||
+    u.includes("imaginauto") ||
+    u.includes("magr") ||
+    u.includes("watermark") ||
+    u.includes("getty") ||
+    u.includes("shutterstock") ||
+    u.includes("depositphotos")
+  );
+}
+
+export function isHeroSafePhotoUrl(url: string): boolean {
+  if (!url?.trim()) return false;
+  if (isLocalAsset(url)) return true;
+  return !isStockPhotoUrl(url) && !isWatermarkedRenderUrl(url);
 }
 
 export function isLocalAsset(url: string): boolean {

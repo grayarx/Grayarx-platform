@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
     >
       <h2>1. Who we are</h2>
       <p>
-        GrayArx (Pty) Ltd ("GrayArx", "we", "us", or "our") is the responsible party (data controller) for your personal information under the Protection of Personal Information Act, 2013 (POPIA). Our registered office is in Johannesburg, South Africa. You can contact our Information Officer at <strong>privacy@grayarx.com</strong>.
+        GrayArx (Pty) Ltd (Enterprise No. 2026/407647/07) is the responsible party (data controller) for your personal information under the Protection of Personal Information Act, 2013 (POPIA). Our registered address is Sjampanije Street, Roodepoort, Gauteng 1736, South Africa. You can contact our Information Officer at <strong>privacy@grayarx.com</strong>.
       </p>
 
       <h2>2. What information we collect</h2>
@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
         <li><strong>Lead and customer information you upload or that customers submit:</strong> name, contact details, vehicle preferences, conversation transcripts, consent records.</li>
         <li><strong>Usage data:</strong> log-in events, feature usage, IP address, device and browser metadata.</li>
         <li><strong>Vehicle inventory data:</strong> make, model, year, price, images, specifications.</li>
-        <li><strong>Communications:</strong> emails, voice call recordings, WhatsApp messages, SMS — handled by our AI agents on your behalf.</li>
+        <li><strong>Communications:</strong> emails, WhatsApp messages, and SMS — handled by our AI agents on your behalf when enabled.</li>
       </ul>
 
       <h2>3. Why we collect it (lawful basis)</h2>
@@ -33,7 +33,7 @@ export default function PrivacyPolicy() {
 
       <h2>4. How we use AI</h2>
       <p>
-        Our AI agents (Email, Calling, and Booking) process personal information to draft and send communications, qualify leads, and book appointments. We use a combination of large language models and our own fine-tuned models trained on dealership data with appropriate consent. <strong>We do not use your customers' personal data to train foundation models for third parties.</strong> Voice calls are transcribed in real time and the audio is retained only as long as necessary for quality and compliance, after which it is deleted.
+        Our AI agents (Email, WhatsApp, and Booking) process personal information to draft and send communications, qualify leads, and book appointments. We use a combination of large language models and our own fine-tuned models trained on dealership data with appropriate consent. <strong>We do not use your customers' personal data to train foundation models for third parties.</strong> Outbound AI voice calling is not part of the pilot unless explicitly enabled later.
       </p>
 
       <h2>5. Sharing your information</h2>
@@ -92,7 +92,8 @@ export default function PrivacyPolicy() {
       <h2>13. Contact</h2>
       <p>
         Information Officer<br />
-        GrayArx (Pty) Ltd<br />
+        GrayArx (Pty) Ltd · Enterprise No. 2026/407647/07<br />
+        Sjampanije Street, Roodepoort, Gauteng 1736, South Africa<br />
         Email: <strong>privacy@grayarx.com</strong><br />
         Information Regulator (SA): <a href="https://inforegulator.org.za" target="_blank" rel="noopener">inforegulator.org.za</a>
       </p>

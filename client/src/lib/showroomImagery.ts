@@ -1,4 +1,4 @@
-import { vehiclePrimaryUrl, isStockPhotoUrl, LUXURY_HERO_FALLBACK, LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
+import { vehiclePrimaryUrl, isStockPhotoUrl, isWatermarkedRenderUrl, LUXURY_HERO_FALLBACK, LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
 import { scoreListingDeal } from "@shared/priceIntelligence";
 
 export type InventoryRow = {
@@ -19,7 +19,7 @@ export function pickShowroomPhotos(vehicles: InventoryRow[]): InventoryRow[] {
     .filter((v) => v.status === "available" || !v.status)
     .filter((v) => {
       const url = vehiclePrimaryUrl(v);
-      return url && !isStockPhotoUrl(url);
+      return url && !isStockPhotoUrl(url) && !isWatermarkedRenderUrl(url);
     })
     .sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0));
 }

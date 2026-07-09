@@ -10,15 +10,21 @@ interface LogoProps {
 export const LOGO_URL = logoIconSrc;
 
 export default function Logo({ size = 48, className }: LogoProps) {
+  const inset = Math.round(size * 0.18);
   return (
-    <img
-      src={LOGO_URL}
-      alt="GrayArx"
-      width={size}
-      height={size}
-      className={cn("select-none rounded-[22%]", className)}
+    <span
+      className={cn("inline-flex shrink-0 items-center justify-center", className)}
       style={{ width: size, height: size }}
-      draggable={false}
-    />
+    >
+      <img
+        src={LOGO_URL}
+        alt="GrayArx"
+        width={size - inset * 2}
+        height={size - inset * 2}
+        className="select-none object-contain"
+        style={{ width: size - inset * 2, height: size - inset * 2 }}
+        draggable={false}
+      />
+    </span>
   );
 }

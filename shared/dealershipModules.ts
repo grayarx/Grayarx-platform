@@ -82,7 +82,7 @@ export const DEALERSHIP_MODULES: DealershipModuleSpec[] = [
   {
     id: "voice_agent",
     title: "Voice Agent (Themba)",
-    description: "AI voice call drafts and outbound dialler queue.",
+    description: "Future opt-in — outbound AI calling. Disabled during pilot.",
     category: "agents",
     toggleable: true,
   },

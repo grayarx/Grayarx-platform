@@ -25,17 +25,19 @@ describe("parseInventoryCsv", () => {
     expect(res.validRows[0].title).toBe("2022 Toyota Corolla");
   });
 
-  it("skips rows with missing or zero price", () => {
+  it("skips rows with missing, zero, POA, or R1 placeholder prices", () => {
     const csv = [
       "title,price",
       "Ford Fiesta,",
       "Hyundai i20,0",
+      "Cheap Car,1",
+      "POA Car,POA",
       "BMW 320i,489000",
     ].join("\n");
     const res = parseInventoryCsv(csv);
     expect(res.validRows).toHaveLength(1);
     expect(res.validRows[0].title).toBe("BMW 320i");
-    expect(res.skippedRows.length).toBe(2);
+    expect(res.skippedRows.length).toBe(4);
   });
 
   it("deduplicates by stock/vin/registration number", () => {

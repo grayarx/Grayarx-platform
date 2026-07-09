@@ -259,7 +259,9 @@ export default function Onboarding() {
 
               <p className="text-xs text-muted-foreground text-center">
                 By submitting, you agree to our{" "}
-                <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>{" "}
+                <a href="/terms" className="text-primary hover:underline">Terms of Service</a>,{" "}
+                <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>, and{" "}
+                <a href="/dpa" className="text-primary hover:underline">Data Processing Agreement</a>,{" "}
                 and consent to processing your data for the purpose of evaluating this application.
               </p>
             </CardContent>

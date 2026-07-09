@@ -53,7 +53,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-themba-a4kg3nBuYDzsMeGY8onqkm.webp",
     description:
-      "Places polite, on-brand outbound calls in a South African English voice. Qualifies buyers and pitches dealership prospects handed off by the Prospector.",
+      "Optional future add-on — outbound AI calling for dealerships that explicitly opt in. Not active during the pilot; your team handles calls.",
   },
   booking: {
     id: "booking",
@@ -161,6 +161,9 @@ export const AGENT_LIST: AgentPersona[] = [
   AGENTS.preapproval,
   AGENTS.tradein,
 ];
+
+/** Pilot roster — excludes outbound voice until a dealership opts in. */
+export const PILOT_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter((a) => a.id !== "calling");
 
 /**
  * The single inbound mailbox dealers/customers can reply to.

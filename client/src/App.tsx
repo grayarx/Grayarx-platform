@@ -30,6 +30,7 @@ import { SocialLoginSetup } from "./pages/SocialLoginSetup";
 import { AdminUsers } from "./pages/AdminUsers";
 import { AdminAuditLog } from "./pages/AdminAuditLog";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
+import { DealerRouteGuard } from "./components/DealerRouteGuard";
 // import { OAuthCallbackPage } from "./pages/OAuthCallback";
 // import { TwoFactorSetupPage } from "./pages/TwoFactorSetupPage";
 // import { PasswordResetFlowPage } from "./pages/PasswordResetFlow";
@@ -101,7 +102,6 @@ import AdminMarketGuide from "./pages/admin/AdminMarketGuide";
 import AdminPilotDashboard from "./pages/admin/AdminPilotDashboard";
 import AgentsEnhanced from "./pages/AgentsEnhanced";
 import CSVPhotoManager from "./pages/CSVPhotoManager";
-import R1PriceManager from "./pages/R1PriceManager";
 // import { ChatbotAnalyticsDashboard } from "./pages/ChatbotAnalyticsDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminDashboardEnhanced from "./pages/AdminDashboardEnhanced";
@@ -129,6 +129,7 @@ import AIEthics from "./pages/legal/AIEthics";
 import DPA from "./pages/legal/DPA";
 import AUP from "./pages/legal/AUP";
 import SLA from "./pages/legal/SLA";
+import CreditDisclaimer from "./pages/legal/CreditDisclaimer";
 import { POPIAConsentModal } from "./components/POPIAConsentModal";
 import { POPIAReconfirmationBanner } from "./components/POPIAReconfirmationBanner";
 import { usePopiaConsent } from "./hooks/usePopiaConsent";
@@ -194,16 +195,18 @@ function Router() {
       <Route path="/dealer/trade-ins" component={TradeInNetwork} />
       <Route path="/dealer/inventory-management" component={InventoryManagementPage} />
       <Route path="/dealer/agents">
-        <AdminRouteGuard><Agents /></AdminRouteGuard>
+        <DealerRouteGuard><Agents /></DealerRouteGuard>
       </Route>
       <Route path="/dealer/network" component={DealerNetwork} />
       <Route path="/dealer/email-sequences" component={EmailSequences} />
       <Route path="/dealer/analytics" component={AnalyticsDashboard} />
       <Route path="/dealer/agents-enhanced">
-        <AdminRouteGuard><AgentsEnhanced /></AdminRouteGuard>
+        <DealerRouteGuard><AgentsEnhanced /></DealerRouteGuard>
       </Route>
       <Route path="/dealer/csv-photo" component={CSVPhotoManager} />
-      <Route path="/dealer/fix-r1-prices" component={R1PriceManager} />
+      <Route path="/dealer/fix-r1-prices">
+        <Redirect to="/dealer/inventory/import" />
+      </Route>
       <Route path="/dealer/revenue" component={RevenueDashboard} />
       <Route path="/dealer/support-agent" component={SupportAgentCustomization} />
       <Route path="/dealer/conversation-insights" component={InsightsDashboard} />
@@ -327,6 +330,7 @@ function Router() {
       <Route path="/dpa" component={DPA} />
       <Route path="/aup" component={AUP} />
       <Route path="/sla" component={SLA} />
+      <Route path="/credit-disclaimer" component={CreditDisclaimer} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
@@ -335,12 +339,40 @@ function Router() {
 }
 
 function AppContent() {
-  // Disabled POPIA consent check due to database table issues
-  // const { showModal, setShowModal, needsReconfirmation, handleSign, handleReconfirm, isLoading, consentStatus } = usePopiaConsent();
+  const {
+    showModal,
+    setShowModal,
+    needsReconfirmation,
+    handleSign,
+    handleReconfirm,
+    isLoading,
+    consentStatus,
+  } = usePopiaConsent();
+
+  const consentId =
+    consentStatus && "consentId" in consentStatus ? consentStatus.consentId : undefined;
 
   return (
     <>
-      {/* POPIA consent modal disabled */}
+      <POPIAConsentModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSign={handleSign}
+        isLoading={isLoading}
+      />
+      {needsReconfirmation && consentId != null && (
+        <div className="fixed top-20 left-0 right-0 z-50 px-4 max-w-3xl mx-auto">
+          <POPIAReconfirmationBanner
+            onReconfirm={() => handleReconfirm(consentId)}
+            isLoading={isLoading}
+            daysUntilExpiry={
+              consentStatus && "daysUntilExpiry" in consentStatus
+                ? consentStatus.daysUntilExpiry
+                : undefined
+            }
+          />
+        </div>
+      )}
       <OfflineIndicator />
       <PWAInstallPrompt />
       <Router />

@@ -12,7 +12,6 @@ import {
   Upload,
   Settings,
   Store,
-  AlertTriangle,
 } from "lucide-react";
 import {
   AreaChart,
@@ -80,8 +79,6 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = trpc.dealer.stats.useQuery();
   const { data: activity } = trpc.dealer.activity.useQuery();
   const { data: trend } = trpc.dealer.leadsTrend.useQuery();
-  const { data: suspiciousData } = trpc.inventoryImport.suspiciousPriceCount.useQuery();
-  const suspiciousCount = suspiciousData?.count ?? 0;
 
   // Format trend for chart (fill blanks)
   const trendData = (trend ?? []).map((t) => ({
@@ -116,7 +113,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { href: "/dealer/inventory/import", icon: Upload, label: "Import CSV", hint: "Bulk stock upload" },
-          { href: "/dealer/settings", icon: Settings, label: "Settings", hint: "Chat icons & R1 fix" },
+          { href: "/dealer/settings", icon: Settings, label: "Settings", hint: "Showroom & WhatsApp" },
           { href: "/showroom", icon: Store, label: "View showroom", hint: "Public stock page" },
           { href: "/dealer/inventory", icon: Car, label: "Inventory", hint: "Manage vehicles" },
         ].map((action, i) => (
@@ -141,32 +138,6 @@ export default function Dashboard() {
           </motion.div>
         ))}
       </div>
-
-      {(suspiciousCount > 0) && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-wrap items-center justify-between gap-3"
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-amber-200">
-                {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} with missing or R1 pricing
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                Customers see POA instead — upload your CSV to repair prices in bulk.
-              </div>
-            </div>
-          </div>
-          <Link
-            href="/dealer/fix-r1-prices"
-            className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2"
-          >
-            Fix now →
-          </Link>
-        </motion.div>
-      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

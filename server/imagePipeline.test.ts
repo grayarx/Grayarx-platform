@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildSrcSet,
   isStockPhotoUrl,
+  isWatermarkedRenderUrl,
+  isHeroSafePhotoUrl,
   mergeVehicleGallery,
   optimizeImageUrl,
   parseMultiPhotoField,
@@ -31,6 +33,13 @@ describe("imagePipeline", () => {
   it("detects stock photo hosts", () => {
     expect(isStockPhotoUrl("https://images.unsplash.com/x")).toBe(true);
     expect(isStockPhotoUrl("https://cdn.dealer.co.za/car.jpg")).toBe(false);
+  });
+
+  it("detects watermarked configurator renders", () => {
+    expect(isWatermarkedRenderUrl("https://cdn.imagin.studio/car.png")).toBe(true);
+    expect(isWatermarkedRenderUrl("https://example.com/magr-studio-render.jpg")).toBe(true);
+    expect(isHeroSafePhotoUrl("https://cdn.dealer.co.za/car.jpg")).toBe(true);
+    expect(isHeroSafePhotoUrl("https://cdn.imagin.studio/car.png")).toBe(false);
   });
 
   it("merges gallery without duplicates", () => {

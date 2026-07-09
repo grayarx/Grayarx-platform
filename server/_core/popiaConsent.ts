@@ -76,6 +76,7 @@ export async function checkPopiaConsentStatus(userId: number, dealershipId: numb
       status: 'expired',
       message: 'POPIA consent has expired and needs to be re-confirmed',
       needsAction: true,
+      consentId: latest.id,
       expiresAt: latest.expiresAt,
     };
   }
@@ -84,6 +85,7 @@ export async function checkPopiaConsentStatus(userId: number, dealershipId: numb
     status: 'active',
     message: 'POPIA consent is current',
     needsAction: false,
+    consentId: latest.id,
     signedAt: latest.signedAt,
     expiresAt: latest.expiresAt,
     daysUntilExpiry: Math.ceil(

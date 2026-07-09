@@ -7,6 +7,7 @@ import {
 } from "../shared/pilotProspectSegments";
 import {
   generateSegmentPilotEmailHTML,
+  generateSegmentPilotEmailText,
   subjectForSegment,
 } from "./_core/pilotEmailTemplate";
 import { previewPilotCampaign } from "./_core/pilotEmailCampaignService";
@@ -58,6 +59,21 @@ describe("pilot email campaign", () => {
     expect(html).not.toContain("Segment:");
     expect(html).not.toContain("manus.space");
     expect(html).not.toContain("position:absolute");
+    expect(html).toContain("/privacy-policy");
+    expect(html).toContain("unsubscribe");
+  });
+
+  it("plain-text pilot email includes legal footer", () => {
+    const sample = PILOT_PROSPECTS[0]!;
+    const text = generateSegmentPilotEmailText({
+      dealershipName: sample.dealershipName,
+      contactName: sample.contactName,
+      city: sample.city,
+      segment: sample.segment,
+    });
+    expect(text).toContain("privacy-policy");
+    expect(text.toLowerCase()).toContain("unsubscribe");
+    expect(text).toContain("POPIA");
   });
 
   it("each segment has a distinct subject line", () => {

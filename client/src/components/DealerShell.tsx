@@ -14,7 +14,6 @@ import {
   Settings2,
   Store,
   Handshake,
-  Wrench,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -43,9 +42,8 @@ const DEALER_LINKS = [
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
-  { href: "/dealer/fix-r1-prices", label: "Fix R1 prices", icon: Wrench, tip: "Bulk repair vehicles stuck at R1 from bad imports" },
   { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save AutoTrader images, photo health" },
-  { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, price fixes" },
+  { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, branding" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
   { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Partner dealerships and referrals" },
 ];
@@ -63,10 +61,7 @@ export default function DealerShell({
 }) {
   const { user, loading } = useAuth();
   const [location] = useLocation();
-  const isFounder = user?.role === "founder" || user?.role === "admin";
-  const dealerLinks = DEALER_LINKS.filter(
-    (l) => l.href !== "/dealer/agents" || isFounder,
-  );
+  const dealerLinks = DEALER_LINKS;
 
   const showPhotoHint = PHOTO_HINT_ROUTES.some(
     (r) => location === r || location.startsWith(`${r}/`),

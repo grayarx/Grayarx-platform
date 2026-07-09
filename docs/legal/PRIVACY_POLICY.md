@@ -334,10 +334,11 @@ We may update this Privacy Policy at any time by posting the revised version on 
 For questions about this Privacy Policy or to exercise your data subject rights, contact us at:
 
 **GrayArx (Pty) Ltd**  
+Enterprise No. 2026/407647/07  
 Email: privacy@grayarx.com  
 Phone: +27 79 491 5187  
 Website: www.grayarx.com  
-Mailing Address: [INSERT REGISTERED ADDRESS]
+Registered address: Sjampanije Street, Roodepoort, Gauteng 1736, South Africa
 
 ---
 
