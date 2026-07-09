@@ -67,8 +67,11 @@ const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
   transmission: ["transmission", "gearbox"],
   location: ["location", "city", "branch", "dealership location"],
   imageUrl: ["image", "image url", "imageurl", "photo", "photo url", "photos", "photos url", "photo urls", "primary photo", "thumbnail", "img", "picture", "main image"],
+  imageUrls: ["image urls", "photo urls", "photos urls", "gallery", "images"],
   description: ["description", "notes", "comments", "details"],
   externalRef: ["stock", "stock id", "stock no", "stock number", "stock code", "stock_id", "vin", "vin number", "registration", "reg", "reg no", "ref", "reference", "listing id", "id"],
+  photoScore: ["photo score", "photography score"],
+  photoWarnings: ["photo warnings", "photo issues"],
 };
 
 /** Split a single CSV line respecting quotes. */

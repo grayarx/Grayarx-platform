@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
+import OptimizedImage from "@/components/OptimizedImage";
 import { cn } from "@/lib/utils";
 import { PLACEHOLDER_SVG } from "@shared/imagePipeline";
 

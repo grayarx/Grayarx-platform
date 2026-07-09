@@ -9,7 +9,7 @@
 import nodemailer from "nodemailer";
 import { existsSync } from "fs";
 import { join } from "path";
-import { GRAYARX_EMAIL_LOGO_CID } from "../../shared/emailBranding";
+import { GRAYARX_EMAIL_LOGO_CID, shouldAttachInlineEmailLogo } from "../../shared/emailBranding";
 
 export function resolveGmailCredentials(): { user: string; pass: string } | null {
   const pilotUser = process.env.PILOT_GMAIL_USER?.trim();

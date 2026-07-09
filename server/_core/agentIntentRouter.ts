@@ -72,8 +72,12 @@ function tumiTradeInReply(
   dealer: string,
   vehicle?: VehicleChatContext | null,
 ): string {
-  const v = vehicle ?? { title: "your vehicle", year: undefined, price: undefined };
-  const base = polishedNalaText(lang, REPLY_TRADE_IN, v);
+  const base = polishedNalaText(lang, REPLY_TRADE_IN, {
+    title: vehicle?.title ?? "your vehicle",
+    year: vehicle?.year ?? undefined,
+    price: vehicle?.price ?? undefined,
+    color: vehicle?.color ?? undefined,
+  });
   const link = `${siteUrl()}/trade-in`;
   const suffix =
     lang === "af"

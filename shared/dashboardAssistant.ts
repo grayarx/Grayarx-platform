@@ -289,8 +289,8 @@ function buildAgentStatusReply(
   const agent =
     ctx.agents.find((a) => a.id === agentId) ??
     ({
-      id: agentId,
       ...AGENTS[agentId],
+      id: agentId,
       status: "idle" as const,
       actionCount: 0,
       lastActionAt: null,

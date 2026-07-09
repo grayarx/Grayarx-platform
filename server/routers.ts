@@ -70,6 +70,7 @@ import {
   updateVehicle,
   deleteVehicle,
   getVehicle,
+  getUserById,
   getDashboardStats,
   getRecentActivity,
   getLeadsTrend,
@@ -753,9 +754,12 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found." });
         }
 
-        const dealership = row.dealershipId
-          ? await getDealershipById(row.dealershipId)
-          : null;
+        let dealershipId = 1;
+        if (row.ownerUserId) {
+          const owner = await getUserById(row.ownerUserId);
+          if (owner?.dealershipId) dealershipId = owner.dealershipId;
+        }
+        const dealership = await getDealershipById(dealershipId);
 
         const lang = input.language && isLanguageCode(input.language)
           ? input.language
@@ -767,7 +771,7 @@ export const appRouter = router({
           message: input.message,
           vehicle: vehicleCtx,
           vehicleId: input.vehicleId,
-          dealershipId: row.dealershipId ?? 1,
+          dealershipId,
           dealershipName: dealerName,
           businessHoursOverride: dealership?.businessHoursJson ?? undefined,
           language: lang,

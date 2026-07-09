@@ -47,7 +47,7 @@ export function pickTopDealPhotos(vehicles: InventoryRow[], count = 4): Inventor
         title: v.title,
       }),
     }))
-    .filter((x) => x.score && x.score.rating !== "overpriced")
+    .filter((x) => x.score && x.score.rating !== "above" && x.score.rating !== "premium")
     .sort((a, b) => (b.score?.deltaPct ?? 0) - (a.score?.deltaPct ?? 0))
     .slice(0, count)
     .map((x) => x.v);

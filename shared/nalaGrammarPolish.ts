@@ -4,7 +4,7 @@
 
 import type { LanguageCode } from "./languages";
 import { ALL_LANGUAGE_CODES } from "./languages";
-import { PROMPT_FOLLOW_UP, replyNeedsNameCapture } from "./nalaTranslations";
+import { PROMPT_FOLLOW_UP, replyNeedsNameCapture, nalaText } from "./nalaTranslations";
 
 type Vars = Record<string, string | number | undefined>;
 
