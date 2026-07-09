@@ -12,7 +12,6 @@ import {
   Phone,
   ChevronDown,
   ChevronUp,
-  Bot,
   Car,
   Calendar,
   Upload,
