@@ -44,6 +44,7 @@ export default function Footer() {
               Legal & Compliance
             </h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
+              <li><Link href="/legal" className="hover:text-primary transition-colors font-medium text-foreground/90">Legal centre (all documents)</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
               <li><Link href="/ai-ethics" className="hover:text-primary transition-colors">AI Ethics</Link></li>
@@ -88,12 +89,20 @@ export default function Footer() {
         <div className="section-divider-glow my-12" />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-tech text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-            © {new Date().getFullYear()} GrayArx. All rights reserved. POPIA compliant.
-          </p>
-          <p className="font-tech text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-            Built for South African dealerships
-          </p>
+          <div className="text-center md:text-left">
+            <p className="font-tech text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+              © {new Date().getFullYear()} GrayArx (Pty) Ltd · Ent. 2026/407647/07
+            </p>
+            <p className="font-tech text-[9px] uppercase tracking-[0.12em] text-muted-foreground/70 mt-1">
+              POPIA compliant · Built for South African dealerships
+            </p>
+          </div>
+          <Link
+            href="/legal"
+            className="font-tech text-[10px] uppercase tracking-[0.18em] text-primary/80 hover:text-primary transition-colors"
+          >
+            Legal centre →
+          </Link>
         </div>
       </div>
     </footer>

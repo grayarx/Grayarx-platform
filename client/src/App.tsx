@@ -129,6 +129,10 @@ import DPA from "./pages/legal/DPA";
 import AUP from "./pages/legal/AUP";
 import SLA from "./pages/legal/SLA";
 import CreditDisclaimer from "./pages/legal/CreditDisclaimer";
+import LegalHub from "./pages/legal/LegalHub";
+import DealerAgreement from "./pages/legal/DealerAgreement";
+import PopiaConsentForm from "./pages/legal/PopiaConsentForm";
+import DealerLegal from "./pages/dealer/Legal";
 import { POPIAConsentModal } from "./components/POPIAConsentModal";
 import { POPIAReconfirmationBanner } from "./components/POPIAReconfirmationBanner";
 import { usePopiaConsent } from "./hooks/usePopiaConsent";
@@ -191,6 +195,7 @@ function Router() {
       <Route path="/dealer/security" component={DealershipSecurityDashboard} />
       <Route path="/dealer/inventory/import" component={DealerInventoryImport} />
       <Route path="/dealer/settings" component={DealerSettings} />
+      <Route path="/dealer/legal" component={DealerLegal} />
       <Route path="/dealer/trade-ins" component={TradeInNetwork} />
       <Route path="/dealer/inventory-management" component={InventoryManagementPage} />
       <Route path="/dealer/agents">
@@ -323,6 +328,9 @@ function Router() {
       <Route path="/security" component={SecurityDashboardPage} />
 
       {/* Legal */}
+      <Route path="/legal/dealer-agreement" component={DealerAgreement} />
+      <Route path="/legal/popia-consent-form" component={PopiaConsentForm} />
+      <Route path="/legal" component={LegalHub} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms" component={Terms} />
       <Route path="/ai-ethics" component={AIEthics} />

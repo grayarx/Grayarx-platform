@@ -81,9 +81,19 @@ export default function Onboarding() {
                 Keep this for your records. Quote it when calling or emailing support.
               </p>
             </div>
-            <Button asChild variant="outline" className="mt-8">
-              <a href="/">Back to home</a>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+              <Button asChild variant="outline">
+                <a href="/legal">Review legal documents</a>
+              </Button>
+              <Button asChild variant="ghost">
+                <a href="/">Back to home</a>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-6 max-w-md mx-auto">
+              Before go-live we will send the Dealer Agreement and POPIA form for signature.
+              You can preview everything now at{" "}
+              <a href="/legal" className="text-primary hover:underline">grayarx.com/legal</a>.
+            </p>
           </div>
         </section>
         <Footer />
@@ -92,22 +102,27 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[#060608] text-foreground">
       <Navigation />
-      <section className="pt-24 pb-20">
-        <div className="container max-w-2xl">
+      <section className="pt-24 pb-20 relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 gradient-mesh opacity-60" aria-hidden />
+        <div className="container max-w-2xl relative">
           <div className="text-center mb-10">
             <Logo size={64} className="mx-auto" />
             <h1 className="font-display text-4xl md:text-5xl font-bold mt-6">
               Onboard your dealership
             </h1>
-            <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
+            <p className="text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
               Tell us a bit about your business. Our team reviews every application and
               gets back within one business day.
             </p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Preview agreements at{" "}
+              <a href="/legal" className="text-primary hover:underline">grayarx.com/legal</a>
+            </p>
           </div>
 
-          <Card className="card-premium">
+          <Card className="card-premium border-primary/20 shadow-2xl">
             <CardContent className="p-6 md:p-8 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

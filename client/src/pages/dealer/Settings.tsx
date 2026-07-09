@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Eye,
   Palette,
+  Scale,
 } from "lucide-react";
 import { Link } from "wouter";
 import DealerShell from "@/components/DealerShell";
@@ -303,6 +304,23 @@ export default function DealerSettings() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-primary/15 mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Scale className="h-5 w-5 text-primary" />
+            Legal & compliance
+          </CardTitle>
+          <CardDescription>
+            Terms, privacy, DPA, dealer agreement, and POPIA forms — one place for your team.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/dealer/legal">Open compliance pack</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </DealerShell>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Globe, ChevronDown, LogOut, LayoutDashboard, Users, Calendar, Car, User } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, LogOut, LayoutDashboard, Users, Calendar, Car, User, Bot, Scale } from "lucide-react";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +44,8 @@ export default function Navigation() {
   // we want to learn what dealerships actually use and what they'd pay for
   // it before anchoring them to a number. The route itself still resolves
   // (redirects home) so no old link can leak the page.
+  const isFounder = user?.role === "founder" || user?.role === "admin";
+
   const NAV_LINKS = [
     { href: "/", label: t("nav.home"), tip: "Platform overview and lead capture" },
     { href: "/showroom", label: t("nav.showroom"), tip: "Browse inventory — AI search and filters" },
@@ -51,7 +53,8 @@ export default function Navigation() {
     { href: "/trade-in", label: "Trade-In", tip: "Get an instant trade-in estimate from Tumi" },
     { href: "/finance", label: "Finance", tip: "Calculate monthly instalments on any vehicle" },
     { href: "/help", label: "Help", tip: "FAQs, contact options, and dealer console links" },
-    { href: "/dashboard", label: t("nav.dashboard"), tip: "Your dealer console — leads, agents, inventory" },
+    { href: "/legal", label: "Legal", tip: "Terms, privacy, dealer agreement, and POPIA forms" },
+    { href: "/dashboard", label: t("nav.dashboard"), tip: "Your dealer console — leads, bookings, inventory" },
   ];
 
   // On internal console routes (dealer/admin/dashboard) we MUST render the
@@ -186,6 +189,18 @@ export default function Navigation() {
                     <Car className="h-4 w-4 mr-2" /> Inventory
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dealer/legal" className="cursor-pointer">
+                    <Scale className="h-4 w-4 mr-2" /> Legal & compliance
+                  </Link>
+                </DropdownMenuItem>
+                {isFounder && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dealer/agents" className="cursor-pointer">
+                      <Bot className="h-4 w-4 mr-2" /> AI agents
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="cursor-pointer text-red-400 focus:text-red-300">
                   <LogOut className="h-4 w-4 mr-2" /> Sign out

@@ -15,6 +15,7 @@ import {
   Car,
   Calendar,
   Upload,
+  Scale,
 } from "lucide-react";
 import { OWNER_EMAIL, OWNER_PHONE_DISPLAY, OWNER_PHONE_E164, OWNER_WHATSAPP_URL } from "@/lib/contact";
 
@@ -41,7 +42,11 @@ const FAQS = [
   },
   {
     q: "Is my data POPIA compliant?",
-    a: "Yes. GrayArx includes consent capture, audit logs, and South African data residency. See our Privacy Policy and DPA for full details.",
+    a: "Yes. GrayArx includes consent capture, audit logs, and South African data residency. Policies, the dealer agreement, and POPIA sign-off forms are at /legal (public) or Legal in your dealer console.",
+  },
+  {
+    q: "Where are the legal documents and agreements?",
+    a: "Everything is in one place: grayarx.com/legal — Terms, Privacy, DPA, AI Ethics, Credit Disclaimer, plus the Dealer Agreement and POPIA Consent Form to print and sign. Logged-in dealers also have Legal in the sidebar under /dealer/legal.",
   },
   {
     q: "What languages are supported?",
@@ -53,6 +58,7 @@ const QUICK_LINKS = [
   { href: "/dealer/inventory", label: "Manage Inventory", icon: Car, desc: "Add or import vehicles" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, desc: "Test drives & demos" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, desc: "Bulk upload for chatbots" },
+  { href: "/legal", label: "Legal centre", icon: Scale, desc: "Agreements & POPIA forms" },
 ];
 
 export default function HelpCenter() {
@@ -67,11 +73,12 @@ export default function HelpCenter() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[#060608] text-foreground">
       <Navigation />
 
-      <section className="pt-32 pb-12 gradient-mesh">
-        <div className="container max-w-3xl text-center">
+      <section className="pt-32 pb-12 gradient-mesh relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 cyber-grid opacity-30" aria-hidden />
+        <div className="container max-w-3xl text-center relative">
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full glass-gold text-xs font-medium uppercase tracking-widest text-primary">
             <HelpCircle className="h-3.5 w-3.5" /> Help Centre
           </div>
@@ -105,28 +112,39 @@ export default function HelpCenter() {
           </div>
 
           <h2 className="font-display text-2xl font-bold mb-6">Frequently asked questions</h2>
-          <div className="space-y-3">
-            {filtered.map((faq, i) => (
-              <Card
-                key={faq.q}
-                className="glass border-primary/10 cursor-pointer"
-                onClick={() => setOpenIdx(openIdx === i ? null : i)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="font-semibold">{faq.q}</p>
-                    {openIdx === i ? (
-                      <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="space-y-3" role="list">
+            {filtered.map((faq, i) => {
+              const isOpen = openIdx === i;
+              const panelId = `faq-panel-${i}`;
+              return (
+                <Card key={faq.q} className="glass border-primary/10 overflow-hidden">
+                  <CardContent className="p-0">
+                    <button
+                      type="button"
+                      id={`faq-trigger-${i}`}
+                      aria-expanded={isOpen}
+                      aria-controls={panelId}
+                      className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg"
+                      onClick={() => setOpenIdx(isOpen ? null : i)}
+                    >
+                      <span className="font-semibold">{faq.q}</span>
+                      {isOpen ? (
+                        <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div id={panelId} role="region" aria-labelledby={`faq-trigger-${i}`} className="px-5 pb-5">
+                        <p className="text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-3">
+                          {faq.a}
+                        </p>
+                      </div>
                     )}
-                  </div>
-                  {openIdx === i && (
-                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{faq.a}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -6,6 +6,7 @@ Master checklist for South African regulatory requirements. Last reviewed: **9 J
 
 | Document | URL | Source |
 |----------|-----|--------|
+| **Legal centre (hub)** | `/legal` | `client/src/pages/legal/LegalHub.tsx` |
 | Privacy Policy (POPIA) | `/privacy-policy` | `docs/legal/PRIVACY_POLICY.md` |
 | Terms of Service | `/terms` | `docs/legal/TERMS_OF_SERVICE.md` |
 | AI Ethics & Transparency | `/ai-ethics` | React page |
@@ -13,8 +14,10 @@ Master checklist for South African regulatory requirements. Last reviewed: **9 J
 | Acceptable Use Policy | `/aup` | `docs/legal/ACCEPTABLE_USE_POLICY.md` |
 | Service Level Agreement | `/sla` | `docs/legal/SERVICE_LEVEL_AGREEMENT.md` |
 | Credit & Finance Disclaimer | `/credit-disclaimer` | `docs/legal/CREDIT_DISCLAIMER.md` |
+| **Dealer Agreement (sign-off)** | `/legal/dealer-agreement` | `docs/legal/DEALER_AGREEMENT.md` |
+| **POPIA Consent Form (sign-off)** | `/legal/popia-consent-form` | `docs/legal/POPIA_CONSENT_FORM.md` |
 
-All linked from site footer (`client/src/components/Footer.tsx`).
+All linked from site footer and **`/dealer/legal`** in the dealer console.
 
 ## South African law mapping
 
@@ -44,16 +47,17 @@ All linked from site footer (`client/src/components/Footer.tsx`).
 |------|----------|-------|
 | Account sign-up | `/signup` | Terms + Privacy checkbox required |
 | Pilot application | `/onboarding` | Privacy + Terms + DPA consent text |
-| POPIA modal (customers) | `popiaConsent.ts` | Backend ready; UI modal temporarily disabled — re-enable when DB stable |
-| Dealer onboarding | `docs/PILOT_ONBOARDING_CHECKLIST.md` | Signed dealer agreement + POPIA consent form |
+| POPIA modal (customers) | `popiaConsent.ts` | Backend ready; UI modal enabled in `App.tsx` for logged-in users |
+| Dealer onboarding | `docs/PILOT_ONBOARDING_CHECKLIST.md` | Signed dealer agreement + POPIA consent form via `/legal` |
+| Dealer console legal hub | `/dealer/legal` | All policies + sign-off links for dealership staff |
 
-## Internal / contract templates (not public routes)
+## Internal / contract templates (source markdown)
 
-| Document | Path | When used |
-|----------|------|-----------|
-| Dealer Agreement | `docs/legal/DEALER_AGREEMENT.md` | Pilot contract — sign before go-live |
-| POPIA Consent Form | `docs/legal/POPIA_CONSENT_FORM.md` | Per-dealer data processing consent |
-| Liability & Indemnification | `docs/legal/LIABILITY_INDEMNIFICATION.md` | Schedule to dealer agreement |
+| Document | Path | Live URL |
+|----------|------|----------|
+| Dealer Agreement | `docs/legal/DEALER_AGREEMENT.md` | `/legal/dealer-agreement` |
+| POPIA Consent Form | `docs/legal/POPIA_CONSENT_FORM.md` | `/legal/popia-consent-form` |
+| Liability & Indemnification | `docs/legal/LIABILITY_INDEMNIFICATION.md` | Incorporated in Terms / Dealer Agreement |
 
 ## Key contacts (must be monitored mailboxes)
 
@@ -66,9 +70,10 @@ All linked from site footer (`client/src/components/Footer.tsx`).
 
 ## Open items (non-blocking for pilot)
 
-- [ ] Complete `[TO BE COMPLETED]` placeholders in dealer agreement (company reg, VAT)
-- [ ] Formal attorney review of all `docs/legal/*` templates
-- [ ] Re-enable POPIA consent modal in `App.tsx` when DB migration stable
+- [ ] Formal attorney review of all `docs/legal/*` templates (recommended before scaling)
+- [ ] Monitor `privacy@grayarx.com` and `legal@grayarx.com` mailboxes
+- [ ] Information Officer registration with the Information Regulator (POPIA)
+- [ ] Collect signed Dealer Agreement + POPIA form per pilot dealership (return to legal@grayarx.com)
 - [ ] Dedicated `unsubscribe@grayarx.com` auto-handler (optional)
 - [ ] PAIA manual PDF download on `/privacy-policy` (optional)
 
@@ -86,4 +91,4 @@ pnpm vitest run server/pilotEmailCampaign.test.ts shared/emailBranding.test.ts
 
 | Date | Change |
 |------|--------|
-| 9 Jul 2026 | Email footer: privacy, terms, unsubscribe (POPIA s.69); sign-up terms checkbox; credit disclaimer page; this index |
+| 9 Jul 2026 | Legal centre `/legal`, dealer hub `/dealer/legal`, sign-off pages for dealer agreement & POPIA form |

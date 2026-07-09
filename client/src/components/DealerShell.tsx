@@ -14,6 +14,7 @@ import {
   Settings2,
   Store,
   Handshake,
+  Scale,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -45,6 +46,7 @@ const DEALER_LINKS = [
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
   { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save AutoTrader images, photo health" },
   { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, branding" },
+  { href: "/dealer/legal", label: "Legal", icon: Scale, tip: "Policies, dealer agreement, POPIA forms" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
   { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Partner dealerships and referrals" },
 ];

@@ -4,11 +4,11 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
-  Bot,
   Car,
   CheckCircle2,
   Handshake,
   Shield,
+  Scale,
   Sparkles,
   TrendingUp,
   Zap,
@@ -140,6 +140,7 @@ const TRUST_POINTS = [
   "11 SA languages",
   "CSV / DMS import",
   "Deal scores",
+  "Legal centre",
 ];
 
 export default function Home() {
@@ -182,11 +183,11 @@ export default function Home() {
       </div>
 
       {/* ── Cinematic full-bleed hero (Daytona-style) ── */}
-      <section className="relative hero-cinematic scan-line">
+      <section className="relative hero-cinematic scan-line hero-gold-sweep">
         <div className="hero-cinematic-bg">
           <OptimizedImage
             src={heroSrc}
-            alt=""
+            alt="Premium vehicle on studio floor — GrayArx dealership platform"
             priority
             staticAsset={heroSrc.startsWith("/")}
             sizes="100vw"
@@ -552,10 +553,49 @@ export default function Home() {
               {TRUST_POINTS.map((t) => (
                 <li key={t} className="flex items-center gap-2.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(212,175,55,0.6)]" />
-                  {t}
+                  {t === "Legal centre" ? (
+                    <Link href="/legal" className="hover:text-primary transition-colors">
+                      {t}
+                    </Link>
+                  ) : (
+                    t
+                  )}
                 </li>
               ))}
             </ul>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Compliance strip */}
+      <section className="relative py-14 md:py-16 border-t border-primary/10 bg-[#08080a]/80">
+        <div className="container">
+          <motion.div
+            {...fadeUp}
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 rounded-2xl border border-primary/15 holo-card p-8 md:p-10"
+          >
+            <div className="flex items-start gap-4 max-w-xl">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                <Scale className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-tech text-[10px] uppercase tracking-[0.28em] text-primary/80 mb-2">
+                  Compliance
+                </p>
+                <h2 className="font-display text-xl md:text-2xl font-bold mb-2">
+                  Enterprise-grade legal pack
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Terms, privacy, DPA, dealer agreement, and POPIA forms — one link for your team
+                  or attorney. Built for South African law from day one.
+                </p>
+              </div>
+            </div>
+            <Button asChild className="btn-gold h-12 px-8 shrink-0 font-semibold uppercase tracking-wider text-sm">
+              <Link href="/legal">
+                Open legal centre <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>

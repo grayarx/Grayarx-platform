@@ -4,8 +4,8 @@ Use this when the first paying / pilot dealership signs. Target: **live in 48 ho
 
 ## Before kickoff call (founder)
 
-- [ ] Signed pilot agreement (see `docs/legal/DEALER_AGREEMENT.md`)
-- [ ] POPIA consent captured (`docs/legal/POPIA_CONSENT_FORM.md`)
+- [ ] Signed pilot agreement — send dealer to **https://www.grayarx.com/legal/dealer-agreement** (print/sign, return to legal@grayarx.com)
+- [ ] POPIA consent captured — **https://www.grayarx.com/legal/popia-consent-form**
 - [ ] PayFast / billing method on file (if applicable)
 - [ ] Dealership legal name, company reg, VAT number
 - [ ] Primary contact: name, cell, email
