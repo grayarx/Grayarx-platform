@@ -45,7 +45,7 @@ const ADMIN_LINKS = [
   { href: "/admin/billing", label: "Billing", icon: Wallet, founderOnly: true },
   { href: "/admin/tax-dashboard", label: "Tax Dashboard", icon: DollarSign, founderOnly: true },
   { href: "/admin/email-preview", label: "Email Preview", icon: Mail, founderOnly: true },
-  { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone, founderOnly: true },
+  { href: "/admin/campaigns", label: "Pilot outreach", icon: Megaphone, founderOnly: true },
 ];
 
 export default function AdminShell({

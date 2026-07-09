@@ -3491,6 +3491,13 @@ export const appRouter = router({
       }
       return getPlatformOpsSnapshot();
     }),
+    health: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { getPlatformHealth } = await import("./_core/platformHealth");
+      return getPlatformHealth();
+    }),
   }),
 
   // ---- Admin: agents system-wide ----

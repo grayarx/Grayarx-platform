@@ -14,6 +14,10 @@ import {
   ListChecks,
   CheckCircle2,
   Activity,
+  AlertTriangle,
+  Bot,
+  Mail,
+  Webhook,
 } from "lucide-react";
 
 function relativeTime(ms: number | null): string {
@@ -35,6 +39,20 @@ export default function AdminOps() {
       refetchInterval: 30_000,
       staleTime: 15_000,
     });
+
+  const { data: health } = trpc.adminOps.health.useQuery(undefined, {
+    refetchInterval: 120_000,
+    staleTime: 60_000,
+  });
+
+  const healthTiles = health
+    ? [
+        { key: "openai", label: "OpenAI / Nala LLM", icon: Bot, ...health.openai },
+        { key: "resend", label: "Resend (pilot@)", icon: Mail, ...health.resend },
+        { key: "whatsapp", label: "WhatsApp Meta", icon: Activity, ...health.whatsapp },
+        { key: "webhooks", label: "Webhook verify", icon: Webhook, ...health.webhooks },
+      ]
+    : [];
 
   const tiles = data
     ? [
@@ -124,6 +142,33 @@ export default function AdminOps() {
         </div>
       }
     >
+      {healthTiles.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+          {healthTiles.map((h) => {
+            const Icon = h.icon;
+            return (
+              <Card
+                key={h.key}
+                className={h.ok ? "border-emerald-500/30" : "border-amber-500/40"}
+              >
+                <CardContent className="p-4 flex gap-3">
+                  {h.ok ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                      <Icon className="h-3 w-3" /> {h.label}
+                    </div>
+                    <p className="text-sm mt-1">{h.detail}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {(isLoading ? Array.from({ length: 8 }) : tiles).map((t, i) => {
           if (!t) {

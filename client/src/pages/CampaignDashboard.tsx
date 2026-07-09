@@ -2,201 +2,266 @@ import AdminShell from "@/components/AdminShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Megaphone, Plus, BarChart3, Clock, CheckCircle2 } from "lucide-react";
+import { PILOT_SEGMENT_LABELS, type PilotOutreachSegment } from "@shared/pilotProspectSegments";
+import { CheckCircle2, Eye, Loader2, Mail, Megaphone, Send, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export default function CampaignDashboard() {
-  const [campaigns, setCampaigns] = useState([
-    {
-      id: 1,
-      name: "Spring Sale Campaign",
-      painPointGroup: "Price-Sensitive Buyers",
-      status: "active",
-      startDate: "2026-05-20",
-      endDate: "2026-06-20",
-      emailsSent: 1250,
-      openRate: 34.2,
-      clickRate: 8.5,
-      conversions: 42,
-    },
-    {
-      id: 2,
-      name: "Trade-In Promotion",
-      painPointGroup: "Trade-In Seekers",
-      status: "active",
-      startDate: "2026-05-15",
-      endDate: "2026-06-15",
-      emailsSent: 890,
-      openRate: 41.8,
-      clickRate: 12.3,
-      conversions: 67,
-    },
-    {
-      id: 3,
-      name: "Finance Options",
-      painPointGroup: "Finance-Conscious Buyers",
-      status: "scheduled",
-      startDate: "2026-06-01",
-      endDate: "2026-07-01",
-      emailsSent: 0,
-      openRate: 0,
-      clickRate: 0,
-      conversions: 0,
-    },
-  ]);
+const SEGMENTS: PilotOutreachSegment[] = [
+  "no_website_social_only",
+  "basic_website_no_showroom",
+  "after_hours_leak",
+  "whatsapp_manual",
+];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500/20 text-green-700 border-green-500/30";
-      case "scheduled":
-        return "bg-blue-500/20 text-blue-700 border-blue-500/30";
-      case "completed":
-        return "bg-gray-500/20 text-gray-700 border-gray-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-700 border-gray-500/30";
-    }
-  };
+export default function CampaignDashboard() {
+  const [testEmail, setTestEmail] = useState("grayarx@gmail.com");
+  const [testSegment, setTestSegment] = useState<PilotOutreachSegment>("basic_website_no_showroom");
+
+  const { data: preview, isLoading } = trpc.pilotEmail.preview.useQuery();
+  const { data: branding } = trpc.pilotEmail.brandingCheck.useQuery();
+
+  const sendTest = trpc.pilotEmail.sendTest.useMutation({
+    onSuccess: (r) => {
+      if (r.success) toast.success(`Test email sent (${r.messageId ?? "ok"})`);
+      else toast.error(r.error ?? "Send failed");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const sendSegment = trpc.pilotEmail.sendSegment.useMutation({
+    onSuccess: (r) => {
+      toast.success(`Segment ${PILOT_SEGMENT_LABELS[r.segment]}: ${r.sent}/${r.attempted} ok`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const sendBulk = trpc.pilotEmail.sendBulk.useMutation({
+    onSuccess: (r) => {
+      toast.success(
+        r.dryRun
+          ? `Dry run complete — ${r.totalSent}/${r.totalAttempted} mailable`
+          : `Bulk send — ${r.totalSent} sent, ${r.totalFailed} failed`,
+      );
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const totalMailable = preview?.reduce((s, p) => s + p.mailable, 0) ?? 0;
 
   return (
     <AdminShell
-      title="Campaign Management"
-      subtitle="Manage email campaigns for different pain point groups"
+      title="Pilot outreach"
+      subtitle="Segmented Resend campaigns for Gauteng dealership research — dry-run first, then send."
       actions={
-        <Button className="btn-gold">
-          <Plus className="h-4 w-4 mr-2" />
-          New Campaign
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={sendBulk.isPending}
+            onClick={() => sendBulk.mutate({ dryRun: true })}
+          >
+            {sendBulk.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Dry-run all segments
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Branding + Resend status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="glass-gold border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Campaigns
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Mailable prospects</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2</div>
-              <p className="text-xs text-muted-foreground mt-1">Currently running</p>
+              <div className="text-3xl font-bold">{totalMailable}</div>
+              <p className="text-xs text-muted-foreground mt-1">Verified public emails only</p>
             </CardContent>
           </Card>
-
           <Card className="glass-gold border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Emails Sent
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Resend</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2,140</div>
-              <p className="text-xs text-muted-foreground mt-1">This month</p>
+              <div className="flex items-center gap-2">
+                {branding?.resendConfigured ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                ) : (
+                  <ShieldAlert className="h-5 w-5 text-amber-400" />
+                )}
+                <span className="font-medium">
+                  {branding?.resendConfigured ? "Configured" : "Missing API key"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">From: pilot@grayarx.com</p>
             </CardContent>
           </Card>
-
           <Card className="glass-gold border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Avg. Open Rate
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Body logo</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">38.0%</div>
-              <p className="text-xs text-muted-foreground mt-1">Across all campaigns</p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-gold border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Conversions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">109</div>
-              <p className="text-xs text-muted-foreground mt-1">Leads generated</p>
+              <p className="text-xs font-mono break-all">{branding?.bodyLogoUrl ?? "—"}</p>
+              <p className="text-xs text-muted-foreground mt-2">Inline CID attachment in Resend sends</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Campaigns List */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Campaigns</h3>
-          </div>
-
-          {campaigns.map((campaign) => (
-            <Card key={campaign.id} className="glass-gold border-primary/20">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                      <Badge className={getStatusColor(campaign.status)}>
-                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                      </Badge>
-                    </div>
-                    <CardDescription>{campaign.painPointGroup}</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Start Date</p>
-                    <p className="font-semibold text-sm">{campaign.startDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">End Date</p>
-                    <p className="font-semibold text-sm">{campaign.endDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Emails Sent</p>
-                    <p className="font-semibold text-sm">{campaign.emailsSent.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Open Rate</p>
-                    <p className="font-semibold text-sm text-green-400">{campaign.openRate}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Click Rate</p>
-                    <p className="font-semibold text-sm text-blue-400">{campaign.clickRate}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Conversions</p>
-                    <p className="font-semibold text-sm text-primary">{campaign.conversions}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Help Text */}
-        <Card className="bg-primary/5 border-primary/20">
+        {/* Send test */}
+        <Card className="glass-gold border-primary/20">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-primary" />
-              About Campaigns
+              <Mail className="h-4 w-4 text-primary" />
+              Send test email
             </CardTitle>
+            <CardDescription>Verify logo + template before bulk send</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>
-              Campaigns are targeted email sequences sent to dealerships based on their pain point groups.
-            </p>
-            <p>
-              Each campaign includes email preview functionality so you can review and approve emails before they're sent to dealerships.
-            </p>
+          <CardContent className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="test-email">To</Label>
+              <Input
+                id="test-email"
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
+            </div>
+            <div className="w-full sm:w-64 space-y-1">
+              <Label>Segment</Label>
+              <Select value={testSegment} onValueChange={(v) => setTestSegment(v as PilotOutreachSegment)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEGMENTS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {PILOT_SEGMENT_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="btn-gold shrink-0"
+              disabled={sendTest.isPending || !testEmail}
+              onClick={() => sendTest.mutate({ to: testEmail, segment: testSegment })}
+            >
+              {sendTest.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Send test
+            </Button>
           </CardContent>
         </Card>
+
+        {/* Segments */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            Segments
+          </h3>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading prospects…
+            </div>
+          ) : (
+            preview?.map((row) => (
+              <Card key={row.segment} className="glass-gold border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base">{PILOT_SEGMENT_LABELS[row.segment]}</CardTitle>
+                      <CardDescription className="mt-1">{row.label}</CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline">{row.mailable} mailable</Badge>
+                      <Badge variant="secondary">{row.total} researched</Badge>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Eye className="h-4 w-4 mr-1" /> Preview
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Email preview — {PILOT_SEGMENT_LABELS[row.segment]}</DialogTitle>
+                          </DialogHeader>
+                          <iframe
+                            title="Pilot email preview"
+                            className="w-full min-h-[480px] border rounded bg-white"
+                            srcDoc={row.sampleHtml}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sendSegment.isPending || row.mailable === 0}
+                        onClick={() =>
+                          sendSegment.mutate({ segment: row.segment, dryRun: true })
+                        }
+                      >
+                        Dry-run
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="btn-gold"
+                        disabled={sendSegment.isPending || row.mailable === 0}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              `Send ${row.mailable} emails for segment "${PILOT_SEGMENT_LABELS[row.segment]}"?`,
+                            )
+                          ) {
+                            return;
+                          }
+                          sendSegment.mutate({ segment: row.segment, dryRun: false });
+                        }}
+                      >
+                        Send segment
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {row.prospects.slice(0, 5).map((p) => (
+                      <li key={p.id}>
+                        {p.name} — {p.city}
+                        {p.emailVerified && p.email ? (
+                          <span className="text-emerald-400/80"> · {p.email}</span>
+                        ) : (
+                          <span className="text-amber-400/80"> · no verified email</span>
+                        )}
+                      </li>
+                    ))}
+                    {row.prospects.length > 5 && (
+                      <li className="text-xs">+{row.prospects.length - 5} more in research list</li>
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </AdminShell>
   );
