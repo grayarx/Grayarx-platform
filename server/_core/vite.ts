@@ -48,20 +48,24 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(import.meta.dirname, "../..", "dist", "public");
   if (!fs.existsSync(distPath)) {
     console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { index: false }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Never serve SPA index.html for API routes — webhooks must return JSON
+  app.use("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      return res.status(404).json({ error: "API route not found", path: req.path });
+    }
+    // Static assets with extensions must not fall through to SPA (logo-icon.png, etc.)
+    if (/\.[a-z0-9]+$/i.test(req.path)) {
+      return res.status(404).send("Not found");
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

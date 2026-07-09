@@ -1,0 +1,7 @@
+/logo-icon.png  /logo-icon.png  200
+/logo.png  /logo.png  200
+/grayarx-gmail-avatar.gif  /grayarx-gmail-avatar.gif  200
+/grayarx-logo-animated.webp  /grayarx-logo-animated.webp  200
+/favicon.ico  /favicon.ico  200
+/assets/*  /assets/:splat  200
+/api/*  /api/:splat  200

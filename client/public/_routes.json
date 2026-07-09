@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/api/*",
+    "/assets/*",
+    "/logo-icon.png",
+    "/logo.png",
+    "/favicon.ico",
+    "/grayarx-logo-animated.webp",
+    "/grayarx-gmail-avatar.gif",
+    "/icon-192x192.png",
+    "/icon-512x512.png",
+    "/icon-maskable-192x192.png",
+    "/icon-maskable-512x512.png",
+    "/icon-96x96.png",
+    "/hero-car.jpg",
+    "/manifest.json",
+    "/robots.txt",
+    "/sitemap.xml"
+  ]
+}
