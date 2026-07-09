@@ -19,28 +19,11 @@ export const FAQ_DATABASE: FAQItem[] = [
     category: "pricing",
     question: "What are your pricing plans?",
     keywords: ["price", "cost", "plans", "subscription", "how much"],
-    answer: `GrayArx offers three pricing tiers:
+    answer: `GrayArx offers three plans — Showroom, Growth, and Group — built around what dealerships actually use: inventory, showroom, leads, and AI chat.
 
-**Starter** — R3,500/month
-• 50 vehicles
-• 100 leads/month
-• Basic AI agents (Mia, Themba, Lerato)
-• Email + WhatsApp support
+During our **pilot programme**, pricing is tailored to your dealership size and usage. Pilot partners receive **Growth-level features** (WhatsApp Nala, trade-in network, deal scores, and more).
 
-**Professional** — R8,750/month
-• 500 vehicles
-• 500 leads/month
-• All AI agents (includes Tumi, Bongi, Sipho)
-• Priority support
-• Advanced analytics
-
-**Enterprise** — Custom pricing
-• Unlimited vehicles & leads
-• White-label options
-• Dedicated account manager
-• Custom integrations
-
-All plans include 30-day free trial, no credit card required.`,
+Public pricing will be published at grayarx.com when the pilot closes. Join the pilot at grayarx.com to discuss terms.`,
     followUp: "Would you like to start your free trial?",
   },
 

@@ -102,29 +102,11 @@ Learn more: www.grayarx.com`,
     title: "FAQ: How Much Does GrayArx Cost?",
     content: `💰 FAQ: How Much Does GrayArx Cost?
 
-Great question! We offer three pricing tiers:
+We're in a **pilot programme** with a small group of SA dealerships. Pricing is tailored to your size and usage — pilot partners get **Growth-level features** (showroom, inventory, WhatsApp Nala, leads, trade-ins, and more).
 
-**Starter — R3,500/month**
-• 50 vehicles
-• 100 leads/month
-• Basic AI agents
-• Email + WhatsApp support
+Three tiers will launch after pilot: **Showroom**, **Growth**, and **Group**. Public pricing will be on grayarx.com when we're ready.
 
-**Professional — R8,750/month**
-• 500 vehicles
-• 500 leads/month
-• All AI agents
-• Priority support
-• Advanced analytics
-
-**Enterprise — Custom pricing**
-• Unlimited vehicles & leads
-• White-label options
-• Dedicated account manager
-
-Plus: 30-day free trial, no credit card required.
-
-Start your trial: www.grayarx.com/onboarding`,
+Join the pilot: www.grayarx.com/#lead-capture`,
   },
 
   compliance: {

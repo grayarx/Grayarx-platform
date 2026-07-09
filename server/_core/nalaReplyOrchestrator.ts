@@ -8,12 +8,13 @@ import {
   detectLanguage,
   type VehicleChatContext,
 } from "../../shared/nalaShowroomChat";
-import { GREETING } from "../../shared/nalaTranslations";
+import { composeShowroomBotReply, polishNalaReply } from "../../shared/nalaGrammarPolish";
+import { GREETING, replyNeedsNameCapture } from "../../shared/nalaTranslations";
 import { scoreListingDeal } from "../../shared/priceIntelligence";
 import { generateNalaShowroomReply } from "./nalaShowroomLlm";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
 import type { LanguageCode } from "../../shared/languages";
-import { detectsBookingIntent } from "./bookingAgent";
+import { detectsBookingIntent } from "../../shared/agentIntentRouting";
 
 export function stripMarkdownForWhatsApp(text: string): string {
   return text
@@ -221,6 +222,25 @@ export async function resolveNalaReply(input: {
 
   const heuristic = answerShowroomQuestion(input.vehicle, input.message, lang);
 
+  // Web chat: native templates only — LLM rewrites caused cross-language grammar errors
+  // when OpenAI quota was limited. WhatsApp still uses LLM polish path below.
+  if (input.channel === "web") {
+    let reply = composeShowroomBotReply(heuristic.reply, lang, {
+      appendFollowUp: heuristic.answered && !replyNeedsNameCapture(heuristic.reply),
+    });
+    if (input.includeDealScore !== false && (heuristic.intent === "price" || heuristic.intent === "availability")) {
+      reply = appendDealScoreToReply(reply, input.vehicle, lang);
+    }
+    return {
+      reply,
+      language: lang,
+      intent: heuristic.intent,
+      answered: heuristic.answered,
+      source: "template",
+      isBookingIntent,
+    };
+  }
+
   try {
     const llm = await generateNalaShowroomReply({
       language: lang,
@@ -231,6 +251,14 @@ export async function resolveNalaReply(input: {
       intent: heuristic.intent,
     });
     let reply = (llm.reply.trim() || heuristic.reply).trim();
+    reply = polishNalaReply(reply, lang);
+    if (
+      llm.reply.trim() &&
+      heuristic.answered &&
+      !replyNeedsNameCapture(reply)
+    ) {
+      reply = composeShowroomBotReply(reply, lang, { appendFollowUp: true });
+    }
     if (input.includeDealScore !== false && (heuristic.intent === "price" || heuristic.intent === "availability")) {
       reply = appendDealScoreToReply(reply, input.vehicle, lang);
     }
@@ -247,7 +275,10 @@ export async function resolveNalaReply(input: {
     };
   } catch (e) {
     console.warn("[nalaReplyOrchestrator] LLM failed", e);
-    let reply = heuristic.reply;
+    let reply = polishNalaReply(heuristic.reply, lang);
+    if (heuristic.answered && !replyNeedsNameCapture(reply)) {
+      reply = composeShowroomBotReply(reply, lang, { appendFollowUp: true });
+    }
     if (input.includeDealScore !== false && heuristic.intent === "price") {
       reply = appendDealScoreToReply(reply, input.vehicle, lang);
     }

@@ -101,6 +101,7 @@ import AdminMarketGuide from "./pages/admin/AdminMarketGuide";
 import AdminPilotDashboard from "./pages/admin/AdminPilotDashboard";
 import AgentsEnhanced from "./pages/AgentsEnhanced";
 import CSVPhotoManager from "./pages/CSVPhotoManager";
+import R1PriceManager from "./pages/R1PriceManager";
 // import { ChatbotAnalyticsDashboard } from "./pages/ChatbotAnalyticsDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminDashboardEnhanced from "./pages/AdminDashboardEnhanced";
@@ -202,6 +203,7 @@ function Router() {
         <AdminRouteGuard><AgentsEnhanced /></AdminRouteGuard>
       </Route>
       <Route path="/dealer/csv-photo" component={CSVPhotoManager} />
+      <Route path="/dealer/fix-r1-prices" component={R1PriceManager} />
       <Route path="/dealer/revenue" component={RevenueDashboard} />
       <Route path="/dealer/support-agent" component={SupportAgentCustomization} />
       <Route path="/dealer/conversation-insights" component={InsightsDashboard} />

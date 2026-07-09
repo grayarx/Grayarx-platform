@@ -31,6 +31,8 @@ import type { LanguageCode } from "@shared/languages";
 import { isLanguageCode } from "@shared/languages";
 import { formatVehiclePrice } from "@/lib/formatPrice";
 
+import type { RoutedAgentId } from "@shared/agentIntentRouting";
+
 export type ChatVehicle = {
   id: string;
   title: string;
@@ -53,6 +55,17 @@ type ChatMessage = {
   id: string;
   role: "bot" | "user";
   text: string;
+  agent?: RoutedAgentId;
+};
+
+const AGENT_HEADER: Record<
+  RoutedAgentId,
+  { name: string; role: string }
+> = {
+  nala: { name: "Nala", role: "AI Sales" },
+  lerato: { name: "Lerato", role: "Booking" },
+  tumi: { name: "Tumi", role: "Trade-In" },
+  bongi: { name: "Bongi", role: "After Hours" },
 };
 
 type ShowroomChatAgentProps = {
@@ -89,6 +102,7 @@ export function ShowroomChatAgent({
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [chatLang, setChatLang] = useState<LanguageCode>("en");
+  const [activeAgent, setActiveAgent] = useState<RoutedAgentId>("nala");
 
   const booking = trpc.publicBooking.submit.useMutation();
   const preApproval = trpc.publicPreApproval.submit.useMutation();
@@ -96,8 +110,9 @@ export function ShowroomChatAgent({
   const enquire = trpc.showroom.enquire.useMutation();
   const showroomChat = trpc.showroom.chat.useMutation();
 
-  const addBot = useCallback((text: string) => {
-    setMessages((m) => [...m, { id: uid(), role: "bot", text }]);
+  const addBot = useCallback((text: string, agent: RoutedAgentId = "nala") => {
+    setActiveAgent(agent);
+    setMessages((m) => [...m, { id: uid(), role: "bot", text, agent }]);
   }, []);
 
   const addUser = useCallback((text: string) => {
@@ -111,8 +126,9 @@ export function ShowroomChatAgent({
     setDraft({});
     setInput("");
     setChatLang(browserPreferredLang());
+    setActiveAgent("nala");
     const greeting = greetingForVehicle(vehicle, dealershipName, browserPreferredLang());
-    setMessages([{ id: uid(), role: "bot", text: greeting }]);
+    setMessages([{ id: uid(), role: "bot", text: greeting, agent: "nala" }]);
   }, [vehicle, dealershipName]);
 
   useEffect(() => {
@@ -319,24 +335,34 @@ export function ShowroomChatAgent({
           dealershipName,
           language: lang,
         });
-        addBot(res.reply);
+        addBot(res.reply, res.agent ?? "nala");
+
+        if (res.agent === "lerato" && res.intent === "test_drive") {
+          setFlow("test_drive");
+          setStep(0);
+          setDraft({ lang: res.language });
+          return;
+        }
+
+        if (res.agent === "tumi" && res.intent === "trade_in") {
+          setFlow("trade_in");
+          setStep(0);
+          setDraft({ lang: res.language });
+          return;
+        }
 
         const needsLeadCapture =
           res.intent === "general" ||
           (res.intent === "color" && !vehicle.color?.trim()) ||
-          (res.intent === "location" && !vehicle.location?.trim()) ||
-          replyNeedsNameCapture(res.reply);
+          (res.intent === "location" && !vehicle.location?.trim());
 
         if (needsLeadCapture) {
           setFlow("enquiry");
           setStep(1);
           setDraft({ notes: val, lang: res.language });
-          addBot(getLocalizedPrompt("askName", res.language as ShowroomLang));
-          return;
-        }
-
-        if (res.answered) {
-          addBot(getLocalizedPrompt("followUp", res.language as ShowroomLang));
+          if (!replyNeedsNameCapture(res.reply)) {
+            addBot(getLocalizedPrompt("askName", res.language as ShowroomLang));
+          }
         }
       } catch (e) {
         addBot(getFlowPrompt("errorGeneric", lang));
@@ -479,6 +505,8 @@ export function ShowroomChatAgent({
 
   if (!vehicle) return null;
 
+  const headerAgent = AGENT_HEADER[activeAgent];
+
   return (
     <AnimatePresence>
       {open && (
@@ -487,18 +515,19 @@ export function ShowroomChatAgent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[60]"
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 bg-[#060608]/70 backdrop-blur-md z-[60]"
             onClick={() => onOpenChange(false)}
           />
           <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            initial={{ opacity: 0, y: 48, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.96 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[420px] z-[70] flex flex-col rounded-2xl border border-primary/25 bg-card shadow-2xl shadow-black/50 overflow-hidden max-h-[85vh]"
+            exit={{ opacity: 0, y: 32, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[440px] z-[70] flex flex-col rounded-2xl border border-primary/30 bg-[#0a0a0c]/95 shadow-2xl shadow-black/60 overflow-hidden max-h-[88vh] holo-card scan-line"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-primary/15 bg-gradient-to-r from-primary/10 to-transparent">
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-primary/20 bg-gradient-to-r from-primary/12 via-transparent to-cyan-500/5">
               {vehicle.image ? (
                 <img src={vehicle.image} alt="" className="w-10 h-10 rounded-lg object-cover ring-1 ring-primary/30" />
               ) : (
@@ -509,7 +538,9 @@ export function ShowroomChatAgent({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-primary uppercase tracking-wide">Nala · AI Sales</span>
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+                    {headerAgent.name} · {headerAgent.role}
+                  </span>
                 </div>
                 <p className="text-sm font-medium truncate">
                   {formatVehicleDisplayName(vehicle.year, vehicle.title)}
@@ -525,49 +556,75 @@ export function ShowroomChatAgent({
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-[280px] max-h-[50vh]">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex",
-                    msg.role === "user" ? "justify-end" : "justify-start",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted/60 text-muted-foreground rounded-bl-md border border-border/50",
-                    )}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-[300px] max-h-[52vh] scroll-smooth">
+              <AnimatePresence initial={false}>
+                {messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}
                   >
-                    {renderMarkdown(msg.text)}
-                  </div>
-                </div>
-              ))}
+                    <div
+                      className={cn(
+                        "max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words",
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-md shadow-lg shadow-primary/20"
+                          : "bg-muted/40 text-foreground rounded-bl-md border border-primary/15 backdrop-blur-sm",
+                      )}
+                    >
+                      {msg.role === "bot" && msg.agent && msg.agent !== "nala" && (
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-primary mb-1.5">
+                          {AGENT_HEADER[msg.agent].name}
+                        </p>
+                      )}
+                      {renderMarkdown(msg.text)}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {busy && (
-                <div className="flex justify-start">
-                  <div className="bg-muted/60 rounded-2xl px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    {getFlowPrompt("working", chatLang)}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="bg-muted/40 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm text-muted-foreground border border-primary/10">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span>{getFlowPrompt("working", chatLang)}</span>
+                    <span className="inline-flex gap-1" aria-hidden>
+                      {[0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-primary/70"
+                          animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+                        />
+                      ))}
+                    </span>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Quick actions when back at menu */}
               {flow === "menu" && !busy && (
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <QuickAction icon={Calendar} label={getFlowPrompt("quickTestDrive", chatLang)} onClick={() => startFlow("test_drive")} />
-                  <QuickAction icon={Banknote} label={getFlowPrompt("quickPreApproval", chatLang)} onClick={() => startFlow("pre_approval")} />
-                  <QuickAction icon={Car} label={getFlowPrompt("quickTradeIn", chatLang)} onClick={() => startFlow("trade_in")} />
-                  <QuickAction icon={MessageCircle} label={getFlowPrompt("quickAsk", chatLang)} onClick={() => startFlow("enquiry")} />
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  className="grid grid-cols-2 gap-2 pt-2"
+                >
+                  <QuickAction icon={Calendar} label={getFlowPrompt("quickTestDrive", chatLang)} onClick={() => startFlow("test_drive")} delay={0} />
+                  <QuickAction icon={Banknote} label={getFlowPrompt("quickPreApproval", chatLang)} onClick={() => startFlow("pre_approval")} delay={0.05} />
+                  <QuickAction icon={Car} label={getFlowPrompt("quickTradeIn", chatLang)} onClick={() => startFlow("trade_in")} delay={0.1} />
+                  <QuickAction icon={MessageCircle} label={getFlowPrompt("quickAsk", chatLang)} onClick={() => startFlow("enquiry")} delay={0.15} />
+                </motion.div>
               )}
             </div>
 
             {/* Input */}
-            <div className="border-t border-primary/15 p-3 bg-card/80">
+            <div className="border-t border-primary/20 p-3 bg-[#08080a]/90 backdrop-blur-md">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -584,15 +641,20 @@ export function ShowroomChatAgent({
                       : getFlowPrompt("inputReply", chatLang)
                   }
                   disabled={busy}
-                  className="flex-1 h-10 bg-background/60"
+                  className="flex-1 h-11 bg-black/40 border-primary/25 focus-visible:ring-primary/30"
                   autoFocus
                 />
-                <Button type="submit" size="icon" disabled={busy || !input.trim()} className="btn-gold h-10 w-10 shrink-0">
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={busy || !input.trim()}
+                  className="btn-gold h-11 w-11 shrink-0 transition-transform active:scale-95"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
-              <p className="text-[10px] text-muted-foreground text-center mt-2">
-                Nala · 11 SA languages + Portuguese · Grammar-checked AI · POPIA compliant
+              <p className="font-tech text-[9px] uppercase tracking-[0.18em] text-muted-foreground text-center mt-2.5">
+                {headerAgent.name} · 11 SA languages · Native grammar templates · POPIA compliant
               </p>
             </div>
           </motion.div>
@@ -606,21 +668,28 @@ function QuickAction({
   icon: Icon,
   label,
   onClick,
+  delay = 0,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
+  delay?: number;
 }) {
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/15 hover:border-primary/40 px-3 py-2.5 text-left text-xs font-medium transition-all group"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ scale: 1.02, borderColor: "rgba(212,175,55,0.45)" }}
+      whileTap={{ scale: 0.98 }}
+      className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/12 px-3 py-2.5 text-left text-xs font-medium transition-colors group"
     >
       <Icon className="h-4 w-4 text-primary shrink-0" />
-      <span className="flex-1">{label}</span>
-      <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
-    </button>
+      <span className="flex-1 leading-snug">{label}</span>
+      <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+    </motion.button>
   );
 }
 

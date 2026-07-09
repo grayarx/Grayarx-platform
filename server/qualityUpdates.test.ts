@@ -76,17 +76,18 @@ describe("Quality Updates - Phase 2: OAuth & Security", () => {
 
     it("should invalidate expired tokens", () => {
       const session = sessionRotation.generateToken(1);
-      // Manually set expiry to past
-      const token = sessionRotation.getActiveSessions(1)[0];
-      if (token) {
-        token.expiresAt = Date.now() - 1000;
-      }
+      const store = (sessionRotation as unknown as { sessions: Record<string, { expiresAt: number }> })
+        .sessions;
+      store[session.token].expiresAt = Date.now() - 1000;
       const validated = sessionRotation.validateToken(session.token);
       expect(validated).toBeNull();
     });
 
-    it("should rotate tokens", () => {
+    it("should rotate tokens after rotation interval", () => {
       const session = sessionRotation.generateToken(1);
+      const store = (sessionRotation as unknown as { sessions: Record<string, { rotatedAt: number }> })
+        .sessions;
+      store[session.token].rotatedAt = Date.now() - 2 * 60 * 60 * 1000;
       const rotated = sessionRotation.rotateToken(session.token, "192.168.1.2");
       expect(rotated).not.toBeNull();
       expect(rotated?.token).not.toBe(session.token);

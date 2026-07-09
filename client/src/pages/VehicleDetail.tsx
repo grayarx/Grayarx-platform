@@ -40,8 +40,10 @@ import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 import DealScoreBadge from "@/components/DealScoreBadge";
 import UpgradeJourneyCard from "@/components/UpgradeJourneyCard";
+import VehicleGallery from "@/components/VehicleGallery";
 import { loadTradeInSession } from "@/lib/tradeInSession";
 import { scoreListingDeal } from "@shared/priceIntelligence";
+import { mergeVehicleGallery, vehiclePrimaryUrl } from "@shared/imagePipeline";
 
 function formatKm(km: number | null | undefined): string {
   if (km === null || km === undefined) return "—";
@@ -74,6 +76,12 @@ export default function VehicleDetail() {
       mileageKm: vehicle.km,
       title: vehicle.title,
     });
+  }, [vehicle]);
+
+  const galleryImages = useMemo(() => {
+    if (!vehicle) return [];
+    const gallery = (vehicle as { gallery?: Array<{ url: string }> }).gallery ?? [];
+    return mergeVehicleGallery(vehiclePrimaryUrl(vehicle), gallery);
   }, [vehicle]);
 
   const handleCopy = async () => {
@@ -229,29 +237,16 @@ export default function VehicleDetail() {
               className="grid lg:grid-cols-5 gap-8 pb-16"
             >
               {/* Left: Gallery */}
-              <div className="lg:col-span-3">
-                <div className="relative rounded-2xl overflow-hidden border border-primary/15 bg-card">
-                  {vehicle.imageUrl ? (
-                    <img
-                      src={vehicle.imageUrl}
-                      alt={vehicle.title}
-                      className="w-full aspect-[16/10] object-cover object-center img-premium"
-                      loading="eager"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[16/10] flex items-center justify-center bg-muted">
-                      <Car className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                  )}
-                  {vehicle.status && vehicle.status !== "available" && (
-                    <Badge
-                      variant="secondary"
-                      className="absolute top-4 left-4 capitalize text-sm px-3 py-1"
-                    >
-                      {vehicle.status}
-                    </Badge>
-                  )}
-                </div>
+              <div className="lg:col-span-3 relative">
+                {vehicle.status && vehicle.status !== "available" && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute top-4 left-4 z-20 capitalize text-sm px-3 py-1"
+                  >
+                    {vehicle.status}
+                  </Badge>
+                )}
+                <VehicleGallery title={vehicle.title} images={galleryImages} />
 
                 {vehicle.description && (
                   <div className="mt-6 rounded-2xl border border-primary/10 bg-card/50 p-6">

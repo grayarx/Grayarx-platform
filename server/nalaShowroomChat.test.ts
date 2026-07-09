@@ -53,6 +53,17 @@ describe("detectShowroomLanguage", () => {
 });
 
 describe("answerShowroomQuestion — all languages", () => {
+  it("answers Afrikaans colour question with kleer typo", () => {
+    const { answered, intent, reply } = answerShowroomQuestion(
+      vehicle,
+      "watse kleer het julle hom in",
+      "af",
+    );
+    expect(answered).toBe(true);
+    expect(intent).toBe("color");
+    expect(reply.toLowerCase()).toContain("red");
+  });
+
   it("answers Afrikaans colour question", () => {
     const { answered, reply } = answerShowroomQuestion(
       vehicle,

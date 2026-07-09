@@ -36,7 +36,7 @@ export const PROMPT_ASK_NAME: LangStrings = {
   tn: "Nka go fetisetsa sehlopheng. Leina la gago ke mang?",
   ts: "Ndzi ta ku rhumela eka ntlawa. Vito ra wena i mani?",
   ss: "Ngitawudlulisa ethimeni. Ligama lakho ngubani?",
-  ve: "Ndo rumela tshitshavha. Zwi ita zwine?",
+  ve: "Ndo rumela tshitshavha. Dzina lavho ndi ani?",
   nr: "Ngizokudlulisa ithimba. Igama lakho ngubani?",
   pt: "Posso encaminhar à equipa. Qual é o seu nome?",
 };
@@ -76,12 +76,12 @@ export const PROMPT_FOLLOW_UP: LangStrings = {
   af: "Iets anders oor hierdie motor, of kies 'n opsie hieronder?",
   zu: "Okunye mayelana nemoto, noma khetha inketho engezansi?",
   xh: "Enye into ngale moto, okanye khetha ukhetho ngezantsi?",
-  st: "Ho na le se seng? khetha khetho ka tlase.",
-  nso: "Go na le se sengwe? kgetha kgetho ka fase.",
-  tn: "Go na le se sengwe? kgetha kgetho fa tlase.",
-  ts: "Xiphiqo xin'wana? hlawula xitlhaviso laha hansi.",
+  st: "Ho na le se seng? Khetha khetho ka tlase.",
+  nso: "Go na le se sengwe? Kgetha kgetho ka fase.",
+  tn: "Go na le se sengwe? Kgetha kgetho fa tlase.",
+  ts: "Xin'wana xin'we hi movha lowu, kumbe hlawula xitlhaviso laha hansi.",
   ss: "Lokunye mayelana nemoto, noma ukhethe lokukhetsa ngezansi?",
-  ve: "Zwiṅwe? nangani nga fhasi.",
+  ve: "Zwiṅwe zwi re hone? Nangani nga fhasi.",
   nr: "Okunye mayelana nemoto, noma ukhethe okukhethwa ngezansi?",
   pt: "Mais alguma coisa sobre este carro, ou escolha uma opção abaixo?",
 };
@@ -143,7 +143,7 @@ export const REPLY_COLOR_UNKNOWN: LangStrings = {
   tn: "Ga ke na mmala wa **{name}** — ke tla botsa sehlopha. Leina la gago ke mang?",
   ts: "A ndzi na muvala wa **{name}** — ndzi ta vutisa ntlawa. Vito ra wena i mani?",
   ss: "Anginaso umbala we-**{name}** — ngizobuza sithimba. Ligama lakho ngubani?",
-  ve: "A thi na mmala ha **{name}** — ndi do vhiga tshitshavha. Zwi ita zwine?",
+  ve: "A thi na mmala ha **{name}** — ndi do vhiga tshitshavha. Dzina lavho ndi ani?",
   nr: "Anginayo umbala we-**{name}** — ngizobuza ithimba. Igama lakho ngubani?",
   pt: "Ainda não tenho a cor exacta do **{name}** — vou confirmar com a equipa. Qual é o seu nome?",
 };
@@ -211,7 +211,7 @@ export const REPLY_TRANSMISSION: LangStrings = {
 export const REPLY_LOCATION_KNOWN: LangStrings = {
   en: "You'll find this **{name}** at **{location}**.",
   af: "Jy sal hierdie **{name}** by **{location}** kry.",
-  zu: "Uzo**{name}** e-**{location}**.",
+  zu: "Uzothola i-**{name}** e-**{location}**.",
   xh: "Ufumana le **{name}** e-**{location}**.",
   st: "U tla fumana **{name}** ho **{location}**.",
   nso: "O tla hwetša **{name}** go **{location}**.",
@@ -233,7 +233,7 @@ export const REPLY_LOCATION_UNKNOWN: LangStrings = {
   tn: "Lefelo ga le sa ngwadišwe — ke tla botsa sehlopha. Leina la gago ke mang?",
   ts: "Ndawo a yi kombisiwanga — ndzi ta vutisa ntlawa. Vito ra wena i mani?",
   ss: "Indzawo ayibhalwanga — ngizobuza sithimba. Ligama lakho ngubani?",
-  ve: "Fhethu ha fho ngadzwaho — ndi do vhiga tshitshavha. Zwi ita zwine?",
+  ve: "Fhethu ha fho ngadzwaho — ndi do vhiga tshitshavha. Dzina lavho ndi ani?",
   nr: "Indawo ayibhalwanga — ngizobuza ithimba. Igama lakho ngubani?",
   pt: "Localização não indicada — vou confirmar com a equipa. Qual é o seu nome?",
 };
@@ -308,7 +308,7 @@ export const REPLY_GENERAL: LangStrings = {
   tn: "Ke a leboga ka potso ya gago mabapi le **{name}**. Leina la gago ke mang?",
   ts: "Ndza khensa hi xivutiso xa wena hi **{name}**. Vito ra wena i mani?",
   ss: "Ngiyabonga ngembuto yakho nge **{name}**. Ligama lakho ngubani?",
-  ve: "Ndo livhuwa nga mbudziso yavho nga **{name}**. Zwi ita zwine?",
+  ve: "Ndo livhuwa nga mbudziso yavho nga **{name}**. Dzina lavho ndi ani?",
   nr: "Ngiyathokoza ngombuzo wakho nge **{name}**. Igama lakho ngubani?",
   pt: "Obrigado pela pergunta sobre o **{name}**. Qual é o seu nome?",
 };
@@ -324,8 +324,8 @@ export function nalaText(
 
 /** Phrases that signal lead capture is needed (any language) */
 export const NAME_REQUEST_MARKERS = [
-  "your name", "jou naam", "igama lakho", "igama lakho", "lebitso la hao",
-  "leina la gago", "vito ra wena", "ligama lakho", "zwi ita zwine", "seu nome",
+  "your name", "jou naam", "igama lakho", "lebitso la hao",
+  "leina la gago", "vito ra wena", "ligama lakho", "dzina lavho", "seu nome",
   "qual é o seu nome", "wat is jou naam", "ngubani igama",
 ];
 

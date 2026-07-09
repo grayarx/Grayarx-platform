@@ -153,25 +153,7 @@ export function suggestNextSlot(
  * messages to Lerato. False positives here only mean the customer gets a
  * booking ack instead of a generic reply — still useful and recoverable.
  */
-export function detectsBookingIntent(message: string): boolean {
-  if (!message) return false;
-  const lower = message.toLowerCase();
-  const patterns = [
-    /\btest[\s-]?drive\b/, // English
-    /\btoetsr(it|y)\b/, // Afrikaans
-    /\bbook(ing)? a (test|car|vehicle)\b/,
-    /\b(can|may|could) i (come|see|view|drive|test)\b/,
-    /\bsee the (car|vehicle|vehiku|imoto|umkhumbi)\b/,
-    /\bukuza ku|ukuhlola|uku(shayela|qhuba)\b/, // isiZulu / isiXhosa
-    /\bteko ya ho khanna|teko ya go otlela|teko ya go kgweetsa\b/, // Sotho/Tswana/Pedi
-    /\bnkambelo wa ku chayela\b/, // Xitsonga
-    /\bkuhlola kushayela\b/, // siSwati
-    /\bu linga u tshimbidza\b/, // Tshivenda
-    /\bukuhlola ukutjhayela\b/, // isiNdebele
-    /\btest[ -]?drive|reservar (um )?test|agendar visita\b/, // Portuguese
-  ];
-  return patterns.some((p) => p.test(lower));
-}
+export { detectsBookingIntent } from "../../shared/agentIntentRouting";
 
 /**
  * Format a Date in SAST as a short, readable "Sat 24 May at 11:00" string.

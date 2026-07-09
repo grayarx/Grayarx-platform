@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
+import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import AuthShell from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -12,285 +13,137 @@ export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+
+  const resetMutation = trpc.auth.resetPassword.useMutation({
+    onSuccess: () => {
+      setSuccess(true);
+      toast.success("Password updated — you can sign in now.");
+    },
+    onError: (e) => toast.error(e.message ?? "Could not reset password"),
+  });
 
   useEffect(() => {
-    // Extract token from URL query params
-    const params = new URLSearchParams(search);
-    const resetToken = params.get("token");
-    if (!resetToken) {
-      setError("Invalid or missing reset token");
-    } else {
-      setToken(resetToken);
-    }
+    const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    setToken(params.get("token"));
   }, [search]);
 
-  const validatePassword = (pwd: string) => {
-    const errors: string[] = [];
-    if (pwd.length < 8) {
-      errors.push("At least 8 characters");
-    }
-    if (!/[A-Z]/.test(pwd)) {
-      errors.push("One uppercase letter");
-    }
-    if (!/[0-9]/.test(pwd)) {
-      errors.push("One number");
-    }
-    return errors;
-  };
+  const passwordErrors: string[] = [];
+  if (password.length > 0 && password.length < 8) passwordErrors.push("At least 8 characters");
+  if (password.length > 0 && !/[A-Z]/.test(password)) passwordErrors.push("One uppercase letter");
+  if (password.length > 0 && !/[0-9]/.test(password)) passwordErrors.push("One number");
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const pwd = e.target.value;
-    setPassword(pwd);
-    if (pwd) {
-      setPasswordErrors(validatePassword(pwd));
-    } else {
-      setPasswordErrors([]);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!token) {
-      setError("Invalid reset token");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    const errors = validatePassword(password);
-    if (errors.length > 0) {
-      setError("Password does not meet requirements");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Failed to reset password");
-        return;
-      }
-
-      setSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const inputClass =
+    "w-full h-12 pl-11 pr-11 bg-black/40 border border-primary/20 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition text-sm";
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900 border-slate-800 shadow-2xl">
-          <div className="p-8">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-amber-500" />
-              </div>
-            </div>
-
-            <h1 className="text-2xl font-bold text-center text-white mb-2">
-              Password Reset Successful
-            </h1>
-
-            <p className="text-slate-400 text-center mb-6">
-              Your password has been reset successfully. You can now sign in with your new password.
-            </p>
-
-            <Button
-              onClick={() => setLocation("/login")}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold"
-            >
-              Go to Login
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <AuthShell title="Password updated" subtitle="Your account is ready — sign in with your new password.">
+        <div className="text-center py-4 space-y-4">
+          <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
+          <Button className="w-full h-12 btn-gold" onClick={() => setLocation("/login")}>
+            Go to sign in
+          </Button>
+        </div>
+      </AuthShell>
     );
   }
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900 border-slate-800 shadow-2xl">
-          <div className="p-8">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-8 h-8 text-red-500" />
-              </div>
-            </div>
-
-            <h1 className="text-2xl font-bold text-center text-white mb-2">
-              Invalid Link
-            </h1>
-
-            <p className="text-slate-400 text-center mb-6">
-              The password reset link is invalid or has expired. Please request a new one.
-            </p>
-
-            <Button
-              onClick={() => setLocation("/forgot-password")}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold"
-            >
-              Request New Link
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <AuthShell title="Invalid link" subtitle="This reset link is missing or expired.">
+        <div className="text-center py-4 space-y-4">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <Button asChild className="w-full h-12 btn-gold">
+            <Link href="/forgot-password">Request a new link</Link>
+          </Button>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-800 shadow-2xl">
-        <div className="p-8">
-          <h1 className="text-2xl font-bold text-center text-white mb-2">
-            Reset Your Password
-          </h1>
-
-          <p className="text-slate-400 text-center mb-6 text-sm">
-            Enter your new password below.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-200">{error}</p>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                New Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={password}
-                  onChange={handlePasswordChange}
-                  required
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 pr-10"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              {password && passwordErrors.length > 0 && (
-                <div className="mt-2 text-sm text-slate-400">
-                  <p className="mb-1">Password must have:</p>
-                  <ul className="space-y-1">
-                    {passwordErrors.map((error, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <span className="text-red-500">✗</span>
-                        {error}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {password && passwordErrors.length === 0 && (
-                <p className="mt-2 text-sm text-green-500">✓ Password meets requirements</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 pr-10"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              {confirmPassword && password !== confirmPassword && (
-                <p className="mt-2 text-sm text-red-500">Passwords do not match</p>
-              )}
-
-              {confirmPassword && password === confirmPassword && (
-                <p className="mt-2 text-sm text-green-500">✓ Passwords match</p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              disabled={
-                loading ||
-                !password ||
-                !confirmPassword ||
-                password !== confirmPassword ||
-                passwordErrors.length > 0
-              }
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Resetting..." : "Reset Password"}
-            </Button>
-          </form>
-
-          <div className="border-t border-slate-800 mt-6 pt-6">
-            <p className="text-center text-slate-500 text-sm">
-              Remember your password?{" "}
-              <button
-                onClick={() => setLocation("/login")}
-                className="text-amber-500 hover:text-amber-400 font-medium"
-              >
-                Sign in
-              </button>
-            </p>
-          </div>
+    <AuthShell
+      title="Choose new password"
+      subtitle="Use at least 8 characters with one uppercase letter and one number."
+      footer={
+        <p className="text-sm text-muted-foreground">
+          <Link href="/login" className="text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </p>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (password !== confirmPassword || passwordErrors.length) return;
+          resetMutation.mutate({ token, newPassword: password });
+        }}
+        className="space-y-4"
+      >
+        <div className="relative">
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type={showPassword ? "text" : "password"}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="New password"
+            className={inputClass}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
         </div>
-      </Card>
-    </div>
+        {passwordErrors.length > 0 && (
+          <ul className="text-xs text-muted-foreground space-y-1">
+            {passwordErrors.map((err) => (
+              <li key={err}>• {err}</li>
+            ))}
+          </ul>
+        )}
+
+        <div className="relative">
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type={showPassword ? "text" : "password"}
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm password"
+            className={inputClass}
+            autoComplete="new-password"
+          />
+        </div>
+        {confirmPassword && password !== confirmPassword && (
+          <p className="text-xs text-destructive">Passwords do not match</p>
+        )}
+
+        <Button
+          type="submit"
+          disabled={
+            resetMutation.isPending ||
+            passwordErrors.length > 0 ||
+            password !== confirmPassword
+          }
+          className="w-full h-12 btn-gold font-semibold"
+        >
+          {resetMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Updating…
+            </>
+          ) : (
+            "Update password"
+          )}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

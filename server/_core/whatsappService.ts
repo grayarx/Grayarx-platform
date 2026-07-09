@@ -283,11 +283,11 @@ export async function handleIncomingWhatsAppMessage(
     const { listVehicles, getVehicle } = await import("../db");
     const { getDealershipById } = await import("../db");
     const {
-      resolveNalaReply,
       parseVehicleTitleFromMessage,
       findVehicleFromMessage,
       vehicleRowToContext,
     } = await import("./nalaReplyOrchestrator");
+    const { resolveRoutedReply } = await import("./agentIntentRouter");
     const { scoreListingDeal } = await import("../../shared/priceIntelligence");
 
     const dealership = await getDealershipById(dealershipIdNum);
@@ -357,26 +357,22 @@ export async function handleIncomingWhatsAppMessage(
       if (row) vehicleCtx = vehicleRowToContext(row);
     }
 
-    const result = await resolveNalaReply({
+    const result = await resolveRoutedReply({
       message,
       vehicle: vehicleCtx,
+      vehicleId,
+      dealershipId: dealershipIdNum,
       dealershipName: dealerName,
+      businessHoursOverride: dealership?.businessHoursJson ?? undefined,
+      customerPhone: formattedPhone,
       channel: "whatsapp",
       includeDealScore: true,
       inventoryHints: topDealHints,
     });
 
     console.log(
-      `[WhatsApp Nala] +${formattedPhone} lang=${result.language} intent=${result.intent}`,
+      `[WhatsApp ${result.agent}] +${formattedPhone} lang=${result.language} intent=${result.intent}`,
     );
-
-    if (result.isBookingIntent) {
-      const bookingHint =
-        result.language === "af"
-          ? "\n\nVir 'n toetsrit, stuur jou naam en wanneer jy beskikbaar is — ons span bevestig binnekort."
-          : "\n\nFor a test drive, send your name and when you're available — our team will confirm shortly.";
-      result.reply = result.reply + bookingHint;
-    }
 
     await sendWhatsAppMessage({
       phone: formattedPhone,

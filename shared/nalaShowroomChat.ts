@@ -6,6 +6,7 @@ import {
   type LanguageCode,
   detectLanguage,
 } from "./languages";
+import { normalizeBuyerMessage, polishedNalaText } from "./nalaGrammarPolish";
 import {
   GREETING,
   PROMPT_ASK_EMAIL,
@@ -26,7 +27,6 @@ import {
   REPLY_TEST_DRIVE,
   REPLY_TRADE_IN,
   REPLY_TRANSMISSION,
-  nalaText,
   replyNeedsNameCapture,
 } from "./nalaTranslations";
 
@@ -72,9 +72,9 @@ type Intent =
 /** Multilingual intent keywords — order matters (first match wins) */
 const INTENT_KEYWORDS: Record<Exclude<Intent, "general">, string[]> = {
   color: [
-    "colour", "color", "kleur", "umbala", "mmala", "muvala", "what colour", "watse kleur",
-    "watter kleur", "ngiyiphi umbala", "yintoni umbala", "mmala ke eng", "mmala ke ofe",
-    "cor", "qual cor",
+    "colour", "color", "kleur", "kleer", "umbala", "mmala", "muvala", "what colour", "watse kleur",
+    "wat kleur", "watter kleur", "ngiyiphi umbala", "yintoni umbala", "mmala ke eng", "mmala ke ofe",
+    "cor", "qual cor", "het julle hom in", "het julle dit in",
   ],
   price: [
     "price", "prys", "cost", "how much", "hoeveel", "intengo", "theko", "ixabiso", "poa",
@@ -120,12 +120,16 @@ function matchesIntent(text: string, keywords: string[]): boolean {
 }
 
 export function classifyShowroomIntent(text: string): Intent {
+  const normalized = normalizeBuyerMessage(text);
   const order: Exclude<Intent, "general">[] = [
     "color", "price", "km", "fuel", "transmission", "location",
     "test_drive", "finance", "trade_in", "availability",
   ];
   for (const intent of order) {
-    if (matchesIntent(text, INTENT_KEYWORDS[intent])) return intent;
+    if (matchesIntent(normalized, INTENT_KEYWORDS[intent])) return intent;
+  }
+  if (/\b(kleur|kleer|colour|color|umbala|mmala|muvala|cor)\b/i.test(normalized)) {
+    return "color";
   }
   return "general";
 }
@@ -163,7 +167,7 @@ export function getLocalizedPrompt(
     askPhone: PROMPT_ASK_PHONE,
     followUp: PROMPT_FOLLOW_UP,
   };
-  return nalaText(lang, map[key]);
+  return polishedNalaText(lang, map[key]);
 }
 
 export function thanksForEnquiry(
@@ -172,7 +176,7 @@ export function thanksForEnquiry(
   dealership: string,
   vehicle: VehicleChatContext,
 ): string {
-  return nalaText(lang, PROMPT_THANKS_ENQUIRY, {
+  return polishedNalaText(lang, PROMPT_THANKS_ENQUIRY, {
     name,
     dealership,
     vehicle: formatVehicleDisplayName(vehicle.year, vehicle.title),
@@ -184,7 +188,8 @@ export function answerShowroomQuestion(
   question: string,
   lang: LanguageCode = detectLanguage(question),
 ): { answered: boolean; reply: string; intent: Intent; language: LanguageCode } {
-  const intent = classifyShowroomIntent(question);
+  const normalized = normalizeBuyerMessage(question);
+  const intent = classifyShowroomIntent(normalized);
   const v = vehicleVars(vehicle);
 
   switch (intent) {
@@ -194,40 +199,40 @@ export function answerShowroomQuestion(
         intent,
         language: lang,
         reply: vehicle.color?.trim()
-          ? nalaText(lang, REPLY_COLOR_KNOWN, v)
-          : nalaText(lang, REPLY_COLOR_UNKNOWN, v),
+          ? polishedNalaText(lang, REPLY_COLOR_KNOWN, v)
+          : polishedNalaText(lang, REPLY_COLOR_UNKNOWN, v),
       };
     case "price":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_PRICE, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_PRICE, v) };
     case "km":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_KM, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_KM, v) };
     case "fuel":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_FUEL, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_FUEL, v) };
     case "transmission":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_TRANSMISSION, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_TRANSMISSION, v) };
     case "location":
       return {
         answered: true,
         intent,
         language: lang,
         reply: vehicle.location?.trim()
-          ? nalaText(lang, REPLY_LOCATION_KNOWN, v)
-          : nalaText(lang, REPLY_LOCATION_UNKNOWN, v),
+          ? polishedNalaText(lang, REPLY_LOCATION_KNOWN, v)
+          : polishedNalaText(lang, REPLY_LOCATION_UNKNOWN, v),
       };
     case "test_drive":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_TEST_DRIVE, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_TEST_DRIVE, v) };
     case "finance":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_FINANCE, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_FINANCE, v) };
     case "trade_in":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_TRADE_IN, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_TRADE_IN, v) };
     case "availability":
-      return { answered: true, intent, language: lang, reply: nalaText(lang, REPLY_AVAILABILITY, v) };
+      return { answered: true, intent, language: lang, reply: polishedNalaText(lang, REPLY_AVAILABILITY, v) };
     default:
       return {
         answered: false,
         intent,
         language: lang,
-        reply: nalaText(lang, REPLY_GENERAL, v),
+        reply: polishedNalaText(lang, REPLY_GENERAL, v),
       };
   }
 }
@@ -241,7 +246,7 @@ export function greetingForVehicle(
   const price = fmtPrice(vehicle.price);
   const km = vehicle.km != null ? `${(vehicle.km / 1000).toFixed(0)}k km` : "—";
   const specs = `${km}, ${vehicle.fuel ?? "—"}, ${vehicle.transmission ?? "—"}`;
-  return nalaText(lang, GREETING, { dealership: dealershipName, name, price, specs });
+  return polishedNalaText(lang, GREETING, { dealership: dealershipName, name, price, specs });
 }
 
 export { replyNeedsNameCapture };

@@ -1,13 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   Loader2,
   Plus,
   Trash2,
   Car as CarIcon,
-  Camera,
-  Image as ImageIcon,
-  X,
   Search,
   Eye,
   Star,
@@ -39,6 +36,10 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import VehiclePhotoUploader, {
+  type PendingGalleryPhoto,
+} from "@/components/VehiclePhotoUploader";
+import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
 import {
   Select,
   SelectContent,
@@ -239,31 +240,18 @@ export default function Inventory() {
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [bodyFilter, setBodyFilter] = useState<string>("all");
 
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const [pendingGallery, setPendingGallery] = useState<PendingGalleryPhoto[]>([]);
 
-  const createV = trpc.dealer.createVehicle.useMutation({
-    onSuccess: () => {
-      utils.dealer.listVehicles.invalidate();
-      utils.dealer.stats.invalidate();
-      utils.showroom.list.invalidate();
-      setOpen(false);
-      setEditingId(null);
-      setForm(EMPTY_FORM);
-      toast.success("Vehicle added to your showroom");
-    },
-    onError: (e) =>
-      toast.error(e.message ?? "Could not add vehicle. Please review the form."),
-  });
+  const attachPhoto = trpc.dealer.attachPhotoFromUrl.useMutation();
+
+  const createV = trpc.dealer.createVehicle.useMutation();
 
   const updateV = trpc.dealer.updateVehicle.useMutation({
     onSuccess: () => {
       utils.dealer.listVehicles.invalidate();
       utils.showroom.list.invalidate();
       setOpen(false);
-      setEditingId(null);
-      setForm(EMPTY_FORM);
+      resetForm();
       toast.success("Vehicle updated");
     },
     onError: (e) => toast.error(e.message ?? "Could not save changes"),
@@ -278,44 +266,11 @@ export default function Inventory() {
     },
   });
 
-  const uploadPhoto = trpc.dealer.uploadVehiclePhoto.useMutation();
-
-  async function handlePhotoFile(file: File | null | undefined) {
-    if (!file) return;
-    const mt =
-      file.type === "image/png"
-        ? "image/png"
-        : file.type === "image/webp"
-          ? "image/webp"
-          : "image/jpeg";
-    if (file.size > 12 * 1024 * 1024) {
-      toast.error("Photo is too large (max 12 MB)");
-      return;
-    }
-    setUploading(true);
-    try {
-      const buf = await file.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(buf).reduce(
-          (acc, b) => acc + String.fromCharCode(b),
-          "",
-        ),
-      );
-      const { url } = await uploadPhoto.mutateAsync({
-        dataBase64: base64,
-        mimeType: mt,
-        filename: file.name.replace(/\.[^.]+$/, ""),
-      });
-      setForm((f) => ({ ...f, imageUrl: url }));
-      toast.success("Photo uploaded");
-    } catch {
-      toast.error("Photo upload failed");
-    } finally {
-      setUploading(false);
-      if (cameraRef.current) cameraRef.current.value = "";
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setPendingGallery([]);
+    setEditingId(null);
+  };
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -343,7 +298,7 @@ export default function Inventory() {
     });
   }, [data, search, statusFilter, conditionFilter, bodyFilter]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const priceNum = parsePriceInput(form.price);
     if (priceNum === null || priceNum <= 1) {
       toast.error("Enter a valid price above R1. Use Settings → Fix R1 prices for bulk imports.");
@@ -354,16 +309,43 @@ export default function Inventory() {
       toast.error("Price must be greater than R1.");
       return;
     }
-    if (editingId != null) {
-      updateV.mutate({ id: editingId, ...payload, price: payload.price });
-    } else {
-      createV.mutate({ ...payload, price: payload.price });
+    try {
+      if (editingId != null) {
+        await updateV.mutateAsync({ id: editingId, ...payload, price: payload.price });
+      } else {
+        const result = await createV.mutateAsync({ ...payload, price: payload.price });
+        const newId = result.id;
+        if (newId && pendingGallery.length > 0) {
+          for (const p of pendingGallery) {
+            await attachPhoto.mutateAsync({
+              vehicleId: newId,
+              url: p.url,
+              caption: p.angleId,
+              setPrimary: p.angleId === "front_3_4",
+            });
+          }
+        }
+        utils.dealer.listVehicles.invalidate();
+        utils.dealer.stats.invalidate();
+        utils.showroom.list.invalidate();
+        toast.success("Vehicle added to your showroom");
+      }
+      setOpen(false);
+      resetForm();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save vehicle");
     }
   };
 
   const openEdit = (v: NonNullable<typeof data>[number]) => {
     setEditingId(v.id);
     setForm(vehicleToForm(v));
+    setPendingGallery([]);
+    setOpen(true);
+  };
+
+  const openAdd = () => {
+    resetForm();
     setOpen(true);
   };
 
@@ -402,10 +384,7 @@ export default function Inventory() {
           <DialogTrigger asChild>
             <Button
               className="btn-gold font-semibold"
-              onClick={() => {
-                setEditingId(null);
-                setForm(EMPTY_FORM);
-              }}
+              onClick={openAdd}
             >
               <Plus className="h-4 w-4 mr-2" /> Add vehicle
             </Button>
@@ -665,73 +644,10 @@ export default function Inventory() {
               </div>
 
               <div className="col-span-1 sm:col-span-2">
-                <Label>Vehicle photo</Label>
-                {form.imageUrl ? (
-                  <div className="mt-1 relative rounded-lg overflow-hidden border border-primary/20">
-                    <img
-                      src={form.imageUrl}
-                      alt="Vehicle preview"
-                      className="w-full h-56 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, imageUrl: "" })}
-                      className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white rounded-full p-1.5"
-                      aria-label="Remove photo"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-1 flex flex-col sm:flex-row gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => cameraRef.current?.click()}
-                      disabled={uploading}
-                      className="flex-1 h-11"
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Camera className="h-4 w-4 mr-2" />
-                      )}
-                      Take photo
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      className="flex-1 h-11"
-                    >
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Choose from gallery
-                    </Button>
-                  </div>
-                )}
-                <input
-                  ref={cameraRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => handlePhotoFile(e.target.files?.[0])}
-                />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handlePhotoFile(e.target.files?.[0])}
-                />
-                <Input
-                  value={form.imageUrl}
-                  onChange={(e) =>
-                    setForm({ ...form, imageUrl: e.target.value })
-                  }
-                  className="mt-2"
-                  placeholder="Or paste an image URL"
+                <VehiclePhotoUploader
+                  vehicleId={editingId}
+                  onPrimaryUrlChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                  onPendingPhotosChange={setPendingGallery}
                 />
               </div>
 
@@ -867,30 +783,14 @@ export default function Inventory() {
                 key={v.id}
                 className="card-premium rounded-2xl border border-primary/10 overflow-hidden group flex flex-col"
               >
-                {/* Photo */}
-                <div className="relative aspect-[16/10] bg-muted/30 overflow-hidden">
-                  {/* Always render the placeholder beneath the img so a
-                      broken/missing photo gracefully reveals a neutral
-                      car-icon empty state instead of the browser's yellow
-                      broken-image glyph. */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/60">
-                    <CarIcon className="h-10 w-10 mb-2" />
-                    <span className="text-xs">No photo yet</span>
-                  </div>
-                  {photo && (
-                    <img
-                      src={photo}
-                      alt={v.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="relative w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04] img-premium"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none opacity-70 group-hover:opacity-90 transition-opacity duration-500" />
-                  <div className="absolute top-3 left-3 flex gap-2">
+                {/* Photo — studio frame composites any upload onto premium backdrop */}
+                <VehicleShowroomFrame
+                  src={photo}
+                  alt={v.title}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none opacity-70 group-hover:opacity-90 transition-opacity duration-500 z-[3]" />
+                  <div className="absolute top-3 left-3 flex gap-2 z-[4]">
                     <Badge
                       className={`text-[10px] uppercase tracking-wider ${statusClass(v.status)}`}
                     >
@@ -903,12 +803,12 @@ export default function Inventory() {
                     )}
                   </div>
                   {(v.views ?? 0) > 0 && (
-                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] px-2 py-1 rounded-full flex items-center gap-1">
+                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] px-2 py-1 rounded-full flex items-center gap-1 z-[4]">
                       <Eye className="h-3 w-3" />
                       {v.views}
                     </div>
                   )}
-                </div>
+                </VehicleShowroomFrame>
 
                 {/* Body */}
                 <div className="p-5 flex-1 flex flex-col">

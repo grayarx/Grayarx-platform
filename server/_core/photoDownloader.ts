@@ -1,39 +1,75 @@
 /**
- * Download vehicle photos from AutoTrader / Cars.co.za URLs and store in S3.
- * Called during CSV import to ensure photos don't break when the source listing expires.
+ * Mirror external vehicle photos into GrayArx storage.
+ * AutoTrader / Cars.co.za links expire — we copy them on import so listings stay live.
  */
 
+import { isExternalPhotoUrl } from "../../shared/photoHosting";
 import { storagePut } from "../storage";
 
-const AUTOTRADER_DOMAIN = "autotrader.co.za";
-const CARS_DOMAIN = "cars.co.za";
+const BLOCKED_HOST_SNIPPETS = [
+  "localhost",
+  "127.0.0.1",
+  "169.254.",
+  "192.168.",
+  "10.",
+  "172.16.",
+  "0.0.0.0",
+];
 
+const TRUSTED_MARKETPLACE_SNIPPETS = [
+  "autotrader.co.za",
+  "img.autotrader",
+  "cars.co.za",
+  "cloudfront.net",
+  "amazonaws.com",
+];
+
+function isBlockedUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return BLOCKED_HOST_SNIPPETS.some((b) => host.includes(b));
+  } catch {
+    return true;
+  }
+}
+
+function isTrustedMarketplace(url: string): boolean {
+  const lower = url.toLowerCase();
+  return TRUSTED_MARKETPLACE_SNIPPETS.some((s) => lower.includes(s));
+}
+
+/** @deprecated use mirrorExternalPhoto */
 export async function downloadAndStorePhoto(
   externalUrl: string | null,
   vehicleTitle: string,
   externalRef: string | null,
 ): Promise<string | null> {
-  if (!externalUrl || !externalUrl.startsWith("http")) {
+  return mirrorExternalPhoto(externalUrl, vehicleTitle, externalRef);
+}
+
+export async function mirrorExternalPhoto(
+  externalUrl: string | null,
+  vehicleTitle: string,
+  externalRef: string | null,
+): Promise<string | null> {
+  if (!externalUrl || !isExternalPhotoUrl(externalUrl)) {
+    return null;
+  }
+  if (isBlockedUrl(externalUrl)) {
     return null;
   }
 
   try {
-    // Only download from known SA marketplaces to avoid abuse
-    const isAutoTrader = externalUrl.includes(AUTOTRADER_DOMAIN);
-    const isCars = externalUrl.includes(CARS_DOMAIN);
-    if (!isAutoTrader && !isCars) {
-      return null;
-    }
-
-    // Fetch the image with a short timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
     const response = await fetch(externalUrl, {
       signal: controller.signal,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; GrayArx/1.0; +https://grayarx.com)",
+        Accept: "image/*",
       },
+      redirect: "follow",
     });
     clearTimeout(timeoutId);
 
@@ -41,38 +77,38 @@ export async function downloadAndStorePhoto(
       return null;
     }
 
-    // Read the image bytes
     const buffer = await response.arrayBuffer();
-    if (buffer.byteLength === 0 || buffer.byteLength > 10_000_000) {
-      // Reject empty or >10MB files
+    if (buffer.byteLength === 0 || buffer.byteLength > 12 * 1024 * 1024) {
       return null;
     }
 
-    // Determine MIME type from Content-Type header or URL extension
     let mimeType = response.headers.get("content-type") || "image/jpeg";
     if (!mimeType.startsWith("image/")) {
-      mimeType = "image/jpeg";
+      if (externalUrl.toLowerCase().includes(".png")) mimeType = "image/png";
+      else if (externalUrl.toLowerCase().includes(".webp")) mimeType = "image/webp";
+      else mimeType = "image/jpeg";
     }
 
-    // Generate a unique S3 key: vehicles/{externalRef or title slug}/{timestamp}.{ext}
     const timestamp = Date.now();
     const slug = (externalRef || vehicleTitle)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .slice(0, 50);
-    const ext = mimeType.split("/")[1] || "jpg";
+    const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
     const key = `vehicles/${slug}/${timestamp}.${ext}`;
 
-    // Upload to S3
     const { url } = await storagePut(key, new Uint8Array(buffer), mimeType);
     return url;
   } catch (err) {
-    // Silently fail on network errors, timeouts, or parsing issues
-    // The vehicle will be created without a photo
+    const tag = isTrustedMarketplace(externalUrl ?? "") ? "marketplace" : "external";
     console.error(
-      `[photoDownloader] Failed to download ${externalUrl}:`,
+      `[photoDownloader] Failed to mirror (${tag}) ${externalUrl}:`,
       err instanceof Error ? err.message : String(err),
     );
     return null;
   }
+}
+
+export function shouldMirrorPhoto(url: string | null | undefined): boolean {
+  return isExternalPhotoUrl(url ?? null);
 }

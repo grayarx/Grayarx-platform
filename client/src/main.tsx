@@ -5,6 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
+import { UpgradeModalProvider } from "./contexts/UpgradeModalContext";
 import { getLoginUrl } from "./const";
 import { ToastProvider } from "./components/ToastNotification";
 import "./index.css";
@@ -57,7 +58,9 @@ createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
       <ToastProvider position="bottom-right">
-        <App />
+        <UpgradeModalProvider>
+          <App />
+        </UpgradeModalProvider>
       </ToastProvider>
     </QueryClientProvider>
   </trpc.Provider>

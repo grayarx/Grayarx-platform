@@ -25,8 +25,8 @@ export default function Pricing() {
           </h1>
           <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
             We're working closely with early dealerships to understand which features drive the most value.
-            Plans start from <strong className="text-foreground">R4,000/month</strong> — final pricing is
-            based on your dealership's size and usage during the pilot.
+            Pilot partners receive <strong className="text-foreground">Growth-level features</strong> — final
+            pricing is confirmed before billing goes live.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild className="btn-gold h-12 px-8 font-semibold">

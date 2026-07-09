@@ -6,8 +6,8 @@
 export const featureDescriptions = {
   whatsapp_chatbot: {
     name: "WhatsApp Chatbot",
-    description: "AI-powered chatbot that handles customer inquiries on WhatsApp. Responds to questions, qualifies leads, and schedules appointments automatically.",
-    tiers: ["starter", "professional", "enterprise"],
+    description: "AI-powered Nala on Meta WhatsApp Cloud API. Handles buyer inquiries, qualifies leads, and books test drives in-thread.",
+    tiers: ["professional", "enterprise"],
     icon: "MessageCircle",
   },
   email_notifications: {

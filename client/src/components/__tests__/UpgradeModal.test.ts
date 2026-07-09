@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
+import { TIER_PRICES_ZAR, TIER_DISPLAY_NAMES } from "@shared/subscriptionTiers";
 
 /**
  * Upgrade Modal Component Tests
@@ -69,14 +70,15 @@ describe("UpgradeModal Component", () => {
 
   describe("Pricing Display", () => {
     it("should display correct pricing for each tier", () => {
-      const prices = {
-        starter: 3999,
-        professional: 7999,
-        enterprise: 11999,
-      };
-      expect(prices.starter).toBe(3999);
-      expect(prices.professional).toBe(7999);
-      expect(prices.enterprise).toBe(11999);
+      expect(TIER_PRICES_ZAR.starter).toBe(3999);
+      expect(TIER_PRICES_ZAR.professional).toBe(7999);
+      expect(TIER_PRICES_ZAR.enterprise).toBe(11999);
+    });
+
+    it("uses Showroom / Growth / Group display names", () => {
+      expect(TIER_DISPLAY_NAMES.starter).toBe("Showroom");
+      expect(TIER_DISPLAY_NAMES.professional).toBe("Growth");
+      expect(TIER_DISPLAY_NAMES.enterprise).toBe("Group");
     });
 
     it("should format prices with currency symbol", () => {

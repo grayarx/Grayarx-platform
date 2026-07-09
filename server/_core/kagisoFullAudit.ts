@@ -159,25 +159,24 @@ function walkDataHealth(snap: KagisoSnapshot): Finding[] {
 }
 
 function walkAgentActivity(_snap: KagisoSnapshot): Finding[] {
-  // Placeholder rule: if agent_activity table empty, propose a heartbeat.
   return [
     {
-      title: "Wire a nightly Kagiso self-audit heartbeat",
+      title: "Chart specialist routing mix (Lerato / Tumi / Bongi / Nala)",
       description:
-        "Kagiso currently only audits when triggered manually from the admin UI. A nightly heartbeat (02:00 SAST) would let him catch regressions before customers do.",
+        "Intent routing now hands booking, trade-in, and after-hours messages to specialist agents instead of Nala alone. Kagiso should track routing volume weekly to catch misclassification or dead paths.",
       rationale:
-        "The infrastructure for scheduled jobs already exists (server/_core/heartbeat.ts). Wiring a single weekly cron + dedupe hash takes ~30 credits.",
+        "The `agent_activity` table already logs Lerato bookings and Bongi fallbacks. A dashboard rollup (routing mix + conversion by agent) would surface regressions before buyers feel them.",
       category: "agent_improvement",
       priority: "medium",
       severity: "medium",
-      creditCostEstimate: 30,
-      roiEstimateZar: 25_000,
-      llmTokensEstimate: 1_200,
+      creditCostEstimate: 25,
+      roiEstimateZar: 18_000,
+      llmTokensEstimate: 800,
       agentAutonomous: true,
       humanRequired: false,
       auditSection: "agent_activity",
-      hash: stableHash(["agent_activity", "nightly_heartbeat_v1"]),
-      evidenceJson: { manualAuditOnly: true },
+      hash: stableHash(["agent_activity", "intent_routing_metrics_v1"]),
+      evidenceJson: { intentRoutingLive: true, autonomousAuditLive: true },
     },
   ];
 }

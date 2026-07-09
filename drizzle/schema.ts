@@ -383,6 +383,8 @@ export const dealerships = mysqlTable("dealerships", {
   brandLogoUrl: varchar("brandLogoUrl", { length: 500 }),
   brandAccentColor: varchar("brandAccentColor", { length: 16 }), // "#C9A24A"
   brandSignature: varchar("brandSignature", { length: 500 }),
+  /** Public showroom visual template — dealer-controlled in Settings. */
+  showroomTheme: varchar("showroomTheme", { length: 32 }).default("futuristic"),
   vatNumber: varchar("vatNumber", { length: 32 }),
   bankDetails: varchar("bankDetails", { length: 500 }), // free-form, masked client-side
   // Public shortcode used in webhook URLs / contact forms so external

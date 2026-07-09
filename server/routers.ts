@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { emailRouter } from "./routers/emailRouter";
+import { pilotEmailRouter } from "./routers/pilotEmailRouter";
 import { inventorySyncRouter } from "./routers/inventorySyncRouter";
 import { whatsappRouter } from "./routers/whatsappRouter";
 import { smsRouter } from "./routers/smsRouter";
@@ -30,6 +31,7 @@ import { leadScoringCalibrationRouter } from "./routers/leadScoringCalibrationRo
 import { csvAutoRepairRouter } from "./routers/csvAutoRepairRouter";
 import { inventoryRouter } from "./routers/inventoryRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
+import { dashboardAssistantRouter } from "./routers/dashboardAssistantRouter";
 import { leadScoringRouter } from "./routers/leadScoringRouter";
 // import { insightsRouter } from "./routers/insightsRouter";
 import {
@@ -39,7 +41,8 @@ import {
   RATE_LIMITS,
 } from "./_core/rateLimit";
 import { generateNalaShowroomReply } from "./_core/nalaShowroomLlm";
-import { resolveNalaReply, vehicleRowToContext } from "./_core/nalaReplyOrchestrator";
+import { resolveRoutedReply } from "./_core/agentIntentRouter";
+import { vehicleRowToContext } from "./_core/nalaReplyOrchestrator";
 import { generateTumiQuote } from "./_core/tumiAgent";
 import {
   answerShowroomQuestion,
@@ -101,6 +104,7 @@ import {
   findVehicleByMakeModelYear,
   findVehicleByTitle,
   countSuspiciousPriceVehicles,
+  listSuspiciousPriceVehicles,
   getKagisoSettings,
   patchKagisoSettings,
   getMarketGuideRefreshMeta,
@@ -122,8 +126,10 @@ import { buildConfirmationMessage, buildBookingIcs } from "./_core/bookingConfir
 import { triggerKagisoAuditIfDue, AUDIT_INTERVAL_MS } from "./_core/autonomousAudit";
 import { applyProposedPatch } from "./_core/kagisoPatchApplier";
 import { resolveBrandKit, sanitizeHexColor } from "./_core/brandKit";
+import { isShowroomThemeId, resolveShowroomTheme } from "../shared/showroomThemes";
 import { parseInventoryCsv } from "./_core/csvInventory";
-import { downloadAndStorePhoto } from "./_core/photoDownloader";
+import { isR1Price, repairPricesFromRows } from "./_core/csvPriceRepair";
+import { downloadAndStorePhoto, mirrorExternalPhoto, shouldMirrorPhoto } from "./_core/photoDownloader";
 import { buildHtmlEmail, buildPlainTextSignature } from "./_core/emailSignature";
 import { billingRouter } from "./_core/billingRouter";
 import { emailRouter as coreEmailRouter } from "./_core/emailRouter"; // Renamed to avoid conflict
@@ -333,6 +339,7 @@ export const appRouter = router({
   csvAutoRepair: csvAutoRepairRouter,
   inventory: inventoryRouter,
   dashboard: dashboardRouter,
+  dashboardAssistant: dashboardAssistantRouter,
   leadScoring: leadScoringRouter,
   // insights: insightsRouter,
   // vehiclePhoto: vehiclePhotoRouter,
@@ -596,7 +603,20 @@ export const appRouter = router({
     list: publicProcedure.query(async () => listVehicles(200)),
     get: publicProcedure
       .input(z.object({ id: z.number().int() }))
-      .query(async ({ input }) => getVehicle(input.id)),
+      .query(async ({ input }) => {
+        const vehicle = await getVehicle(input.id);
+        if (!vehicle) return null;
+        const photos = await listVehiclePhotos(input.id);
+        return {
+          ...vehicle,
+          gallery: photos.map((p) => ({
+            id: p.id,
+            url: p.url,
+            caption: p.caption,
+            position: p.position,
+          })),
+        };
+      }),
     /**
      * Public discovery: which dealership shortcode should the front-end
      * link to from the showroom "Get pre-approved" CTA?
@@ -642,6 +662,28 @@ export const appRouter = router({
         webChatbotEnabled: deployment ? deployment.webChatbotEnabled === 1 : true,
         whatsappChatbotEnabled: deployment?.whatsappChatbotEnabled === 1,
         whatsappPhoneNumber: deployment?.whatsappPhoneNumber ?? "0820532685",
+      };
+    }),
+    /** Public showroom look — driven by the primary dealership's chosen template. */
+    appearance: publicProcedure.query(async () => {
+      const all = await listAllDealerships();
+      const candidate =
+        all.find(
+          (d) =>
+            (d.status === "active" || d.status === "onboarding") &&
+            !!d.publicShortcode,
+        ) ?? all[0];
+      if (!candidate) {
+        return {
+          theme: resolveShowroomTheme(null),
+          accentColor: null as string | null,
+          dealershipName: "GrayArx Dealership",
+        };
+      }
+      return {
+        theme: resolveShowroomTheme(candidate.showroomTheme),
+        accentColor: candidate.brandAccentColor ?? null,
+        dealershipName: candidate.name ?? "GrayArx Dealership",
       };
     }),
     enquire: publicProcedure
@@ -711,16 +753,23 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found." });
         }
 
+        const dealership = row.dealershipId
+          ? await getDealershipById(row.dealershipId)
+          : null;
+
         const lang = input.language && isLanguageCode(input.language)
           ? input.language
           : detectLanguage(input.message);
 
-        const dealerName = input.dealershipName ?? "GrayArx Dealership";
+        const dealerName = input.dealershipName ?? dealership?.name ?? "GrayArx Dealership";
         const vehicleCtx = vehicleRowToContext(row);
-        const resolved = await resolveNalaReply({
+        const resolved = await resolveRoutedReply({
           message: input.message,
           vehicle: vehicleCtx,
+          vehicleId: input.vehicleId,
+          dealershipId: row.dealershipId ?? 1,
           dealershipName: dealerName,
+          businessHoursOverride: dealership?.businessHoursJson ?? undefined,
           language: lang,
           channel: "web",
           includeDealScore: true,
@@ -731,6 +780,8 @@ export const appRouter = router({
           intent: resolved.intent,
           answered: resolved.answered,
           source: resolved.source,
+          agent: resolved.agent,
+          referenceNumber: resolved.referenceNumber,
         };
       }),
     aiSearch: publicProcedure
@@ -765,6 +816,49 @@ export const appRouter = router({
     stats: protectedProcedure.query(async () => getDashboardStats()),
     activity: protectedProcedure.query(async () => getRecentActivity(10)),
     leadsTrend: protectedProcedure.query(async () => getLeadsTrend(14)),
+
+    /** Dealer-controlled showroom appearance (template + accent). */
+    getAppearance: protectedProcedure.query(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No dealership assigned" });
+      }
+      const dealership = await getDealershipById(dealershipId);
+      if (!dealership) throw new TRPCError({ code: "NOT_FOUND" });
+      return {
+        theme: resolveShowroomTheme(dealership.showroomTheme),
+        brandAccentColor: dealership.brandAccentColor ?? null,
+        brandLogoUrl: dealership.brandLogoUrl ?? null,
+        dealershipName: dealership.name ?? "Your dealership",
+      };
+    }),
+
+    updateAppearance: protectedProcedure
+      .input(
+        z.object({
+          theme: z.enum(["futuristic", "classic", "minimal", "bold"]),
+          brandAccentColor: z.string().max(16).nullable().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const dealershipId = ctx.user.dealershipId;
+        if (!dealershipId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "No dealership assigned" });
+        }
+        if (!isShowroomThemeId(input.theme)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid theme" });
+        }
+        const accent = input.brandAccentColor
+          ? sanitizeHexColor(input.brandAccentColor)
+          : undefined;
+        await updateDealershipBrand(dealershipId, {
+          showroomTheme: input.theme,
+          ...(Object.prototype.hasOwnProperty.call(input, "brandAccentColor")
+            ? { brandAccentColor: accent ?? null }
+            : {}),
+        });
+        return { success: true, theme: input.theme };
+      }),
 
     listLeads: protectedProcedure.query(async () => listLeads(200)),
     listNetworkTradeIns: protectedProcedure.query(async ({ ctx }) => {
@@ -1194,7 +1288,43 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         await setVehiclePrimaryPhoto(input.vehicleId, input.photoUrl);
+        await updateVehicle(input.vehicleId, {
+          primaryPhotoUrl: input.photoUrl,
+          imageUrl: input.photoUrl,
+        });
         return { success: true } as const;
+      }),
+
+    /** Link an already-uploaded URL to a vehicle gallery (no re-upload). */
+    attachPhotoFromUrl: protectedProcedure
+      .input(
+        z.object({
+          vehicleId: z.number().int(),
+          url: z.string().min(1).max(500),
+          caption: z.string().max(200).optional(),
+          setPrimary: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const existing = await listVehiclePhotos(input.vehicleId);
+        const nextPosition = existing.length
+          ? Math.max(...existing.map((p) => p.position)) + 1
+          : 0;
+        const photo = await addVehiclePhoto({
+          vehicleId: input.vehicleId,
+          url: input.url,
+          storageKey: `linked/${input.vehicleId}/${Date.now()}`,
+          position: nextPosition,
+          caption: input.caption ?? null,
+        });
+        if (input.setPrimary || existing.length === 0) {
+          await setVehiclePrimaryPhoto(input.vehicleId, input.url);
+          await updateVehicle(input.vehicleId, {
+            primaryPhotoUrl: input.url,
+            imageUrl: input.url,
+          });
+        }
+        return { id: photo.id, url: input.url } as const;
       }),
   }),
 
@@ -1910,25 +2040,33 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const preview = parseInventoryCsv(input.csv);
         let created = 0;
+        let repaired = 0;
         const existingDuplicates: string[] = [];
         const failedRows: Array<{ title: string; reason: string }> = [];
         for (const row of preview.validRows) {
           if (row.externalRef) {
             const existing = await findVehicleByExternalRef(row.externalRef);
             if (existing) {
-              existingDuplicates.push(row.externalRef);
+              if (isR1Price(existing.price) && row.price && row.price > 1) {
+                await updateVehicle(existing.id, { price: String(row.price) });
+                repaired++;
+              } else {
+                existingDuplicates.push(row.externalRef);
+              }
               continue;
             }
           }
           try {
+            const primaryUrl = row.imageUrls[0] ?? row.imageUrl;
             const storedImageUrl = input.skipPhotoMirror
               ? null
               : await downloadAndStorePhoto(
-                  row.imageUrl,
+                  primaryUrl,
                   row.title,
                   row.externalRef,
                 );
-            await createVehicle({
+            const primary = storedImageUrl || primaryUrl;
+            const result = await createVehicle({
               ownerUserId: ctx.user.id,
               title: row.title,
               make: row.make,
@@ -1939,11 +2077,31 @@ export const appRouter = router({
               fuel: row.fuel,
               transmission: row.transmission,
               location: row.location,
-              imageUrl: storedImageUrl || row.imageUrl,
-              primaryPhotoUrl: storedImageUrl || row.imageUrl,
+              imageUrl: primary,
+              primaryPhotoUrl: primary,
               description: row.description,
               externalRef: row.externalRef,
             });
+            const vehicleId = (result as { insertId?: number })?.insertId;
+            if (vehicleId && row.imageUrls.length > 0) {
+              for (let pi = 0; pi < row.imageUrls.length; pi++) {
+                const rawUrl = row.imageUrls[pi];
+                const stored =
+                  pi === 0
+                    ? primary
+                    : input.skipPhotoMirror
+                      ? rawUrl
+                      : (await downloadAndStorePhoto(rawUrl, row.title, row.externalRef)) || rawUrl;
+                if (!stored) continue;
+                await addVehiclePhoto({
+                  vehicleId,
+                  url: stored,
+                  storageKey: `import/${vehicleId}/${pi}-${Date.now()}`,
+                  position: pi,
+                  caption: null,
+                });
+              }
+            }
             created++;
           } catch (err) {
             const reason = err instanceof Error ? err.message : String(err);
@@ -1954,9 +2112,10 @@ export const appRouter = router({
           agentId: "improvement",
           action: "inventory_imported",
           subjectType: null,
-          summary: `Kagiso imported ${created} vehicle${created === 1 ? "" : "s"} via CSV (${preview.skippedRows.length} skipped, ${preview.duplicateRefs.length + existingDuplicates.length} duplicates, ${failedRows.length} failed).`,
+          summary: `Kagiso imported ${created} vehicle${created === 1 ? "" : "s"} via CSV (${preview.skippedRows.length} skipped, ${preview.duplicateRefs.length + existingDuplicates.length} duplicates, ${failedRows.length} failed${repaired ? `, ${repaired} R1 prices repaired` : ""}).`,
           payload: {
             created,
+            repaired,
             skipped: preview.skippedRows.length,
             duplicatesInCsv: preview.duplicateRefs.length,
             duplicatesAgainstDb: existingDuplicates.length,
@@ -1965,6 +2124,7 @@ export const appRouter = router({
         });
         return {
           created,
+          repaired,
           skipped: preview.skippedRows,
           duplicatesInCsv: preview.duplicateRefs,
           duplicatesAgainstDb: existingDuplicates,
@@ -1977,36 +2137,9 @@ export const appRouter = router({
       .input(z.object({ csv: z.string().min(1).max(2_000_000) }))
       .mutation(async ({ input }) => {
         const preview = parseInventoryCsv(input.csv);
-        let updated = 0;
-        let notFound = 0;
-        let alreadyCorrect = 0;
-
-        for (const row of preview.validRows) {
-          if (!row.price || row.price <= 1) continue;
-
-          let vehicle =
-            (row.externalRef
-              ? await findVehicleByExternalRef(row.externalRef)
-              : undefined) ??
-            (row.make && row.model && row.year
-              ? await findVehicleByMakeModelYear(row.make, row.model, row.year)
-              : undefined) ??
-            (await findVehicleByTitle(row.title));
-
-          if (!vehicle) {
-            notFound++;
-            continue;
-          }
-
-          const currentPrice = Number(vehicle.price);
-          if (currentPrice > 1) {
-            alreadyCorrect++;
-            continue;
-          }
-
-          await updateVehicle(vehicle.id, { price: String(row.price) });
-          updated++;
-        }
+        const { updated, notFound, alreadyCorrect } = await repairPricesFromRows(
+          preview.validRows,
+        );
 
         await logAgentActivity({
           agentId: "improvement",
@@ -2022,6 +2155,91 @@ export const appRouter = router({
     suspiciousPriceCount: protectedProcedure.query(async () => {
       const count = await countSuspiciousPriceVehicles(1);
       return { count };
+    }),
+
+    suspiciousVehicles: protectedProcedure.query(async () => {
+      const vehicles = await listSuspiciousPriceVehicles(1, 100);
+      return { vehicles, count: vehicles.length };
+    }),
+
+    /** Inventory photography health — for dealer dashboard & photo manager. */
+    photoHealth: protectedProcedure.query(async () => {
+      const all = await listVehicles(500);
+      let withoutPhoto = 0;
+      let externalOnly = 0;
+      let belowRecommended = 0;
+      let totalPhotoCount = 0;
+
+      for (const v of all) {
+        const gallery = await listVehiclePhotos(v.id);
+        const count =
+          gallery.length > 0
+            ? gallery.length
+            : v.primaryPhotoUrl || v.imageUrl
+              ? 1
+              : 0;
+        totalPhotoCount += count;
+        if (count === 0) withoutPhoto++;
+        else if (count < 8) belowRecommended++;
+        const primary = v.primaryPhotoUrl || v.imageUrl;
+        if (shouldMirrorPhoto(primary)) externalOnly++;
+      }
+
+      const total = all.length;
+      return {
+        totalVehicles: total,
+        withoutPhoto,
+        externalOnly,
+        belowRecommended,
+        avgPhotosPerVehicle: total > 0 ? Math.round((totalPhotoCount / total) * 10) / 10 : 0,
+        showroomReady: total > 0 && withoutPhoto === 0 && externalOnly === 0 && belowRecommended === 0,
+      };
+    }),
+
+    /** Copy external AutoTrader/Cars.co.za (and other) photos into GrayArx storage. */
+    mirrorMissingPhotos: protectedProcedure.mutation(async () => {
+      const all = await listVehicles(500);
+      let mirrored = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      for (const v of all) {
+        const primary = v.primaryPhotoUrl || v.imageUrl;
+        if (!shouldMirrorPhoto(primary)) {
+          skipped++;
+          continue;
+        }
+        const stored = await mirrorExternalPhoto(primary, v.title, v.externalRef);
+        if (!stored) {
+          failed++;
+          continue;
+        }
+        await updateVehicle(v.id, {
+          imageUrl: stored,
+          primaryPhotoUrl: stored,
+        });
+        const gallery = await listVehiclePhotos(v.id);
+        if (gallery.length === 0) {
+          await addVehiclePhoto({
+            vehicleId: v.id,
+            url: stored,
+            storageKey: `mirror/${v.id}/${Date.now()}`,
+            position: 0,
+            caption: "front_3_4",
+          });
+        }
+        mirrored++;
+      }
+
+      await logAgentActivity({
+        agentId: "improvement",
+        action: "photos_mirrored",
+        subjectType: null,
+        summary: `Mirrored ${mirrored} external photo${mirrored === 1 ? "" : "s"} into GrayArx storage (${failed} failed, ${skipped} already hosted).`,
+        payload: { mirrored, failed, skipped },
+      });
+
+      return { mirrored, skipped, failed };
     }),
 
     sendEmail: protectedProcedure
@@ -3845,7 +4063,7 @@ export const appRouter = router({
   }),
 
   // ---- Pilot Email Campaign Management ----
-  pilotEmail: emailRouter,
+  pilotEmail: pilotEmailRouter,
 
   // ---- Phase 33: Advanced Features ----
   // (Using existing routers: notifications, auditLog)

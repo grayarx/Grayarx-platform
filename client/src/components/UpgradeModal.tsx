@@ -9,27 +9,57 @@ import {
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Check, X, Zap, ArrowRight } from "lucide-react";
-import { TableCellTooltip } from "./FeatureTooltip";
-import { featureDescriptions } from "@/lib/featureDescriptions";
+import { Check, X, Zap, ArrowRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  TIER_ORDER,
+  TIER_DISPLAY_NAMES,
+  TIER_FEATURE_ROWS,
+  TIER_LIMITS,
+  TIER_MARKETING_BLURBS,
+  formatPriceDisplay,
+  PILOT_PRICING_HIDDEN,
+  PILOT_PARTNER,
+  type SubscriptionTierId,
+} from "@shared/subscriptionTiers";
+import { Link } from "wouter";
 
 export interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentTier: "starter" | "professional" | "enterprise" | null;
+  currentTier: SubscriptionTierId | null;
   lockedFeature: {
     id: string;
     name: string;
     description: string;
-    requiredTier: "starter" | "professional" | "enterprise";
+    requiredTier: SubscriptionTierId;
   };
-  onUpgrade: (tier: "starter" | "professional" | "enterprise") => Promise<void>;
+  onUpgrade: (tier: SubscriptionTierId) => Promise<void>;
 }
 
+const TIER_HIGHLIGHTS: Record<SubscriptionTierId, string[]> = {
+  starter: [
+    "150 vehicles · 3 users",
+    "Web chat Nala (400/mo)",
+    "CSV import + R1 price fix",
+    "Leads + test-drive bookings",
+  ],
+  professional: [
+    "500 vehicles · 10 users",
+    "WhatsApp Nala Cloud API",
+    "8-angle photos + deal scores",
+    "Trade-in dealer network",
+  ],
+  enterprise: [
+    "Unlimited vehicles* · unlimited users",
+    "3,500 AI sessions · 8k WhatsApp",
+    "Dedicated onboarding",
+    "Phone + named contact",
+  ],
+};
+
 /**
- * Interactive upgrade modal that shows when user tries to access a locked feature
- * Displays pricing tiers, feature comparisons, and upgrade options
+ * Upgrade modal — shows tier comparison. Prices hidden during pilot.
  */
 export function UpgradeModal({
   isOpen,
@@ -38,61 +68,14 @@ export function UpgradeModal({
   lockedFeature,
   onUpgrade,
 }: UpgradeModalProps) {
-  const [selectedTier, setSelectedTier] = useState<"starter" | "professional" | "enterprise" | null>(
-    null
-  );
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTierId | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
-  const tiers = [
-    {
-      id: "starter",
-      name: "Starter",
-      price: 3999,
-      description: "Perfect for getting started",
-      features: [
-        "WhatsApp chatbot",
-        "Email notifications",
-        "Basic lead capture",
-        "Dashboard",
-      ],
-      locked: [],
-    },
-    {
-      id: "professional",
-      name: "Professional",
-      price: 7999,
-      description: "For growing dealerships",
-      features: [
-        "Everything in Starter",
-        "Advanced analytics",
-        "Lead prioritization AI",
-        "Inventory sync",
-        "Webhook support",
-        "Priority support",
-      ],
-      locked: ["API access", "Custom integrations"],
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      price: 11999,
-      description: "For large operations",
-      features: [
-        "Everything in Professional",
-        "Full API access",
-        "Custom webhooks",
-        "CRM integration",
-        "Phone support",
-        "Dedicated account manager",
-      ],
-      locked: [],
-    },
-  ];
+  const requiredTierIndex = TIER_ORDER.indexOf(lockedFeature.requiredTier);
 
   const handleUpgrade = async () => {
     if (!selectedTier) return;
-
     try {
       setIsLoading(true);
       await onUpgrade(selectedTier);
@@ -104,136 +87,132 @@ export function UpgradeModal({
     }
   };
 
-  const currentTierIndex = tiers.findIndex((t) => t.id === currentTier);
-  const requiredTierIndex = tiers.findIndex((t) => t.id === lockedFeature.requiredTier);
-  const canUpgrade = currentTierIndex < requiredTierIndex;
-
-  // Feature list with keys for tooltip lookup
-  const featureList = [
-    { name: "WhatsApp Chatbot", key: "whatsapp_chatbot", tiers: ["starter", "professional", "enterprise"] },
-    { name: "Email Notifications", key: "email_notifications", tiers: ["starter", "professional", "enterprise"] },
-    { name: "Lead Capture", key: "lead_capture", tiers: ["starter", "professional", "enterprise"] },
-    { name: "Lead Scoring", key: "lead_scoring", tiers: ["starter", "professional", "enterprise"] },
-    { name: "Advanced Analytics", key: "advanced_analytics", tiers: ["professional", "enterprise"] },
-    { name: "Lead Prioritization", key: "lead_prioritization", tiers: ["professional", "enterprise"] },
-    { name: "Inventory Sync", key: "inventory_sync", tiers: ["professional", "enterprise"] },
-    { name: "Webhook Support", key: "webhook_support", tiers: ["professional", "enterprise"] },
-    { name: "Bulk Lead Import", key: "bulk_lead_import", tiers: ["professional", "enterprise"] },
-    { name: "API Access", key: "api_access", tiers: ["enterprise"] },
-    { name: "Custom Webhooks", key: "custom_webhooks", tiers: ["enterprise"] },
-    { name: "CRM Integration", key: "crm_integration", tiers: ["enterprise"] },
-    { name: "Phone Support", key: "phone_support", tiers: ["enterprise"] },
-    { name: "Dedicated Account Manager", key: "dedicated_account_manager", tiers: ["enterprise"] },
-  ];
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#0a0a0c] border-primary/20 text-foreground">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-500" />
+          <DialogTitle className="flex items-center gap-2 font-display">
+            <Zap className="w-5 h-5 text-primary" />
             Unlock {lockedFeature.name}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             {lockedFeature.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Feature Highlight */}
-          <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <div className="flex items-start justify-between">
+          {PILOT_PRICING_HIDDEN && (
+            <Card className="p-4 border-primary/25 bg-primary/5 holo-card">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-primary">{PILOT_PARTNER.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pilot dealerships get <strong className="text-foreground">Growth</strong> features
+                    while we polish WhatsApp and inventory. Pricing is tailored —{" "}
+                    <Link href="/#lead-capture" className="text-primary hover:underline">
+                      join the pilot
+                    </Link>{" "}
+                    to discuss terms.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-4 border-primary/20 bg-primary/[0.04]">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-blue-900">{lockedFeature.name}</h3>
-                <p className="text-sm text-blue-800 mt-1">{lockedFeature.description}</p>
-                <Badge className="mt-2 bg-blue-600">
-                  Requires {lockedFeature.requiredTier} tier
+                <h3 className="font-semibold">{lockedFeature.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{lockedFeature.description}</p>
+                <Badge className="mt-2 bg-primary/20 text-primary border-primary/30">
+                  Requires {TIER_DISPLAY_NAMES[lockedFeature.requiredTier]}
                 </Badge>
               </div>
-              <ArrowRight className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+              <ArrowRight className="w-5 h-5 text-primary mt-1 shrink-0" />
             </div>
           </Card>
 
-          {/* Pricing Tiers */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-lg">Choose Your Plan</h3>
+              <h3 className="font-display font-semibold text-lg">Choose your plan</h3>
               <Button
                 variant="outline"
                 size="sm"
+                className="border-primary/20"
                 onClick={() => setShowComparison(!showComparison)}
               >
-                {showComparison ? "Hide" : "Show"} Comparison
+                {showComparison ? "Hide" : "Show"} comparison
               </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {tiers.map((tier) => {
-                const isCurrentTier = tier.id === currentTier;
-                const isRequiredTier = tier.id === lockedFeature.requiredTier;
-                const isSelected = tier.id === selectedTier;
-                const isBelowRequired = tiers.findIndex((t) => t.id === tier.id) < requiredTierIndex;
+              {TIER_ORDER.map((tierId) => {
+                const isCurrentTier = tierId === currentTier;
+                const isRequiredTier = tierId === lockedFeature.requiredTier;
+                const isSelected = tierId === selectedTier;
+                const tierIdx = TIER_ORDER.indexOf(tierId);
+                const isBelowRequired = tierIdx < requiredTierIndex;
 
                 return (
                   <Card
-                    key={tier.id}
+                    key={tierId}
                     className={cn(
-                      "p-6 cursor-pointer transition-all duration-200 relative",
-                      isCurrentTier && "ring-2 ring-green-500 bg-green-50",
-                      isRequiredTier && "ring-2 ring-blue-500 bg-blue-50",
-                      isSelected && !isCurrentTier && "ring-2 ring-purple-500",
-                      isBelowRequired && "opacity-60"
+                      "p-6 cursor-pointer transition-all duration-200 relative holo-card border-primary/10",
+                      isCurrentTier && "ring-2 ring-green-500/60 bg-green-500/5",
+                      isRequiredTier && "ring-2 ring-primary/60 bg-primary/5",
+                      isSelected && !isCurrentTier && "ring-2 ring-primary",
+                      isBelowRequired && "opacity-60",
                     )}
-                    onClick={() => !isCurrentTier && setSelectedTier(tier.id as any)}
+                    onClick={() => !isCurrentTier && !isBelowRequired && setSelectedTier(tierId)}
                   >
                     {isCurrentTier && (
-                      <Badge className="absolute top-3 right-3 bg-green-600">Current</Badge>
+                      <Badge className="absolute top-3 right-3 bg-green-600/90">Current</Badge>
                     )}
-                    {isRequiredTier && (
-                      <Badge className="absolute top-3 right-3 bg-blue-600">Unlocks Feature</Badge>
+                    {isRequiredTier && !isCurrentTier && (
+                      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
+                        Unlocks feature
+                      </Badge>
                     )}
 
                     <div className="space-y-4">
                       <div>
-                        <h4 className="font-bold text-lg">{tier.name}</h4>
-                        <p className="text-sm text-muted-foreground">{tier.description}</p>
+                        <h4 className="font-display font-bold text-lg">{TIER_DISPLAY_NAMES[tierId]}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{TIER_MARKETING_BLURBS[tierId]}</p>
                       </div>
 
                       <div className="space-y-1">
-                        <div className="text-3xl font-bold">
-                          R {tier.price.toLocaleString()}
+                        <div className="text-2xl font-bold text-cyber-gradient tabular-nums">
+                          {formatPriceDisplay(tierId)}
                         </div>
-                        <p className="text-xs text-muted-foreground">/month</p>
+                        {!PILOT_PRICING_HIDDEN && (
+                          <p className="text-xs text-muted-foreground">/month</p>
+                        )}
                       </div>
 
                       {!showComparison && (
                         <ul className="space-y-2">
-                          {tier.features.slice(0, 3).map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm">
-                              <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                              <span>{feature}</span>
+                          {TIER_HIGHLIGHTS[tierId].map((feature) => (
+                            <li key={feature} className="flex items-start gap-2 text-sm">
+                              <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                              <span className="text-muted-foreground">{feature}</span>
                             </li>
                           ))}
-                          {tier.features.length > 3 && (
-                            <li className="text-sm text-muted-foreground">
-                              +{tier.features.length - 3} more features
-                            </li>
-                          )}
                         </ul>
                       )}
 
                       {!isCurrentTier && (
                         <Button
-                          className="w-full mt-4"
+                          className={cn("w-full mt-4", isSelected && "btn-gold")}
                           variant={isSelected ? "default" : "outline"}
                           disabled={isBelowRequired}
                         >
-                          {isBelowRequired ? "Below Required" : isSelected ? "Selected" : "Select"}
+                          {isBelowRequired ? "Below required" : isSelected ? "Selected" : "Select"}
                         </Button>
                       )}
                       {isCurrentTier && (
-                        <Button className="w-full mt-4" disabled>
-                          Current Plan
+                        <Button className="w-full mt-4" disabled variant="outline">
+                          Current plan
                         </Button>
                       )}
                     </div>
@@ -243,84 +222,74 @@ export function UpgradeModal({
             </div>
           </div>
 
-          {/* Feature Comparison Table */}
           {showComparison && (
-            <Card className="p-6 overflow-x-auto">
-              <h4 className="font-semibold mb-4">Feature Comparison</h4>
-              <p className="text-xs text-muted-foreground mb-4">Hover over feature names or checkmarks for descriptions</p>
+            <Card className="p-6 overflow-x-auto border-primary/10 bg-black/20">
+              <h4 className="font-semibold mb-4">Feature comparison</h4>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
+                  <tr className="border-b border-primary/10">
                     <th className="text-left py-2 px-2">Feature</th>
-                    {tiers.map((tier) => (
-                      <th key={tier.id} className="text-center py-2 px-2">
-                        {tier.name}
+                    {TIER_ORDER.map((tierId) => (
+                      <th key={tierId} className="text-center py-2 px-2 font-display">
+                        {TIER_DISPLAY_NAMES[tierId]}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {featureList.map((feature, idx) => {
-                    const featureDesc = featureDescriptions[feature.key as keyof typeof featureDescriptions];
-                    return (
-                      <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-2 group">
-                            <span>{feature.name}</span>
-                            {featureDesc && (
-                              <div className="text-blue-500 opacity-60 hover:opacity-100 transition-opacity cursor-help relative">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                </svg>
-                                <div className="hidden group-hover:block absolute left-0 top-full mt-1 z-50 bg-gray-900 text-white text-xs rounded py-2 px-3 max-w-xs whitespace-normal">
-                                  <p className="font-semibold mb-1">{featureDesc.name}</p>
-                                  <p>{featureDesc.description}</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                  {TIER_FEATURE_ROWS.map((feature) => (
+                    <tr key={feature.key} className="border-b border-primary/5 hover:bg-primary/[0.03]">
+                      <td className="py-2 px-2">{feature.label}</td>
+                      {TIER_ORDER.map((tierId) => (
+                        <td key={tierId} className="text-center py-2 px-2">
+                          {feature.tiers.includes(tierId) ? (
+                            <Check className="w-4 h-4 text-primary mx-auto" />
+                          ) : (
+                            <X className="w-4 h-4 text-muted-foreground/30 mx-auto" />
+                          )}
                         </td>
-                        {tiers.map((tier) => (
-                          <td key={tier.id} className="text-center py-2 px-2">
-                            {featureDesc ? (
-                              <TableCellTooltip
-                                featureName={feature.name}
-                                description={featureDesc.description}
-                                isAvailable={feature.tiers.includes(tier.id)}
-                              />
-                            ) : feature.tiers.includes(tier.id) ? (
-                              <Check className="w-4 h-4 text-green-600 mx-auto" />
-                            ) : (
-                              <X className="w-4 h-4 text-gray-300 mx-auto" />
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
+                  <tr className="border-b border-primary/5">
+                    <td className="py-2 px-2 font-medium">Vehicle cap</td>
+                    {TIER_ORDER.map((tierId) => (
+                      <td key={tierId} className="text-center py-2 px-2 text-xs text-muted-foreground">
+                        {TIER_LIMITS[tierId].vehicles}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </Card>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-primary/10">
+            <Button variant="outline" onClick={onClose} className="border-primary/20">
               Cancel
             </Button>
-            <Button
-              onClick={handleUpgrade}
-              disabled={!selectedTier || isLoading || selectedTier === currentTier}
-              className="gap-2"
-            >
-              {isLoading ? "Processing..." : "Upgrade Now"}
-              {!isLoading && <ArrowRight className="w-4 h-4" />}
-            </Button>
+            {PILOT_PRICING_HIDDEN ? (
+              <Button asChild className="btn-gold gap-2">
+                <Link href="/#lead-capture">
+                  Join pilot <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                onClick={handleUpgrade}
+                disabled={!selectedTier || isLoading || selectedTier === currentTier}
+                className="btn-gold gap-2"
+              >
+                {isLoading ? "Processing..." : "Upgrade now"}
+                {!isLoading && <ArrowRight className="w-4 h-4" />}
+              </Button>
+            )}
           </div>
 
-          {/* Info Text */}
           <p className="text-xs text-muted-foreground text-center">
-            Your billing cycle will be adjusted accordingly. You'll have immediate access to all features in your new tier.
+            {PILOT_PRICING_HIDDEN
+              ? "Pilot partners receive Growth features. Final tier pricing is confirmed before billing goes live."
+              : "Your billing cycle will be adjusted accordingly. Immediate access to all features in your new tier."}
           </p>
         </div>
       </DialogContent>
@@ -328,9 +297,6 @@ export function UpgradeModal({
   );
 }
 
-/**
- * Hook to manage upgrade modal state
- */
 export function useUpgradeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<UpgradeModalProps["lockedFeature"] | null>(null);

@@ -212,6 +212,41 @@ export async function getVehicle(id: number) {
   return result[0] ?? null;
 }
 
+/** List vehicles for in-memory CSV price repair (single DB round-trip). */
+export async function listVehiclesForPriceRepair(limit = 2000) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: vehicles.id,
+      title: vehicles.title,
+      price: vehicles.price,
+      make: vehicles.make,
+      model: vehicles.model,
+      year: vehicles.year,
+      externalRef: vehicles.externalRef,
+    })
+    .from(vehicles)
+    .limit(limit);
+}
+
+/** Apply many price updates in parallel chunks (much faster than per-row queries). */
+export async function bulkUpdateVehiclePrices(
+  updates: Array<{ id: number; price: string }>,
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const CHUNK = 40;
+  for (let i = 0; i < updates.length; i += CHUNK) {
+    const chunk = updates.slice(i, i + CHUNK);
+    await Promise.all(
+      chunk.map(({ id, price }) =>
+        db.update(vehicles).set({ price }).where(eq(vehicles.id, id)),
+      ),
+    );
+  }
+}
+
 export async function updateVehicle(id: number, data: Partial<InsertVehicle>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -815,10 +850,11 @@ export async function updateWhatsappDraftStatus(
 export async function findVehicleByExternalRef(ref: string) {
   const db = await getDb();
   if (!db) return undefined;
+  const normalized = ref.trim().toLowerCase();
   const [row] = await db
     .select()
     .from(vehicles)
-    .where(eq(vehicles.externalRef, ref))
+    .where(sql`LOWER(TRIM(${vehicles.externalRef})) = ${normalized}`)
     .limit(1);
   return row;
 }
@@ -834,6 +870,26 @@ export async function countSuspiciousPriceVehicles(maxPrice = 1) {
   return Number(row?.c ?? 0);
 }
 
+/** List vehicles with suspiciously low prices for bulk repair UI. */
+export async function listSuspiciousPriceVehicles(maxPrice = 1, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: vehicles.id,
+      title: vehicles.title,
+      price: vehicles.price,
+      make: vehicles.make,
+      model: vehicles.model,
+      year: vehicles.year,
+      externalRef: vehicles.externalRef,
+    })
+    .from(vehicles)
+    .where(lte(vehicles.price, String(maxPrice)))
+    .orderBy(desc(vehicles.createdAt))
+    .limit(limit);
+}
+
 export async function findVehicleByMakeModelYear(
   make: string,
   model: string,
@@ -846,8 +902,8 @@ export async function findVehicleByMakeModelYear(
     .from(vehicles)
     .where(
       and(
-        eq(vehicles.make, make),
-        eq(vehicles.model, model),
+        sql`LOWER(TRIM(${vehicles.make})) = ${make.trim().toLowerCase()}`,
+        sql`LOWER(TRIM(${vehicles.model})) = ${model.trim().toLowerCase()}`,
         eq(vehicles.year, year),
       ),
     )
@@ -858,10 +914,11 @@ export async function findVehicleByMakeModelYear(
 export async function findVehicleByTitle(title: string) {
   const db = await getDb();
   if (!db) return undefined;
+  const normalized = title.trim().toLowerCase();
   const [row] = await db
     .select()
     .from(vehicles)
-    .where(eq(vehicles.title, title.trim()))
+    .where(sql`LOWER(TRIM(${vehicles.title})) = ${normalized}`)
     .limit(1);
   return row;
 }
@@ -1531,6 +1588,7 @@ export async function updateDealershipBrand(
     vatNumber?: string | null;
     bankDetails?: string | null;
     businessHoursJson?: unknown | null;
+    showroomTheme?: string | null;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -1542,10 +1600,11 @@ export async function updateDealershipBrand(
     vatNumber: patch.vatNumber ?? null,
     bankDetails: patch.bankDetails ?? null,
   };
-  // Only touch businessHoursJson when explicitly supplied so callers that
-  // don't know about hours don't accidentally null out an override.
   if (Object.prototype.hasOwnProperty.call(patch, "businessHoursJson")) {
     set.businessHoursJson = patch.businessHoursJson ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "showroomTheme")) {
+    set.showroomTheme = patch.showroomTheme ?? "futuristic";
   }
   await db.update(dealerships).set(set).where(eq(dealerships.id, id));
 }

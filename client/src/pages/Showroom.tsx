@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   Search,
   Filter,
@@ -36,9 +37,12 @@ import { ShowroomChatAgent } from "@/components/ShowroomChatAgent";
 import { SkeletonLoader } from "@/components/LoadingAnimations";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 import DealScoreBadge from "@/components/DealScoreBadge";
+import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
 import { scoreListingDeal } from "@shared/priceIntelligence";
+import { PLACEHOLDER_SVG } from "@shared/imagePipeline";
 
-const SAMPLE_VEHICLES = [
+const DEV_SAMPLE_VEHICLES = import.meta.env.DEV
+  ? [
   {
     id: "1",
     title: "BMW 3 Series 320i M Sport",
@@ -138,10 +142,10 @@ const SAMPLE_VEHICLES = [
     location: "Johannesburg",
     badge: "Hot",
   },
-];
+]
+  : [];
 
-const PLACEHOLDER_IMAGE =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'%3E%3Crect fill='%231a1a1a' width='800' height='500'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23D4AF37' font-family='system-ui' font-size='24'%3ENo photo%3C/text%3E%3C/svg%3E";
+const PLACEHOLDER_IMAGE = PLACEHOLDER_SVG;
 
 type ShowroomVehicle = {
   id: string;
@@ -245,6 +249,21 @@ function parseAiFilters(query: string) {
 export default function Showroom() {
   const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery();
   const { data: contactOptions } = trpc.showroom.contactOptions.useQuery();
+  const { data: appearance } = trpc.showroom.appearance.useQuery();
+
+  const theme = appearance?.theme ?? "classic";
+  const themeClass = useMemo(() => {
+    switch (theme) {
+      case "classic":
+        return "showroom-theme-classic";
+      case "minimal":
+        return "showroom-theme-minimal";
+      case "bold":
+        return "showroom-theme-bold";
+      default:
+        return "showroom-theme-futuristic";
+    }
+  }, [theme]);
 
   const [search, setSearch] = useState("");
   const [aiQuery, setAiQuery] = useState("");
@@ -267,13 +286,17 @@ export default function Showroom() {
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<ShowroomVehicle | null>(null);
 
+  const fromDb = useMemo(
+    () =>
+      (dbVehicles ?? [])
+        .filter((v) => v.status === "available" && v.title?.trim())
+        .map(dbToShowroom),
+    [dbVehicles],
+  );
+
   const allVehicles: ShowroomVehicle[] = useMemo(() => {
-    const fromDb = (dbVehicles ?? [])
-      .filter((v) => v.status === "available" && v.title?.trim())
-      .map(dbToShowroom);
-    // Use live inventory when present; otherwise show demo stock so search/filters always work in pilot.
-    return fromDb.length > 0 ? fromDb : (SAMPLE_VEHICLES as ShowroomVehicle[]);
-  }, [dbVehicles]);
+    return fromDb.length > 0 ? fromDb : (DEV_SAMPLE_VEHICLES as ShowroomVehicle[]);
+  }, [fromDb]);
 
   const hasActiveFilters =
     search.trim().length > 0 ||
@@ -430,10 +453,18 @@ export default function Showroom() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className={cn("min-h-screen bg-background text-foreground", themeClass)}
+      data-showroom-theme={theme}
+      style={
+        appearance?.accentColor
+          ? ({ ["--dealer-accent" as string]: appearance.accentColor } as React.CSSProperties)
+          : undefined
+      }
+    >
       <Navigation />
 
-      <section className="pt-32 pb-12 gradient-mesh noise-overlay">
+      <section className="pt-32 pb-12">
         <div className="container">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -441,14 +472,14 @@ export default function Showroom() {
             transition={{ duration: 0.6 }}
             className="max-w-3xl"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full glass-gold text-xs font-medium uppercase tracking-[0.18em] text-primary">
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full border border-primary/20 text-xs font-medium uppercase tracking-[0.18em] text-primary">
               Premium Showroom
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold mb-4 tracking-tight">
               Curated <span className="text-gold-gradient">Inventory</span>
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Every listing scored against SA market guides — spot great deals AutoTrader won't label for you.
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              Photography-first listings with live deal scores — every vehicle presented like a luxury showroom.
             </p>
           </motion.div>
         </div>
@@ -570,13 +601,25 @@ export default function Showroom() {
             <SkeletonLoader count={6} type="card" className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 px-4 rounded-2xl border border-primary/10 bg-card/40">
-              <p className="text-lg font-medium mb-2">No vehicles match your search</p>
-              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Try different keywords, remove filters, or ask our team — we may have similar stock arriving soon.
+              <p className="text-lg font-medium mb-2">
+                {fromDb.length === 0 && !import.meta.env.DEV
+                  ? "Showroom inventory coming soon"
+                  : "No vehicles match your search"}
               </p>
+              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                {fromDb.length === 0 && !import.meta.env.DEV
+                  ? "Our dealers are loading premium stock. Check back shortly or contact us for off-market vehicles."
+                  : "Try different keywords, remove filters, or ask our team — we may have similar stock arriving soon."}
+              </p>
+              {hasActiveFilters ? (
               <Button variant="outline" onClick={clearFilters}>
                 Show all vehicles
               </Button>
+              ) : (
+                <Button asChild variant="outline">
+                  <Link href="/">Back to home</Link>
+                </Button>
+              )}
             </div>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -596,34 +639,29 @@ export default function Showroom() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4), ease: [0.16, 1, 0.3, 1] }}
-                className="card-premium glass rounded-2xl overflow-hidden group"
+                className="card-premium vehicle-card glass rounded-2xl overflow-hidden group"
               >
-                <div className="relative aspect-[16/10] bg-gradient-to-br from-muted/80 to-muted overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.06)_0%,transparent_70%)]" />
-                  <img
-                    src={v.image || PLACEHOLDER_IMAGE}
-                    alt={v.title}
-                    className="relative w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04] img-premium"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = PLACEHOLDER_IMAGE;
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+                <VehicleShowroomFrame
+                  src={v.image && v.image !== PLACEHOLDER_IMAGE ? v.image : null}
+                  alt={v.title}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  staticAsset={!v.image}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500 pointer-events-none z-[3]" />
                   {v.badge && (
-                    <Badge className="absolute top-3 left-3 btn-gold text-xs font-bold border-0 z-10">
+                    <Badge className="absolute top-3 left-3 btn-gold text-xs font-bold border-0 z-[4]">
                       {v.badge}
                     </Badge>
                   )}
                   {dealScore && (
-                    <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
+                    <div className="absolute top-3 left-3 z-[4] flex flex-col gap-1">
                       {!v.badge && <DealScoreBadge score={dealScore} />}
                       {v.badge && (
                         <DealScoreBadge score={dealScore} className="mt-10" />
                       )}
                     </div>
                   )}
-                  <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
+                  <div className="absolute bottom-3 right-3 flex items-center gap-2 z-[4]">
                     {contactOptions?.whatsappChatbotEnabled && contactOptions.whatsappPhoneNumber && (
                       <a
                         href={`https://wa.me/${contactOptions.whatsappPhoneNumber.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${v.title} (${formatVehiclePrice(v.price)}) at ${contactOptions.dealershipName}`)}`}
@@ -650,10 +688,10 @@ export default function Showroom() {
                       </button>
                     )}
                   </div>
-                  <button className="absolute top-3 right-3 w-9 h-9 rounded-full glass flex items-center justify-center hover:bg-primary/20 transition-colors z-10">
+                  <button className="absolute top-3 right-3 w-9 h-9 rounded-full glass flex items-center justify-center hover:bg-primary/20 transition-colors z-[4]">
                     <Heart className="h-4 w-4 text-primary" />
                   </button>
-                </div>
+                </VehicleShowroomFrame>
 
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-2 mb-3">

@@ -21,6 +21,10 @@ import { OWNER_EMAIL, OWNER_PHONE_DISPLAY, OWNER_PHONE_E164, OWNER_WHATSAPP_URL 
 
 const FAQS = [
   {
+    q: "What does the pilot include?",
+    a: "Pilot partners receive Growth-level features: public showroom, CSV inventory import, R1 price repair, web + WhatsApp Nala, lead pipeline, test-drive bookings, deal scores, 8-angle photos, and trade-in network. Pricing is tailored — we confirm terms before billing goes live.",
+  },
+  {
     q: "How do I add vehicles to my showroom?",
     a: "Go to Dashboard → Inventory → Add vehicle. You can also bulk-import from AutoTrader or Cars.co.za CSV via Import CSV. Imported stock feeds your web showroom and chatbot automatically.",
   },

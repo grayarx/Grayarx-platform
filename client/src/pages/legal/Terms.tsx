@@ -19,7 +19,7 @@ export default function Terms() {
 
       <h2>3. Subscription and billing</h2>
       <p>
-        Subscriptions are billed monthly in South African Rand. Pricing is published at <a href="/pricing">grayarx.com/pricing</a>. We offer a 14-day free trial on all plans with no credit card required to start. After the trial, you authorise us to charge the subscription fee on a recurring basis until you cancel.
+        Subscriptions are billed monthly in South African Rand. During the pilot programme, pricing is confirmed in writing before billing begins. Plan limits and features are agreed per dealership. After the trial, you authorise us to charge the subscription fee on a recurring basis until you cancel.
       </p>
 
       <h2>4. Free trial</h2>

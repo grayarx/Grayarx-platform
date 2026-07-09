@@ -1,0 +1,80 @@
+import { describe, it, expect } from "vitest";
+import { grayArxLogoUrl, grayArxEmailHeader } from "../shared/emailBranding";
+import {
+  mailableProspects,
+  groupProspectsBySegment,
+  PILOT_PROSPECTS,
+} from "../shared/pilotProspectSegments";
+import {
+  generateSegmentPilotEmailHTML,
+  subjectForSegment,
+} from "./_core/pilotEmailTemplate";
+import { previewPilotCampaign } from "./_core/pilotEmailCampaignService";
+
+describe("pilot email campaign", () => {
+  it("logo URL is the square site icon PNG", () => {
+    const url = grayArxLogoUrl();
+    expect(url).toContain("/logo-icon.png");
+    expect(url).not.toContain(".svg");
+    expect(url).not.toContain("email-logo-grayarx");
+  });
+
+  it("email header matches site layout (icon + wordmark)", () => {
+    const header = grayArxEmailHeader();
+    expect(header).toContain('role="presentation"');
+    expect(header).toContain("cid:grayarx-logo-icon");
+    expect(header).toContain("GrayArx");
+    expect(header).toContain("AI Platform");
+    expect(header).not.toContain("<p ");
+  });
+
+  it("groups prospects into four segments", () => {
+    const groups = groupProspectsBySegment();
+    expect(Object.keys(groups)).toHaveLength(4);
+    expect(groups.basic_website_no_showroom.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("dedupes mailable prospects by email", () => {
+    const mailable = mailableProspects();
+    const emails = mailable.map((p) => p.email!.toLowerCase());
+    expect(new Set(emails).size).toBe(emails.length);
+    for (const p of mailable) {
+      expect(p.emailVerified).toBe(true);
+      expect(p.email).toBeTruthy();
+    }
+  });
+
+  it("generates segment-specific HTML with dealership name", () => {
+    const sample = PILOT_PROSPECTS.find((p) => p.id === "jubilee-springs")!;
+    const html = generateSegmentPilotEmailHTML({
+      dealershipName: sample.dealershipName,
+      contactName: sample.contactName,
+      city: sample.city,
+      segment: sample.segment,
+    });
+    expect(html).toContain("Jubilee Motors");
+    expect(html).toContain("cid:grayarx-logo-icon");
+    expect(html).toContain("Apply for pilot access");
+    expect(html).not.toContain("Segment:");
+    expect(html).not.toContain("manus.space");
+    expect(html).not.toContain("position:absolute");
+  });
+
+  it("each segment has a distinct subject line", () => {
+    const subjects = new Set([
+      subjectForSegment("no_website_social_only"),
+      subjectForSegment("basic_website_no_showroom"),
+      subjectForSegment("after_hours_leak"),
+      subjectForSegment("whatsapp_manual"),
+    ]);
+    expect(subjects.size).toBe(4);
+  });
+
+  it("preview campaign reports mailable counts per segment", () => {
+    const preview = previewPilotCampaign();
+    expect(preview.length).toBe(4);
+    const basic = preview.find((p) => p.segment === "basic_website_no_showroom");
+    expect(basic?.mailable).toBeGreaterThanOrEqual(3);
+    expect(basic?.sampleHtml).toContain("<img");
+  });
+});

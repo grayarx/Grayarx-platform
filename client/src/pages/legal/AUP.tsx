@@ -54,7 +54,7 @@ export default function AUP() {
 
       <h2>7. Fair use and rate limits</h2>
       <p>
-        Plan limits (leads, calls, vehicles) are set out at <a href="/pricing">grayarx.com/pricing</a>. We may apply technical rate limits to protect platform stability. Excessive automated requests outside the published API may be throttled or suspended.
+        Plan limits (leads, vehicles, AI sessions) are set out in your pilot or subscription agreement. We may apply technical rate limits to protect platform stability. Excessive automated requests outside the published API may be throttled or suspended.
       </p>
 
       <h2>8. Reporting and enforcement</h2>

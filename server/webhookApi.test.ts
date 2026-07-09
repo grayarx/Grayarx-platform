@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { generateApiKey, hashApiKey, validateApiKey, createApiKey, revokeApiKey } from "./apiKeyService";
+import crypto from "crypto";
+import { generateApiKey, hashApiKey, validateApiKey, createApiKey, revokeApiKey, checkRateLimit, getRateLimitStatus } from "./apiKeyService";
 
 describe("API Key Management", () => {
   it("should generate a valid API key", () => {
@@ -69,20 +70,19 @@ describe("Webhook Security", () => {
   });
 
   it("should verify webhook signatures correctly", () => {
-    const crypto = require("crypto");
     const payload = JSON.stringify({ event: "lead.created", id: 123 });
     const secret = "webhook_secret";
-    
+
     const signature = crypto
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex");
-    
+
     const isValid = crypto.timingSafeEqual(
-      signature,
-      signature
+      Buffer.from(signature, "hex"),
+      Buffer.from(signature, "hex"),
     );
-    
+
     expect(isValid).toBe(true);
   });
 
@@ -108,16 +108,12 @@ describe("Webhook Security", () => {
 
 describe("Rate Limiting", () => {
   it("should allow requests within rate limit", () => {
-    const { checkRateLimit } = require("./apiKeyService");
-    
     const key1 = 1;
     const result1 = checkRateLimit(key1, 1000);
     expect(result1).toBe(true);
   });
 
   it("should track rate limit status", () => {
-    const { getRateLimitStatus } = require("./apiKeyService");
-    
     const status = getRateLimitStatus(1, 1000);
     expect(status.remaining).toBeLessThanOrEqual(1000);
     expect(status.resetAt).toBeInstanceOf(Date);

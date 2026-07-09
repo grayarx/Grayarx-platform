@@ -5,10 +5,12 @@ import { subscriptions, invoices, payments, dealerships } from "../../drizzle/sc
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
+import { TIER_PRICES_ZAR } from "../../shared/subscriptionTiers";
+
 const PRICING_TIERS = {
-  starter: 3500,      // R3,500/month
-  professional: 8750, // R8,750/month
-  enterprise: 0,      // Custom pricing
+  starter: TIER_PRICES_ZAR.starter,
+  professional: TIER_PRICES_ZAR.professional,
+  enterprise: TIER_PRICES_ZAR.enterprise,
 };
 
 /**

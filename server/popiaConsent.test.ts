@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signPopiaConsent, checkPopiaConsentStatus, POPIA_FORM_TEXT_V1 } from './_core/popiaConsent';
+import * as db from './db';
 
 // Mock DB functions
 vi.mock('./db', () => ({

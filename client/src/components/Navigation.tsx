@@ -73,20 +73,20 @@ export default function Navigation() {
     <header
       data-testid="site-nav"
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         scrolled || isConsoleRoute
-          ? "glass border-b border-[rgba(212,175,55,0.15)]"
-          : "bg-transparent",
+          ? "glass border-b border-[rgba(212,175,55,0.15)] backdrop-blur-xl"
+          : "bg-gradient-to-b from-black/60 to-transparent",
       )}
     >
-      <div className="container flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <Logo size={44} glow />
+      <div className="container flex h-16 md:h-20 items-center justify-between">
+        <Link href="/" className="flex items-center gap-3 group">
+          <Logo size={40} />
           <div className="hidden sm:flex flex-col leading-tight">
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            <span className="font-display text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
               GrayArx
             </span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="font-tech text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
               AI Platform
             </span>
           </div>
@@ -99,7 +99,7 @@ export default function Navigation() {
                 <Link
                   href={link.href}
                   className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary relative whitespace-nowrap",
+                    "font-tech text-[11px] uppercase tracking-[0.12em] transition-colors hover:text-primary relative whitespace-nowrap",
                     location === link.href
                       ? "text-primary"
                       : "text-muted-foreground",

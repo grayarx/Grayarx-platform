@@ -97,7 +97,7 @@ export default function Onboarding() {
       <section className="pt-24 pb-20">
         <div className="container max-w-2xl">
           <div className="text-center mb-10">
-            <Logo size={64} glow className="mx-auto" />
+            <Logo size={64} className="mx-auto" />
             <h1 className="font-display text-4xl md:text-5xl font-bold mt-6">
               Onboard your dealership
             </h1>

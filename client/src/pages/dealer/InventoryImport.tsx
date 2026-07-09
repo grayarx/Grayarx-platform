@@ -11,20 +11,25 @@ import {
   Car,
   Gauge,
   Fuel,
+  Wrench,
 } from "lucide-react";
 import { Link } from "wouter";
 import DealerShell from "@/components/DealerShell";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar, LoadingSpinner } from "@/components/LoadingAnimations";
 import { cn } from "@/lib/utils";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 
+import { photoQualityLabel } from "@shared/photoStandards";
+
 const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,stock
-2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=800,STK-001
+2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200|https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200,STK-001
 2020 VW Polo 1.0 TSI Comfortline,VW,Polo,2020,224900,68000,Petrol,Manual,Pretoria,,STK-002`;
 
 const TEMPLATE_CSV = SAMPLE;
@@ -41,6 +46,9 @@ type PreviewRow = {
   km: number | null;
   fuel: string | null;
   imageUrl: string | null;
+  imageUrls?: string[];
+  photoScore?: number;
+  photoWarnings?: string[];
 };
 
 
@@ -59,10 +67,18 @@ export default function InventoryImportPage() {
     validRows: PreviewRow[];
     skippedRows: Array<{ index: number; reason: string }>;
     duplicateRefs: string[];
+    photoSummary?: {
+      avgScore: number;
+      rowsWithoutPhotos: number;
+      rowsBelowRecommended: number;
+    };
   } | null>(null);
+
+  const [mirrorPhotos, setMirrorPhotos] = useState(true);
 
   const [lastImport, setLastImport] = useState<{
     created: number;
+    repaired: number;
     failed: Array<{ title: string; reason: string }>;
   } | null>(null);
 
@@ -119,16 +135,22 @@ export default function InventoryImportPage() {
       setTimeout(() => setImportProgress(null), 800);
       setLastImport({
         created: res.created,
+        repaired: res.repaired ?? 0,
         failed: res.failedRows ?? [],
       });
       utils.dealer.listVehicles.invalidate();
       utils.showroom.list.invalidate();
+      utils.inventoryImport.suspiciousPriceCount.invalidate();
       utils.agent.feed.invalidate();
+      const parts = [];
+      if (res.created > 0) {
+        parts.push(`Imported ${res.created} vehicle${res.created === 1 ? "" : "s"}`);
+      }
+      if (res.repaired && res.repaired > 0) {
+        parts.push(`repaired ${res.repaired} R1 price${res.repaired === 1 ? "" : "s"}`);
+      }
       toast.success(
-        `Imported ${res.created} vehicle${res.created === 1 ? "" : "s"}.` +
-          (res.failedRows?.length
-            ? ` ${res.failedRows.length} failed.`
-            : ""),
+        parts.length > 0 ? parts.join(" · ") + "." : "No new vehicles to import.",
       );
       if (res.created > 0) {
         setCsv("");
@@ -142,10 +164,31 @@ export default function InventoryImportPage() {
     },
   });
 
+  const repairMutation = trpc.inventoryImport.repairPrices.useMutation({
+    onSuccess: (res) => {
+      utils.dealer.listVehicles.invalidate();
+      utils.showroom.list.invalidate();
+      utils.inventoryImport.suspiciousPriceCount.invalidate();
+      toast.success(
+        `Fixed ${res.updated} R1 price${res.updated === 1 ? "" : "s"}` +
+          (res.notFound ? ` · ${res.notFound} not matched` : ""),
+      );
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleRepairR1 = () => {
+    if (!csv.trim()) {
+      toast.error("Load your CSV first");
+      return;
+    }
+    repairMutation.mutate({ csv });
+  };
+
   const handleImport = () => {
     setImportProgress(5);
     commitMutation.mutate(
-      { csv, skipPhotoMirror: true },
+      { csv, skipPhotoMirror: !mirrorPhotos },
       {
         onSettled: () => {
           if (!commitMutation.isSuccess) setImportProgress(null);
@@ -216,8 +259,8 @@ export default function InventoryImportPage() {
               <span className="text-amber-300">
                 {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} in your inventory
                 still show R1 —{" "}
-                <Link href="/dealer/settings" className="underline hover:text-amber-200">
-                  fix them in Settings
+                <Link href="/dealer/fix-r1-prices" className="underline hover:text-amber-200">
+                  fix them in bulk
                 </Link>
                 .
               </span>
@@ -333,7 +376,8 @@ export default function InventoryImportPage() {
 
             <p className="text-xs text-muted-foreground leading-relaxed">
               Headers we recognise: title, make, model, year, price/price_zar, km/mileage_km, fuel,
-              transmission, location, image/photos, stock/vin/ref.
+              transmission, location, image/photos (use <strong>|</strong> for multiple angles — aim for 8+),
+              stock/vin/ref.
             </p>
           </CardContent>
         </Card>
@@ -373,6 +417,31 @@ export default function InventoryImportPage() {
                   />
                 </div>
 
+                {preview.photoSummary && (
+                  <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm space-y-2">
+                    <p className="font-semibold flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-primary" />
+                      Photography quality — avg {preview.photoSummary.avgScore}/100 (
+                      {photoQualityLabel(preview.photoSummary.avgScore)})
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                      {preview.photoSummary.rowsWithoutPhotos > 0 && (
+                        <li>{preview.photoSummary.rowsWithoutPhotos} row(s) missing photos</li>
+                      )}
+                      {preview.photoSummary.rowsBelowRecommended > 0 && (
+                        <li>
+                          {preview.photoSummary.rowsBelowRecommended} listing(s) below 8-photo luxury
+                          standard
+                        </li>
+                      )}
+                      {preview.photoSummary.rowsWithoutPhotos === 0 &&
+                        preview.photoSummary.rowsBelowRecommended === 0 && (
+                          <li>Photo coverage meets GrayArx showroom standards.</li>
+                        )}
+                    </ul>
+                  </div>
+                )}
+
                 {preview.validRows.length > 0 && (
                   <div className="rounded-xl border border-border overflow-hidden">
                     <div className="border-b border-border bg-muted/40 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -401,6 +470,19 @@ export default function InventoryImportPage() {
                             <div className="text-sm font-medium text-foreground truncate">
                               {r.title}
                             </div>
+                            {typeof r.photoScore === "number" && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                Photo score: {r.photoScore}/100
+                                {r.imageUrls && r.imageUrls.length > 1
+                                  ? ` · ${r.imageUrls.length} angles`
+                                  : ""}
+                              </div>
+                            )}
+                            {r.photoWarnings && r.photoWarnings.length > 0 && (
+                              <p className="text-[10px] text-amber-500/90 mt-0.5 truncate">
+                                {r.photoWarnings[0]}
+                              </p>
+                            )}
                             <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
                               {r.year && (
                                 <span className="flex items-center gap-0.5">
@@ -458,15 +540,61 @@ export default function InventoryImportPage() {
                 )}
 
                 {preview.validRows.length > 0 && (
-                  <Button
-                    className="w-full btn-gold h-12"
-                    onClick={handleImport}
-                    disabled={isImporting}
-                  >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Import {preview.validRows.length} vehicle
-                    {preview.validRows.length === 1 ? "" : "s"}
-                  </Button>
+                  <>
+                    <div className="flex items-center justify-between rounded-xl border border-primary/15 bg-muted/20 px-4 py-3">
+                      <div>
+                        <Label htmlFor="mirror-photos" className="text-sm font-medium">
+                          Save photos to GrayArx
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Recommended — copies AutoTrader/Cars.co.za images so links never break
+                        </p>
+                      </div>
+                      <Switch
+                        id="mirror-photos"
+                        checked={mirrorPhotos}
+                        onCheckedChange={setMirrorPhotos}
+                      />
+                    </div>
+                    <Button
+                      className="w-full btn-gold h-12"
+                      onClick={handleImport}
+                      disabled={isImporting}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {suspiciousCount > 0 ? "Import / repair R1 prices" : "Import"}{" "}
+                      {preview.validRows.length} vehicle
+                      {preview.validRows.length === 1 ? "" : "s"}
+                      {mirrorPhotos ? " + save photos" : ""}
+                    </Button>
+                    {suspiciousCount > 0 && (
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={handleRepairR1}
+                        disabled={repairMutation.isPending || !csv.trim()}
+                      >
+                        {repairMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Repairing R1 prices…
+                          </>
+                        ) : (
+                          <>
+                            <Wrench className="mr-2 h-4 w-4" />
+                            Repair {suspiciousCount} R1 price{suspiciousCount === 1 ? "" : "s"} only
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <p className="text-center text-xs text-muted-foreground">
+                      After import, open{" "}
+                      <Link href="/dealer/csv-photo" className="text-primary underline">
+                        Photo manager
+                      </Link>{" "}
+                      to fix any missing angles.
+                    </p>
+                  </>
                 )}
 
                 {lastImport && (
@@ -477,7 +605,12 @@ export default function InventoryImportPage() {
                   >
                     <p className="text-green-300 font-medium flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
-                      {lastImport.created} vehicle{lastImport.created === 1 ? "" : "s"} imported successfully
+                      {lastImport.created > 0 &&
+                        `${lastImport.created} vehicle${lastImport.created === 1 ? "" : "s"} imported`}
+                      {lastImport.created > 0 && lastImport.repaired > 0 && " · "}
+                      {lastImport.repaired > 0 &&
+                        `${lastImport.repaired} R1 price${lastImport.repaired === 1 ? "" : "s"} repaired`}
+                      {lastImport.created === 0 && lastImport.repaired === 0 && "Import complete"}
                     </p>
                     {lastImport.failed.length > 0 && (
                       <ul className="mt-2 text-xs text-amber-200 list-disc ml-4">

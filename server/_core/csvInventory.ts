@@ -8,6 +8,9 @@
  * Supports: quoted fields, embedded commas inside quotes, escaped quotes ("").
  */
 
+import { parseMultiPhotoField } from "../../shared/imagePipeline";
+import { validatePhotoSet } from "../../shared/photoStandards";
+
 export type ParsedVehicleRow = {
   title: string;
   make: string | null;
@@ -19,9 +22,13 @@ export type ParsedVehicleRow = {
   transmission: string | null;
   location: string | null;
   imageUrl: string | null;
+  /** Pipe- or semicolon-separated photo URLs from CSV */
+  imageUrls: string[];
   description: string | null;
   /** Source registration / vin / stock number used for dedupe. */
   externalRef: string | null;
+  photoScore: number;
+  photoWarnings: string[];
 };
 
 export type ImportPreview = {
@@ -29,6 +36,11 @@ export type ImportPreview = {
   validRows: ParsedVehicleRow[];
   skippedRows: Array<{ index: number; reason: string }>;
   duplicateRefs: string[];
+  photoSummary: {
+    avgScore: number;
+    rowsWithoutPhotos: number;
+    rowsBelowRecommended: number;
+  };
 };
 
 const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
@@ -124,7 +136,13 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     .filter((l) => l.length > 0);
 
   if (lines.length === 0) {
-    return { totalRows: 0, validRows: [], skippedRows: [], duplicateRefs: [] };
+    return {
+      totalRows: 0,
+      validRows: [],
+      skippedRows: [],
+      duplicateRefs: [],
+      photoSummary: { avgScore: 0, rowsWithoutPhotos: 0, rowsBelowRecommended: 0 },
+    };
   }
 
   const header = splitCsvLine(lines[0]);
@@ -150,6 +168,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
         },
       ],
       duplicateRefs: [],
+      photoSummary: { avgScore: 0, rowsWithoutPhotos: 0, rowsBelowRecommended: 0 },
     };
   }
 
@@ -184,8 +203,9 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     }
 
     const rawImage = get("imageUrl")?.trim() || null;
-    const imageUrl =
-      rawImage?.split(/[|;]/)[0]?.trim() || null;
+    const imageUrls = parseMultiPhotoField(rawImage);
+    const imageUrl = imageUrls[0] ?? null;
+    const photoCheck = validatePhotoSet(imageUrls);
 
     const externalRef = get("externalRef")?.trim() || null;
     if (externalRef) {
@@ -208,15 +228,27 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       transmission: get("transmission")?.trim() || null,
       location: get("location")?.trim() || null,
       imageUrl,
+      imageUrls,
       description: get("description")?.trim() || null,
       externalRef,
+      photoScore: photoCheck.score,
+      photoWarnings: photoCheck.warnings,
     });
   }
+
+  const scores = validRows.map((r) => r.photoScore);
+  const avgScore =
+    scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
   return {
     totalRows: lines.length - 1,
     validRows,
     skippedRows,
     duplicateRefs,
+    photoSummary: {
+      avgScore,
+      rowsWithoutPhotos: validRows.filter((r) => r.imageUrls.length === 0).length,
+      rowsBelowRecommended: validRows.filter((r) => r.imageUrls.length > 0 && r.imageUrls.length < 8).length,
+    },
   };
 }

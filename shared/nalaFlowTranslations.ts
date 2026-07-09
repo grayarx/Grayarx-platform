@@ -4,7 +4,7 @@
  */
 
 import { type LanguageCode } from "./languages";
-import { nalaText } from "./nalaTranslations";
+import { polishedNalaText } from "./nalaGrammarPolish";
 
 type LangStrings = Record<LanguageCode, string>;
 type Vars = Record<string, string | number | undefined>;
@@ -21,7 +21,7 @@ export const FLOW_SETUP_INCOMPLETE = L({
   tn: "Moforisi o a sa qetse go tlhophwa — mme ke ka tsaya potso ya gago. Leina la gago ke mang?",
   ts: "Xitolo a xi nga heti ku vekiwa — kambe ndzi ta teka xivutiso xa wena. Vito ra wena i mani?",
   ss: "Lomthengisi akakagcwalisi kusetha — kodwa ngingathatha umbuto wakho. Ligama lakho ngubani?",
-  ve: "Fhethu ha fho ngo fhedza u ita — fhedzi ndo khou tevhedza mbudziso yavho. Zwi ita zwine?",
+  ve: "Fhethu ha fho ngo fhedza u ita — fhedzi ndo khou tevhedza mbudziso yavho. Dzina lavho ndi ani?",
   nr: "Lo mthengisi akakagcwalisi ukusetha — kodwa ngingathatha umbuzo wakho. Igama lakho ngubani?",
   pt: "Esta concessionária ainda não concluiu a configuração — mas posso registar o seu pedido. Qual é o seu nome?",
 });
@@ -36,7 +36,7 @@ export const FLOW_TEST_DRIVE_START = L({
   tn: "Kgetho e botse! A re go fe tshono ya go khanna. Leina la gago le feletseng ke mang?",
   ts: "Nhlawulo lowu a wu nene! A hi ku nyika nkarhi wo khoma. Vito ra wena leri heleleke i mani?",
   ss: "Kukhetfa lokuhle! Masikusize uqhubeke le moto. Ligama lakho lephelele ngubani?",
-  ve: "Nhluvho nnzhi! Ri do u fa tshikhala tsha u khama. Zwi ita zwine zwo fhelaho?",
+  ve: "Nhluvho nnzhi! Ri do u fa tshikhala tsha u khama. Dzina lavho lṱhe nfhedzo ndi ani?",
   nr: "Ukukhetha okuhle! Masikusize uqhubeke le moto. Igama lakho eligcwele ngubani?",
   pt: "Excelente escolha! Vamos marcar o test drive. Qual é o seu nome completo?",
 });
@@ -111,7 +111,7 @@ export const FLOW_PRE_APPROVAL_START = L({
   tn: "Go siame — ke tla go thusa go bona tumelelo pele ya **{vehicle}** ka **{price}**. Leina la gago ke mang?",
   ts: "Swinene — ndzi ta ku pfuna ku kuma mpfumelelo wa le mahlweni wa **{vehicle}** hi **{price}**. Vito ra wena i mani?",
   ss: "Kuhle — ngitakukusita utfole imvume yangaphambili ye-**{vehicle}** nge-**{price}**. Ligama lakho lephelele ngubani?",
-  ve: "Zwo nanga — ndi do u thusa u wana thendelo ya u thoma ya **{vehicle}** nga **{price}**. Zwi ita zwine?",
+  ve: "Zwo nanga — ndi do u thusa u wana thendelo ya u thoma ya **{vehicle}** nga **{price}**. Dzina lavho lṱhe nfhedzo ndi ani?",
   nr: "Kuhle — ngizokusize uthole imvume yangaphambili ye-**{vehicle}** ngo-**{price}**. Igama lakho eligcwele ngubani?",
   pt: "Perfeito — vou ajudá-lo com a pré-aprovação para o **{vehicle}** a **{price}**. Qual é o seu nome completo?",
 });
@@ -155,7 +155,7 @@ export const FLOW_PRE_APPROVAL_TERM = L({
   nso: "Nako ka dikgwedi? (mohl. 60, goba **skip**)",
   tn: "Nako ka dikgwedi? (mohl. 60, kgotsa **skip**)",
   ts: "Nkarhi hi tinhweti? (xik. 60, kumbe **skip**)",
-  ss: "Sikhatsi seminyaka? (sib. 60, noma **skip**)",
+  ss: "Sikhatsi seminyanga? (sib. 60, noma **skip**)",
   ve: "Tshifhinga tsha miṅwaha? (swo fana na 60, kana **skip**)",
   nr: "Isikhathi sezinyanga? (isb. 60, noma **skip**)",
   pt: "Prazo em meses? (ex. 60, ou **skip**)",
@@ -485,7 +485,7 @@ export function getFlowPrompt(
   lang: LanguageCode,
   vars: Vars = {},
 ): string {
-  return nalaText(lang, FLOW_MAP[key], vars);
+  return polishedNalaText(lang, FLOW_MAP[key], vars);
 }
 
 export function isSkipReply(text: string): boolean {

@@ -1,6 +1,7 @@
 import { getDb } from './db';
 import { leads, bookings, vehicles } from '../drizzle/schema';
 import { eq, gte, lte, and, count, avg, sum } from 'drizzle-orm';
+import { TIER_PRICES_ZAR } from '../shared/subscriptionTiers';
 
 export interface KPIMetrics {
   // Lead Metrics
@@ -181,7 +182,7 @@ export async function calculateKPIMetrics(
   // Estimate financial metrics
   const estimatedLeadValue = 10000; // R10,000 average
   const estimatedMonthlyRevenue = testDriveConversions * estimatedLeadValue;
-  const subscriptionCost = 7999; // Professional tier default
+  const subscriptionCost = 7999; // Growth tier default (see shared/subscriptionTiers.ts)
   const estimatedROI =
     subscriptionCost > 0
       ? ((estimatedMonthlyRevenue - subscriptionCost) / subscriptionCost) * 100
@@ -251,12 +252,7 @@ export async function calculateROIMetrics(
   const db = await getDb();
   if (!db) throw new Error('Database connection failed');
 
-  // Get subscription cost by tier
-  const subscriptionCosts = {
-    starter: 3999,
-    professional: 7999,
-    enterprise: 11999,
-  };
+  const subscriptionCosts = TIER_PRICES_ZAR;
 
   const monthlySubscriptionCost = subscriptionCosts[subscriptionTier];
 

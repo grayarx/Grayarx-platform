@@ -11,9 +11,11 @@ import {
   Upload,
   CheckCircle2,
   Eye,
+  Palette,
 } from "lucide-react";
 import { Link } from "wouter";
 import DealerShell from "@/components/DealerShell";
+import ShowroomThemePicker from "@/components/ShowroomThemePicker";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,21 +25,41 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/LoadingAnimations";
 import { OWNER_PHONE_E164 } from "@/lib/contact";
+import type { ShowroomThemeId } from "@shared/showroomThemes";
 
 export default function DealerSettings() {
   const utils = trpc.useUtils();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: deployment, isLoading: loadingDeployment } = trpc.chatbot.getDeployment.useQuery();
+  const { data: appearance, isLoading: loadingAppearance } = trpc.dealer.getAppearance.useQuery();
   const { data: suspicious, isLoading: loadingSuspicious } =
     trpc.inventoryImport.suspiciousPriceCount.useQuery();
 
   const [webChatEnabled, setWebChatEnabled] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [showroomTheme, setShowroomTheme] = useState<ShowroomThemeId>("classic");
+  const [brandAccentColor, setBrandAccentColor] = useState("#d4af37");
   const [repairCsv, setRepairCsv] = useState<string | null>(null);
   const [repairFileName, setRepairFileName] = useState<string | null>(null);
   const [repairProgress, setRepairProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (appearance) {
+      setShowroomTheme(appearance.theme);
+      setBrandAccentColor(appearance.brandAccentColor ?? "#d4af37");
+    }
+  }, [appearance]);
+
+  const saveAppearanceMutation = trpc.dealer.updateAppearance.useMutation({
+    onSuccess: () => {
+      utils.dealer.getAppearance.invalidate();
+      utils.showroom.appearance.invalidate();
+      toast.success("Showroom look saved");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   useEffect(() => {
     if (deployment) {
@@ -122,8 +144,81 @@ export default function DealerSettings() {
   return (
     <DealerShell
       title="Settings"
-      subtitle="Control what buyers see on your public showroom — contact icons, chat options, and inventory fixes."
+      subtitle="Control your public showroom look, contact icons, chat options, and inventory fixes."
     >
+      <Card className="border-primary/15 mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Palette className="h-5 w-5 text-primary" />
+            Showroom template
+          </CardTitle>
+          <CardDescription>
+            Pick a clean layout for your public showroom. You stay in control — switch anytime
+            without touching code.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {loadingAppearance ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading templates…
+            </div>
+          ) : (
+            <>
+              <ShowroomThemePicker
+                value={showroomTheme}
+                onChange={setShowroomTheme}
+                disabled={saveAppearanceMutation.isPending}
+              />
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4 max-w-md">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="accent-color">Accent colour (optional)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="accent-color"
+                      value={brandAccentColor}
+                      onChange={(e) => setBrandAccentColor(e.target.value)}
+                      placeholder="#d4af37"
+                      className="font-mono"
+                    />
+                    <input
+                      type="color"
+                      value={brandAccentColor.startsWith("#") ? brandAccentColor : "#d4af37"}
+                      onChange={(e) => setBrandAccentColor(e.target.value)}
+                      className="h-10 w-12 rounded-md border border-border cursor-pointer bg-transparent"
+                      aria-label="Pick accent colour"
+                    />
+                  </div>
+                </div>
+                <Button
+                  className="btn-gold shrink-0"
+                  disabled={saveAppearanceMutation.isPending}
+                  onClick={() =>
+                    saveAppearanceMutation.mutate({
+                      theme: showroomTheme,
+                      brandAccentColor: brandAccentColor.trim() || null,
+                    })
+                  }
+                >
+                  {saveAppearanceMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save look
+                </Button>
+              </div>
+              <Button asChild variant="outline" className="btn-cyber bg-transparent">
+                <Link href="/showroom" target="_blank">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview showroom
+                </Link>
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Showroom contact icons */}
         <Card className="border-primary/15">
@@ -350,7 +445,12 @@ export default function DealerSettings() {
 
             <p className="text-xs text-muted-foreground leading-relaxed">
               Matches vehicles by stock ID, then make/model/year, then title. Only updates vehicles
-              currently priced at R1 or less — won&apos;t overwrite correct prices.
+              currently priced at R1 or less — won&apos;t overwrite correct prices. Or use the
+              dedicated{" "}
+              <Link href="/dealer/fix-r1-prices" className="text-primary underline">
+                Fix R1 prices
+              </Link>{" "}
+              page.
             </p>
           </CardContent>
         </Card>

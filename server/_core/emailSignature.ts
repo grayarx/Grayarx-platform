@@ -9,8 +9,7 @@
 
 import { AGENTS, type AgentId } from "../../shared/agents";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/email-logo-grayarx-CkmUMDcDMNY2EYgACtADGv.png";
+import { grayArxEmailHeader } from "../../shared/emailBranding";
 
 const OWNER_PHONE = "+27 79 491 5187";
 const OWNER_WHATSAPP = "https://wa.me/27794915187";
@@ -46,11 +45,6 @@ export function buildHtmlSignature(ctx: SignatureContext): string {
   const agent = AGENTS[ctx.agentId];
   return `
 <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;color:#1f2937;border-collapse:collapse;margin-top:24px">
-  <tr>
-    <td style="padding:0 0 12px 0">
-      <img src="${LOGO_URL}" alt="GrayArx — AI Platform for Dealerships" width="280" style="display:block;border:0;outline:none;text-decoration:none;max-width:280px;height:auto" />
-    </td>
-  </tr>
   <tr>
     <td style="padding:0 0 6px 0">
       <span style="font-size:15px;font-weight:600;color:#0a0a0a">${escapeHtml(agent.displayName)}</span>
@@ -118,8 +112,8 @@ export function buildHtmlEmail(opts: {
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.06)">
             <tr>
-              <td style="background:#0a0a0a;padding:18px 28px">
-                <img src="${LOGO_URL}" alt="GrayArx" width="200" style="display:block;border:0;outline:none;text-decoration:none;max-width:200px;height:auto" />
+              <td style="background:#0a0a0a;padding:0">
+                ${grayArxEmailHeader()}
               </td>
             </tr>
             <tr>

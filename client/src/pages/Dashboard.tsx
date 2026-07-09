@@ -26,6 +26,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import DealerShell from "@/components/DealerShell";
+import { PhotoGuideCard } from "@/components/PhotoGuide";
 import AgentActivityFeed from "@/components/AgentActivityFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -109,6 +110,8 @@ export default function Dashboard() {
         </div>
       }
     >
+      <PhotoGuideCard />
+
       {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
@@ -152,12 +155,12 @@ export default function Dashboard() {
                 {suspiciousCount} vehicle{suspiciousCount === 1 ? "" : "s"} with missing or R1 pricing
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                Customers see POA instead — upload your CSV in Settings to repair prices in bulk.
+                Customers see POA instead — upload your CSV to repair prices in bulk.
               </div>
             </div>
           </div>
           <Link
-            href="/dealer/settings"
+            href="/dealer/fix-r1-prices"
             className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2"
           >
             Fix now →

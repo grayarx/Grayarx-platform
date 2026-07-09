@@ -1,3 +1,11 @@
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+import {
+  grayArxEmailHeader,
+  grayArxEmailFooter,
+  GRAYARX_EMAIL_LOGO_CID,
+  shouldAttachInlineEmailLogo,
+} from "../../shared/emailBranding";
 import { ENV } from "./env";
 
 /**
@@ -23,6 +31,32 @@ interface EmailResponse {
   error?: string;
 }
 
+function loadInlineLogoAttachment():
+  | { filename: string; content: string; content_id: string; content_type: string }
+  | null {
+  if (!shouldAttachInlineEmailLogo()) return null;
+
+  const candidates = [
+    join(process.cwd(), "client/public/logo-icon.png"),
+    join(process.cwd(), "dist/public/logo-icon.png"),
+  ];
+  for (const path of candidates) {
+    if (!existsSync(path)) continue;
+    try {
+      const content = readFileSync(path).toString("base64");
+      return {
+        filename: "logo-icon.png",
+        content,
+        content_id: GRAYARX_EMAIL_LOGO_CID,
+        content_type: "image/png",
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 /**
  * Send email via Resend
  */
@@ -33,6 +67,8 @@ export async function sendEmailViaResend(data: EmailData): Promise<EmailResponse
       console.error("[Resend] API key not configured");
       return { success: false, error: "RESEND_API_KEY not configured" };
     }
+
+    const inlineLogo = loadInlineLogoAttachment();
 
     const response = await fetch(RESEND_API_URL, {
       method: "POST",
@@ -48,6 +84,7 @@ export async function sendEmailViaResend(data: EmailData): Promise<EmailResponse
         reply_to: data.replyTo,
         cc: data.cc,
         bcc: data.bcc,
+        ...(inlineLogo ? { attachments: [inlineLogo] } : {}),
       }),
     });
 
@@ -356,23 +393,19 @@ export async function sendAccountLockedEmail(
 export async function testEmailDelivery(testEmail: string): Promise<EmailResponse> {
   const html = `
     <html>
-      <body style="font-family: Inter, sans-serif; background-color: #f5f5f5; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d4af37; margin: 0;">GrayArx</h1>
-          </div>
-          <h2 style="color: #1a1a1a; margin-bottom: 20px;">Email Delivery Test ✅</h2>
-          <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
-            If you received this email, the Resend email integration is working correctly!
-          </p>
-          <div style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4caf50; margin: 20px 0;">
-            <p style="color: #2e7d32; margin: 0;"><strong>Status: Email service is operational</strong></p>
-          </div>
-          <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; text-align: center;">
-            <p style="color: #888; font-size: 12px; margin: 0;">
-              Powered by GrayArx AI Platform
+      <body style="font-family: Inter, sans-serif; background-color: #f5f5f5; padding: 20px; margin:0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          ${grayArxEmailHeader("Email delivery test")}
+          <div style="padding: 40px;">
+            <h2 style="color: #1a1a1a; margin-bottom: 20px;">Email Delivery Test</h2>
+            <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+              If you received this email, the Resend integration is working and the GrayArx logo loaded correctly above.
             </p>
+            <div style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4caf50; margin: 20px 0;">
+              <p style="color: #2e7d32; margin: 0;"><strong>Status: Email service is operational</strong></p>
+            </div>
           </div>
+          ${grayArxEmailFooter()}
         </div>
       </body>
     </html>

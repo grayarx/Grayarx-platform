@@ -88,5 +88,16 @@ describe("parseInventoryCsv", () => {
     expect(res.validRows[0].price).toBe(329900);
     expect(res.validRows[0].km).toBe(42000);
     expect(res.validRows[0].imageUrl).toBe("https://example.com/car.jpg");
+    expect(res.photoSummary.avgScore).toBeGreaterThan(0);
+  });
+
+  it("parses multiple photo URLs separated by pipe", () => {
+    const csv = [
+      "title,price,image",
+      "BMW 320i,500000,https://a.com/1.jpg|https://a.com/2.jpg|https://a.com/3.jpg",
+    ].join("\n");
+    const res = parseInventoryCsv(csv);
+    expect(res.validRows[0].imageUrls).toHaveLength(3);
+    expect(res.validRows[0].photoWarnings.length).toBeGreaterThan(0);
   });
 });

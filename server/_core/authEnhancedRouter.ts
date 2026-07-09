@@ -6,7 +6,7 @@ import { passwordResetTokens, users } from "../../drizzle/schema";
 import { eq, gt } from "drizzle-orm";
 import { sendProspectEmail } from "./emailSendingService";
 import { getSessionCookieOptions } from "./cookies";
-import { COOKIE_NAME } from "../../shared/const";
+import { COOKIE_NAME, REMEMBER_ME_MS, SESSION_MS } from "../../shared/const";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -208,6 +208,7 @@ export const authEnhancedRouter = router({
       z.object({
         email: z.string().email("Invalid email address"),
         password: z.string().min(1, "Password required"),
+        rememberMe: z.boolean().optional().default(true),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -227,13 +228,13 @@ export const authEnhancedRouter = router({
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
         }
 
-        const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+        const sessionMs = input.rememberMe ? REMEMBER_ME_MS : SESSION_MS;
         const token = Buffer.from(
-          JSON.stringify({ userId: user.id, email: user.email, exp: Date.now() + ONE_YEAR_MS })
+          JSON.stringify({ userId: user.id, email: user.email, exp: Date.now() + sessionMs })
         ).toString("base64");
 
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: sessionMs });
 
         return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
       } catch (err) {
