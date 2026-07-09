@@ -22,7 +22,7 @@ import { OWNER_EMAIL, OWNER_PHONE_DISPLAY, OWNER_PHONE_E164, OWNER_WHATSAPP_URL 
 const FAQS = [
   {
     q: "What does the pilot include?",
-    a: "Pilot partners receive Growth-level features: public showroom, CSV inventory import, R1 price repair, web + WhatsApp Nala, lead pipeline, test-drive bookings, deal scores, 8-angle photos, and trade-in network. Pricing is tailored — we confirm terms before billing goes live.",
+    a: "Pilot partners receive Growth-level features: public showroom, CSV inventory import, web + WhatsApp Nala, lead pipeline, test-drive bookings, deal scores, 8-angle photos, and trade-in network. Pricing is tailored — we confirm terms before billing goes live.",
   },
   {
     q: "How do I add vehicles to my showroom?",
@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "How do the AI agents work?",
-    a: "Each agent handles a specific job: Nala (WhatsApp), Mia (email), Lerato (bookings), Sipho (prospecting), Tumi (trade-in), and Kagiso (improvements). Outbound AI calling is a future opt-in — not part of the pilot. Click any agent card on the Agents page to see their live activity feed.",
+    a: "Each agent handles a specific job behind the scenes: Nala (WhatsApp), Mia (email), Lerato (bookings), Sipho (prospecting), Tumi (trade-in), and Kagiso (improvements). You see leads and bookings in your dashboard — GrayArx runs the agents for you. Outbound AI calling is a future opt-in, not part of the pilot.",
   },
   {
     q: "Why didn't I receive a confirmation email?",
@@ -52,7 +52,6 @@ const FAQS = [
 
 const QUICK_LINKS = [
   { href: "/dealer/inventory", label: "Manage Inventory", icon: Car, desc: "Add or import vehicles" },
-  { href: "/dealer/agents", label: "AI Agents", icon: Bot, desc: "See what your team is doing" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, desc: "Test drives & demos" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, desc: "Bulk upload for chatbots" },
 ];

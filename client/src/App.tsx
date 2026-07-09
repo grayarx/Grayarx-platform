@@ -30,7 +30,6 @@ import { SocialLoginSetup } from "./pages/SocialLoginSetup";
 import { AdminUsers } from "./pages/AdminUsers";
 import { AdminAuditLog } from "./pages/AdminAuditLog";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
-import { DealerRouteGuard } from "./components/DealerRouteGuard";
 // import { OAuthCallbackPage } from "./pages/OAuthCallback";
 // import { TwoFactorSetupPage } from "./pages/TwoFactorSetupPage";
 // import { PasswordResetFlowPage } from "./pages/PasswordResetFlow";
@@ -195,13 +194,13 @@ function Router() {
       <Route path="/dealer/trade-ins" component={TradeInNetwork} />
       <Route path="/dealer/inventory-management" component={InventoryManagementPage} />
       <Route path="/dealer/agents">
-        <DealerRouteGuard><Agents /></DealerRouteGuard>
+        <AdminRouteGuard><Agents /></AdminRouteGuard>
       </Route>
       <Route path="/dealer/network" component={DealerNetwork} />
       <Route path="/dealer/email-sequences" component={EmailSequences} />
       <Route path="/dealer/analytics" component={AnalyticsDashboard} />
       <Route path="/dealer/agents-enhanced">
-        <DealerRouteGuard><AgentsEnhanced /></DealerRouteGuard>
+        <AdminRouteGuard><AgentsEnhanced /></AdminRouteGuard>
       </Route>
       <Route path="/dealer/csv-photo" component={CSVPhotoManager} />
       <Route path="/dealer/fix-r1-prices">

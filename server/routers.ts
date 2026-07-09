@@ -1585,8 +1585,8 @@ export const appRouter = router({
      * live status (action count + last action) so the UI can render cards.
      */
     list: protectedProcedure.query(async ({ ctx }) => {
-      if (!isDealerConsoleUser(ctx.user)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
       }
       const roster = PILOT_AGENT_LIST;
       const stats = await getAgentStats();
@@ -1617,8 +1617,8 @@ export const appRouter = router({
           .optional(),
       )
       .query(async ({ input, ctx }) => {
-        if (!isDealerConsoleUser(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
         }
         const rows = await listAgentActivity({
           agentId: input?.agentId === "calling" ? undefined : input?.agentId,
@@ -1659,8 +1659,8 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        if (!isDealerConsoleUser(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Dealer access required" });
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
         }
         if (input.agentId === "calling") {
           throw new TRPCError({
@@ -4119,16 +4119,6 @@ export const appRouter = router({
 
 function isFounderOrAdmin(user: any): boolean {
   return user && (user.role === "founder" || user.role === "admin");
-}
-
-function isDealerConsoleUser(user: any): boolean {
-  return (
-    user &&
-    (user.role === "founder" ||
-      user.role === "admin" ||
-      user.role === "dealer_owner" ||
-      user.role === "dealer_consultant")
-  );
 }
 
 export type AppRouter = typeof appRouter;

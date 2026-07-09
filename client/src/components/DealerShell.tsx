@@ -34,6 +34,7 @@ const PHOTO_HINT_ROUTES = [
 // Dealer-facing sidebar — minimal by design.
 // Prospector, Improvements, Inventory Import, all-dealership lists live under /admin
 // and are NOT visible to dealer_owner / dealer_consultant roles.
+// Agents command centre (/dealer/agents) is founder/admin only — hidden from dealer nav.
 const DEALER_LINKS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, tip: "KPIs, recent activity, quick actions" },
   { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "AI teammates and shared activity feed" },
@@ -61,7 +62,10 @@ export default function DealerShell({
 }) {
   const { user, loading } = useAuth();
   const [location] = useLocation();
-  const dealerLinks = DEALER_LINKS;
+  const isFounder = user?.role === "founder" || user?.role === "admin";
+  const dealerLinks = DEALER_LINKS.filter(
+    (l) => l.href !== "/dealer/agents" || isFounder,
+  );
 
   const showPhotoHint = PHOTO_HINT_ROUTES.some(
     (r) => location === r || location.startsWith(`${r}/`),

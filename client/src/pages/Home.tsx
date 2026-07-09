@@ -314,10 +314,10 @@ export default function Home() {
               </h2>
             </div>
             <Link
-              href="/dealer/agents"
+              href="/help"
               className="font-tech text-xs uppercase tracking-[0.2em] text-primary hover:text-primary/80 inline-flex items-center gap-2"
             >
-              Meet the agents <ArrowUpRight className="h-4 w-4" />
+              How agents work <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
