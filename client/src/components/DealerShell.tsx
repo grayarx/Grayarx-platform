@@ -1,6 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
+  Camera,
   LayoutDashboard,
   Users,
   Calendar,
@@ -12,6 +14,7 @@ import {
   Settings2,
   Store,
   Handshake,
+  Wrench,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -20,6 +23,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { PhotoGuideHint, PhotoGuideRestoreLink } from "@/components/PhotoGuide";
+import DashboardChatAgent from "@/components/DashboardChatAgent";
+
+const PHOTO_HINT_ROUTES = [
+  "/dealer/inventory",
+  "/dealer/inventory/import",
+  "/dealer/csv-photo",
+];
 
 // Dealer-facing sidebar — minimal by design.
 // Prospector, Improvements, Inventory Import, all-dealership lists live under /admin
@@ -32,6 +43,8 @@ const DEALER_LINKS = [
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
+  { href: "/dealer/fix-r1-prices", label: "Fix R1 prices", icon: Wrench, tip: "Bulk repair vehicles stuck at R1 from bad imports" },
+  { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save AutoTrader images, photo health" },
   { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, price fixes" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
   { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Partner dealerships and referrals" },
@@ -55,10 +68,28 @@ export default function DealerShell({
     (l) => l.href !== "/dealer/agents" || isFounder,
   );
 
-  if (loading) {
+  const showPhotoHint = PHOTO_HINT_ROUTES.some(
+    (r) => location === r || location.startsWith(`${r}/`),
+  );
+
+  const [authSlow, setAuthSlow] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setAuthSlow(false);
+      return;
+    }
+    const id = window.setTimeout(() => setAuthSlow(true), 12_000);
+    return () => window.clearTimeout(id);
+  }, [loading]);
+
+  if (loading && !authSlow) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Logo size={64} glow />
+      <div className="min-h-screen bg-background text-foreground">
+        <Navigation />
+        <div className="flex flex-col items-center justify-center gap-3 pt-36">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+          <p className="text-sm text-muted-foreground">Loading dashboard…</p>
+        </div>
       </div>
     );
   }
@@ -69,7 +100,7 @@ export default function DealerShell({
         <Navigation />
         <section className="pt-32 pb-20">
           <div className="container max-w-lg text-center">
-            <Logo size={96} glow className="mx-auto" />
+            <Logo size={96} className="mx-auto" />
             <h1 className="font-display text-3xl font-bold mt-8">
               Sign in to access the dealer console
             </h1>
@@ -141,11 +172,18 @@ export default function DealerShell({
             </nav>
           </div>
 
+          {showPhotoHint && <PhotoGuideHint />}
+
           {children}
+
+          <div className="mt-10 pt-4 border-t border-primary/5 flex justify-end">
+            <PhotoGuideRestoreLink />
+          </div>
         </div>
       </div>
 
       <Footer />
+      <DashboardChatAgent />
     </div>
   );
 }
