@@ -8,6 +8,7 @@ import {
   detectLanguage,
   type VehicleChatContext,
 } from "../../shared/nalaShowroomChat";
+import { GREETING } from "../../shared/nalaTranslations";
 import { scoreListingDeal } from "../../shared/priceIntelligence";
 import { generateNalaShowroomReply } from "./nalaShowroomLlm";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
@@ -19,6 +20,88 @@ export function stripMarkdownForWhatsApp(text: string): string {
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
     .trim();
+}
+
+const GREETING_RE =
+  /^(hi|hello|hey|howzit|howzit\?|molo|dumela|hallo|haai|good (morning|afternoon|evening)|thanks|thank you)\b/i;
+
+/** Match inventory rows when the buyer names a make/model (e.g. "polo", "bmw x3"). */
+export function findVehicleFromMessage(
+  message: string,
+  vehicles: Array<{
+    id: number;
+    title?: string | null;
+    make?: string | null;
+    model?: string | null;
+    year?: number | null;
+    price?: number | string | null;
+    status?: string | null;
+  }>,
+): (typeof vehicles)[number] | null {
+  const available = vehicles.filter(
+    (v) => v.status === "available" || v.status == null,
+  );
+  if (available.length === 0) return null;
+
+  const lower = message.toLowerCase().replace(/[^\w\s]/g, " ");
+  const tokens = lower.split(/\s+/).filter((t) => t.length >= 2);
+  if (tokens.length === 0) return null;
+
+  const stop = new Set([
+    "the", "a", "an", "do", "you", "have", "any", "for", "sale", "car", "cars",
+    "vehicle", "vehicles", "auto", "please", "thanks", "hi", "hello", "hey",
+    "looking", "want", "need", "about", "price", "how", "much", "is", "there",
+  ]);
+  const keywords = tokens.filter((t) => !stop.has(t));
+  if (keywords.length === 0) return null;
+
+  let best: { v: (typeof vehicles)[number]; score: number } | null = null;
+  for (const v of available) {
+    const hay = `${v.make ?? ""} ${v.model ?? ""} ${v.title ?? ""}`.toLowerCase();
+    let score = 0;
+    for (const kw of keywords) {
+      if (hay.includes(kw)) score += kw.length >= 4 ? 3 : 2;
+    }
+    if (score > 0 && (!best || score > best.score)) best = { v, score };
+  }
+  return best?.v ?? null;
+}
+
+export function buildNoVehicleWhatsAppReply(
+  message: string,
+  lang: LanguageCode,
+  siteUrl: string,
+  topMatches: Array<{ title: string; price?: number | string | null }> = [],
+): string {
+  if (GREETING_RE.test(message.trim())) {
+    const greet = GREETING[lang] ?? GREETING.en;
+    const intro =
+      lang === "af"
+        ? `Welkom by GrayArx! Ek is Nala — jou AI-verkoopsassistent.`
+        : lang === "zu"
+          ? `Siyakwamukela ku-GrayArx! Ngingu-Nala — umsizi wakho we-AI.`
+          : `Welcome to GrayArx! I'm Nala — your AI sales assistant.`;
+    let reply = `${greet}\n\n${intro}`;
+    if (topMatches.length > 0) {
+      const lines = topMatches.slice(0, 3).map((v) => {
+        const price =
+          v.price != null && Number(v.price) > 1
+            ? ` — R${Math.round(Number(v.price)).toLocaleString("en-ZA")}`
+            : "";
+        return `• ${v.title}${price}`;
+      });
+      reply += `\n\n🔥 Top deals right now:\n${lines.join("\n")}`;
+    }
+    reply += `\n\nBrowse all scored stock: ${siteUrl}/showroom?sort=best_deals`;
+    reply += `\nTrade-in estimate: ${siteUrl}/trade-in`;
+    return reply;
+  }
+
+  return lang === "af"
+    ? `Dankie vir jou boodskap! Noem die motor (bv. "Polo" of "BMW X3") of blaai ons showroom: ${siteUrl}/showroom?sort=best_deals`
+    : lang === "zu"
+      ? `Ngiyabonga! Bhala igama lemoto (isb. "Polo") noma uvakashele: ${siteUrl}/showroom?sort=best_deals`
+      : `Thanks for your message! Tell me the car you're after (e.g. "Polo" or "BMW X3"), or browse scored deals: ${siteUrl}/showroom?sort=best_deals`;
 }
 
 export function parseVehicleTitleFromMessage(message: string): string | null {
@@ -106,6 +189,7 @@ export async function resolveNalaReply(input: {
   language?: LanguageCode;
   channel: "web" | "whatsapp";
   includeDealScore?: boolean;
+  inventoryHints?: Array<{ title: string; price?: number | string | null }>;
 }): Promise<{
   reply: string;
   language: LanguageCode;
@@ -118,12 +202,13 @@ export async function resolveNalaReply(input: {
   const isBookingIntent = detectsBookingIntent(input.message);
 
   if (!input.vehicle?.title) {
-    const fallback =
-      lang === "af"
-        ? "Dankie vir jou boodskap! Deel asseblief watter motor jy soek, of stuur die naam van die voertuig vanaf ons webwerf."
-        : lang === "zu"
-          ? "Ngiyabonga! Sicela uthathe isithombe somoto of ubhale igama lemoto oyithandayo kusuka ku-showroom yethu."
-          : "Thanks for your message! Please tell me which vehicle you're interested in — or paste the car name from our showroom.";
+    const siteUrl = (process.env.APP_URL || "https://www.grayarx.com").replace(/\/+$/, "");
+    const fallback = buildNoVehicleWhatsAppReply(
+      input.message,
+      lang,
+      siteUrl,
+      input.inventoryHints ?? [],
+    );
     return {
       reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(fallback, lang) : fallback,
       language: lang,

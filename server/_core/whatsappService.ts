@@ -285,20 +285,48 @@ export async function handleIncomingWhatsAppMessage(
     const {
       resolveNalaReply,
       parseVehicleTitleFromMessage,
+      findVehicleFromMessage,
       vehicleRowToContext,
     } = await import("./nalaReplyOrchestrator");
+    const { scoreListingDeal } = await import("../../shared/priceIntelligence");
 
     const dealership = await getDealershipById(dealershipIdNum);
     const dealerName = dealership?.name ?? "GrayArx Dealership";
 
+    const allVehicles = await listVehicles(200);
+
     let vehicleId: number | undefined;
     const parsedTitle = parseVehicleTitleFromMessage(message);
     if (parsedTitle) {
-      const all = await listVehicles(200);
       const hay = parsedTitle.toLowerCase();
-      const match = all.find((v) => (v.title ?? "").toLowerCase().includes(hay) || hay.includes((v.title ?? "").toLowerCase().slice(0, 20)));
+      const match = allVehicles.find(
+        (v) =>
+          (v.title ?? "").toLowerCase().includes(hay) ||
+          hay.includes((v.title ?? "").toLowerCase().slice(0, 20)),
+      );
       if (match?.id) vehicleId = Number(match.id);
     }
+    if (!vehicleId) {
+      const matched = findVehicleFromMessage(message, allVehicles);
+      if (matched?.id) vehicleId = Number(matched.id);
+    }
+
+    const topDealHints = allVehicles
+      .filter((v) => v.status === "available" && v.price && Number(v.price) > 1)
+      .map((v) => ({
+        v,
+        score: scoreListingDeal(Number(v.price), {
+          make: v.make,
+          model: v.model,
+          year: v.year,
+          mileageKm: v.km,
+          title: v.title,
+        }),
+      }))
+      .filter((x) => x.score?.rating === "great")
+      .sort((a, b) => (b.score?.deltaPct ?? 0) - (a.score?.deltaPct ?? 0))
+      .slice(0, 3)
+      .map(({ v }) => ({ title: v.title ?? "Vehicle", price: v.price }));
 
     const conversation = await getOrCreateWhatsappConversation(
       dealershipIdNum,
@@ -335,6 +363,7 @@ export async function handleIncomingWhatsAppMessage(
       dealershipName: dealerName,
       channel: "whatsapp",
       includeDealScore: true,
+      inventoryHints: topDealHints,
     });
 
     console.log(

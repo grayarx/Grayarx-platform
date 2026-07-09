@@ -110,6 +110,7 @@ import { storagePut } from "./storage";
 import { AGENTS, AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
+import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
 import { placeOutboundCall } from "./_core/calling";
 import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
 import { runAudit, type AuditInput, applyFindingToSettings } from "./_core/improvementAgent";
@@ -482,6 +483,12 @@ export const appRouter = router({
           } catch (e) {
             console.error("[leads.create] scheduleFollowups failed", e);
           }
+          // Instant pilot welcome — Resend ships even when OpenAI quota is empty.
+          sendLeadAcknowledgmentEmail(
+            input.email,
+            input.contactName,
+            input.dealershipName,
+          ).catch((e) => console.error("[leads.create] Resend acknowledgment failed", e));
         }
 
         // Live guarded multilingual reply via Mia (Email Agent).

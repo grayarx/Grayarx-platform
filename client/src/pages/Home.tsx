@@ -16,6 +16,7 @@ import Footer from "@/components/Footer";
 import LeadCaptureFormOptimized from "@/components/LeadCaptureFormOptimized";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import { Button } from "@/components/ui/button";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -83,6 +84,16 @@ const TRUST_POINTS = [
 ];
 
 export default function Home() {
+  useDocumentMeta({
+    title: "GrayArx — Dealership Operating System",
+    description:
+      "Deal scores, trade-in intelligence, and finance for South African dealerships. Built to outsell classifieds.",
+    ogImage: "https://www.grayarx.com/hero-car.jpg",
+    ogUrl: "https://www.grayarx.com/",
+    ogType: "website",
+    themeColor: "#1a1a1a",
+  });
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Navigation />

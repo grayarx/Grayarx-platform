@@ -58,23 +58,23 @@ export default function LeadCaptureFormOptimized() {
         <div className="glass-gold rounded-xl p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <span className="font-display text-2xl font-bold text-gold-gradient">3x</span>
+            <span className="font-display text-2xl font-bold text-gold-gradient">Live</span>
           </div>
-          <p className="text-xs text-muted-foreground">Higher Lead Conversion</p>
+          <p className="text-xs text-muted-foreground">Deal scores on stock</p>
         </div>
         <div className="glass-gold rounded-xl p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Users className="h-5 w-5 text-primary" />
-            <span className="font-display text-2xl font-bold text-gold-gradient">500+</span>
+            <span className="font-display text-2xl font-bold text-gold-gradient">11</span>
           </div>
-          <p className="text-xs text-muted-foreground">Active Dealerships</p>
+          <p className="text-xs text-muted-foreground">SA languages</p>
         </div>
         <div className="glass-gold rounded-xl p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Zap className="h-5 w-5 text-primary" />
             <span className="font-display text-2xl font-bold text-gold-gradient">24h</span>
           </div>
-          <p className="text-xs text-muted-foreground">Setup Time</p>
+          <p className="text-xs text-muted-foreground">Pilot onboarding</p>
         </div>
       </div>
 

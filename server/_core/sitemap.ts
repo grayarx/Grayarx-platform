@@ -18,9 +18,10 @@ import { listVehicles } from "../db";
 const STATIC_ROUTES: Array<{ path: string; changefreq: string; priority: string }> = [
   { path: "/", changefreq: "weekly", priority: "1.0" },
   { path: "/showroom", changefreq: "daily", priority: "0.9" },
-  { path: "/pricing", changefreq: "monthly", priority: "0.7" },
-  { path: "/about", changefreq: "monthly", priority: "0.5" },
-  { path: "/apply", changefreq: "monthly", priority: "0.6" },
+  { path: "/trade-in", changefreq: "weekly", priority: "0.85" },
+  { path: "/finance", changefreq: "weekly", priority: "0.8" },
+  { path: "/compare", changefreq: "weekly", priority: "0.75" },
+  { path: "/help", changefreq: "monthly", priority: "0.5" },
 ];
 
 function originFromRequest(req: Request): string {
