@@ -78,12 +78,15 @@ describe("agentIntentRouter", () => {
     expect(res.reply).toContain("Tumi");
   });
 
-  it("routes after-hours general chat to Bongi", async () => {
+  it("routes after-hours general chat to Nala (24/7 AI)", async () => {
     vi.mocked(isAfterHoursSAST).mockReturnValue(true);
-    vi.mocked(runFallbackAgent).mockResolvedValue({
-      referenceNumber: "FALL-1",
-      outboundReply: "Thanks — we'll call you back first thing tomorrow.",
+    vi.mocked(resolveNalaReply).mockResolvedValue({
+      reply: "Hi! I'm Nala — what car are you looking for?",
       language: "en",
+      intent: "general",
+      answered: true,
+      source: "llm",
+      isBookingIntent: false,
     });
 
     const res = await resolveRoutedReply({
@@ -91,9 +94,10 @@ describe("agentIntentRouter", () => {
       message: "Hello, are you there?",
     });
 
-    expect(res.agent).toBe("bongi");
-    expect(res.intent).toBe("after_hours");
-    expect(res.referenceNumber).toBe("FALL-1");
+    expect(res.agent).toBe("nala");
+    expect(res.intent).toBe("general");
+    expect(resolveNalaReply).toHaveBeenCalledOnce();
+    expect(runFallbackAgent).not.toHaveBeenCalled();
   });
 
   it("falls through to Nala for in-hours vehicle questions", async () => {

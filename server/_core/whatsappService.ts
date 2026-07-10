@@ -732,7 +732,7 @@ export async function handleIncomingWhatsAppMessage(
     });
 
     console.log(
-      `[WhatsApp ${result.agent}] +${formattedPhone} lang=${result.language} intent=${result.intent}`,
+      `[WhatsApp ${result.agent}] +${formattedPhone} lang=${result.language} intent=${result.intent} source=${result.source ?? "unknown"}`,
     );
 
     const sent = await sendWhatsAppMessage({

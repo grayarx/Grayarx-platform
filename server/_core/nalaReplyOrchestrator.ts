@@ -11,7 +11,7 @@ import {
 import { composeShowroomBotReply, polishNalaReply } from "../../shared/nalaGrammarPolish";
 import { replyNeedsNameCapture } from "../../shared/nalaTranslations";
 import { scoreListingDeal } from "../../shared/priceIntelligence";
-import { generateNalaShowroomReply } from "./nalaShowroomLlm";
+import { generateNalaShowroomReply, generateNalaGeneralWhatsAppReply } from "./nalaShowroomLlm";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
 import type { LanguageCode } from "../../shared/languages";
 import { detectsBookingIntent } from "../../shared/agentIntentRouting";
@@ -674,7 +674,7 @@ export async function resolveNalaReply(input: {
   const siteUrl = (process.env.APP_URL || "https://www.grayarx.com").replace(/\/+$/, "");
 
   if (!input.vehicle?.title) {
-    const fallback = buildNoVehicleWhatsAppReply(
+    const templateFallback = buildNoVehicleWhatsAppReply(
       input.message,
       lang,
       siteUrl,
@@ -682,8 +682,36 @@ export async function resolveNalaReply(input: {
       input.dealershipName,
       phone,
     );
+
+    // WhatsApp: LLM-polished Nala reply 24/7 (falls back to template if OpenAI unavailable)
+    if (input.channel === "whatsapp") {
+      try {
+        const llm = await generateNalaGeneralWhatsAppReply({
+          language: lang,
+          customerMessage: input.message,
+          dealershipName: input.dealershipName,
+          templateReply: templateFallback,
+          inventoryHints: input.inventoryHints,
+        });
+        const reply = addWhatsAppAIDisclosure(
+          stripMarkdownForWhatsApp((llm.reply.trim() || templateFallback).trim()),
+          lang,
+        );
+        return {
+          reply,
+          language: lang,
+          intent: "general",
+          answered: Boolean(llm.reply.trim()),
+          source: llm.reply.trim() ? "llm" : "template",
+          isBookingIntent,
+        };
+      } catch (e) {
+        console.warn("[nalaReplyOrchestrator] General WhatsApp LLM failed — using template", e);
+      }
+    }
+
     return {
-      reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(fallback, lang) : fallback,
+      reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(templateFallback, lang) : templateFallback,
       language: lang,
       intent: "general",
       answered: false,
@@ -751,7 +779,8 @@ export async function resolveNalaReply(input: {
       isBookingIntent,
     };
   } catch (e) {
-    console.warn("[nalaReplyOrchestrator] LLM failed", e);
+    const reason = e instanceof Error ? e.message : String(e);
+    console.warn(`[nalaReplyOrchestrator] LLM failed (${reason}) — using template`);
     let reply = polishNalaReply(heuristic.reply, lang);
     if (input.includeDealScore !== false && heuristic.intent === "price") {
       reply = appendDealScoreToReply(reply, input.vehicle, lang);

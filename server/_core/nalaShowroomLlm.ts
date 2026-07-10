@@ -16,6 +16,73 @@ import {
   type VehicleChatContext,
 } from "../../shared/nalaShowroomChat";
 
+export async function generateNalaGeneralWhatsAppReply(input: {
+  language: LanguageCode;
+  customerMessage: string;
+  dealershipName: string;
+  templateReply: string;
+  inventoryHints?: Array<{ title: string; price?: number | string | null }>;
+}): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
+  const langMeta = LANGUAGES[input.language];
+  const stockLines = (input.inventoryHints ?? [])
+    .slice(0, 5)
+    .map((v) => {
+      const price =
+        v.price != null && Number(v.price) > 1
+          ? ` — R${Math.round(Number(v.price)).toLocaleString("en-ZA")}`
+          : "";
+      return `• ${v.title}${price}`;
+    })
+    .join("\n");
+
+  const extraContext = [
+    `Dealership: ${input.dealershipName}`,
+    stockLines ? `Available stock (use ONLY these — never invent):\n${stockLines}` : "",
+    `Suggested factual reply to phrase naturally (keep any prices/links exact):\n${input.templateReply}`,
+    "",
+    "You are Nala, the WhatsApp showroom assistant.",
+    "Reply in ONE warm message, max 90 words. Help the buyer browse, finance, trade-in, or book a test drive.",
+    `CRITICAL: Write ONLY in ${langMeta.englishName} (${langMeta.endonym}). Perfect grammar.`,
+    `Never use: ${FORBIDDEN_PHRASES.slice(0, 4).join(", ")}.`,
+    "Never say a human will call back tomorrow — you handle the conversation now, 24/7.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const systemPrompt = buildWhatsAppSystemPrompt(input.language, extraContext);
+  const first = await invokeLLM({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: input.customerMessage },
+    ],
+  });
+  const draft1 = first.choices?.[0]?.message?.content?.toString() ?? input.templateReply;
+  const check1 = scoreWhatsAppDraft(draft1, input.language);
+  if (check1.score >= 78) {
+    return { reply: draft1, score: check1.score, issues: check1.issues, attempts: 1 };
+  }
+
+  const second = await invokeLLM({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: input.customerMessage },
+      { role: "assistant", content: draft1 },
+      {
+        role: "user",
+        content: `Rewrite in flawless ${langMeta.englishName}. Fix: ${check1.issues.join("; ")}. Keep all prices and links exact.`,
+      },
+    ],
+  });
+  const draft2 = second.choices?.[0]?.message?.content?.toString() ?? draft1;
+  const check2 = scoreWhatsAppDraft(draft2, input.language);
+  return {
+    reply: draft2 || draft1 || input.templateReply,
+    score: check2.score,
+    issues: check2.issues,
+    attempts: 2,
+  };
+}
+
 export async function generateNalaShowroomReply(input: {
   language: LanguageCode;
   customerMessage: string;

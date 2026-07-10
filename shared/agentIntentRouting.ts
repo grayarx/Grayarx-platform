@@ -55,7 +55,9 @@ export function detectsTradeInIntent(message: string): boolean {
 
 /**
  * Pick the specialist agent. Priority: Lerato (booking) → Tumi (trade-in) →
- * Bongi (after-hours general) → Nala (default showroom Q&A).
+ * Nala (showroom Q&A, 24/7 on WhatsApp and web).
+ *
+ * Bongi is reserved for manual fallback-inbox triggers — not auto-reply routing.
  */
 export function classifyAgentRoute(input: {
   message: string;
@@ -69,10 +71,6 @@ export function classifyAgentRoute(input: {
 
   if (detectsTradeInIntent(input.message)) {
     return { agent: "tumi", intent: "trade_in" };
-  }
-
-  if (input.afterHours && showroomIntent === "general") {
-    return { agent: "bongi", intent: "after_hours" };
   }
 
   return { agent: "nala", intent: showroomIntent };

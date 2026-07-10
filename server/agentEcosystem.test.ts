@@ -45,7 +45,7 @@ describe("GrayArx agent ecosystem", () => {
       ).toBe("tumi");
       expect(
         classifyAgentRoute({ message: "Hello, are you there?", afterHours: true }).agent,
-      ).toBe("bongi");
+      ).toBe("nala");
       expect(
         classifyAgentRoute({ message: "What colour is it?", afterHours: false }).agent,
       ).toBe("nala");
