@@ -11,7 +11,7 @@ export async function removeBackground(
 
   try {
     const formData = new FormData();
-    const blob = new Blob([imageBuffer], { type: mimeType });
+    const blob = new Blob([imageBuffer as unknown as BlobPart], { type: mimeType });
     formData.append("image_file", blob, filename);
     formData.append("size", "auto");
     formData.append("format", "png");

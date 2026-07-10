@@ -129,7 +129,7 @@ export function getSetupGuideEmailTemplate(dealershipName: string): EmailTemplat
 
               <div class="step">
                 <h3><span class="step-number">3</span>Configure Business Hours</h3>
-                <p>Set your operating hours. Mia (Email Agent) will use this to send smarter follow-ups at the right time.</p>
+                <p>Set your operating hours. Nala (your WhatsApp AI agent) will use this to send smarter follow-ups at the right time.</p>
                 <a href="https://www.grayarx.com/dashboard/settings" class="cta-button">Set Hours</a>
               </div>
 

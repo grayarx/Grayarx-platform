@@ -1334,8 +1334,8 @@ export const appRouter = router({
         // Try to remove background
         const enhanced = await removeBackground(buffer, input.mimeType, `${safeName}.${ext}`);
         if (enhanced) {
-          finalBuffer = enhanced.buffer;
-          finalMimeType = enhanced.mimeType;
+          finalBuffer = Buffer.from(enhanced.buffer) as Buffer<ArrayBuffer>;
+          finalMimeType = enhanced.mimeType as "image/jpeg" | "image/png" | "image/webp";
           ext = "png"; // remove.bg always returns PNG
         }
 
