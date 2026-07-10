@@ -77,37 +77,50 @@ export default function LegalHub() {
 
       <h2 className="mt-12">Contact privacy or legal team</h2>
       <p>
-        Use this form if you cannot email directly — it creates a monitored ticket and alerts our
-        Information Officer queue (same as mailing {GRAYARX_LEGAL.informationOfficerEmail}).
+        Use this form to raise a privacy or legal query — it creates a monitored ticket in our
+        Information Officer queue.
       </p>
       <ComplianceContactForm />
 
-      <h2 className="mt-12">Information Officer & legal contacts</h2>
-      <ul>
-        <li>
-          <strong>Privacy / POPIA queries:</strong>{" "}
-          <a href={`mailto:${GRAYARX_LEGAL.informationOfficerEmail}`}>
-            {GRAYARX_LEGAL.informationOfficerEmail}
-          </a>
-        </li>
-        <li>
-          <strong>Contracts & agreements:</strong>{" "}
-          <a href={`mailto:${GRAYARX_LEGAL.legalEmail}`}>{GRAYARX_LEGAL.legalEmail}</a>
-        </li>
-        <li>
-          <strong>General support:</strong>{" "}
-          <a href={`mailto:${GRAYARX_LEGAL.supportEmail}`}>{GRAYARX_LEGAL.supportEmail}</a>
-        </li>
-        <li>
-          <strong>Registered address:</strong> {grayArxRegisteredAddressSingleLine()}
-        </li>
-      </ul>
-
-      <p className="text-sm text-muted-foreground">
-        These documents are provided for operational use during the GrayArx pilot programme.
-        Formal attorney review is recommended before scaling beyond pilot dealerships.{" "}
-        <a href="/legal/popia-information-officer">POPIA Information Officer guide</a>.
-      </p>
+      {/* IO contacts + registered address — collapsed, sensitive */}
+      <div className="not-prose mt-8">
+        <details className="group rounded-xl border border-border/40 bg-muted/20">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors select-none">
+            <span>Information Officer &amp; registered details</span>
+            <svg
+              className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div className="border-t border-border/40 px-5 py-5 text-sm text-muted-foreground space-y-2">
+            <p><strong className="text-foreground/70">Privacy / POPIA queries:</strong>{" "}
+              <a href={`mailto:${GRAYARX_LEGAL.informationOfficerEmail}`} className="text-primary hover:underline">
+                {GRAYARX_LEGAL.informationOfficerEmail}
+              </a>
+            </p>
+            <p><strong className="text-foreground/70">Contracts &amp; agreements:</strong>{" "}
+              <a href={`mailto:${GRAYARX_LEGAL.legalEmail}`} className="text-primary hover:underline">
+                {GRAYARX_LEGAL.legalEmail}
+              </a>
+            </p>
+            <p><strong className="text-foreground/70">General support:</strong>{" "}
+              <a href={`mailto:${GRAYARX_LEGAL.supportEmail}`} className="text-primary hover:underline">
+                {GRAYARX_LEGAL.supportEmail}
+              </a>
+            </p>
+            <p><strong className="text-foreground/70">Registered address:</strong>{" "}
+              {grayArxRegisteredAddressSingleLine()}
+            </p>
+            <p className="pt-2 text-xs text-muted-foreground/60">
+              These documents are provided for operational use during the GrayArx pilot programme.
+              Formal attorney review is recommended before scaling beyond pilot dealerships.{" "}
+              <a href="/legal/popia-information-officer" className="hover:underline">POPIA Information Officer guide</a>.
+            </p>
+          </div>
+        </details>
+      </div>
     </LegalLayout>
   );
 }
