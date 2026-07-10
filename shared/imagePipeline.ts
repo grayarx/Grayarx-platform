@@ -24,7 +24,9 @@ export type VehiclePhotoSource = {
 
 export function vehiclePrimaryUrl(v: VehiclePhotoSource): string | null {
   const url = (v.primaryPhotoUrl || v.imageUrl || "").trim();
-  return url || null;
+  if (!url) return null;
+  if (isWatermarkedRenderUrl(url) || isStockPhotoUrl(url)) return null;
+  return url;
 }
 
 export function isStockPhotoUrl(url: string): boolean {

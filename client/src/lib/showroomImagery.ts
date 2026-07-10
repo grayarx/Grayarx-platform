@@ -35,8 +35,8 @@ export function pickHeroImage(vehicles: InventoryRow[]): string {
 }
 
 export function pickTopDealPhotos(vehicles: InventoryRow[], count = 4): InventoryRow[] {
-  return vehicles
-    .filter((v) => (v.status === "available" || !v.status) && vehiclePrimaryUrl(v))
+  return pickShowroomPhotos(vehicles)
+    .filter((v) => vehiclePrimaryUrl(v))
     .map((v) => ({
       v,
       score: scoreListingDeal(Number(v.price), {

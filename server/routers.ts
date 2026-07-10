@@ -18,6 +18,7 @@ import { auditRouter } from "./routers/auditRouter";
 import { campaignRouter } from "./routers/campaignRouter";
 import { complianceRouter } from "./routers/complianceRouter";
 import { complianceMailboxRouter } from "./routers/complianceMailboxRouter";
+import { legalSignOffRouter } from "./routers/legalSignOffRouter";
 // import { complianceTrainingRouter } from "./routers/complianceTrainingRouter";
 // import { complianceTrainingAlertsRouter } from "./routers/complianceTrainingAlertsRouter";
 import { chatbotRouter } from "./routers/chatbotRouter";
@@ -73,6 +74,7 @@ import {
   getVehicle,
   getUserById,
   getDashboardStats,
+  getVehicleInventoryCounts,
   getRecentActivity,
   getLeadsTrend,
   listProspects,
@@ -329,6 +331,7 @@ export const appRouter = router({
   // services: servicesRouter,
   compliance: complianceRouter,
   complianceMailbox: complianceMailboxRouter,
+  legalSignOff: legalSignOffRouter,
   // complianceTraining: complianceTrainingRouter,
   // complianceTrainingAlerts: complianceTrainingAlertsRouter,
   // auditTrailExport: auditTrailExportRouter,
@@ -606,7 +609,8 @@ export const appRouter = router({
   }),
 
   showroom: router({
-    list: publicProcedure.query(async () => listVehicles(200)),
+    list: publicProcedure.query(async () => listVehicles(2000)),
+    stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
       .input(z.object({ id: z.number().int() }))
       .query(async ({ input }) => {
@@ -2297,6 +2301,12 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const reference = `GRX-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
         const monthlyVolume = input.monthlyVolume ? parseInt(input.monthlyVolume, 10) : null;
+        if (monthlyVolume !== null && (!Number.isFinite(monthlyVolume) || monthlyVolume < 0)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Monthly vehicle sales must be zero or higher.",
+          });
+        }
         const languages = input.primaryLanguage ? [input.primaryLanguage] : null;
         const vehicleTypes = input.brandsCarried
           ? input.brandsCarried.split(",").map((b) => b.trim()).filter(Boolean)

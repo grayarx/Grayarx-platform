@@ -1,5 +1,7 @@
 import LegalLayout from "@/components/LegalLayout";
-import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine } from "@shared/companyLegal";
+import LegalSignOffForm from "@/components/LegalSignOffForm";
+import MailtoLink from "@/components/MailtoLink";
+import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine, grayArxTaxStatusLine } from "@shared/companyLegal";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
@@ -23,9 +25,7 @@ export default function DealerAgreement() {
       <p>
         <strong>GrayArx</strong> means {GRAYARX_LEGAL.legalName} (Enterprise No.{" "}
         {GRAYARX_LEGAL.enterpriseNumber}), registered address {grayArxRegisteredAddressSingleLine()}.
-        Tax reference: {GRAYARX_LEGAL.taxReference}. GrayArx is{" "}
-        {GRAYARX_LEGAL.vatRegistered ? "VAT-registered" : "not VAT-registered"}; pilot fees are
-        quoted excluding VAT unless registration status changes.
+        {grayArxTaxStatusLine()}.
       </p>
       <p>
         <strong>Dealer</strong> means the motor vehicle dealership entering into this Agreement
@@ -78,8 +78,9 @@ export default function DealerAgreement() {
       <h2>7. Service levels & support</h2>
       <p>
         GrayArx targets 99.5% monthly uptime as set out in the{" "}
-        <a href="/sla">Service Level Agreement</a>. Support is via {GRAYARX_LEGAL.supportEmail}{" "}
-        and {GRAYARX_LEGAL.phone} during business hours unless Enterprise SLA applies.
+        <a href="/sla">Service Level Agreement</a>. Support is via{" "}
+        <MailtoLink email={GRAYARX_LEGAL.supportEmail} /> and {GRAYARX_LEGAL.phone} during business
+        hours unless Enterprise SLA applies.
       </p>
 
       <h2>8. Liability & indemnity</h2>
@@ -107,9 +108,15 @@ export default function DealerAgreement() {
       </ul>
 
       <h2 className="mt-12">Signature block</h2>
-      <p>Complete, sign, and return to {GRAYARX_LEGAL.legalEmail} before account activation.</p>
+      <p>
+        Complete and sign below on GrayArx, or print and return to{" "}
+        <MailtoLink email={GRAYARX_LEGAL.legalEmail} subject="Signed Dealer Agreement" /> before
+        account activation.
+      </p>
 
-      <div className="not-prose mt-6 grid gap-6 md:grid-cols-2">
+      <LegalSignOffForm type="dealer_agreement" />
+
+      <div className="not-prose mt-8 hidden print:grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border border-white/10 p-5 space-y-4">
           <p className="font-semibold">Dealer</p>
           <div className="space-y-3 text-sm">
@@ -140,7 +147,7 @@ export default function DealerAgreement() {
           <p className="text-sm text-muted-foreground">
             {grayArxRegisteredAddressSingleLine()}
             <br />
-            {GRAYARX_LEGAL.legalEmail} · {GRAYARX_LEGAL.phone}
+            <MailtoLink email={GRAYARX_LEGAL.legalEmail} /> · {GRAYARX_LEGAL.phone}
           </p>
           <div className="space-y-3 text-sm">
             <div>

@@ -80,8 +80,8 @@ export function LegalDocumentLinks({
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
               Before we activate your account, please review and sign the{" "}
               <strong className="text-foreground">Dealer Agreement</strong> and{" "}
-              <strong className="text-foreground">POPIA Consent Form</strong>.
-              Return signed copies to{" "}
+              <strong className="text-foreground">POPIA Consent Form</strong> online on each
+              document page — or email signed copies to{" "}
               <a href={`mailto:${GRAYARX_LEGAL.legalEmail}`} className="text-primary hover:underline">
                 {GRAYARX_LEGAL.legalEmail}
               </a>{" "}

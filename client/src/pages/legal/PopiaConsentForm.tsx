@@ -1,5 +1,7 @@
 import LegalLayout from "@/components/LegalLayout";
-import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine } from "@shared/companyLegal";
+import LegalSignOffForm from "@/components/LegalSignOffForm";
+import MailtoLink from "@/components/MailtoLink";
+import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine, grayArxTaxStatusLine } from "@shared/companyLegal";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
@@ -51,20 +53,14 @@ export default function PopiaConsentForm() {
           <strong>Enterprise number:</strong> {GRAYARX_LEGAL.enterpriseNumber}
         </li>
         <li>
-          <strong>Tax reference:</strong> {GRAYARX_LEGAL.taxReference}
-        </li>
-        <li>
-          <strong>VAT status:</strong>{" "}
-          {GRAYARX_LEGAL.vatRegistered ? GRAYARX_LEGAL.vatNumber : "Not VAT-registered (July 2026)"}
+          <strong>Tax / VAT:</strong> {grayArxTaxStatusLine()}
         </li>
         <li>
           <strong>Registered address:</strong> {grayArxRegisteredAddressSingleLine()}
         </li>
         <li>
           <strong>Information Officer:</strong>{" "}
-          <a href={`mailto:${GRAYARX_LEGAL.informationOfficerEmail}`}>
-            {GRAYARX_LEGAL.informationOfficerEmail}
-          </a>
+          <MailtoLink email={GRAYARX_LEGAL.informationOfficerEmail} />
         </li>
       </ul>
 
@@ -127,12 +123,14 @@ export default function PopiaConsentForm() {
 
       <h2>6. Signature</h2>
       <p>
-        Return the signed Form to{" "}
-        <a href={`mailto:${GRAYARX_LEGAL.legalEmail}`}>{GRAYARX_LEGAL.legalEmail}</a> with your
-        signed <a href="/legal/dealer-agreement">Dealer Agreement</a>.
+        Sign online below, or return a scanned copy to{" "}
+        <MailtoLink email={GRAYARX_LEGAL.legalEmail} subject="Signed POPIA Consent Form" /> with
+        your <a href="/legal/dealer-agreement">Dealer Agreement</a>.
       </p>
 
-      <div className="not-prose mt-6 grid gap-6 md:grid-cols-2">
+      <LegalSignOffForm type="popia_consent" />
+
+      <div className="not-prose mt-8 hidden print:grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border border-white/10 p-5 space-y-3 text-sm">
           <p className="font-semibold">Dealership authorised signatory</p>
           <div>

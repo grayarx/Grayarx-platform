@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
@@ -21,6 +21,10 @@ export default function LegalLayout({
   children,
   showHubCrumb = true,
 }: LegalLayoutProps) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [title]);
+
   return (
     <div className="min-h-screen bg-[#060608] text-foreground overflow-x-hidden">
       <Navigation />

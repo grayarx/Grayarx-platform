@@ -52,7 +52,7 @@ export function PhotoGuideCard({ className }: { className?: string }) {
               Showroom photos — about 60 seconds
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              No technical setup. Follow these four steps once — your stock will look like a top
+              No technical setup. Follow these five steps once — your stock will look like a top
               luxury dealer.
             </p>
           </div>
@@ -82,7 +82,7 @@ export function PhotoGuideCard({ className }: { className?: string }) {
       </div>
 
       {!state.collapsed && (
-        <div className="px-4 py-4 sm:px-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="px-4 py-4 sm:px-5 grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {PHOTO_GUIDE_STEPS.map((s) => (
             <Link
               key={s.step}
@@ -148,7 +148,7 @@ export function PhotoGuideHint({ className }: { className?: string }) {
             onClick={() => setExpanded(!expanded)}
             className="text-xs text-primary hover:underline font-medium"
           >
-            {expanded ? "Hide steps" : "Show 4 steps"}
+            {expanded ? "Hide steps" : "Show 5 steps"}
           </button>
           <button
             type="button"

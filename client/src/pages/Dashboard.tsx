@@ -12,6 +12,8 @@ import {
   Upload,
   Settings,
   Store,
+  Bot,
+  Shield,
 } from "lucide-react";
 import {
   AreaChart,
@@ -28,6 +30,7 @@ import DealerShell from "@/components/DealerShell";
 import { PhotoGuideCard } from "@/components/PhotoGuide";
 import AgentActivityFeed from "@/components/AgentActivityFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -93,6 +96,8 @@ export default function Dashboard() {
     { channel: "Inventory", value: stats?.totalVehicles ?? 0 },
   ];
 
+  const isFounder = user?.role === "founder" || user?.role === "admin";
+
   return (
     <DealerShell
       title={`Welcome, ${user?.name?.split(" ")[0] ?? "Dealer"}`}
@@ -108,6 +113,32 @@ export default function Dashboard() {
       }
     >
       <PhotoGuideCard />
+
+      {isFounder && (
+        <Card className="mb-6 border-primary/25 bg-primary/5">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Founder console</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Compliance inbox (Production A-test), AI agents roster, and platform ops.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button asChild variant="outline" size="sm" className="border-primary/30">
+                <Link href="/admin/compliance">Compliance inbox</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="border-primary/30">
+                <Link href="/dealer/agents">
+                  <Bot className="h-3.5 w-3.5 mr-1.5" /> AI agents
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -164,9 +195,9 @@ export default function Dashboard() {
         />
         <StatCard
           icon={Car}
-          label="Vehicles in stock"
+          label="Live on showroom"
           value={statsLoading ? "…" : stats?.availableVehicles ?? 0}
-          hint={`${stats?.soldVehicles ?? 0} sold · ${stats?.reservedVehicles ?? 0} reserved`}
+          hint={`${stats?.totalVehicles ?? 0} imported · ${stats?.soldVehicles ?? 0} sold · ${stats?.reservedVehicles ?? 0} reserved`}
           delay={0.15}
         />
       </div>

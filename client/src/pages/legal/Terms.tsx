@@ -1,4 +1,5 @@
 import LegalLayout from "@/components/LegalLayout";
+import MailtoLink from "@/components/MailtoLink";
 
 export default function Terms() {
   return (
@@ -77,7 +78,8 @@ export default function Terms() {
 
       <h2>13. Contact</h2>
       <p>
-        Questions about these Terms? Email <strong>legal@grayarx.com</strong>.
+        Questions about these Terms? Email{" "}
+        <MailtoLink email="legal@grayarx.com" subject="Terms of Service enquiry" />.
       </p>
     </LegalLayout>
   );

@@ -1,30 +1,23 @@
 import { cn } from "@/lib/utils";
-import logoIconSrc from "@/assets/logo-icon.png";
 
 interface LogoProps {
   size?: number;
   className?: string;
 }
 
-/** Circuit-board GA emblem — bundled PNG so nav is correct even if /logo-icon.png is SPA-routed */
-export const LOGO_URL = logoIconSrc;
+/** Original GrayArx emblem — served from /public (no crop/zoom inset). */
+export const LOGO_URL = "/logo.svg";
 
 export default function Logo({ size = 48, className }: LogoProps) {
-  const inset = Math.round(size * 0.18);
   return (
-    <span
-      className={cn("inline-flex shrink-0 items-center justify-center", className)}
+    <img
+      src={LOGO_URL}
+      alt="GrayArx"
+      width={size}
+      height={size}
+      className={cn("select-none object-contain shrink-0", className)}
       style={{ width: size, height: size }}
-    >
-      <img
-        src={LOGO_URL}
-        alt="GrayArx"
-        width={size - inset * 2}
-        height={size - inset * 2}
-        className="select-none object-contain"
-        style={{ width: size - inset * 2, height: size - inset * 2 }}
-        draggable={false}
-      />
-    </span>
+      draggable={false}
+    />
   );
 }

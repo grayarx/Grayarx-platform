@@ -145,7 +145,8 @@ const TRUST_POINTS = [
 
 export default function Home() {
   const { data: inventory } = trpc.showroom.list.useQuery();
-  const liveCount = (inventory ?? []).filter((v) => v.status === "available" || !v.status).length;
+  const { data: inventoryStats } = trpc.showroom.stats.useQuery();
+  const liveCount = inventoryStats?.available ?? 0;
 
   const heroSrc = LUXURY_HERO_FALLBACK;
 
@@ -346,6 +347,23 @@ export default function Home() {
                 <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                   {agent.description}
                 </p>
+                {agent.id === "email" && (
+                  <a
+                    href={`mailto:${agent.email}?subject=GrayArx%20enquiry`}
+                    className="mt-3 inline-flex text-[10px] font-tech uppercase tracking-[0.18em] text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Email Mia →
+                  </a>
+                )}
+                {agent.id === "whatsapp" && (
+                  <Link
+                    href="/showroom"
+                    className="mt-3 inline-flex text-[10px] font-tech uppercase tracking-[0.18em] text-primary hover:underline"
+                  >
+                    Try Nala on showroom →
+                  </Link>
+                )}
               </motion.div>
             ))}
           </div>

@@ -69,4 +69,11 @@ export const PHOTO_GUIDE_STEPS = [
     href: "/showroom",
     time: "10 sec",
   },
+  {
+    step: 5,
+    title: "Sign legal pack",
+    body: "Dealer agreement + POPIA consent — fill in and submit online (no printing).",
+    href: "/dealer/legal",
+    time: "3 min",
+  },
 ] as const;

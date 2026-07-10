@@ -193,6 +193,7 @@ export default function Onboarding() {
                   <Input
                     id="monthlyVolume"
                     type="number"
+                    min={0}
                     value={form.monthlyVolume}
                     onChange={(e) => setForm({ ...form, monthlyVolume: e.target.value })}
                     placeholder="25"

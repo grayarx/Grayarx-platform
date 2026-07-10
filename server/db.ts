@@ -145,6 +145,38 @@ export async function updateUserLastSignedIn(id: number) {
   await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
 }
 
+/** Promote founder emails to platform founder role (idempotent). */
+export async function promoteUserToFounder(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role: "founder" }).where(eq(users.id, id));
+  const updated = await getUserById(id);
+  if (!updated) throw new Error("User not found after promote");
+  return updated;
+}
+
+export async function getVehicleInventoryCounts() {
+  const db = await getDb();
+  if (!db) {
+    return { total: 0, available: 0, reserved: 0, sold: 0, showroomCap: 2000 };
+  }
+  const [row] = await db
+    .select({
+      total: sql<number>`COUNT(*)`,
+      available: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'available' THEN 1 ELSE 0 END)`,
+      reserved: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'reserved' THEN 1 ELSE 0 END)`,
+      sold: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'sold' THEN 1 ELSE 0 END)`,
+    })
+    .from(vehicles);
+  return {
+    total: Number(row?.total ?? 0),
+    available: Number(row?.available ?? 0),
+    reserved: Number(row?.reserved ?? 0),
+    sold: Number(row?.sold ?? 0),
+    showroomCap: 2000,
+  };
+}
+
 // === Leads ===
 export async function createLead(data: InsertLead): Promise<number> {
   const db = await getDb();
@@ -199,7 +231,7 @@ export async function createVehicle(data: InsertVehicle) {
   return result;
 }
 
-export async function listVehicles(limit = 200) {
+export async function listVehicles(limit = 2000) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(vehicles).orderBy(desc(vehicles.createdAt)).limit(limit);
