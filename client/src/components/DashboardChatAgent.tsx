@@ -1,17 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, HelpCircle, Loader2, MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { Bot, HelpCircle, Loader2, MessageCircle, Send, Sparkles, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+
+type PendingAction = {
+  type: "inventory_delete_all";
+  label: string;
+  confirmPhrase: string;
+  vehicleCount: number;
+};
 
 type ChatMessage = {
   id: string;
   role: "bot" | "user";
   text: string;
   links?: Array<{ label: string; href: string }>;
+  pendingAction?: PendingAction;
 };
 
 function uid() {
@@ -42,6 +50,7 @@ export default function DashboardChatAgent() {
     staleTime: 60_000,
   });
   const chat = trpc.dashboardAssistant.chat.useMutation();
+  const utils = trpc.useUtils();
 
   const isOwner = config.data?.mode === "owner";
   const quickPrompts = config.data?.quickPrompts ?? [];
@@ -70,15 +79,21 @@ export default function DashboardChatAgent() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, chat.isPending]);
 
-  const send = async (text: string) => {
+  const send = async (text: string, confirmAction?: PendingAction["type"]) => {
     const trimmed = text.trim();
-    if (!trimmed || chat.isPending) return;
+    if (!trimmed && !confirmAction) return;
+    if (chat.isPending) return;
 
-    setInput("");
-    setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
+    if (!confirmAction) {
+      setInput("");
+      setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
+    }
 
     try {
-      const res = await chat.mutateAsync({ message: trimmed });
+      const res = await chat.mutateAsync({
+        message: confirmAction ? "confirm" : trimmed,
+        confirmAction,
+      });
       setMessages((m) => [
         ...m,
         {
@@ -86,8 +101,16 @@ export default function DashboardChatAgent() {
           role: "bot",
           text: res.reply,
           links: res.links?.length ? res.links : undefined,
+          pendingAction: res.pendingAction ?? undefined,
         },
       ]);
+
+      if (res.actionExecuted) {
+        void utils.dealer.listVehicles.invalidate();
+        void utils.dealer.stats.invalidate();
+        void utils.showroom.list.invalidate();
+        void utils.showroom.stats.invalidate();
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       setMessages((m) => [
@@ -226,6 +249,21 @@ export default function DashboardChatAgent() {
                           {link.label}
                         </Link>
                       ))}
+                    </div>
+                  )}
+                  {m.pendingAction && (
+                    <div className="mt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={chat.isPending}
+                        className="h-8 text-xs"
+                        onClick={() => void send(m.pendingAction!.confirmPhrase, m.pendingAction!.type)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        {m.pendingAction.label}
+                      </Button>
                     </div>
                   )}
                 </div>

@@ -1,8 +1,14 @@
 import {
   buildDashboardAssistantReply,
+  classifyDashboardIntent,
   type DashboardAssistantContext,
   type DashboardAssistantReply,
 } from "../../shared/dashboardAssistant";
+import {
+  buildInventoryDeleteDoneReply,
+  buildInventoryDeletePendingReply,
+  type AssistantActionType,
+} from "../../shared/assistantActions";
 import {
   buildBugReportConfirmation,
   buildDealerHelpReply,
@@ -19,6 +25,8 @@ import {
   listAgentActivity,
   logAgentActivity,
   getDb,
+  countVehiclesScoped,
+  deleteAllVehiclesScoped,
 } from "../db";
 import { supportTickets } from "../../drizzle/schema";
 import { notifyOwner } from "./notification";
@@ -103,19 +111,96 @@ async function createDealerSupportTicket(input: {
   return { id, title: ticket.title };
 }
 
+async function executeInventoryDeleteAll(input: {
+  userId: number;
+  allPlatform: boolean;
+  mode: "owner" | "dealer";
+}): Promise<DashboardAssistantReply> {
+  const vehicleCount = await countVehiclesScoped(input.allPlatform, input.userId);
+
+  if (vehicleCount === 0) {
+    return {
+      mode: input.mode,
+      intent: "inventory_bulk_delete",
+      links: [{ label: "Inventory", href: "/dealer/inventory" }],
+      reply: buildInventoryDeleteDoneReply(0),
+      actionExecuted: true,
+    };
+  }
+
+  const deleted = await deleteAllVehiclesScoped(input.allPlatform, input.userId);
+
+  void logAgentActivity({
+    agentId: input.mode === "owner" ? "improvement" : "fallback",
+    action: "inventory_bulk_delete",
+    subjectType: "inventory",
+    summary: `Deleted ${deleted} vehicle${deleted === 1 ? "" : "s"} from inventory.`,
+    payload: { deleted, allPlatform: input.allPlatform, userId: input.userId },
+  });
+
+  return {
+    mode: input.mode,
+    intent: "inventory_bulk_delete",
+    links: [{ label: "Inventory", href: "/dealer/inventory" }],
+    reply: buildInventoryDeleteDoneReply(deleted),
+    actionExecuted: true,
+  };
+}
+
+async function buildInventoryDeletePending(input: {
+  userId: number;
+  allPlatform: boolean;
+  mode: "owner" | "dealer";
+}): Promise<DashboardAssistantReply> {
+  const vehicleCount = await countVehiclesScoped(input.allPlatform, input.userId);
+  const pending = buildInventoryDeletePendingReply({ vehicleCount, mode: input.mode });
+
+  return {
+    mode: input.mode,
+    intent: "inventory_bulk_delete",
+    links: pending.links,
+    reply: pending.reply,
+    pendingAction: pending.pendingAction,
+  };
+}
+
 export async function answerDashboardAssistant(input: {
   message: string;
   userName?: string | null;
   userRole?: string | null;
+  userId?: number | null;
   dealershipId?: number | null;
+  confirmAction?: AssistantActionType;
 }): Promise<DashboardAssistantReply> {
   const who = input.userName?.trim() || "Dealer";
   const isOwner = isFounderOrAdmin({ role: input.userRole ?? null });
+  const userId = input.userId ?? 0;
+  const mode = isOwner ? ("owner" as const) : ("dealer" as const);
+  const allPlatform = isOwner;
+
+  if (
+    input.confirmAction === "inventory_delete_all" ||
+    classifyDashboardIntent(input.message) === "inventory_bulk_delete_confirm"
+  ) {
+    return executeInventoryDeleteAll({ userId, allPlatform, mode });
+  }
+
+  if (classifyDashboardIntent(input.message) === "inventory_bulk_delete") {
+    return buildInventoryDeletePending({ userId, allPlatform, mode });
+  }
 
   let result: DashboardAssistantReply;
 
   if (!isOwner) {
     const intent = classifyDealerHelpIntent(input.message);
+
+    if (intent === "inventory_bulk_delete") {
+      return buildInventoryDeletePending({ userId, allPlatform: false, mode: "dealer" });
+    }
+
+    if (intent === "inventory_bulk_delete_confirm") {
+      return executeInventoryDeleteAll({ userId, allPlatform: false, mode: "dealer" });
+    }
 
     if (intent === "bug_report" && isBugDescription(input.message) && input.dealershipId) {
       const ticket = await createDealerSupportTicket({

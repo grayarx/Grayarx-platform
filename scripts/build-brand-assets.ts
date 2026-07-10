@@ -139,6 +139,13 @@ Write-Output "icon sizes"
 `;
   runPowerShell(ps);
 
+  const favicon32 = join(publicDir, "favicon-32.png");
+  const faviconIco = join(publicDir, "favicon.ico");
+  if (existsSync(favicon32)) {
+    copyFileSync(favicon32, faviconIco);
+    console.log("favicon.ico");
+  }
+
   const navAsset = join(assetsDir, "logo-icon.png");
   copyFileSync(join(publicDir, "icon-96x96.png"), navAsset);
   console.log(`Nav bundle asset: ${navAsset.replace(process.cwd(), ".")}`);

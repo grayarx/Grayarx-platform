@@ -9,11 +9,17 @@ import {
   type DashboardAssistantReply,
   type DashboardLink,
 } from "./dashboardAssistant";
+import {
+  isInventoryBulkDeleteConfirm,
+  isInventoryBulkDeleteRequest,
+} from "./assistantActions";
 
 export type DealerHelpIntent =
   | "greeting"
   | "help"
   | "navigation"
+  | "inventory_bulk_delete"
+  | "inventory_bulk_delete_confirm"
   | "bug_report"
   | "bug_report_prompt"
   | "restricted"
@@ -121,6 +127,14 @@ export function classifyDealerHelpIntent(message: string): DealerHelpIntent {
     return "greeting";
   }
 
+  if (isInventoryBulkDeleteConfirm(lower)) {
+    return "inventory_bulk_delete_confirm";
+  }
+
+  if (isInventoryBulkDeleteRequest(lower)) {
+    return "inventory_bulk_delete";
+  }
+
   if (/\b(help|what can you|how do i use|support)\b/i.test(lower) && !isBugDescription(message)) {
     return "help";
   }
@@ -197,6 +211,7 @@ function buildDealerHelp(): DealerHelpReply {
       "I can help with:",
       "",
       "• **How do I…?** — CSV import, photos, leads, bookings, settings",
+      "• **Delete all inventory** — bulk-remove your vehicles (with confirmation)",
       "• **Report a bug** — describe what broke and I'll log it for GrayArx support",
       "",
       `Email support: **${PRIMARY_INBOX}**`,
@@ -271,6 +286,7 @@ function buildDealerUnknown(): DealerHelpReply {
     links: buildDealerHelp().links,
     reply: [
       "Try asking:",
+      "• *Delete all my inventory*",
       "• *How do I import CSV?*",
       "• *Where do I upload photos?*",
       "• *Report a bug: …* (describe the issue)",

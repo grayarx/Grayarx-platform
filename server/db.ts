@@ -294,6 +294,53 @@ export async function deleteVehicle(id: number) {
   await db.delete(vehicles).where(eq(vehicles.id, id));
 }
 
+/** Count vehicles in scope for bulk-delete (platform-wide or per-owner). */
+export async function countVehiclesScoped(allPlatform: boolean, ownerUserId?: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const where = allPlatform
+    ? undefined
+    : ownerUserId != null
+      ? eq(vehicles.ownerUserId, ownerUserId)
+      : undefined;
+  const query = db.select({ total: count() }).from(vehicles);
+  const [row] = where ? await query.where(where) : await query;
+  return Number(row?.total ?? 0);
+}
+
+/**
+ * Delete all vehicles (and their photo rows) in scope.
+ * Founders wipe the full platform inventory; dealers only their own stock.
+ */
+export async function deleteAllVehiclesScoped(allPlatform: boolean, ownerUserId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const idQuery = db.select({ id: vehicles.id }).from(vehicles);
+  const rows = allPlatform
+    ? await idQuery
+    : ownerUserId != null
+      ? await idQuery.where(eq(vehicles.ownerUserId, ownerUserId))
+      : await idQuery;
+
+  const ids = rows.map((r) => r.id);
+  if (ids.length === 0) return 0;
+
+  const CHUNK = 100;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    await db.delete(vehiclePhotos).where(inArray(vehiclePhotos.vehicleId, chunk));
+  }
+
+  if (allPlatform) {
+    await db.delete(vehicles);
+  } else if (ownerUserId != null) {
+    await db.delete(vehicles).where(eq(vehicles.ownerUserId, ownerUserId));
+  }
+
+  return ids.length;
+}
+
 // === Vehicle photos ===
 export async function listVehiclePhotos(vehicleId: number) {
   const db = await getDb();

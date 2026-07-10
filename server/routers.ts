@@ -73,6 +73,7 @@ import {
   setVehiclePrimaryPhoto,
   updateVehicle,
   deleteVehicle,
+  deleteAllVehiclesScoped,
   getVehicle,
   getUserById,
   getDashboardStats,
@@ -1217,6 +1218,18 @@ export const appRouter = router({
         await deleteVehicle(input.id);
         return { success: true } as const;
       }),
+    deleteAllVehicles: protectedProcedure.mutation(async ({ ctx }) => {
+      const allPlatform = isFounderOrAdmin(ctx.user);
+      const deleted = await deleteAllVehiclesScoped(allPlatform, ctx.user.id);
+      void logAgentActivity({
+        agentId: allPlatform ? "improvement" : "fallback",
+        action: "inventory_bulk_delete",
+        subjectType: "inventory",
+        summary: `Deleted ${deleted} vehicle${deleted === 1 ? "" : "s"} via dealer console.`,
+        payload: { deleted, allPlatform, userId: ctx.user.id },
+      });
+      return { success: true as const, deleted };
+    }),
 
     // Accept a base64-encoded image (from a phone camera or file picker),
     // upload it to S3 storage, and return the public URL.

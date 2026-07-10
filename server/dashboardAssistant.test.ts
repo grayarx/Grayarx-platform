@@ -43,6 +43,8 @@ vi.mock("./db", () => ({
     queuedProspects: 0,
   })),
   logAgentActivity: vi.fn(async () => undefined),
+  countVehiclesScoped: vi.fn(async () => 3),
+  deleteAllVehiclesScoped: vi.fn(async () => 3),
   getDb: vi.fn(async () => ({
     insert: vi.fn(() => ({
       values: vi.fn(async () => ({ insertId: 99 })),
@@ -134,5 +136,26 @@ describe("dashboardAssistant.chat", () => {
     const cfg = await caller.dashboardAssistant.config();
     expect(cfg.mode).toBe("dealer");
     expect(cfg.label).toBe("Help");
+  });
+
+  it("asks for confirmation before bulk inventory delete", async () => {
+    const caller = appRouter.createCaller(founderCtx as any);
+    const res = await caller.dashboardAssistant.chat({
+      message: "delete all my inventory",
+    });
+    expect(res.intent).toBe("inventory_bulk_delete");
+    expect(res.pendingAction?.type).toBe("inventory_delete_all");
+    expect(res.pendingAction?.vehicleCount).toBe(3);
+    expect(res.reply).toContain("Cannot be undone");
+  });
+
+  it("executes bulk inventory delete on confirm", async () => {
+    const caller = appRouter.createCaller(founderCtx as any);
+    const res = await caller.dashboardAssistant.chat({
+      message: "confirm",
+      confirmAction: "inventory_delete_all",
+    });
+    expect(res.actionExecuted).toBe(true);
+    expect(res.reply).toContain("removed **3**");
   });
 });

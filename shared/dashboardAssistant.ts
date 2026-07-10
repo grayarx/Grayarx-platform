@@ -5,6 +5,11 @@
 
 import type { AgentId } from "./agents";
 import { AGENTS, AGENT_LIST, PRIMARY_INBOX } from "./agents";
+import {
+  isInventoryBulkDeleteConfirm,
+  isInventoryBulkDeleteRequest,
+  type AssistantPendingAction,
+} from "./assistantActions";
 
 export type DashboardIntent =
   | "greeting"
@@ -13,6 +18,8 @@ export type DashboardIntent =
   | "agent_activity"
   | "dashboard_stats"
   | "navigation"
+  | "inventory_bulk_delete"
+  | "inventory_bulk_delete_confirm"
   | "help"
   | "unknown";
 
@@ -63,6 +70,8 @@ export type DashboardAssistantReply = {
   mode: AssistantMode;
   matchedAgentId?: AgentId;
   ticketId?: number;
+  pendingAction?: AssistantPendingAction;
+  actionExecuted?: boolean;
 };
 
 const AGENT_ALIASES: Record<string, AgentId> = {
@@ -202,6 +211,14 @@ export function classifyDashboardIntent(message: string): DashboardIntent {
 
   if (/^(hi|hello|hey|howzit|howdy|good (morning|afternoon|evening)|yo)\b/.test(lower)) {
     return "greeting";
+  }
+
+  if (isInventoryBulkDeleteConfirm(lower)) {
+    return "inventory_bulk_delete_confirm";
+  }
+
+  if (isInventoryBulkDeleteRequest(lower)) {
+    return "inventory_bulk_delete";
   }
 
   if (
@@ -412,6 +429,7 @@ function buildHelpReply(): DashboardAssistantReply {
       "• *What is Lerato doing?* — recent activity for one agent",
       "• *Dashboard stats* — leads, bookings, inventory",
       "• *How do I import CSV?* — navigation + short how-to",
+      "• *Delete all inventory* — bulk-remove every vehicle (with confirmation)",
       "",
       `Primary inbox for all agent replies: **${PRIMARY_INBOX}**`,
     ].join("\n"),
@@ -439,6 +457,7 @@ function buildUnknownReply(): DashboardAssistantReply {
     links: buildHelpReply().links,
     reply: [
       "Not sure I caught that. Try:",
+      "• *Delete all my inventory* — bulk remove vehicles",
       "• *Where are my agents?*",
       "• *What did Nala do recently?*",
       "• *How do I import inventory?*",
@@ -477,8 +496,8 @@ export function buildDashboardAssistantReply(input: {
 
 export const OWNER_QUICK_PROMPTS = [
   "Where are my agents?",
-  "What did Lerato do recently?",
   "Dashboard stats",
+  "Delete all my inventory",
   "How do I import CSV?",
 ] as const;
 

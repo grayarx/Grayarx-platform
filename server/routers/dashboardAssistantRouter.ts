@@ -20,7 +20,7 @@ export const dashboardAssistantRouter = router({
         ? [
             "Hey — I'm **Kagiso**, your platform ops assistant.",
             "",
-            "Ask where your agents are, what they've been doing, dashboard stats, or how to find anything in GrayArx.",
+            "Ask where your agents are, what they've been doing, dashboard stats, bulk inventory actions, or how to find anything in GrayArx.",
           ].join("\n")
         : [
             "Hi — I'm the **GrayArx Help** assistant for your dealership.",
@@ -35,11 +35,14 @@ export const dashboardAssistantRouter = router({
     .input(
       z.object({
         message: z.string().trim().min(1).max(2000),
+        confirmAction: z.enum(["inventory_delete_all"]).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       return answerDashboardAssistant({
         message: input.message,
+        confirmAction: input.confirmAction,
+        userId: ctx.user.id,
         userName: ctx.user.name ?? ctx.user.email,
         userRole: ctx.user.role,
         dealershipId: ctx.user.dealershipId,
