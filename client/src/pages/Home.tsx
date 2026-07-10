@@ -451,7 +451,7 @@ export default function Home() {
                       </span>
                     )}
                     <p className="font-tech text-[10px] uppercase tracking-[0.25em] text-primary/70 mb-4">
-                      {panel.subtitle ?? panel.tagline}
+                      {panel.subtitle}
                     </p>
                     <span className="inline-flex items-center gap-2 font-tech text-xs uppercase tracking-[0.2em] text-white/70 group-hover:text-primary transition-colors">
                       {panel.cta}
