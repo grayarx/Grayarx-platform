@@ -54,6 +54,13 @@ function mimeFor(file: File) {
   return "image/jpeg" as const;
 }
 
+function slotsEqual(
+  a: Partial<Record<PhotoAngleId, SlotState>>,
+  b: Partial<Record<PhotoAngleId, SlotState>>,
+): boolean {
+  return PHOTO_ANGLES.every((angle) => a[angle.id]?.url === b[angle.id]?.url);
+}
+
 export default function VehiclePhotoUploader({
   vehicleId,
   onPrimaryUrlChange,
@@ -95,11 +102,14 @@ export default function VehiclePhotoUploader({
         next[angleId] = { url: p.url, photoId: p.id };
       }
     });
-    setSlots(next);
+    setSlots((prev) => (slotsEqual(prev, next) ? prev : next));
     const primary = existing.find((p) => p.caption === "front_3_4")?.url ?? existing[0]?.url;
     if (primary && primary !== lastPrimaryRef.current) {
       lastPrimaryRef.current = primary;
-      onPrimaryUrlChangeRef.current(primary);
+      // Editing: form already has primary URL from vehicleToForm — don't bounce parent state.
+      if (!vehicleId) {
+        onPrimaryUrlChangeRef.current(primary);
+      }
     }
   }, [existing]);
 

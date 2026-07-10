@@ -40,7 +40,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import VehiclePhotoUploader, {
@@ -140,6 +139,24 @@ function maskVin(vin: string | null | undefined) {
   return "•".repeat(Math.max(0, vin.length - 4)) + vin.slice(-4);
 }
 
+const SERVICE_SELECT_OPTIONS = ["Not specified", "Full", "Partial", "None"] as const;
+
+function normalizeCondition(value: string | null | undefined): FormState["condition"] {
+  const lower = (value ?? "used").toLowerCase();
+  return CONDITION_OPTIONS.includes(lower as FormState["condition"]) ? (lower as FormState["condition"]) : "used";
+}
+
+function normalizeServiceHistory(value: string | null | undefined): string {
+  const lower = (value ?? "").trim().toLowerCase();
+  if (!lower) return "";
+  return SERVICE_OPTIONS.includes(lower as (typeof SERVICE_OPTIONS)[number]) ? lower : "";
+}
+
+function serviceHistoryLabel(value: string): string {
+  if (!value) return "Not specified";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function vehicleToForm(v: {
   title: string | null;
   make: string | null;
@@ -176,13 +193,13 @@ function vehicleToForm(v: {
     transmission: v.transmission ?? "",
     bodyType: v.bodyType ?? "",
     color: v.color ?? "",
-    condition: (v.condition as FormState["condition"]) ?? "used",
+    condition: normalizeCondition(v.condition),
     vin: v.vin ?? "",
     engineCc: v.engineCc != null && v.engineCc > 0 ? String(v.engineCc) : "",
     doors: v.doors != null && v.doors > 0 ? String(v.doors) : "",
     seats: v.seats != null && v.seats > 0 ? String(v.seats) : "",
     features,
-    serviceHistory: v.serviceHistory ?? "",
+    serviceHistory: normalizeServiceHistory(v.serviceHistory),
     previousOwners: v.previousOwners != null && v.previousOwners > 0 ? String(v.previousOwners) : "",
     imageUrl: v.primaryPhotoUrl || v.imageUrl || "",
     location: v.location ?? "",
@@ -411,24 +428,22 @@ export default function Inventory() {
               <Upload className="h-4 w-4 mr-2" /> Import CSV
             </Link>
           </Button>
+          <Button
+            className="btn-gold font-semibold"
+            type="button"
+            onClick={openAdd}
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add vehicle
+          </Button>
+          {open ? (
           <Dialog
           open={open}
           onOpenChange={(v) => {
             if (!v) closeDialog();
-            else setOpen(true);
           }}
         >
-          <DialogTrigger asChild>
-            <Button
-              className="btn-gold font-semibold"
-              onClick={openAdd}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Add vehicle
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            {open ? (
-            <>
+            <div key={editingId ?? "new"}>
             <DialogHeader>
               <DialogTitle>{editingId != null ? "Edit vehicle" : "Add a new vehicle"}</DialogTitle>
             </DialogHeader>
@@ -467,7 +482,7 @@ export default function Inventory() {
                   <ModelSelect
                     make={form.make}
                     value={form.model}
-                    onChange={(model) => setForm({ ...form, model })}
+                    onChange={(model) => setForm((f) => ({ ...f, model }))}
                   />
                 </div>
               </div>
@@ -629,24 +644,24 @@ export default function Inventory() {
 
               <div>
                 <Label>Service history</Label>
-                <Select
-                  value={form.serviceHistory || "any"}
-                  onValueChange={(v) =>
-                    setForm({ ...form, serviceHistory: v === "any" ? "" : v })
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Not specified" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Not specified</SelectItem>
-                    {SERVICE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    value={serviceHistoryLabel(form.serviceHistory)}
+                    onChange={(label) => {
+                      const lower = label.toLowerCase();
+                      setForm((f) => ({
+                        ...f,
+                        serviceHistory:
+                          lower === "not specified" || !SERVICE_OPTIONS.includes(lower as (typeof SERVICE_OPTIONS)[number])
+                            ? ""
+                            : lower,
+                      }));
+                    }}
+                    options={SERVICE_SELECT_OPTIONS}
+                    placeholder="Not specified"
+                    allowCustom={false}
+                  />
+                </div>
               </div>
               <div>
                 <Label>Previous owners</Label>
@@ -720,10 +735,11 @@ export default function Inventory() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>
+              <Button type="button" variant="outline" onClick={closeDialog}>
                 Cancel
               </Button>
               <Button
+                type="button"
                 className="btn-gold"
                 onClick={handleSave}
                 disabled={createV.isPending || updateV.isPending}
@@ -737,10 +753,10 @@ export default function Inventory() {
                 )}
               </Button>
             </DialogFooter>
-            </>
-            ) : null}
+            </div>
           </DialogContent>
         </Dialog>
+          ) : null}
         </div>
       }
     >
@@ -1011,6 +1027,7 @@ export default function Inventory() {
                         </span>
                       )}
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(v)}

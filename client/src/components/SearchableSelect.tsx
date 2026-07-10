@@ -47,7 +47,7 @@ export default function SearchableSelect({
 
   const trimmed = query.trim();
   const resolved = resolveValue && trimmed ? resolveValue(trimmed) : null;
-  const hint = matchHint?.(trimmed);
+  const hint = open && trimmed ? matchHint?.(trimmed) : null;
 
   const filtered = useMemo(() => {
     if (searchOptions) return searchOptions(trimmed);

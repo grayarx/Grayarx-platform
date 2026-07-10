@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
 import {
   VEHICLE_MAKES,
@@ -46,6 +46,10 @@ export function ModelSelect({
   className?: string;
 }) {
   const models = useMemo(() => getModelsForMake(make), [make]);
+  const searchModelsForMake = useCallback(
+    (query: string) => (make ? searchModels(make, query, 20) : []),
+    [make],
+  );
 
   return (
     <SearchableSelect
@@ -55,7 +59,7 @@ export function ModelSelect({
       placeholder={make ? "Golf GTI, Hilux, Polo…" : "Select make first"}
       allowCustom
       resolveValue={(raw) => resolveModel(make, raw)}
-      searchOptions={(q) => (make ? searchModels(make, q, 15) : [])}
+      searchOptions={searchModelsForMake}
       className={className}
     />
   );
