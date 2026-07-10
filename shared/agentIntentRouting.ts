@@ -32,6 +32,13 @@ export function detectsBookingIntent(message: string): boolean {
     /\btest[ -]?drive|reservar (um )?test|agendar visita\b/,
     /\bappointment\b/,
     /\bviewing\b/,
+    // Zulu / isiNdebele
+    /\bukuqhuba\b/,
+    /\bngiqhube\b/,
+    /\bngizoqhuba\b/,
+    /\bngifuna ukuqhuba\b/,
+    // Afrikaans
+    /\btoetsrit\b/,
   ];
   return patterns.some((p) => p.test(lower));
 }

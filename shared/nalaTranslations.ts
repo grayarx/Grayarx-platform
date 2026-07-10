@@ -72,18 +72,18 @@ export const PROMPT_ASK_PHONE: LangStrings = {
 };
 
 export const PROMPT_FOLLOW_UP: LangStrings = {
-  en: "Anything else about this car, or pick an option below?",
-  af: "Iets anders oor hierdie motor, of kies 'n opsie hieronder?",
-  zu: "Okunye mayelana nemoto, noma khetha inketho engezansi?",
-  xh: "Enye into ngale moto, okanye khetha ukhetho ngezantsi?",
-  st: "Ho na le se seng? Khetha khetho ka tlase.",
-  nso: "Go na le se sengwe? Kgetha kgetho ka fase.",
-  tn: "Go na le se sengwe? Kgetha kgetho fa tlase.",
-  ts: "Xin'wana xin'we hi movha lowu, kumbe hlawula xitlhaviso laha hansi.",
-  ss: "Lokunye mayelana nemoto, noma ukhethe lokukhetsa ngezansi?",
-  ve: "Zwiṅwe zwi re hone? Nangani nga fhasi.",
-  nr: "Okunye mayelana nemoto, noma ukhethe okukhethwa ngezansi?",
-  pt: "Mais alguma coisa sobre este carro, ou escolha uma opção abaixo?",
+  en: "Anything else I can help you with about this one?",
+  af: "Is daar nog iets oor hierdie motor wat ek vir jou kan uitklaar?",
+  zu: "Ingabe kukhona okunye okufunayo ngale moto?",
+  xh: "Ingaba kukho enye into ofuna ukuyazi ngale moto?",
+  st: "Ho na le se seng se seng mabapi le koloi ena?",
+  nso: "Go na le se sengwe ka koloi ye o nyakago go se tseba?",
+  tn: "A go na le se sengwe ka koloi eno o se batlang go itse?",
+  ts: "Ku na na xin'wana eka xitirho lexi u lavaka ku xi tiva?",
+  ss: "Ingabe kukhona okunye ngale moto ufuna kukwati?",
+  ve: "Hu na zwiṅwe nga khathini iyi zwine u tenda u zwi pfesesa?",
+  nr: "Ingabe kukhona okunye okufunayo ngale moto?",
+  pt: "Há mais alguma coisa que queira saber sobre este carro?",
 };
 
 export const PROMPT_THANKS_ENQUIRY: LangStrings = {

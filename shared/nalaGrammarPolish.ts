@@ -78,8 +78,12 @@ const UNIVERSAL_FIXES: Array<[RegExp, string]> = [
   [/\s{2,}/g, " "],
   [/\s+\n/g, "\n"],
   [/\n{3,}/g, "\n\n"],
+  // Remove space that crept in after an OPENING ** ("** word" → "**word")
   [/\*\*\s+/g, "**"],
-  [/\s+\*\*/g, "**"],
+  // Only remove space before a CLOSING ** (one NOT followed by a word/letter).
+  // Using a positive lookahead: \s+\*\* when ** is followed by punctuation, whitespace, or end.
+  // This preserves the legitimate space in "the **VehicleName**" while still cleaning up "word **".
+  [/\s+\*\*(?![a-zA-Z0-9\u00C0-\u024F_])/g, "**"],
 ];
 
 /** Per-language grammar / spelling corrections on outbound replies. */

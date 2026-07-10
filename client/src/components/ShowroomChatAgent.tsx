@@ -55,11 +55,14 @@ export type ChatVehicle = {
 
 type Flow = "menu" | "test_drive" | "pre_approval" | "trade_in" | "enquiry";
 
+type ChatAction = { label: string; url: string };
+
 type ChatMessage = {
   id: string;
   role: "bot" | "user";
   text: string;
   agent?: RoutedAgentId;
+  actions?: ChatAction[];
 };
 
 const AGENT_HEADER: Record<
@@ -170,10 +173,13 @@ export function ShowroomChatAgent({
   const enquire = trpc.showroom.enquire.useMutation();
   const showroomChat = trpc.showroom.chat.useMutation();
 
-  const addBot = useCallback((text: string, agent: RoutedAgentId = "nala") => {
-    setActiveAgent(agent);
-    setMessages((m) => [...m, { id: uid(), role: "bot", text, agent }]);
-  }, []);
+  const addBot = useCallback(
+    (text: string, agent: RoutedAgentId = "nala", actions?: ChatAction[]) => {
+      setActiveAgent(agent);
+      setMessages((m) => [...m, { id: uid(), role: "bot", text, agent, actions }]);
+    },
+    [],
+  );
 
   const addUser = useCallback((text: string) => {
     setMessages((m) => [...m, { id: uid(), role: "user", text }]);
@@ -395,6 +401,7 @@ export function ShowroomChatAgent({
         agent?: RoutedAgentId;
         intent: string;
         language: LanguageCode;
+        actions?: ChatAction[];
       };
 
       try {
@@ -413,7 +420,7 @@ export function ShowroomChatAgent({
       }
 
       try {
-        addBot(res.reply, res.agent ?? "nala");
+        addBot(res.reply, res.agent ?? "nala", res.actions?.length ? res.actions : undefined);
 
         if (res.agent === "lerato" && res.intent === "test_drive") {
           setFlow("test_drive");
@@ -640,7 +647,7 @@ export function ShowroomChatAgent({
                     initial={{ opacity: 0, y: 12, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}
+                    className={cn("flex flex-col", msg.role === "user" ? "items-end" : "items-start")}
                   >
                     <div
                       className={cn(
@@ -657,6 +664,25 @@ export function ShowroomChatAgent({
                       )}
                       {renderMarkdown(msg.text)}
                     </div>
+                    {msg.role === "bot" && msg.actions && msg.actions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.18, duration: 0.3 }}
+                        className="flex flex-wrap gap-2 mt-2 max-w-[88%]"
+                      >
+                        {msg.actions.map((action) => (
+                          <a
+                            key={action.url}
+                            href={action.url}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/8 hover:bg-primary/18 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/50"
+                          >
+                            {action.label}
+                            <ChevronRight className="h-3 w-3" />
+                          </a>
+                        ))}
+                      </motion.div>
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>

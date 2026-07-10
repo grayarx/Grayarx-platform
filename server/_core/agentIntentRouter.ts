@@ -20,7 +20,7 @@ import {
   formatSlotSAST,
 } from "./bookingAgent";
 import { runFallbackAgent, isAfterHoursSAST, generateReferenceNumber } from "./fallbackAgent";
-import { resolveNalaReply, stripMarkdownForWhatsApp } from "./nalaReplyOrchestrator";
+import { resolveNalaReply, stripMarkdownForWhatsApp, getConvState } from "./nalaReplyOrchestrator";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
 import {
   createTestDriveBooking,
@@ -282,7 +282,10 @@ async function handleBongiRoute(input: ResolveRoutedReplyInput, lang: LanguageCo
 export async function resolveRoutedReply(
   input: ResolveRoutedReplyInput,
 ): Promise<RoutedReplyResult> {
-  const lang = input.language ?? detectLanguage(input.message);
+  // Prefer the locked conversation language (set on first detection) over re-detecting
+  // on every message — prevents Nala from switching languages mid-conversation.
+  const lockedState = input.customerPhone ? getConvState(input.customerPhone) : undefined;
+  const lang = lockedState?.lang ?? input.language ?? detectLanguage(input.message);
   const afterHours = isAfterHoursSAST(new Date(), input.businessHoursOverride);
   const route = classifyAgentRoute({ message: input.message, afterHours });
 
@@ -302,6 +305,7 @@ export async function resolveRoutedReply(
         channel: input.channel,
         includeDealScore: input.includeDealScore,
         inventoryHints: input.inventoryHints,
+        phone: input.customerPhone,
       });
       return {
         agent: "nala",

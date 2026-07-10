@@ -5,15 +5,15 @@ interface LogoProps {
   className?: string;
   /**
    * `icon` — square GA emblem (favicons, compact slots)
-   * `nav` — emblem + GRAYARX wordmark (header/footer)
-   * `full` — stacked logo + tagline (auth / onboarding)
+   * `nav` — circular emblem crop + GRAYARX wordmark (header/footer)
+   * `full` — full logo PNG (auth / onboarding)
    */
   variant?: "icon" | "nav" | "full";
 }
 
 export const LOGO_ICON_URL = "/grayarx-logo-emblem.png";
-export const LOGO_NAV_URL = "/grayarx-logo-nav.png";
-export const LOGO_FULL_URL = "/grayarx-logo-full.png";
+export const LOGO_NAV_URL = "/grayarx-logo-emblem.png";
+export const LOGO_FULL_URL = "/grayarx-logo-emblem.png";
 /** Legacy alias used by LogoEmblem and emailBranding */
 export const LOGO_URL = LOGO_ICON_URL;
 
@@ -24,8 +24,7 @@ export default function Logo({ size = 40, className, variant = "icon" }: LogoPro
         src={LOGO_FULL_URL}
         alt="GrayArx — AI Platform for Dealerships"
         className={cn("select-none object-contain shrink-0 mx-auto", className)}
-        style={{ height: size, width: "auto", maxWidth: "min(100%, 200px)" }}
-        width={Math.round(size * 0.85)}
+        style={{ height: size, width: "auto", maxWidth: "min(100%, 280px)" }}
         height={size}
         draggable={false}
       />
@@ -35,26 +34,32 @@ export default function Logo({ size = 40, className, variant = "icon" }: LogoPro
   if (variant === "nav") {
     const px = Math.round(size);
     return (
-      <img
-        src={LOGO_NAV_URL}
-        alt="GrayArx"
-        className={cn("select-none object-contain object-left shrink-0", className)}
-        style={{ height: px, width: "auto", maxWidth: Math.round(px * 4.2) }}
-        height={px}
-        draggable={false}
-      />
+      <div className={cn("flex items-center gap-3 select-none shrink-0", className)}>
+        <img
+          src={LOGO_NAV_URL}
+          alt="GrayArx emblem"
+          draggable={false}
+          style={{ width: px, height: px, objectFit: "contain", flexShrink: 0 }}
+        />
+        <span
+          className="font-display font-bold tracking-[0.14em] leading-none text-white select-none"
+          style={{ fontSize: Math.round(px * 0.4) }}
+        >
+          GRAY<span className="text-primary">ARX</span>
+        </span>
+      </div>
     );
   }
 
-  const px = Math.round(size);
+  // icon — square emblem, full logo PNG
   return (
     <img
       src={LOGO_ICON_URL}
       alt="GrayArx"
       className={cn("select-none object-contain shrink-0", className)}
-      style={{ width: px, height: px, maxWidth: px, maxHeight: px }}
-      width={px}
-      height={px}
+      style={{ width: size, height: size, maxWidth: size, maxHeight: size }}
+      width={size}
+      height={size}
       draggable={false}
     />
   );

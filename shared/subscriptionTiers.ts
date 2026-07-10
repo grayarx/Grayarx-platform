@@ -44,7 +44,6 @@ export type TierFeatureRow = {
 export const TIER_FEATURE_ROWS: TierFeatureRow[] = [
   { key: "showroom", label: "Public showroom + themes", tiers: ["starter", "professional", "enterprise"] },
   { key: "inventory", label: "Inventory + CSV import", tiers: ["starter", "professional", "enterprise"] },
-  { key: "r1_fix", label: "R1 bulk price repair", tiers: ["starter", "professional", "enterprise"] },
   { key: "studio_photos", label: "Studio photo frame on listings", tiers: ["starter", "professional", "enterprise"] },
   { key: "leads", label: "Lead pipeline (kanban)", tiers: ["starter", "professional", "enterprise"] },
   { key: "bookings", label: "Test-drive bookings", tiers: ["starter", "professional", "enterprise"] },

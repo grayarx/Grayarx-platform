@@ -17,23 +17,16 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import LeadCaptureFormOptimized from "@/components/LeadCaptureFormOptimized";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
-import OptimizedImage from "@/components/OptimizedImage";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { trpc } from "@/lib/trpc";
-import { buildEditorialPanels, pickHeroImage } from "@/lib/showroomImagery";
-import { LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
+import { buildEditorialPanels } from "@/lib/showroomImagery";
+import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
 import { AGENTS } from "@shared/agents";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
-const HERO_AGENTS = [
-  AGENTS.whatsapp,
-  AGENTS.email,
-  AGENTS.booking,
-  AGENTS.tradein,
-] as const;
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -59,26 +52,81 @@ const EDITORIAL_STATIC = [
     tagline: "Precision. Priced.",
     cta: "View more",
     href: "/showroom?sort=best_deals",
+    images: [
+      "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1400&q=88&auto=format&fit=crop", // BMW M5
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1400&q=88&auto=format&fit=crop", // Lamborghini Huracán
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1400&q=88&auto=format&fit=crop", // Porsche 911
+      "https://images.unsplash.com/photo-1580274455191-1c62238fa1c6?w=1400&q=88&auto=format&fit=crop", // Audi R8
+      "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1400&q=88&auto=format&fit=crop", // Lamborghini dark
+    ],
   },
   {
     title: "Digital showroom",
     tagline: "Be bold.",
     cta: "Explore",
     href: "/showroom",
+    images: [
+      "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=1200&q=88&auto=format&fit=crop", // Mercedes C200
+      "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=1200&q=88&auto=format&fit=crop", // Porsche GT3
+      "https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=1200&q=88&auto=format&fit=crop", // BMW X5
+      "https://images.unsplash.com/photo-1606152421802-db97b9c7a11b?w=1200&q=88&auto=format&fit=crop", // Land Rover Defender
+      "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&q=88&auto=format&fit=crop", // BMW M5 studio
+    ],
   },
   {
     title: "Trade-in intelligence",
     tagline: "Know your number.",
     cta: "Get valuation",
     href: "/trade-in",
+    images: [
+      "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=1200&q=88&auto=format&fit=crop", // Toyota Hilux
+      "https://images.unsplash.com/photo-1606152421802-db97b9c7a11b?w=1200&q=88&auto=format&fit=crop", // Land Rover
+      "https://images.unsplash.com/photo-1471444928139-48c5bf5173f8?w=1200&q=88&auto=format&fit=crop", // car on highway
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=88&auto=format&fit=crop", // Porsche 911
+      "https://images.unsplash.com/photo-1580274455191-1c62238fa1c6?w=1200&q=88&auto=format&fit=crop", // Audi R8
+    ],
   },
   {
     title: "AI platform",
     tagline: "For the dealers.",
     cta: "Read more",
     href: "/help",
+    images: [
+      "https://images.unsplash.com/photo-1571987502227-9231b837d92a?w=1200&q=88&auto=format&fit=crop", // BMW X5 night
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&q=88&auto=format&fit=crop", // Lambo
+      "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1200&q=88&auto=format&fit=crop", // dark Lambo
+      "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=1200&q=88&auto=format&fit=crop", // Porsche GT3
+      "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=1200&q=88&auto=format&fit=crop", // Mercedes
+    ],
   },
-] as const;
+];
+
+function PanelSlideshow({ images, eager }: { images: string[]; eager?: boolean }) {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const id = setInterval(() => {
+      setActive((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [images.length]);
+
+  return (
+    <>
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          loading={eager && i === 0 ? "eager" : "lazy"}
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+          style={{ opacity: i === active ? 1 : 0 }}
+        />
+      ))}
+    </>
+  );
+}
 
 const PILLARS = [
   { value: "Live", label: "Deal scores on every listing" },
@@ -145,17 +193,16 @@ const TRUST_POINTS = [
 
 export default function Home() {
   const { data: inventory } = trpc.showroom.list.useQuery();
-  const { data: inventoryStats } = trpc.showroom.stats.useQuery();
-  const liveCount = inventoryStats?.available ?? 0;
-
-  const heroSrc = useMemo(() => pickHeroImage(inventory ?? []), [inventory]);
 
   const editorialPanels = useMemo(() => {
     const live = buildEditorialPanels(inventory ?? []);
-    if ((inventory ?? []).some((v) => v.primaryPhotoUrl || v.imageUrl)) return live;
-    return EDITORIAL_STATIC.map((p, i) => ({
+    // Use live listing photos if any vehicle has a non-stock photo
+    const hasRealPhotos = live.some((p) => p.liveListing);
+    if (hasRealPhotos) return live;
+
+    // Each static panel has its own curated image — use it directly
+    return EDITORIAL_STATIC.map((p) => ({
       ...p,
-      image: LOCAL_EDITORIAL_IMAGES[i % LOCAL_EDITORIAL_IMAGES.length],
       liveListing: false,
       subtitle: p.tagline,
     }));
@@ -183,23 +230,24 @@ export default function Home() {
         <div className="absolute inset-0 gradient-mesh opacity-40" />
       </div>
 
-      {/* ── Cinematic full-bleed hero (Daytona-style) ── */}
-      <section className="relative hero-cinematic scan-line hero-gold-sweep">
-        <div className="hero-cinematic-bg">
-          <OptimizedImage
-            src={heroSrc}
-            alt="Premium vehicle on studio floor — GrayArx dealership platform"
-            priority
-            staticAsset={heroSrc.startsWith("/")}
-            sizes="100vw"
-            className="img-premium absolute inset-0 h-full w-full"
-            fallbackSrc="/hero-car.jpg"
-          />
-        </div>
-        <div className="hero-cinematic-veil-full" />
+      {/* ── Full-bleed cinematic hero ── */}
+      <section className="relative home-hero-stage overflow-hidden">
+        {/* Full-bleed car background */}
+        <img
+          src={HERO_SHOWCASE_CORVETTE}
+          alt="GrayArx futuristic hypercar showcase"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          fetchPriority="high"
+          loading="eager"
+          decoding="sync"
+        />
 
-        <div className="relative z-10 container w-full pb-16 md:pb-24 pt-28 md:pt-32">
-          <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-16 items-end">
+        {/* Gradient overlays — keep left text readable, let car breathe on right */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#060608] via-[#060608]/80 to-[#060608]/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#060608]/70 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative z-10 container w-full py-28 md:py-32 lg:py-36">
+          <div className="max-w-2xl">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -245,55 +293,14 @@ export default function Home() {
                 ))}
               </ul>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="home-hero-stats hidden sm:block"
-            >
-              <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-xl p-6 md:p-8 shadow-2xl">
-                <p className="font-tech text-[10px] uppercase tracking-[0.28em] text-primary/80 mb-6">
-                  Live platform
-                </p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="font-display text-3xl md:text-4xl font-bold text-white tabular-nums">
-                      {liveCount > 0 ? liveCount : "—"}
-                    </p>
-                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
-                      Vehicles scored
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-display text-3xl md:text-4xl font-bold text-cyber-gradient">11</p>
-                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
-                      SA languages
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-display text-3xl md:text-4xl font-bold text-white">24/7</p>
-                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
-                      WhatsApp & chat
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-display text-3xl md:text-4xl font-bold text-white">&lt;60s</p>
-                    <p className="mt-1 font-tech text-[10px] uppercase tracking-[0.18em] text-white/45">
-                      Lead alert SLA
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
           </div>
 
-          {/* Scroll hint */}
+          {/* Scroll indicator */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.8 }}
-            className="hidden md:flex absolute bottom-8 right-8 flex-col items-center gap-2 text-white/30"
+            className="hidden lg:flex absolute bottom-8 right-8 flex-col items-center gap-2 text-white/30"
           >
             <span className="font-tech text-[9px] uppercase tracking-[0.3em] [writing-mode:vertical-lr]">
               Scroll
@@ -303,67 +310,85 @@ export default function Home() {
         </div>
       </section>
 
-      {/* AI team strip */}
-      <section className="relative border-y border-primary/10 bg-[#08080a]/90 py-10 md:py-14">
+      {/* Luxury vehicle showcase strip */}
+      <section className="relative border-y border-primary/10 bg-[#08080a]/90 py-10 md:py-14 overflow-hidden">
         <div className="container">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
             <div>
               <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-2">
-                Your AI sales team
+                Scored inventory
               </p>
               <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
-                Always on. Always on-brand.
+                Precision-priced. Ready to deal.
               </h2>
             </div>
             <Link
-              href="/help"
-              className="font-tech text-xs uppercase tracking-[0.2em] text-primary hover:text-primary/80 inline-flex items-center gap-2"
+              href="/showroom?sort=best_deals"
+              className="font-tech text-xs uppercase tracking-[0.2em] text-primary hover:text-primary/80 inline-flex items-center gap-2 shrink-0"
             >
-              How agents work <ArrowUpRight className="h-4 w-4" />
+              Browse all deals <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {HERO_AGENTS.map((agent, i) => (
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {[
+              {
+                img: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=85&auto=format&fit=crop",
+                make: "Porsche", model: "911 Carrera S", year: 2023, price: "R1 890 000", score: "Great Deal", pct: -8,
+              },
+              {
+                img: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=85&auto=format&fit=crop",
+                make: "Mercedes-Benz", model: "C63 AMG", year: 2022, price: "R1 245 000", score: "Great Deal", pct: -11,
+              },
+              {
+                img: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=85&auto=format&fit=crop",
+                make: "Lamborghini", model: "Huracán EVO", year: 2021, price: "R4 750 000", score: "Fair Price", pct: -3,
+              },
+              {
+                img: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=85&auto=format&fit=crop",
+                make: "Ferrari", model: "Roma", year: 2022, price: "R5 100 000", score: "Great Deal", pct: -7,
+              },
+            ].map((car, i) => (
               <motion.div
-                key={agent.id}
+                key={car.model}
                 {...fadeUp}
-                transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-                className="home-agent-card group rounded-xl border border-white/8 bg-white/[0.03] p-5 hover:border-primary/30 transition-colors"
+                transition={{ ...fadeUp.transition, delay: i * 0.08 }}
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={agent.avatarUrl}
-                    alt=""
-                    className="h-11 w-11 rounded-full object-cover ring-2 ring-primary/20"
-                    loading="lazy"
-                  />
-                  <div>
-                    <p className="font-semibold text-sm">{agent.displayName}</p>
-                    <p className="font-tech text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                      {agent.role}
+                <Link
+                  href="/showroom?sort=best_deals"
+                  className="group block rounded-xl overflow-hidden border border-white/8 hover:border-primary/30 transition-colors relative"
+                >
+                  {/* Car image */}
+                  <div className="aspect-[4/3] overflow-hidden">
+                    <img
+                      src={car.img}
+                      alt={`${car.year} ${car.make} ${car.model}`}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  </div>
+
+                  {/* Deal score badge */}
+                  <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-primary/90 px-2.5 py-1 font-tech text-[9px] font-semibold uppercase tracking-[0.15em] text-black backdrop-blur-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-black/60" />
+                    {car.score} · {car.pct}%
+                  </span>
+
+                  {/* Info */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="font-tech text-[9px] uppercase tracking-[0.18em] text-white/50 mb-0.5">
+                      {car.year} · {car.make}
+                    </p>
+                    <p className="font-display text-sm font-bold text-white leading-tight">
+                      {car.model}
+                    </p>
+                    <p className="font-tech text-[11px] text-primary mt-1">
+                      {car.price}
                     </p>
                   </div>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                  {agent.description}
-                </p>
-                {agent.id === "email" && (
-                  <a
-                    href={`mailto:${agent.email}?subject=GrayArx%20enquiry`}
-                    className="mt-3 inline-flex text-[10px] font-tech uppercase tracking-[0.18em] text-primary hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Email Mia →
-                  </a>
-                )}
-                {agent.id === "whatsapp" && (
-                  <Link
-                    href="/showroom"
-                    className="mt-3 inline-flex text-[10px] font-tech uppercase tracking-[0.18em] text-primary hover:underline"
-                  >
-                    Try Nala on showroom →
-                  </Link>
-                )}
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -409,13 +434,16 @@ export default function Home() {
                   href={panel.href}
                   className={cn("editorial-panel group block rounded-xl md:rounded-2xl border border-white/5 holo-card", i === 0 && "min-h-[380px] md:min-h-[480px]")}
                 >
-                  <OptimizedImage
-                    src={panel.image}
-                    alt=""
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    staticAsset={panel.image.startsWith("/")}
-                    className="absolute inset-0 h-full w-full"
-                  />
+                  {"images" in panel && Array.isArray(panel.images) ? (
+                    <PanelSlideshow images={panel.images} eager={i === 0} />
+                  ) : (
+                    <img
+                      src={(panel as { image: string }).image}
+                      alt=""
+                      loading={i === 0 ? "eager" : "lazy"}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
                   <div className="relative z-10 flex h-full min-h-[320px] md:min-h-[420px] flex-col justify-end p-6 md:p-10">
                     {"liveListing" in panel && panel.liveListing && (
                       <span className="mb-2 inline-flex w-fit rounded-full bg-black/45 px-3 py-1 font-tech text-[9px] uppercase tracking-[0.2em] text-primary/90 backdrop-blur-sm">

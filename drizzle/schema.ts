@@ -400,6 +400,12 @@ export const dealerships = mysqlTable("dealerships", {
    * Stored as JSON object `{ moduleId: boolean }`. Missing key = enabled.
    */
   modulesEnabled: json("modulesEnabled"),
+  /**
+   * Meta WhatsApp Business phone_number_id for this dealership.
+   * Set during onboarding. Used to route incoming webhooks to the correct
+   * dealership without relying on a single env-var (multi-tenant).
+   */
+  whatsappPhoneNumberId: varchar("whatsappPhoneNumberId", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

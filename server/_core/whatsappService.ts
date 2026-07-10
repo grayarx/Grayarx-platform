@@ -4,6 +4,7 @@
  * Uses Meta WhatsApp Cloud API for real message delivery
  */
 
+import crypto from "crypto";
 import {
   createWhatsappMessage,
   getOrCreateWhatsappConversation,
@@ -260,6 +261,83 @@ export async function sendWhatsAppTemplate(
 }
 
 /**
+ * Send up to 3 vehicle photos via WhatsApp image messages.
+ * The last photo gets a caption with the vehicle title, price, and next-step CTA.
+ * Silently skips non-HTTPS URLs and is a no-op if credentials are missing.
+ */
+export async function sendVehiclePhotosViaWhatsApp(
+  phone: string,
+  vehicle: { title: string; price?: number | string | null },
+  photoUrls: string[],
+  dealershipId: string,
+): Promise<void> {
+  const whatsappBusinessPhoneId =
+    process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
+    console.warn("[WhatsApp] Credentials missing — skipping vehicle photo send");
+    return;
+  }
+
+  const formattedPhone = formatPhoneNumber(phone);
+  const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+  const appUrl = (process.env.APP_URL ?? "").replace(/\/+$/, "");
+  // Make relative paths absolute — Meta must be able to fetch the URL
+  const resolvedUrls = photoUrls.map((u) =>
+    u.startsWith("http://") || u.startsWith("https://") ? u : `${appUrl}${u}`,
+  );
+  const publicUrls = resolvedUrls.filter((u) => u.startsWith("https://")).slice(0, 3);
+
+  if (publicUrls.length === 0) {
+    console.warn("[WhatsApp] No public HTTPS photo URLs available (APP_URL may not be set or photos are local):", photoUrls.slice(0, 3));
+    return;
+  }
+
+  const priceStr = vehicle.price
+    ? ` — R${Number(vehicle.price).toLocaleString("en-ZA")}`
+    : "";
+  const lastCaption =
+    `${vehicle.title}${priceStr}\n\nBeautiful, right? 😍 Let me know if you'd like to come in for a test drive, or if you have any questions about this one!`;
+
+  for (let i = 0; i < publicUrls.length; i++) {
+    const isLast = i === publicUrls.length - 1;
+    const payload: Record<string, unknown> = {
+      messaging_product: "whatsapp",
+      to: formattedPhone,
+      type: "image",
+      image: {
+        link: publicUrls[i],
+        ...(isLast ? { caption: lastCaption } : {}),
+      },
+    };
+
+    try {
+      const response = await fetch(metaUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${whatsappAccessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error(`[WhatsApp] Photo ${i + 1}/${publicUrls.length} send error:`, errorData);
+      } else {
+        const data = (await response.json()) as MetaMessageResponse;
+        console.log(
+          `[WhatsApp] Photo ${i + 1}/${publicUrls.length} sent: ${data.messages?.[0]?.id}`,
+        );
+      }
+    } catch (err) {
+      console.error(`[WhatsApp] Error sending photo ${i + 1}:`, err);
+    }
+  }
+}
+
+/**
  * Handle incoming WhatsApp message from customer (called by webhook)
  * Uses multilingual Nala pipeline (same as web showroom chat).
  *
@@ -285,30 +363,33 @@ export async function handleIncomingWhatsAppMessage(
     const {
       parseVehicleTitleFromMessage,
       findVehicleFromMessage,
+      findVehiclesFromMessage,
+      buildMultiVehicleReply,
+      buildNoMatchFallbackReply,
+      detectMakeFromMessage,
+      detectBodyTypesFromMessage,
+      buildSearchTerm,
       vehicleRowToContext,
+      getConvState,
+      stripMarkdownForWhatsApp,
     } = await import("./nalaReplyOrchestrator");
     const { resolveRoutedReply } = await import("./agentIntentRouter");
     const { scoreListingDeal } = await import("../../shared/priceIntelligence");
+    const { detectLanguage } = await import("../../shared/languages");
+    const { addWhatsAppAIDisclosure } = await import("./agentPrompts");
 
     const dealership = await getDealershipById(dealershipIdNum);
     const dealerName = dealership?.name ?? "GrayArx Dealership";
 
     const allVehicles = await listVehicles(200);
 
-    let vehicleId: number | undefined;
-    const parsedTitle = parseVehicleTitleFromMessage(message);
-    if (parsedTitle) {
-      const hay = parsedTitle.toLowerCase();
-      const match = allVehicles.find(
-        (v) =>
-          (v.title ?? "").toLowerCase().includes(hay) ||
-          hay.includes((v.title ?? "").toLowerCase().slice(0, 20)),
-      );
-      if (match?.id) vehicleId = Number(match.id);
-    }
-    if (!vehicleId) {
-      const matched = findVehicleFromMessage(message, allVehicles);
-      if (matched?.id) vehicleId = Number(matched.id);
+    // ── Determine & LOCK language for this phone (must happen before any path diverges) ──
+    const convState = getConvState(formattedPhone);
+    const { updateConvState } = await import("./nalaReplyOrchestrator");
+    const earlyLang = convState?.lang ?? detectLanguage(message);
+    // Lock language on first message — all subsequent messages for this phone use this language
+    if (!convState?.lang) {
+      updateConvState(formattedPhone, { stage: "greeting", lang: earlyLang });
     }
 
     const topDealHints = allVehicles
@@ -327,6 +408,191 @@ export async function handleIncomingWhatsAppMessage(
       .sort((a, b) => (b.score?.deltaPct ?? 0) - (a.score?.deltaPct ?? 0))
       .slice(0, 3)
       .map(({ v }) => ({ title: v.title ?? "Vehicle", price: v.price }));
+
+    // ── Price / budget intent ────────────────────────────────────────────────
+    const PRICE_OBJECTION_RE = /\b(too expensive|can'?t afford|cheaper|something cheaper|more affordable|less than|under r?\s*\d|budget|r\d{3,}k?|within my budget|lower price|goedkoper|te duur|bekostigbaar|shibhile|ntengo|nyauveka|amahle|abiza|hlafo|theko|leseding|chelete|tshenyegelo|madi a mantsi)\b/i;
+    const hasPriceObjection = PRICE_OBJECTION_RE.test(message);
+
+    if (hasPriceObjection) {
+      /**
+       * Parse a budget ceiling from text like "500k", "R500 000", "under 300000".
+       * Returns the numeric value in rands, or null if no amount found.
+       */
+      function parseBudgetFromMessage(msg: string): number | null {
+        const m = msg.match(/r?\s*(\d[\d\s,]*)\s*(k\b|000\b)?/i);
+        if (!m) return null;
+        const raw = m[1].replace(/[\s,]/g, "");
+        const num = parseInt(raw, 10);
+        if (isNaN(num) || num < 10) return null;
+        const multiplier = (m[2] ?? "").toLowerCase() === "k" ? 1000 : 1;
+        return num * multiplier;
+      }
+
+      const budgetCeiling = parseBudgetFromMessage(message);
+      const availableVehicles = allVehicles.filter((v) => v.status === "available" || v.status == null);
+      const lang = earlyLang;
+
+      const BUDGET_HEADER: Record<string, string> = {
+        en: `No problem — here are some more affordable options${budgetCeiling ? ` under R${Math.round(budgetCeiling).toLocaleString("en-ZA")}` : ""}:`,
+        af: `Geen probleem nie — hier is 'n paar meer bekostigbare opsies${budgetCeiling ? ` onder R${Math.round(budgetCeiling).toLocaleString("en-ZA")}` : ""}:`,
+        zu: `Akukho nkinga — nanti izinketho ezinamanani aphansi${budgetCeiling ? ` ngaphansi kwe-R${Math.round(budgetCeiling).toLocaleString("en-ZA")}` : ""}:`,
+      };
+      const BUDGET_FOOTER: Record<string, string> = {
+        en: "Which of these interests you? I can share more details or arrange a test drive.",
+        af: "Watter een stel jy in belang? Ek kan meer besonderhede deel of 'n toetsrit reël.",
+        zu: "Yiyiphi le ethokozisa? Ngingahlangabeza imininingwane engcono noma ngihlele ukuqhuba.",
+      };
+
+      let affordableVehicles = budgetCeiling
+        ? availableVehicles.filter((v) => Number(v.price ?? 0) > 1 && Number(v.price) <= budgetCeiling * 1.1)
+        : [];
+
+      // No budget given or no matches → show 3 cheapest
+      if (affordableVehicles.length === 0) {
+        affordableVehicles = availableVehicles
+          .filter((v) => Number(v.price ?? 0) > 1)
+          .sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
+          .slice(0, 3);
+      } else {
+        affordableVehicles = affordableVehicles
+          .sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
+          .slice(0, 6);
+      }
+
+      if (affordableVehicles.length > 0) {
+        const header = BUDGET_HEADER[lang] ?? BUDGET_HEADER.en;
+        const footer = BUDGET_FOOTER[lang] ?? BUDGET_FOOTER.en;
+        const lines = affordableVehicles.map((v) => {
+          const year = v.year ? `${v.year} ` : "";
+          const title = v.title ?? `${v.make ?? ""} ${v.model ?? ""}`.trim();
+          const display = title.startsWith(String(v.year ?? "")) ? title : `${year}${title}`.trim();
+          const price = Number(v.price ?? 0) > 1 ? ` — R${Math.round(Number(v.price)).toLocaleString("en-ZA")}` : "";
+          return `• ${display}${price}`;
+        });
+        const budgetReply = `${header}\n\n${lines.join("\n")}\n\n${footer}`;
+
+        const conversation = await getOrCreateWhatsappConversation(dealershipIdNum, formattedPhone, undefined);
+        if (!options?.alreadyPersisted) {
+          await createWhatsappMessage({ conversationId: conversation.id, direction: "inbound", messageType: "text", content: message, status: "delivered" });
+        }
+        const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(budgetReply), lang);
+        await sendWhatsAppMessage({ phone: formattedPhone, message: finalReply, type: "automated_reply", dealershipId });
+        console.log(`[WhatsApp budget] +${formattedPhone} lang=${lang} ceiling=${budgetCeiling} matches=${affordableVehicles.length}`);
+        return { success: true, response: finalReply };
+      }
+    }
+
+    // ── Multi-vehicle search: check if the buyer is asking about a make/body type ──
+    const multiMatches = findVehiclesFromMessage(message, allVehicles);
+    const detectedMake = detectMakeFromMessage(message);
+    const detectedBodyTypes = detectBodyTypesFromMessage(message);
+    const isInventorySearch = detectedMake !== null || detectedBodyTypes !== null;
+
+    if (multiMatches.length >= 2) {
+      // 2+ matching vehicles → show a list reply, skip single-vehicle flow
+      const lang = convState?.lang ?? detectLanguage(message);
+      const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
+      const listReply = buildMultiVehicleReply(multiMatches, searchTerm, lang, dealerName);
+
+      const conversation = await getOrCreateWhatsappConversation(
+        dealershipIdNum,
+        formattedPhone,
+        undefined,
+      );
+      if (!options?.alreadyPersisted) {
+        await createWhatsappMessage({
+          conversationId: conversation.id,
+          direction: "inbound",
+          messageType: "text",
+          content: message,
+          status: "delivered",
+        });
+      }
+
+      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(listReply), lang);
+      await sendWhatsAppMessage({
+        phone: formattedPhone,
+        message: finalReply,
+        type: "automated_reply",
+        dealershipId,
+      });
+      console.log(`[WhatsApp multi-vehicle] +${formattedPhone} lang=${lang} found=${multiMatches.length} search="${searchTerm}"`);
+      return { success: true, response: finalReply };
+    }
+
+    if (multiMatches.length === 0 && isInventorySearch) {
+      // 0 matches but the user asked about a specific make/bodytype → no-match fallback
+      const lang = convState?.lang ?? detectLanguage(message);
+      const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
+
+      // Find similar alternatives: same body type different make, or any available
+      const availableVehicles = allVehicles.filter((v) => v.status === "available" || v.status == null);
+      let alternatives = detectedBodyTypes
+        ? availableVehicles.filter((v) => {
+            const vbt = (v.bodyType ?? "").toLowerCase();
+            const vModel = (v.model ?? "").toLowerCase();
+            const vTitle = (v.title ?? "").toLowerCase();
+            return detectedBodyTypes.some((bt) => vbt.includes(bt)) ||
+              (detectedBodyTypes.includes("bakkie") &&
+                ["ranger", "hilux", "amarok", "navara", "d-max"].some((m) => vModel.includes(m) || vTitle.includes(m))) ||
+              (detectedBodyTypes.includes("suv") &&
+                ["fortuner", "prado", "rav4", "cr-v", "tucson"].some((m) => vModel.includes(m) || vTitle.includes(m)));
+          })
+        : availableVehicles;
+
+      // Fall back to any available if no body-type matches either
+      if (alternatives.length === 0) alternatives = availableVehicles;
+      alternatives = alternatives.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0)).slice(0, 5);
+
+      const fallbackReply = buildNoMatchFallbackReply(searchTerm, alternatives, lang);
+      const conversation = await getOrCreateWhatsappConversation(
+        dealershipIdNum,
+        formattedPhone,
+        undefined,
+      );
+      if (!options?.alreadyPersisted) {
+        await createWhatsappMessage({
+          conversationId: conversation.id,
+          direction: "inbound",
+          messageType: "text",
+          content: message,
+          status: "delivered",
+        });
+      }
+
+      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(fallbackReply), lang);
+      await sendWhatsAppMessage({
+        phone: formattedPhone,
+        message: finalReply,
+        type: "automated_reply",
+        dealershipId,
+      });
+      console.log(`[WhatsApp no-match] +${formattedPhone} lang=${lang} search="${searchTerm}"`);
+      return { success: true, response: finalReply };
+    }
+
+    // ── Single-vehicle flow (0 or 1 match) ────────────────────────────────────
+    let vehicleId: number | undefined;
+
+    // If exactly 1 multi-vehicle match, use that vehicle
+    if (multiMatches.length === 1 && multiMatches[0]?.id) {
+      vehicleId = Number(multiMatches[0].id);
+    } else {
+      const parsedTitle = parseVehicleTitleFromMessage(message);
+      if (parsedTitle) {
+        const hay = parsedTitle.toLowerCase();
+        const match = allVehicles.find(
+          (v) =>
+            (v.title ?? "").toLowerCase().includes(hay) ||
+            hay.includes((v.title ?? "").toLowerCase().slice(0, 20)),
+        );
+        if (match?.id) vehicleId = Number(match.id);
+      }
+      if (!vehicleId) {
+        const matched = findVehicleFromMessage(message, allVehicles);
+        if (matched?.id) vehicleId = Number(matched.id);
+      }
+    }
 
     const conversation = await getOrCreateWhatsappConversation(
       dealershipIdNum,
@@ -354,7 +620,31 @@ export async function handleIncomingWhatsAppMessage(
     let vehicleCtx = null;
     if (vehicleId) {
       const row = await getVehicle(vehicleId);
-      if (row) vehicleCtx = vehicleRowToContext(row);
+      if (row) {
+        vehicleCtx = vehicleRowToContext(row);
+
+        // Send gallery photos before the text reply (non-fatal if it fails)
+        try {
+          const { listVehiclePhotos } = await import("../db");
+          const gallery = await listVehiclePhotos(vehicleId);
+          const photoUrls: string[] = gallery.map((p) => p.url);
+          // Fall back to primary / legacy photo fields if gallery is empty
+          if (photoUrls.length === 0) {
+            if (row.primaryPhotoUrl) photoUrls.push(row.primaryPhotoUrl);
+            else if (row.imageUrl) photoUrls.push(row.imageUrl);
+          }
+          if (photoUrls.length > 0) {
+            await sendVehiclePhotosViaWhatsApp(
+              formattedPhone,
+              { title: row.title ?? "Vehicle", price: row.price },
+              photoUrls,
+              dealershipId,
+            );
+          }
+        } catch (photoErr) {
+          console.warn("[WhatsApp] Vehicle photo send failed (non-fatal):", photoErr);
+        }
+      }
     }
 
     const result = await resolveRoutedReply({
@@ -525,7 +815,6 @@ export function validateWhatsAppWebhookSignature(
 ): boolean {
   if (!signature || !appSecret) return false;
 
-  const crypto = require("crypto") as typeof import("crypto");
   const expectedHex = crypto
     .createHmac("sha256", appSecret)
     .update(payload)

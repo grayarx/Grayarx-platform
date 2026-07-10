@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
-  buildInventoryDeleteDoneReply,
-  buildInventoryDeletePendingReply,
   isInventoryBulkDeleteConfirm,
   isInventoryBulkDeleteRequest,
 } from "@shared/assistantActions";
@@ -57,12 +55,11 @@ export default function DashboardChatAgent() {
     staleTime: 60_000,
   });
   const chat = trpc.dashboardAssistant.chat.useMutation();
-  const deleteVehicle = trpc.dealer.deleteVehicle.useMutation();
   const utils = trpc.useUtils();
 
   const isOwner = config.data?.mode === "owner";
   const quickPrompts = config.data?.quickPrompts ?? [];
-  const busy = chat.isPending || acting || deleteVehicle.isPending;
+  const busy = chat.isPending || acting;
 
   const invalidateInventory = () => {
     void utils.dealer.listVehicles.invalidate();
@@ -75,53 +72,33 @@ export default function DashboardChatAgent() {
     setMessages((m) => [...m, { id: uid(), role: "bot", ...msg }]);
   };
 
-  const executeInventoryDeleteAll = async () => {
-    setActing(true);
-    try {
-      const vehicles = await utils.dealer.listVehicles.fetch();
-      if (vehicles.length === 0) {
-        pushBot({
-          text: buildInventoryDeleteDoneReply(0),
-          links: [{ label: "Inventory", href: "/dealer/inventory" }],
-        });
-        return;
-      }
-
-      let deleted = 0;
-      for (const vehicle of vehicles) {
-        await deleteVehicle.mutateAsync({ id: vehicle.id });
-        deleted++;
-      }
-
+  const postAssistantReply = (res: {
+    reply: string;
+    links?: Array<{ label: string; href: string }>;
+    pendingAction?: PendingAction | null;
+    actionExecuted?: boolean;
+  }) => {
+    pushBot({
+      text: res.reply,
+      links: res.links?.length ? res.links : undefined,
+      pendingAction: res.pendingAction ?? undefined,
+    });
+    if (res.actionExecuted) {
       invalidateInventory();
-      pushBot({
-        text: buildInventoryDeleteDoneReply(deleted),
-        links: [{ label: "Inventory", href: "/dealer/inventory" }],
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong.";
-      pushBot({ text: `Sorry — could not delete inventory: ${msg}` });
-    } finally {
-      setActing(false);
     }
   };
 
-  const promptInventoryDeleteAll = async () => {
+  const runAssistantChat = async (input: {
+    message: string;
+    confirmAction?: PendingAction["type"];
+  }) => {
     setActing(true);
     try {
-      const vehicles = await utils.dealer.listVehicles.fetch();
-      const pending = buildInventoryDeletePendingReply({
-        vehicleCount: vehicles.length,
-        mode: isOwner ? "owner" : "dealer",
-      });
-      pushBot({
-        text: pending.reply,
-        links: pending.links,
-        pendingAction: pending.pendingAction,
-      });
+      const res = await chat.mutateAsync(input);
+      postAssistantReply(res);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
-      pushBot({ text: `Sorry — could not load inventory: ${msg}` });
+      pushBot({ text: `Sorry — ${msg}. Try again in a moment.` });
     } finally {
       setActing(false);
     }
@@ -161,14 +138,17 @@ export default function DashboardChatAgent() {
         setInput("");
         setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
       }
-      await executeInventoryDeleteAll();
+      await runAssistantChat({
+        message: trimmed || "confirm",
+        confirmAction: "inventory_delete_all",
+      });
       return;
     }
 
     if (isInventoryBulkDeleteRequest(trimmed)) {
       setInput("");
       setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
-      await promptInventoryDeleteAll();
+      await runAssistantChat({ message: trimmed });
       return;
     }
 
@@ -180,15 +160,7 @@ export default function DashboardChatAgent() {
         message: trimmed,
         confirmAction,
       });
-      pushBot({
-        text: res.reply,
-        links: res.links?.length ? res.links : undefined,
-        pendingAction: res.pendingAction ?? undefined,
-      });
-
-      if (res.actionExecuted) {
-        invalidateInventory();
-      }
+      postAssistantReply(res);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       pushBot({ text: `Sorry — ${msg}. Try again in a moment.` });

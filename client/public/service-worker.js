@@ -14,9 +14,6 @@ const BRAND_ICON_PATHS = new Set([
   "/icon-512x512.png",
   "/logo-icon.png",
   "/logo.svg",
-  "/grayarx-logo-full.png",
-  "/grayarx-logo-emblem.png",
-  "/grayarx-logo-nav.png",
 ]);
 
 // Install event - cache static assets

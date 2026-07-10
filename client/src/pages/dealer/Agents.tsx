@@ -98,13 +98,12 @@ export default function Agents() {
     refetchInterval: 10_000,
   });
 
-  const agentById = useMemo(
-    () =>
-      Object.fromEntries(
-        (roster.data?.agents ?? []).map((a) => [a.id, a]),
-      ) as Record<string, (typeof roster.data)["agents"][number]>,
-    [roster.data],
-  );
+  const agentById = useMemo(() => {
+    type AgentRosterItem = NonNullable<typeof roster.data>["agents"][number];
+    return Object.fromEntries(
+      (roster.data?.agents ?? []).map((a) => [a.id, a]),
+    ) as Record<string, AgentRosterItem>;
+  }, [roster.data]);
 
   const selectAgentFilter = (id: AgentId) => {
     setFilter((prev) => (prev === id ? "all" : id));

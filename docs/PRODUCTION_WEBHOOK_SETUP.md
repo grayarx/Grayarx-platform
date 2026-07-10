@@ -49,7 +49,7 @@ Webhook routes are registered at line 60 **before** static files.
 | Verify token | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` from `.env` |
 | Subscribe | `messages` |
 
-Phone Number ID: `1245737138612982` (+27 82 053 2685)
+Phone Number ID: `1236174859569229` (+27 82 053 2685)
 
 ### D) Env vars required on production
 
@@ -57,7 +57,7 @@ Phone Number ID: `1245737138612982` (+27 82 053 2685)
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=
 WHATSAPP_APP_SECRET=
 WHATSAPP_ACCESS_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=1245737138612982
+WHATSAPP_PHONE_NUMBER_ID=1236174859569229
 WHATSAPP_DEALERSHIP_ID=1
 APP_URL=https://www.grayarx.com
 ```

@@ -104,10 +104,15 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general">, string[]> = {
   finance: [
     "finance", "pre-approval", "pre approval", "loan", "instalment", "finansiering",
     "goedgekeur", "imali", "mali", "lichelete", "financiamento", "parcela",
+    // Zulu / isiNdebele / Sesotho / Setswana
+    "ngifuna ifinance", "ifinance", "mboleko", "ngilungise imali", "tumelo", "ukukhokha",
+    "chelete", "madi", "tšhelete",
   ],
   trade_in: [
     "trade in", "trade-in", "tradein", "ruil", "exchange", "swap", "part exchange",
     "shintsha", "ukushintsha", "financiamento troca",
+    // Zulu / Afrikaans / isiNdebele / Sesotho
+    "thengisa imoto", "ukuthengisa", "inruil",
   ],
   availability: [
     "available", "still for sale", "in stock", "beskikbaar", "iyatholakala", "fumaneha",

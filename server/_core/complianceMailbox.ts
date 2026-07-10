@@ -51,7 +51,8 @@ export async function recordComplianceInquiry(
     metadata: input.metadata ?? null,
   });
 
-  const id = Number((result as { insertId?: number })?.insertId ?? (result as unknown[])?.[0]?.insertId ?? 0) || null;
+  // @ts-expect-error Drizzle MySQL returns insertId on result[0]
+  const id = Number(result?.[0]?.insertId ?? result?.insertId ?? 0) || null;
 
   const mailboxLabel = MAILBOX_LABELS[(input.mailbox as ComplianceMailbox) ?? "other"];
   await alertFounder({

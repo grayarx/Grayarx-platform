@@ -22,7 +22,7 @@ describe("platformHealth", () => {
   it("reports configured services from env", async () => {
     process.env.RESEND_API_KEY = "re_test";
     process.env.WHATSAPP_ACCESS_TOKEN = "tok";
-    process.env.WHATSAPP_PHONE_NUMBER_ID = "1245737138612982";
+    process.env.WHATSAPP_PHONE_NUMBER_ID = "1236174859569229";
     process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN = "verify";
     process.env.WHATSAPP_APP_SECRET = "secret";
 

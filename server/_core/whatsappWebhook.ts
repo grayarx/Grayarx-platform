@@ -3,12 +3,27 @@
  * Receives and processes incoming messages from Meta WhatsApp Cloud API
  */
 
+import { eq } from "drizzle-orm";
 import {
   getOrCreateWhatsappConversation,
   createWhatsappMessage,
   logWhatsappWebhook,
   markWhatsappWebhookProcessed,
 } from "../db";
+import { getDb } from "../db";
+import { whatsappMessages } from "../../drizzle/schema";
+
+// In-memory dedup — survives DB failures; holds last 2000 message IDs
+const _processedMessageIds = new Set<string>();
+function isDuplicateMessage(metaId: string): boolean {
+  if (_processedMessageIds.has(metaId)) return true;
+  _processedMessageIds.add(metaId);
+  if (_processedMessageIds.size > 2000) {
+    const first = _processedMessageIds.values().next().value;
+    if (first !== undefined) _processedMessageIds.delete(first);
+  }
+  return false;
+}
 import { validateWhatsAppWebhookSignature } from "./whatsappService";
 
 interface MetaWebhookMessage {
@@ -160,6 +175,13 @@ async function processIncomingMessage(
   phoneNumberId: string
 ): Promise<void> {
   const customerPhone = message.from;
+
+  // Deduplicate: skip if we've already processed this Meta message ID.
+  // Uses in-memory Set so it always works even when DB is unavailable.
+  if (message.id && isDuplicateMessage(message.id)) {
+    console.log(`[WhatsAppWebhook] Skipping duplicate message ${message.id}`);
+    return;
+  }
 
   // Get or create conversation
   const conversation = await getOrCreateWhatsappConversation(dealershipId, customerPhone);

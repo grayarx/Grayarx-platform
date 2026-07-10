@@ -30,10 +30,19 @@ function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
+  // On tsx watch restarts the previous process may still be releasing the port.
+  // Retry the preferred port up to 8 times (4 s total) before falling back.
+  const RETRY_ATTEMPTS = 32;
+  const RETRY_DELAY_MS = 500;
+  for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
+    if (await isPortAvailable(startPort)) return startPort;
+    if (attempt < RETRY_ATTEMPTS - 1) {
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
     }
+  }
+  // Preferred port still busy — find the next free one
+  for (let port = startPort + 1; port < startPort + 20; port++) {
+    if (await isPortAvailable(port)) return port;
   }
   throw new Error(`No available port found starting from ${startPort}`);
 }
@@ -94,7 +103,7 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead. Browser must open at http://localhost:${port}/`);
   }
 
   server.listen(port, () => {

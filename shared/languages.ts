@@ -240,7 +240,9 @@ export function detectLanguage(text: string): LanguageCode {
     ["st", /\b(dumela|ke a leboha|ntate|mme|nako|hantle|leboha)\b/],
     ["xh", /\b(molo|molweni|enkosi|ndiyabonga|kunjani|kakuhle)\b/],
     ["zu", /\b(sawubona|ngiyabonga|kunjani|imoto|malini|yebo|ngicela|umbala)\b/],
-    ["af", /\b(ek |julle|jou |watse|asseblief|dankie|goeie|hallo|baie|lekker|'n |dis |kar |kleur |nie |van die)\b/],
+    // Afrikaans: multi-word phrases first (no \b needed — surrounding text provides boundaries),
+    // then single distinctive words wrapped in \b.
+    ["af", /(?:ek soek|ek wil|ek het|ek is|wat kos|het julle|is daar|kan julle|hoe laat|baie dankie|goeie more|goeie dag|\bek\b|\bjulle\b|\bjou\b|\bwatse\b|\basseblief\b|\bdankie\b|\bgoeie\b|\bhallo\b|\bhaai\b|\bbaie\b|\blekker\b|\bhoeveel\b|\btoetsrit\b|\bfinansier\b|\bbakkies?\b|\bmôre\b|\bbeskikbaar\b|\binruil\b|\bsoek\b|\bnie\b|\bdaar\b|\bmotor\b|\bmotors\b)/],
     // Portuguese diacritics break \b boundaries — use a non-ASCII-tolerant
     // pattern that matches at start, after whitespace, or after punctuation.
     ["pt", /(?:^|[\s,.;:!?])(olá|obrigado|obrigada|bom dia|boa tarde|quanto custa|carro|preço)(?=$|[\s,.;:!?])/i],

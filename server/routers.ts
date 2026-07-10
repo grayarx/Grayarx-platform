@@ -44,7 +44,15 @@ import {
 } from "./_core/rateLimit";
 import { generateNalaShowroomReply } from "./_core/nalaShowroomLlm";
 import { resolveRoutedReply } from "./_core/agentIntentRouter";
-import { vehicleRowToContext } from "./_core/nalaReplyOrchestrator";
+import {
+  vehicleRowToContext,
+  findVehiclesFromMessage,
+  buildMultiVehicleReply,
+  buildNoMatchFallbackReply,
+  detectMakeFromMessage,
+  detectBodyTypesFromMessage,
+  buildSearchTerm,
+} from "./_core/nalaReplyOrchestrator";
 import { generateTumiQuote } from "./_core/tumiAgent";
 import {
   answerShowroomQuestion,
@@ -779,6 +787,53 @@ export const appRouter = router({
 
         const dealerName = input.dealershipName ?? dealership?.name ?? "GrayArx Dealership";
         const vehicleCtx = vehicleRowToContext(row);
+
+        // ── Multi-vehicle search: check if the user is asking about a make/body type ──
+        const { listVehicles: listAllVehicles } = await import("./db");
+        const allVehicles = await listAllVehicles(200);
+        const multiMatches = findVehiclesFromMessage(input.message, allVehicles);
+        const detectedMake = detectMakeFromMessage(input.message);
+        const detectedBodyTypes = detectBodyTypesFromMessage(input.message);
+        const isInventorySearch = detectedMake !== null || detectedBodyTypes !== null;
+
+        if (multiMatches.length >= 2) {
+          const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
+          const listReply = buildMultiVehicleReply(multiMatches, searchTerm, lang, dealerName);
+          return {
+            reply: listReply,
+            language: lang,
+            intent: "inventory_search",
+            answered: true,
+            source: "template" as const,
+            agent: "nala" as const,
+            referenceNumber: undefined,
+            actions: [{ label: "Browse more deals", url: "/showroom?sort=best_deals" }],
+          };
+        }
+
+        if (multiMatches.length === 0 && isInventorySearch) {
+          const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
+          const availableVehicles = allVehicles.filter((v) => v.status === "available" || v.status == null);
+          const alternatives = (detectedBodyTypes
+            ? availableVehicles.filter((v) => {
+                const vbt = (v.bodyType ?? "").toLowerCase();
+                return detectedBodyTypes.some((bt) => vbt.includes(bt));
+              })
+            : availableVehicles
+          ).sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0)).slice(0, 5);
+          const fallbackReply = buildNoMatchFallbackReply(searchTerm, alternatives.length ? alternatives : availableVehicles.slice(0, 5), lang);
+          return {
+            reply: fallbackReply,
+            language: lang,
+            intent: "inventory_search",
+            answered: true,
+            source: "template" as const,
+            agent: "nala" as const,
+            referenceNumber: undefined,
+            actions: [{ label: "Browse all stock", url: "/showroom" }],
+          };
+        }
+
         let resolved;
         try {
           resolved = await resolveRoutedReply({
@@ -806,6 +861,22 @@ export const appRouter = router({
             source: "template" as const,
           };
         }
+        // Append next-step CTAs when Nala answered a vehicle-specific question
+        const showCtas =
+          resolved.answered &&
+          input.vehicleId > 0 &&
+          resolved.intent !== "test_drive" &&
+          resolved.intent !== "pre_approval" &&
+          resolved.intent !== "trade_in";
+
+        const actions: Array<{ label: string; url: string }> = showCtas
+          ? [
+              { label: "Book test drive", url: "/showroom" },
+              { label: "Get pre-approved", url: "/finance" },
+              { label: "Browse more deals", url: "/showroom?sort=best_deals" },
+            ]
+          : [];
+
         return {
           reply: resolved.reply,
           language: resolved.language,
@@ -814,6 +885,7 @@ export const appRouter = router({
           source: resolved.source,
           agent: resolved.agent,
           referenceNumber: resolved.referenceNumber,
+          actions,
         };
       }),
     aiSearch: publicProcedure
