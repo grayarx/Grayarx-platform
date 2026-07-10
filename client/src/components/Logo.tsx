@@ -14,6 +14,8 @@ interface LogoProps {
 export const LOGO_ICON_URL = "/grayarx-logo-emblem.png";
 export const LOGO_NAV_URL = "/grayarx-logo-nav.png";
 export const LOGO_FULL_URL = "/grayarx-logo-full.png";
+/** Legacy alias used by LogoEmblem and emailBranding */
+export const LOGO_URL = LOGO_ICON_URL;
 
 export default function Logo({ size = 40, className, variant = "icon" }: LogoProps) {
   if (variant === "full") {

@@ -20,6 +20,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import FloatingPilotCTA from "@/components/FloatingPilotCTA";
+import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import { Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -524,6 +525,9 @@ export default function Showroom() {
           </div>
         </div>
       </section>
+
+      {/* Top deals — same vehicles Nala highlights in WhatsApp */}
+      <HomeFeaturedDeals />
 
       {/* Filters */}
       <section className="py-6 border-b border-[rgba(212,175,55,0.1)]">
