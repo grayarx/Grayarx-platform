@@ -39,7 +39,7 @@ import { ShowroomChatAgent } from "@/components/ShowroomChatAgent";
 import { SkeletonLoader } from "@/components/LoadingAnimations";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 import DealScoreBadge from "@/components/DealScoreBadge";
-import VehicleGallery from "@/components/VehicleGallery";
+import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
 import { scoreListingDeal } from "@shared/priceIntelligence";
 import { PLACEHOLDER_SVG } from "@shared/imagePipeline";
 

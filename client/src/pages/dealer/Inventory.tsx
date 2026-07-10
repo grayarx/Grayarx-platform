@@ -39,6 +39,7 @@ import {
 import VehiclePhotoUploader, {
   type PendingGalleryPhoto,
 } from "@/components/VehiclePhotoUploader";
+import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
 import VehicleGallery from "@/components/VehicleGallery";
 import {
   Select,

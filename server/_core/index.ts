@@ -119,7 +119,7 @@ async function startServer() {
   });
 
   // ── Self-healing: sync whatsappPhoneNumberId from env to DB on startup ──
-  // Ensures the DB lookup works without manual SQL — safe to run every boot.
+  // Only fills an empty DB field — never overwrites a value set by webhook sync.
   (async () => {
     try {
       const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -130,10 +130,18 @@ async function startServer() {
         const { eq } = await import("drizzle-orm");
         const db = await getDb();
         if (db) {
-          await db.update(dealerships)
-            .set({ whatsappPhoneNumberId: phoneId })
-            .where(eq(dealerships.id, dealershipId));
-          console.log(`[Startup] Set dealership ${dealershipId} whatsappPhoneNumberId=${phoneId}`);
+          const [row] = await db
+            .select({ whatsappPhoneNumberId: dealerships.whatsappPhoneNumberId })
+            .from(dealerships)
+            .where(eq(dealerships.id, dealershipId))
+            .limit(1);
+          if (!row?.whatsappPhoneNumberId?.trim()) {
+            await db
+              .update(dealerships)
+              .set({ whatsappPhoneNumberId: phoneId })
+              .where(eq(dealerships.id, dealershipId));
+            console.log(`[Startup] Set dealership ${dealershipId} whatsappPhoneNumberId=${phoneId}`);
+          }
         }
       }
     } catch (e) {

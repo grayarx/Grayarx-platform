@@ -35,6 +35,23 @@ async function resolveDealershipIdFromPhoneNumberId(phoneNumberId: string | null
     } catch (err) {
       console.warn("[WhatsApp Webhook] DB lookup failed, falling back to env var:", err);
     }
+
+    // Auto-save inbound phone_number_id so future sends use the correct Meta ID
+    if (phoneNumberId) {
+      try {
+        const db = await getDb();
+        if (db) {
+          const dealerId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
+          await db
+            .update(dealerships)
+            .set({ whatsappPhoneNumberId: phoneNumberId })
+            .where(eq(dealerships.id, dealerId));
+          console.log(`[WhatsApp Webhook] Synced phone_number_id ${phoneNumberId} → dealership ${dealerId}`);
+        }
+      } catch {
+        // non-fatal
+      }
+    }
   }
 
   // Env-var fallback (single-dealer dev / pilot setup)
@@ -100,9 +117,14 @@ export function registerWebhookRoutes(app: Express): void {
         console.warn("[WhatsApp Webhook] Invalid signature, but continuing (bypass active)");
       }
 
-      const phoneNumberId =
-        req.body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id ??
-        null;
+      const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+      const phoneNumberId = value?.metadata?.phone_number_id ?? null;
+      const inboundCount = value?.messages?.length ?? 0;
+      const statusCount = value?.statuses?.length ?? 0;
+      console.log(
+        `[WhatsApp Webhook] POST phone_number_id=${phoneNumberId ?? "none"} messages=${inboundCount} statuses=${statusCount}`,
+      );
+
       const dealershipId = await resolveDealershipIdFromPhoneNumberId(phoneNumberId);
 
       // Process the webhook
@@ -144,6 +166,53 @@ export function registerWebhookRoutes(app: Express): void {
     } catch (error) {
       console.error("[Resend Inbound] error:", error);
       res.status(200).json({ ok: false });
+    }
+  });
+
+  /**
+   * Live Meta API diagnostic — proves token + phone number can actually send.
+   * Does NOT expose secrets. Check Railway logs after sending a WhatsApp message.
+   */
+  app.get("/api/webhooks/whatsapp/diagnostic", async (_req: Request, res: Response) => {
+    const phoneId =
+      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (!phoneId || !token) {
+      return res.status(200).json({
+        ok: false,
+        reason: "missing_credentials",
+        phoneNumberId: phoneId ? "configured" : "missing",
+        accessToken: token ? "configured" : "missing",
+      });
+    }
+
+    try {
+      const metaResp = await fetch(
+        `https://graph.facebook.com/v18.0/${phoneId}?fields=display_phone_number,verified_name,quality_rating,status`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const metaData = await metaResp.json().catch(() => ({}));
+
+      return res.status(200).json({
+        ok: metaResp.ok,
+        phoneNumberId: phoneId,
+        metaStatus: metaResp.status,
+        displayPhoneNumber: (metaData as { display_phone_number?: string }).display_phone_number ?? null,
+        verifiedName: (metaData as { verified_name?: string }).verified_name ?? null,
+        qualityRating: (metaData as { quality_rating?: string }).quality_rating ?? null,
+        phoneStatus: (metaData as { status?: string }).status ?? null,
+        metaError: metaResp.ok ? null : metaData,
+        hint: metaResp.ok
+          ? "Token valid. If no reply, check Meta app mode (dev = test numbers only) or Railway logs."
+          : "Token invalid or expired — regenerate in Meta and update Railway WHATSAPP_ACCESS_TOKEN.",
+      });
+    } catch (err) {
+      return res.status(200).json({
+        ok: false,
+        reason: "meta_unreachable",
+        error: err instanceof Error ? err.message : "unknown",
+      });
     }
   });
 

@@ -19,6 +19,8 @@ interface WhatsAppMessage {
   type: "customer_enquiry" | "dealership_response" | "automated_reply";
   vehicleId?: string;
   dealershipId?: string;
+  /** Use the phone_number_id from the inbound webhook — overrides DB/env. */
+  phoneNumberId?: string;
 }
 
 interface WhatsAppTemplate {
@@ -70,10 +72,34 @@ export async function sendWhatsAppMessage(
   error?: string;
 }> {
   try {
-    // Accept either env name — docs use PHONE_NUMBER_ID; older code used BUSINESS_PHONE_ID.
-    const whatsappBusinessPhoneId =
-      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    // Priority: explicit inbound ID > DB lookup > env fallback
+    let whatsappBusinessPhoneId =
+      message.phoneNumberId ||
+      process.env.WHATSAPP_BUSINESS_PHONE_ID ||
+      process.env.WHATSAPP_PHONE_NUMBER_ID;
     const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const resolvedDealershipId = message.dealershipId ? Number(message.dealershipId) : 0;
+
+    if (!message.phoneNumberId && resolvedDealershipId > 0) {
+      try {
+        const { getDb } = await import("../db");
+        const { dealerships } = await import("../../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (db) {
+          const [row] = await db
+            .select({ whatsappPhoneNumberId: dealerships.whatsappPhoneNumberId })
+            .from(dealerships)
+            .where(eq(dealerships.id, resolvedDealershipId))
+            .limit(1);
+          if (row?.whatsappPhoneNumberId) {
+            whatsappBusinessPhoneId = row.whatsappPhoneNumberId;
+          }
+        }
+      } catch (e) {
+        console.warn("[WhatsAppService] DB lookup for phone ID failed, using fallback");
+      }
+    }
 
     if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
       console.warn("[WhatsAppService] WhatsApp credentials missing");
@@ -84,11 +110,10 @@ export async function sendWhatsAppMessage(
     const formattedPhone = formatPhoneNumber(message.phone);
 
     // Get or create conversation
-    const dealershipId = message.dealershipId ? Number(message.dealershipId) : 0;
-    if (dealershipId > 0) {
+    if (resolvedDealershipId > 0) {
       try {
         await getOrCreateWhatsappConversation(
-          dealershipId,
+          resolvedDealershipId,
           formattedPhone,
           message.vehicleId ? Number(message.vehicleId) : undefined
         );
@@ -141,10 +166,10 @@ export async function sendWhatsAppMessage(
     }
 
     // Store message in database
-    if (dealershipId > 0) {
+    if (resolvedDealershipId > 0) {
       try {
         await createWhatsappMessage({
-          conversationId: dealershipId, // Will be updated to actual conversation ID
+          conversationId: resolvedDealershipId, // Will be updated to actual conversation ID
           direction: "outbound",
           messageType: "text",
           content: message.message,
@@ -269,11 +294,35 @@ export async function sendVehiclePhotosViaWhatsApp(
   phone: string,
   vehicle: { title: string; price?: number | string | null },
   photoUrls: string[],
-  dealershipId: string,
+  dealershipId: string | number,
+  phoneNumberId?: string,
 ): Promise<void> {
-  const whatsappBusinessPhoneId =
-    process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let whatsappBusinessPhoneId =
+    phoneNumberId ||
+    process.env.WHATSAPP_BUSINESS_PHONE_ID ||
+    process.env.WHATSAPP_PHONE_NUMBER_ID;
   const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId && dealershipId && Number(dealershipId) > 0) {
+    try {
+      const { getDb } = await import("../db");
+      const { dealerships } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) {
+        const [row] = await db
+          .select({ whatsappPhoneNumberId: dealerships.whatsappPhoneNumberId })
+          .from(dealerships)
+          .where(eq(dealerships.id, Number(dealershipId)))
+          .limit(1);
+        if (row?.whatsappPhoneNumberId) {
+          whatsappBusinessPhoneId = row.whatsappPhoneNumberId;
+        }
+      }
+    } catch (e) {
+      console.warn("[WhatsAppService] DB lookup for photo phone ID failed");
+    }
+  }
 
   if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
     console.warn("[WhatsApp] Credentials missing — skipping vehicle photo send");
@@ -348,7 +397,7 @@ export async function handleIncomingWhatsAppMessage(
   phone: string,
   message: string,
   dealershipId: string,
-  options?: { alreadyPersisted?: boolean },
+  options?: { alreadyPersisted?: boolean; phoneNumberId?: string },
 ): Promise<{
   success: boolean;
   response?: string;
@@ -356,6 +405,7 @@ export async function handleIncomingWhatsAppMessage(
 }> {
   try {
     const formattedPhone = formatPhoneNumber(phone);
+    const replyPhoneId = options?.phoneNumberId;
     const dealershipIdNum = Number(dealershipId);
 
     const { listVehicles, getVehicle } = await import("../db");
@@ -425,11 +475,7 @@ export async function handleIncomingWhatsAppMessage(
     const hasPriceObjection = PRICE_OBJECTION_RE.test(message);
 
     if (hasPriceObjection) {
-      /**
-       * Parse a budget ceiling from text like "500k", "R500 000", "under 300000".
-       * Returns the numeric value in rands, or null if no amount found.
-       */
-      function parseBudgetFromMessage(msg: string): number | null {
+      const parseBudgetFromMessage = (msg: string): number | null => {
         const m = msg.match(/r?\s*(\d[\d\s,]*)\s*(k\b|000\b)?/i);
         if (!m) return null;
         const raw = m[1].replace(/[\s,]/g, "");
@@ -437,7 +483,7 @@ export async function handleIncomingWhatsAppMessage(
         if (isNaN(num) || num < 10) return null;
         const multiplier = (m[2] ?? "").toLowerCase() === "k" ? 1000 : 1;
         return num * multiplier;
-      }
+      };
 
       const budgetCeiling = parseBudgetFromMessage(message);
       const availableVehicles = allVehicles.filter((v) => v.status === "available" || v.status == null);
@@ -487,7 +533,7 @@ export async function handleIncomingWhatsAppMessage(
           await createWhatsappMessage({ conversationId: conversation.id, direction: "inbound", messageType: "text", content: message, status: "delivered" });
         }
         const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(budgetReply), lang);
-        await sendWhatsAppMessage({ phone: formattedPhone, message: finalReply, type: "automated_reply", dealershipId });
+        await sendWhatsAppMessage({ phone: formattedPhone, message: finalReply, type: "automated_reply", dealershipId, phoneNumberId: replyPhoneId });
         console.log(`[WhatsApp budget] +${formattedPhone} lang=${lang} ceiling=${budgetCeiling} matches=${affordableVehicles.length}`);
         return { success: true, response: finalReply };
       }
@@ -525,7 +571,8 @@ export async function handleIncomingWhatsAppMessage(
         phone: formattedPhone,
         message: finalReply,
         type: "automated_reply",
-        dealershipId,
+        dealershipId: String(dealershipId),
+        phoneNumberId: replyPhoneId,
       });
       console.log(`[WhatsApp multi-vehicle] +${formattedPhone} lang=${lang} found=${multiMatches.length} search="${searchTerm}"`);
       return { success: true, response: finalReply };
@@ -576,7 +623,8 @@ export async function handleIncomingWhatsAppMessage(
         phone: formattedPhone,
         message: finalReply,
         type: "automated_reply",
-        dealershipId,
+        dealershipId: String(dealershipId),
+        phoneNumberId: replyPhoneId,
       });
       console.log(`[WhatsApp no-match] +${formattedPhone} lang=${lang} search="${searchTerm}"`);
       return { success: true, response: finalReply };
@@ -660,7 +708,8 @@ export async function handleIncomingWhatsAppMessage(
               formattedPhone,
               { title: row.title ?? "Vehicle", price: row.price },
               photoUrls,
-              dealershipId,
+              String(dealershipIdNum),
+              replyPhoneId,
             );
           }
         } catch (photoErr) {
@@ -686,18 +735,24 @@ export async function handleIncomingWhatsAppMessage(
       `[WhatsApp ${result.agent}] +${formattedPhone} lang=${result.language} intent=${result.intent}`,
     );
 
-    await sendWhatsAppMessage({
+    const sent = await sendWhatsAppMessage({
       phone: formattedPhone,
       message: result.reply,
       type: "automated_reply",
-      dealershipId,
+      dealershipId: String(dealershipId),
       vehicleId: vehicleId ? String(vehicleId) : undefined,
+      phoneNumberId: replyPhoneId,
     });
+
+    if (!sent.success) {
+      console.error(`[WhatsApp] Reply FAILED for +${formattedPhone}: ${sent.error}`);
+      return { success: false, response: result.reply, error: sent.error };
+    }
 
     return { success: true, response: result.reply };
   } catch (error) {
     console.error("[WhatsAppService] Error handling incoming message:", error);
-    return replyOnlyFallback(phone, message, dealershipId, error);
+    return replyOnlyFallback(phone, message, dealershipId, error, options?.phoneNumberId);
   }
 }
 
@@ -707,6 +762,7 @@ async function replyOnlyFallback(
   message: string,
   dealershipId: string,
   cause: unknown,
+  phoneNumberId?: string,
 ): Promise<{ success: boolean; response?: string; error?: string }> {
   try {
     const formattedPhone = formatPhoneNumber(phone);
@@ -724,6 +780,7 @@ async function replyOnlyFallback(
       message: result.reply,
       type: "automated_reply",
       dealershipId,
+      phoneNumberId,
     });
     if (!sent.success) {
       return { success: false, error: sent.error ?? "Failed to send WhatsApp reply" };
@@ -810,10 +867,12 @@ ${leadData.vehicleInterest ? `Vehicle: ${leadData.vehicleInterest}` : ""}
 ${leadData.message ? `Message: ${leadData.message}` : ""}
     `.trim();
 
+    const dealershipId = process.env.WHATSAPP_DEALERSHIP_ID || "1";
     const result = await sendWhatsAppMessage({
       phone: dealershipPhone,
       message: notification,
       type: "customer_enquiry",
+      dealershipId,
     });
 
     return { success: result.success, error: result.error };

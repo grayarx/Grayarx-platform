@@ -234,6 +234,7 @@ async function processIncomingMessage(
       const { handleIncomingWhatsAppMessage } = await import("./whatsappService");
       await handleIncomingWhatsAppMessage(customerPhone, content, dealershipId.toString(), {
         alreadyPersisted: true,
+        phoneNumberId,
       });
     } catch (error) {
       console.error("[WhatsAppWebhook] Error generating auto-response:", error);

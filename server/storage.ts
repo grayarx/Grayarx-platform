@@ -2,6 +2,8 @@ import { ENV } from "./_core/env";
 import * as fs from "fs/promises";
 import * as path from "path";
 import crypto from "crypto";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
@@ -19,6 +21,16 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
+const s3Bucket = process.env.S3_BUCKET_NAME;
+const s3Client = s3Bucket ? new S3Client({
+  region: process.env.S3_REGION || "auto",
+  endpoint: process.env.S3_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+  },
+}) : null;
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
@@ -26,7 +38,22 @@ export async function storagePut(
 ): Promise<{ key: string; url: string }> {
   const key = appendHashSuffix(normalizeKey(relKey));
   
-  if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+  if (s3Client && s3Bucket) {
+    const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+    await s3Client.send(new PutObjectCommand({
+      Bucket: s3Bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      // Optional: Set to public-read if your bucket policy allows it, or rely on public bucket config
+    }));
+    
+    // If public bucket URL is provided, return that, otherwise fallback to serving via presigned/proxy
+    const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    const url = publicUrlBase ? `${publicUrlBase}/${key}` : `/manus-storage/${key}`;
+    return { key, url };
+
+  } else if (ENV.forgeApiUrl && ENV.forgeApiKey) {
     // 1. Get presigned PUT URL from Forge
     const forgeUrl = ENV.forgeApiUrl.replace(/\/+$/, "");
     const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
@@ -71,6 +98,12 @@ export async function storagePut(
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
+  
+  if (s3Client && s3Bucket) {
+    const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    return { key, url: publicUrlBase ? `${publicUrlBase}/${key}` : `/manus-storage/${key}` };
+  }
+  
   if (ENV.forgeApiUrl && ENV.forgeApiKey) {
     return { key, url: `/manus-storage/${key}` };
   }
@@ -79,6 +112,19 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
   const key = normalizeKey(relKey);
+  
+  if (s3Client && s3Bucket) {
+    // If public bucket URL is provided, just return the direct URL
+    const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    if (publicUrlBase) return `${publicUrlBase}/${key}`;
+    
+    // Otherwise, generate a presigned URL valid for 1 hour
+    return await getSignedUrl(s3Client, new GetObjectCommand({
+      Bucket: s3Bucket,
+      Key: key,
+    }), { expiresIn: 3600 });
+  }
+  
   if (ENV.forgeApiUrl && ENV.forgeApiKey) {
     const forgeUrl = ENV.forgeApiUrl.replace(/\/+$/, "");
     const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
