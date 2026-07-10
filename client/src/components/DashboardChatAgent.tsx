@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import {
+  buildInventoryDeleteDoneReply,
+  buildInventoryDeletePendingReply,
+  isInventoryBulkDeleteConfirm,
+  isInventoryBulkDeleteRequest,
+} from "@shared/assistantActions";
 
 type PendingAction = {
   type: "inventory_delete_all";
@@ -44,16 +50,82 @@ export default function DashboardChatAgent() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [acting, setActing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const config = trpc.dashboardAssistant.config.useQuery(undefined, {
     staleTime: 60_000,
   });
   const chat = trpc.dashboardAssistant.chat.useMutation();
+  const deleteVehicle = trpc.dealer.deleteVehicle.useMutation();
   const utils = trpc.useUtils();
 
   const isOwner = config.data?.mode === "owner";
   const quickPrompts = config.data?.quickPrompts ?? [];
+  const busy = chat.isPending || acting || deleteVehicle.isPending;
+
+  const invalidateInventory = () => {
+    void utils.dealer.listVehicles.invalidate();
+    void utils.dealer.stats.invalidate();
+    void utils.showroom.list.invalidate();
+    void utils.showroom.stats.invalidate();
+  };
+
+  const pushBot = (msg: Omit<ChatMessage, "id" | "role">) => {
+    setMessages((m) => [...m, { id: uid(), role: "bot", ...msg }]);
+  };
+
+  const executeInventoryDeleteAll = async () => {
+    setActing(true);
+    try {
+      const vehicles = await utils.dealer.listVehicles.fetch();
+      if (vehicles.length === 0) {
+        pushBot({
+          text: buildInventoryDeleteDoneReply(0),
+          links: [{ label: "Inventory", href: "/dealer/inventory" }],
+        });
+        return;
+      }
+
+      let deleted = 0;
+      for (const vehicle of vehicles) {
+        await deleteVehicle.mutateAsync({ id: vehicle.id });
+        deleted++;
+      }
+
+      invalidateInventory();
+      pushBot({
+        text: buildInventoryDeleteDoneReply(deleted),
+        links: [{ label: "Inventory", href: "/dealer/inventory" }],
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      pushBot({ text: `Sorry — could not delete inventory: ${msg}` });
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const promptInventoryDeleteAll = async () => {
+    setActing(true);
+    try {
+      const vehicles = await utils.dealer.listVehicles.fetch();
+      const pending = buildInventoryDeletePendingReply({
+        vehicleCount: vehicles.length,
+        mode: isOwner ? "owner" : "dealer",
+      });
+      pushBot({
+        text: pending.reply,
+        links: pending.links,
+        pendingAction: pending.pendingAction,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      pushBot({ text: `Sorry — could not load inventory: ${msg}` });
+    } finally {
+      setActing(false);
+    }
+  };
 
   const greet = useCallback(() => {
     if (!config.data) return;
@@ -77,46 +149,49 @@ export default function DashboardChatAgent() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, chat.isPending]);
+  }, [messages, busy]);
 
   const send = async (text: string, confirmAction?: PendingAction["type"]) => {
     const trimmed = text.trim();
     if (!trimmed && !confirmAction) return;
-    if (chat.isPending) return;
+    if (busy) return;
 
-    if (!confirmAction) {
+    if (confirmAction === "inventory_delete_all" || isInventoryBulkDeleteConfirm(trimmed)) {
+      if (!confirmAction) {
+        setInput("");
+        setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
+      }
+      await executeInventoryDeleteAll();
+      return;
+    }
+
+    if (isInventoryBulkDeleteRequest(trimmed)) {
       setInput("");
       setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
+      await promptInventoryDeleteAll();
+      return;
     }
+
+    setInput("");
+    setMessages((m) => [...m, { id: uid(), role: "user", text: trimmed }]);
 
     try {
       const res = await chat.mutateAsync({
-        message: confirmAction ? "confirm" : trimmed,
+        message: trimmed,
         confirmAction,
       });
-      setMessages((m) => [
-        ...m,
-        {
-          id: uid(),
-          role: "bot",
-          text: res.reply,
-          links: res.links?.length ? res.links : undefined,
-          pendingAction: res.pendingAction ?? undefined,
-        },
-      ]);
+      pushBot({
+        text: res.reply,
+        links: res.links?.length ? res.links : undefined,
+        pendingAction: res.pendingAction ?? undefined,
+      });
 
       if (res.actionExecuted) {
-        void utils.dealer.listVehicles.invalidate();
-        void utils.dealer.stats.invalidate();
-        void utils.showroom.list.invalidate();
-        void utils.showroom.stats.invalidate();
+        invalidateInventory();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
-      setMessages((m) => [
-        ...m,
-        { id: uid(), role: "bot", text: `Sorry — ${msg}. Try again in a moment.` },
-      ]);
+      pushBot({ text: `Sorry — ${msg}. Try again in a moment.` });
     }
   };
 
@@ -257,9 +332,9 @@ export default function DashboardChatAgent() {
                         type="button"
                         size="sm"
                         variant="destructive"
-                        disabled={chat.isPending}
+                        disabled={busy}
                         className="h-8 text-xs"
-                        onClick={() => void send(m.pendingAction!.confirmPhrase, m.pendingAction!.type)}
+                        onClick={() => void send(m.pendingAction!.label, m.pendingAction!.type)}
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
                         {m.pendingAction.label}
@@ -268,10 +343,10 @@ export default function DashboardChatAgent() {
                   )}
                 </div>
               ))}
-              {chat.isPending && (
+              {busy && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  {isOwner ? "Kagiso is checking the platform…" : "Looking that up…"}
+                  {isOwner ? "Kagiso is working on it…" : "Working on it…"}
                 </div>
               )}
             </div>
@@ -282,7 +357,7 @@ export default function DashboardChatAgent() {
                   <button
                     key={prompt}
                     type="button"
-                    disabled={chat.isPending}
+                    disabled={busy}
                     onClick={() => send(prompt)}
                     className={cn(
                       "rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50",
@@ -306,10 +381,10 @@ export default function DashboardChatAgent() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={placeholder}
-                disabled={chat.isPending}
+                disabled={busy}
                 className="bg-black/30 border-white/10"
               />
-              <Button type="submit" size="icon" disabled={chat.isPending || !input.trim()}>
+              <Button type="submit" size="icon" disabled={busy || !input.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
             </form>
