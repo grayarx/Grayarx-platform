@@ -39,7 +39,7 @@ import {
 import VehiclePhotoUploader, {
   type PendingGalleryPhoto,
 } from "@/components/VehiclePhotoUploader";
-import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
+import VehicleGallery from "@/components/VehicleGallery";
 import {
   Select,
   SelectContent,
@@ -775,40 +775,41 @@ export default function Inventory() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((v) => {
             const photo = v.primaryPhotoUrl || v.imageUrl;
+            const photosArray = v.images && v.images.length > 0 
+              ? v.images 
+              : [photo].filter(Boolean) as string[];
             const features = Array.isArray(v.features)
               ? (v.features as string[])
               : [];
             return (
               <div
                 key={v.id}
-                className="card-premium rounded-2xl border border-primary/10 overflow-hidden group flex flex-col"
+                className="relative card-premium rounded-2xl border border-primary/10 overflow-hidden group flex flex-col"
               >
                 {/* Photo — studio frame composites any upload onto premium backdrop */}
                 <VehicleShowroomFrame
-                  src={photo}
+                  src={photosArray}
                   alt={v.title}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none opacity-70 group-hover:opacity-90 transition-opacity duration-500 z-[3]" />
-                  <div className="absolute top-3 left-3 flex gap-2 z-[4]">
-                    <Badge
-                      className={`text-[10px] uppercase tracking-wider ${statusClass(v.status)}`}
-                    >
-                      {v.status}
+                  className="rounded-t-2xl"
+                />
+                <div className="absolute top-3 left-3 flex gap-2 z-[4] pointer-events-none">
+                  <Badge
+                    className={`text-[10px] uppercase tracking-wider ${statusClass(v.status)}`}
+                  >
+                    {v.status}
+                  </Badge>
+                  {v.condition && (
+                    <Badge className="text-[10px] uppercase tracking-wider bg-black/60 text-white border-white/20">
+                      {v.condition}
                     </Badge>
-                    {v.condition && (
-                      <Badge className="text-[10px] uppercase tracking-wider bg-black/60 text-white border-white/20">
-                        {v.condition}
-                      </Badge>
-                    )}
-                  </div>
-                  {(v.views ?? 0) > 0 && (
-                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] px-2 py-1 rounded-full flex items-center gap-1 z-[4]">
-                      <Eye className="h-3 w-3" />
-                      {v.views}
-                    </div>
                   )}
-                </VehicleShowroomFrame>
+                </div>
+                {(v.views ?? 0) > 0 && (
+                  <div className="absolute top-44 right-3 bg-black/60 text-white text-[11px] px-2 py-1 rounded-full flex items-center gap-1 z-[4] pointer-events-none">
+                    <Eye className="h-3 w-3" />
+                    {v.views}
+                  </div>
+                )}
 
                 {/* Body */}
                 <div className="p-5 flex-1 flex flex-col">

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Car } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -5,7 +6,7 @@ import OptimizedImage from "@/components/OptimizedImage";
 import { PLACEHOLDER_SVG } from "@shared/imagePipeline";
 
 export interface VehicleShowroomFrameProps {
-  src?: string | null;
+  src?: string | string[] | null;
   alt: string;
   /** Tailwind aspect ratio class, e.g. aspect-[16/10] */
   aspectClass?: string;
@@ -37,7 +38,18 @@ export default function VehicleShowroomFrame({
   children,
   hoverZoom = true,
 }: VehicleShowroomFrameProps) {
-  const hasPhoto = Boolean(src?.trim());
+  const images = Array.isArray(src) ? src.filter(Boolean) : (src?.trim() ? [src] : []);
+  const hasPhoto = images.length > 0;
+  
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [images.length]);
 
   return (
     <div
@@ -65,22 +77,32 @@ export default function VehicleShowroomFrame({
           <span className="text-xs">{emptyLabel}</span>
         </div>
       ) : (
-        <div className="absolute inset-0 flex items-end justify-center px-[5%] pt-[4%] pb-[9%] z-[1]">
-          <OptimizedImage
-            src={src!}
-            alt={alt}
-            sizes={sizes ?? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
-            staticAsset={staticAsset}
-            priority={priority}
-            fit="contain"
-            objectPosition="center bottom"
-            className={cn(
-              "h-full w-full max-h-full drop-shadow-[0_18px_36px_rgba(0,0,0,0.55)] img-premium",
-              hoverZoom &&
-                "transition-transform duration-700 ease-out group-hover:scale-[1.04]",
-            )}
-            fallbackSrc={PLACEHOLDER_SVG}
-          />
+        <div className="absolute inset-0 z-[1]">
+          {images.map((img, idx) => (
+            <div
+              key={`${img}-${idx}`}
+              className={cn(
+                "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+                idx === currentIndex ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <OptimizedImage
+                src={img}
+                alt={alt}
+                sizes={sizes ?? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
+                staticAsset={staticAsset}
+                priority={priority && idx === 0}
+                fit="cover"
+                objectPosition="center"
+                className={cn(
+                  "h-full w-full max-h-full img-premium",
+                  hoverZoom &&
+                    "transition-transform duration-700 ease-out group-hover:scale-[1.04]",
+                )}
+                fallbackSrc={PLACEHOLDER_SVG}
+              />
+            </div>
+          ))}
         </div>
       )}
 

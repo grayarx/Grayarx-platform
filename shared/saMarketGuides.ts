@@ -212,6 +212,17 @@ export function getTradeInGuideValue(
   }
 
   const age = Math.max(0, nowYear - year);
+  
+  const isExoticMake = ["koenigsegg", "ferrari", "mclaren", "lamborghini", "aston martin", "rolls-royce", "bentley", "bugatti", "pagani", "maserati", "porsche"].includes(make.toLowerCase());
+  
+  if (isExoticMake) {
+    return {
+      value: Math.round(3_500_000 * Math.pow(0.95, age)),
+      source: `Estimated Exotic baseline — ${year} ${make} ${model}`,
+      confidence: "low",
+    };
+  }
+
   return {
     value: Math.round(165_000 * Math.pow(0.95, age)),
     source: `Estimated SA baseline — ${year} ${make} ${model}`,
@@ -259,11 +270,11 @@ export function estimateRetailMarketMid(input: RetailGuideInput, nowYear = new D
   return {
     mid: Math.max(50_000, mid),
     source: key ? "model_guide" : "title_parse",
-    confidence: guide.confidence === "high" ? "high" : "medium",
+    confidence: guide.confidence,
   };
 }
 
-export type DealRating = "great" | "fair" | "above" | "premium" | "unknown";
+export type DealRating = "great" | "fair" | "above" | "premium" | "unknown" | "speciality";
 
 export type DealScore = {
   rating: DealRating;
@@ -287,6 +298,22 @@ export function scoreListingDeal(
   const ratio = listingPrice / mid;
   const deltaZar = mid - listingPrice;
   const deltaPct = Math.round((deltaZar / mid) * 100);
+
+  // Detect extreme outliers or known exotic makes when we only have a generic baseline
+  const make = (input.make || "").toLowerCase();
+  const isExoticMake = ["koenigsegg", "ferrari", "mclaren", "lamborghini", "aston martin", "rolls-royce", "bentley", "bugatti", "pagani", "maserati", "porsche"].includes(make);
+  
+  if (confidence === "low" && (isExoticMake || ratio > 2.5 || listingPrice > 1_500_000)) {
+    return {
+      rating: "speciality",
+      label: "Speciality / Exotic",
+      listingPrice,
+      marketMid: listingPrice, // Avoid showing a misleading baseline
+      deltaZar: 0,
+      deltaPct: 0,
+      confidence: "low",
+    };
+  }
 
   let rating: DealRating;
   let label: string;

@@ -27,4 +27,8 @@ export const DEAL_RATING_STYLES: Record<
     className: "bg-muted text-muted-foreground border-border",
     description: "Insufficient data for a guide price",
   },
+  speciality: {
+    className: "bg-purple-500/15 text-purple-300 border-purple-500/35",
+    description: "Speciality or exotic vehicle — standard market guides do not apply",
+  },
 };

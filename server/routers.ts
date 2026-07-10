@@ -1322,10 +1322,24 @@ export const appRouter = router({
         if (buffer.length > 12 * 1024 * 1024) {
           throw new Error("Image too large (max 12 MB)");
         }
-        const ext = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
+        
+        const { removeBackground } = await import("./_core/imageEnhancement");
         const safeName = (input.filename || `vehicle-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+        let ext = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
+        
+        let finalBuffer = buffer;
+        let finalMimeType = input.mimeType;
+        
+        // Try to remove background
+        const enhanced = await removeBackground(buffer, input.mimeType, `${safeName}.${ext}`);
+        if (enhanced) {
+          finalBuffer = enhanced.buffer;
+          finalMimeType = enhanced.mimeType;
+          ext = "png"; // remove.bg always returns PNG
+        }
+
         const key = `vehicles/${ctx.user.id}/${safeName}.${ext}`;
-        const { url } = await storagePut(key, buffer, input.mimeType);
+        const { url } = await storagePut(key, finalBuffer, finalMimeType);
         return { url, key } as const;
       }),
 
@@ -1357,7 +1371,8 @@ export const appRouter = router({
         if (buffer.length === 0) throw new Error("Empty image data");
         if (buffer.length > 12 * 1024 * 1024)
           throw new Error("Image too large (max 12 MB)");
-        const ext =
+        
+        let ext =
           input.mimeType === "image/png"
             ? "png"
             : input.mimeType === "image/webp"
@@ -1366,8 +1381,21 @@ export const appRouter = router({
         const safeName = (
           input.filename || `vehicle-${input.vehicleId}-${Date.now()}`
         ).replace(/[^a-zA-Z0-9._-]/g, "_");
+
+        let finalBuffer = buffer;
+        let finalMimeType = input.mimeType;
+
+        // Try to remove background to composite seamlessly into the showroom frame
+        const { removeBackground } = await import("./_core/imageEnhancement");
+        const enhanced = await removeBackground(buffer, input.mimeType, `${safeName}.${ext}`);
+        if (enhanced) {
+          finalBuffer = enhanced.buffer;
+          finalMimeType = enhanced.mimeType;
+          ext = "png"; // remove.bg always returns PNG
+        }
+
         const key = `vehicles/${ctx.user.id}/${input.vehicleId}/${safeName}.${ext}`;
-        const { url } = await storagePut(key, buffer, input.mimeType);
+        const { url } = await storagePut(key, finalBuffer, finalMimeType);
 
         const existing = await listVehiclePhotos(input.vehicleId);
         const nextPosition = existing.length

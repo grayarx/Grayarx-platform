@@ -302,7 +302,11 @@ export default function VehicleDetail() {
                       </div>
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Market guide</p>
-                        <p className="font-semibold">{formatVehiclePrice(dealScore.marketMid)}</p>
+                        <p className="font-semibold">
+                          {dealScore.rating === "speciality" || dealScore.rating === "unknown"
+                            ? "Data unavailable"
+                            : formatVehiclePrice(dealScore.marketMid)}
+                        </p>
                       </div>
                     </div>
                     {dealScore.deltaZar > 0 ? (

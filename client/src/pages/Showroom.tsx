@@ -39,7 +39,7 @@ import { ShowroomChatAgent } from "@/components/ShowroomChatAgent";
 import { SkeletonLoader } from "@/components/LoadingAnimations";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 import DealScoreBadge from "@/components/DealScoreBadge";
-import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
+import VehicleGallery from "@/components/VehicleGallery";
 import { scoreListingDeal } from "@shared/priceIntelligence";
 import { PLACEHOLDER_SVG } from "@shared/imagePipeline";
 
@@ -158,6 +158,7 @@ type ShowroomVehicle = {
   fuel: string;
   transmission: string;
   image: string;
+  images?: string[];
   leads: number;
   views: number;
   location: string;
@@ -180,6 +181,7 @@ function dbToShowroom(v: {
   transmission: string | null;
   primaryPhotoUrl: string | null;
   imageUrl: string | null;
+  images?: string[];
   location: string | null;
   make: string | null;
   model: string | null;
@@ -198,6 +200,7 @@ function dbToShowroom(v: {
     fuel: v.fuel ?? "—",
     transmission: v.transmission ?? "—",
     image: v.primaryPhotoUrl || v.imageUrl || "",
+    images: v.images,
     leads: v.leadCount ?? 0,
     views: v.views ?? 0,
     location: v.location ?? "",
@@ -644,14 +647,14 @@ export default function Showroom() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4), ease: [0.16, 1, 0.3, 1] }}
-                className="card-premium vehicle-card glass rounded-2xl overflow-hidden group"
+                className="card-premium vehicle-card glass rounded-2xl overflow-hidden group flex flex-col"
               >
-                <VehicleShowroomFrame
-                  src={v.image && v.image !== PLACEHOLDER_IMAGE ? v.image : null}
-                  alt={v.title}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  staticAsset={!v.image}
-                >
+                <div className="relative">
+                  <VehicleShowroomFrame
+                    src={v.images && v.images.length > 0 ? v.images : [v.image && v.image !== PLACEHOLDER_IMAGE ? v.image : null].filter(Boolean) as string[]}
+                    alt={v.title}
+                    className="rounded-t-2xl"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500 pointer-events-none z-[3]" />
                   {v.badge && (
                     <Badge className="absolute top-3 left-3 btn-gold text-xs font-bold border-0 z-[4]">
@@ -696,7 +699,7 @@ export default function Showroom() {
                   <button className="absolute top-3 right-3 w-9 h-9 rounded-full glass flex items-center justify-center hover:bg-primary/20 transition-colors z-[4]">
                     <Heart className="h-4 w-4 text-primary" />
                   </button>
-                </VehicleShowroomFrame>
+                </div>
 
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-2 mb-3">

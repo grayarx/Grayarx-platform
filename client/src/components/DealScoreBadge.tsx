@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { TrendingDown, Scale, TrendingUp, AlertTriangle } from "lucide-react";
+import { TrendingDown, Scale, TrendingUp, AlertTriangle, Sparkles } from "lucide-react";
 import { DEAL_RATING_STYLES, type DealScore } from "@shared/priceIntelligence";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const ICONS = {
   above: TrendingUp,
   premium: AlertTriangle,
   unknown: Scale,
+  speciality: Sparkles,
 };
 
 export default function DealScoreBadge({

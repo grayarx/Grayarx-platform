@@ -234,7 +234,22 @@ export async function createVehicle(data: InsertVehicle) {
 export async function listVehicles(limit = 2000) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(vehicles).orderBy(desc(vehicles.createdAt)).limit(limit);
+  const rows = await db.select().from(vehicles).orderBy(desc(vehicles.createdAt)).limit(limit);
+  if (rows.length === 0) return [];
+  
+  const vehicleIds = rows.map(r => r.id);
+  const photos = await db.select().from(vehiclePhotos).where(inArray(vehiclePhotos.vehicleId, vehicleIds)).orderBy(vehiclePhotos.position);
+  
+  const photosByVehicle = photos.reduce((acc, p) => {
+    if (!acc[p.vehicleId]) acc[p.vehicleId] = [];
+    acc[p.vehicleId].push(p.url);
+    return acc;
+  }, {} as Record<number, string[]>);
+  
+  return rows.map(r => ({
+    ...r,
+    images: photosByVehicle[r.id] || [],
+  }));
 }
 
 export async function getVehicle(id: number) {
