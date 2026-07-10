@@ -386,10 +386,21 @@ export async function handleIncomingWhatsAppMessage(
     // ── Determine & LOCK language for this phone (must happen before any path diverges) ──
     const convState = getConvState(formattedPhone);
     const { updateConvState } = await import("./nalaReplyOrchestrator");
-    const earlyLang = convState?.lang ?? detectLanguage(message);
-    // Lock language on first message — all subsequent messages for this phone use this language
-    if (!convState?.lang) {
-      updateConvState(formattedPhone, { stage: "greeting", lang: earlyLang });
+    const detectedLang = detectLanguage(message);
+    // Language upgrade logic:
+    //   • No existing state → use detected language
+    //   • Existing state is "en" (ambiguous first greeting like "Hi") and we now detect
+    //     a specific language → upgrade to that language (user switched to their home language)
+    //   • Existing state is a specific language → keep it (don't let one ambiguous message reset)
+    const earlyLang: typeof detectedLang =
+      convState?.lang && convState.lang !== "en"
+        ? convState.lang        // already locked to specific language — keep it
+        : detectedLang !== "en"
+          ? detectedLang        // detected a specific language — use it (upgrades "en" lock)
+          : (convState?.lang ?? "en"); // ambiguous — use existing lock or default en
+    // Persist language (always write if not set, or if upgrading from "en")
+    if (!convState?.lang || (convState.lang === "en" && earlyLang !== "en")) {
+      updateConvState(formattedPhone, { stage: convState?.stage ?? "greeting", lang: earlyLang });
     }
 
     const topDealHints = allVehicles
@@ -592,6 +603,11 @@ export async function handleIncomingWhatsAppMessage(
         const matched = findVehicleFromMessage(message, allVehicles);
         if (matched?.id) vehicleId = Number(matched.id);
       }
+      // No vehicle found in this message → use last vehicle from conversation context
+      // so follow-up messages like "tell me more" / "already told ya" stay in context
+      if (!vehicleId && convState?.lastVehicleId) {
+        vehicleId = convState.lastVehicleId;
+      }
     }
 
     const conversation = await getOrCreateWhatsappConversation(
@@ -622,6 +638,12 @@ export async function handleIncomingWhatsAppMessage(
       const row = await getVehicle(vehicleId);
       if (row) {
         vehicleCtx = vehicleRowToContext(row);
+        // Persist vehicle context so follow-up messages keep the conversation in scope
+        updateConvState(formattedPhone, {
+          stage: "vehicle_shown",
+          lastVehicleId: vehicleId,
+          lastVehicleTitle: row.title ?? undefined,
+        });
 
         // Send gallery photos before the text reply (non-fatal if it fails)
         try {

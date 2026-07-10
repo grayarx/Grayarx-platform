@@ -155,7 +155,8 @@ export function buildSearchTerm(
 }
 
 /**
- * Find ALL available vehicles matching a make and/or body type mentioned in the message.
+ * Find ALL available vehicles matching a make, model, year and/or body type mentioned in the message.
+ * Tries to narrow by specific model/year first; falls back to broader make/bodytype search.
  * Returns them sorted by price ascending. Returns [] when no make/bodytype is detected.
  */
 export function findVehiclesFromMessage(
@@ -165,45 +166,83 @@ export function findVehiclesFromMessage(
   const available = vehicles.filter((v) => v.status === "available" || v.status == null);
   if (available.length === 0) return [];
 
+  const lower = message.toLowerCase();
   const detectedMake = detectMakeFromMessage(message);
   const detectedBodyTypes = detectBodyTypesFromMessage(message);
 
   if (!detectedMake && !detectedBodyTypes) return [];
 
-  const results = available.filter((v) => {
-    const vMake = (v.make ?? "").toLowerCase();
-    const vModel = (v.model ?? "").toLowerCase();
-    const vTitle = (v.title ?? "").toLowerCase();
-    const vBodyType = (v.bodyType ?? "").toLowerCase();
+  // ── Year detection ────────────────────────────────────────────────────────
+  const yearM = lower.match(/\b(19[6-9]\d|20[0-2]\d)\b/);
+  const detectedYear = yearM ? parseInt(yearM[0], 10) : null;
 
-    // Make filter
-    let makeMatch = !detectedMake;
-    if (detectedMake) {
-      if (detectedMake === "volkswagen") {
-        makeMatch = vMake.includes("volkswagen") || vMake.includes("vw") || vTitle.includes("vw ") || vTitle.includes("volkswagen");
-      } else if (detectedMake === "mercedes") {
-        makeMatch = vMake.includes("mercedes") || vMake.includes("merc") || vTitle.includes("mercedes") || vTitle.includes("merc");
-      } else {
-        makeMatch = vMake.includes(detectedMake) || vTitle.includes(detectedMake);
-      }
+  // ── Model detection — scan models in our actual inventory against the message ──
+  let detectedModel: string | null = null;
+  if (detectedMake) {
+    // Only look at vehicles of this make
+    const makeVehicles = available.filter((v) => {
+      const vm = (v.make ?? "").toLowerCase();
+      if (detectedMake === "volkswagen") return vm.includes("volkswagen") || vm.includes("vw");
+      if (detectedMake === "mercedes") return vm.includes("mercedes") || vm.includes("merc");
+      return vm.includes(detectedMake);
+    });
+    // Longest-first so "ranger raptor" beats "ranger"
+    const uniqueModels = [...new Set(
+      makeVehicles.map((v) => (v.model ?? "").toLowerCase().trim()).filter((m) => m.length >= 3),
+    )].sort((a, b) => b.length - a.length);
+    for (const m of uniqueModels) {
+      if (lower.includes(m)) { detectedModel = m; break; }
     }
+  }
 
-    // Body type filter
-    let bodyTypeMatch = !detectedBodyTypes;
-    if (detectedBodyTypes) {
-      if (detectedBodyTypes.some((bt) => vBodyType.includes(bt))) {
-        bodyTypeMatch = true;
-      }
-      if (!bodyTypeMatch && detectedBodyTypes.includes("bakkie")) {
-        bodyTypeMatch = BAKKIE_MODELS.some((m) => vModel.includes(m) || vTitle.includes(m));
-      }
-      if (!bodyTypeMatch && detectedBodyTypes.includes("suv")) {
-        bodyTypeMatch = SUV_MODELS.some((m) => vModel.includes(m) || vTitle.includes(m));
-      }
-    }
+  // ── Core vehicle match ────────────────────────────────────────────────────
+  function vehicleMakeMatch(v: VehicleRow): boolean {
+    if (!detectedMake) return true;
+    const vm = (v.make ?? "").toLowerCase();
+    const vt = (v.title ?? "").toLowerCase();
+    if (detectedMake === "volkswagen") return vm.includes("volkswagen") || vm.includes("vw") || vt.includes("vw ") || vt.includes("volkswagen");
+    if (detectedMake === "mercedes") return vm.includes("mercedes") || vm.includes("merc") || vt.includes("mercedes") || vt.includes("merc");
+    return vm.includes(detectedMake) || vt.includes(detectedMake);
+  }
 
-    return makeMatch && bodyTypeMatch;
-  });
+  function vehicleBodyTypeMatch(v: VehicleRow): boolean {
+    if (!detectedBodyTypes) return true;
+    const vbt = (v.bodyType ?? "").toLowerCase();
+    const vm  = (v.model ?? "").toLowerCase();
+    const vt  = (v.title ?? "").toLowerCase();
+    if (detectedBodyTypes.some((bt) => vbt.includes(bt))) return true;
+    if (detectedBodyTypes.includes("bakkie")) return BAKKIE_MODELS.some((m) => vm.includes(m) || vt.includes(m));
+    if (detectedBodyTypes.includes("suv"))    return SUV_MODELS.some((m) => vm.includes(m) || vt.includes(m));
+    return false;
+  }
+
+  // Step 1: try make + specific model + year (most precise)
+  if (detectedModel && detectedYear) {
+    const precise = available.filter((v) =>
+      vehicleMakeMatch(v) &&
+      ((v.model ?? "").toLowerCase().includes(detectedModel!) || (v.title ?? "").toLowerCase().includes(detectedModel!)) &&
+      v.year === detectedYear,
+    );
+    if (precise.length > 0) return precise.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
+  }
+
+  // Step 2: make + specific model (ignore year)
+  if (detectedModel) {
+    const modelResults = available.filter((v) =>
+      vehicleMakeMatch(v) &&
+      ((v.model ?? "").toLowerCase().includes(detectedModel!) || (v.title ?? "").toLowerCase().includes(detectedModel!)),
+    );
+    if (modelResults.length > 0) return modelResults.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
+  }
+
+  // Step 3: make + body type (original broad search)
+  const results = available.filter((v) => vehicleMakeMatch(v) && vehicleBodyTypeMatch(v));
+
+  // Step 4: if year only (no model), filter those results by year
+  if (detectedYear && results.length > 0) {
+    const yearFiltered = results.filter((v) => v.year === detectedYear);
+    if (yearFiltered.length > 0) return yearFiltered.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
+  }
 
   return results.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
 }
