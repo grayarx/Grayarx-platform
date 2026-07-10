@@ -39,39 +39,50 @@ export async function recordComplianceInquiry(
     return null;
   }
 
-  const result = await db.insert(complianceInquiries).values({
-    mailbox: input.mailbox ?? "other",
-    source: input.source ?? "web_form",
-    senderName: input.senderName ?? null,
-    senderEmail: input.senderEmail,
-    subject: input.subject,
-    message: input.message,
-    status: input.status ?? "new",
-    externalId: input.externalId ?? null,
-    metadata: input.metadata ?? null,
-  });
+  try {
+    const result = await db.insert(complianceInquiries).values({
+      mailbox: input.mailbox ?? "other",
+      source: input.source ?? "web_form",
+      senderName: input.senderName ?? null,
+      senderEmail: input.senderEmail,
+      subject: input.subject,
+      message: input.message,
+      status: input.status ?? "new",
+      externalId: input.externalId ?? null,
+      metadata: input.metadata ?? null,
+    });
 
-  // @ts-expect-error Drizzle MySQL returns insertId on result[0]
-  const id = Number(result?.[0]?.insertId ?? result?.insertId ?? 0) || null;
+    // @ts-expect-error Drizzle MySQL returns insertId on result[0]
+    const id = Number(result?.[0]?.insertId ?? result?.insertId ?? 0) || null;
 
-  const mailboxLabel = MAILBOX_LABELS[(input.mailbox as ComplianceMailbox) ?? "other"];
-  await alertFounder({
-    title: `${mailboxLabel} — ${input.subject}`,
-    content: [
-      `Mailbox: ${input.mailbox ?? "other"}`,
-      `From: ${input.senderName ?? "—"} <${input.senderEmail}>`,
-      `Source: ${input.source ?? "web_form"}`,
-      id ? `Inquiry #${id}` : "",
-      "",
-      input.message.slice(0, 4000),
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    category: "compliance",
-    actionUrl: "https://www.grayarx.com/admin/compliance",
-  });
+    const mailboxLabel = MAILBOX_LABELS[(input.mailbox as ComplianceMailbox) ?? "other"];
+    await alertFounder({
+      title: `${mailboxLabel} — ${input.subject}`,
+      content: [
+        `Mailbox: ${input.mailbox ?? "other"}`,
+        `From: ${input.senderName ?? "—"} <${input.senderEmail}>`,
+        `Source: ${input.source ?? "web_form"}`,
+        id ? `Inquiry #${id}` : "",
+        "",
+        input.message.slice(0, 4000),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      category: "compliance",
+      actionUrl: "https://www.grayarx.com/admin/compliance",
+    });
 
-  return id;
+    return id;
+  } catch (dbErr) {
+    console.error("[complianceMailbox] DB insert failed, falling back to alertFounder:", dbErr);
+    await alertFounder({
+      title: `[DB-FALLBACK] Compliance (${input.mailbox ?? "other"}) — ${input.subject}`,
+      content: `From: ${input.senderName ?? input.senderEmail}\n${input.senderEmail}\n\n${input.message}`,
+      category: "compliance",
+      actionUrl: "https://www.grayarx.com/admin/compliance",
+    });
+    return null;
+  }
 }
 
 export async function listComplianceInquiries(limit = 50) {

@@ -145,6 +145,9 @@ export default function ComplianceContactForm({ compact }: { compact?: boolean }
           className="mt-1 min-h-[120px]"
           rows={5}
         />
+        {form.message.length > 0 && form.message.length < 10 && (
+          <p className="text-xs text-muted-foreground mt-1">{10 - form.message.length} more characters needed</p>
+        )}
       </div>
 
       <input
@@ -161,10 +164,10 @@ export default function ComplianceContactForm({ compact }: { compact?: boolean }
         className="btn-gold w-full sm:w-auto"
         disabled={
           submit.isPending ||
-          !form.name ||
-          !form.email ||
-          !form.subject ||
-          form.message.length < 10
+          !form.name.trim() ||
+          !form.email.trim() ||
+          form.subject.trim().length < 3 ||
+          form.message.trim().length < 10
         }
         onClick={() =>
           submit.mutate({
