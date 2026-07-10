@@ -115,6 +115,29 @@ async function startServer() {
     console.log(`WebSocket server available at ws://localhost:${port}/api/ws`);
   });
 
+  // ── Self-healing: sync whatsappPhoneNumberId from env to DB on startup ──
+  // Ensures the DB lookup works without manual SQL — safe to run every boot.
+  (async () => {
+    try {
+      const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+      const dealershipId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
+      if (phoneId && dealershipId) {
+        const { getDb } = await import("../db");
+        const { dealerships } = await import("../../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (db) {
+          await db.update(dealerships)
+            .set({ whatsappPhoneNumberId: phoneId })
+            .where(eq(dealerships.id, dealershipId));
+          console.log(`[Startup] Set dealership ${dealershipId} whatsappPhoneNumberId=${phoneId}`);
+        }
+      }
+    } catch (e) {
+      console.warn("[Startup] whatsappPhoneNumberId sync skipped:", (e as Error).message);
+    }
+  })();
+
   // Graceful shutdown
   process.on("SIGTERM", () => {
     console.log("SIGTERM received, shutting down gracefully...");
