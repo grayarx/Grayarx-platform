@@ -4512,19 +4512,44 @@ export const appRouter = router({
           });
           reply = memResult.reply;
           memoryUsed = memResult.memoryUsed;
-        } catch {
-          // Template fallback if LLM is unavailable
+        } catch (llmErr) {
+          // Data-driven fallback when LLM is unavailable
           if (actionResult) {
             reply = `Done. ${actionResult.details} Let me know if you need anything else.`;
           } else {
-            reply = `Hi! I'm ${persona.displayName}, your ${persona.role}. I received your message but my language model is currently offline. ${persona.description}`;
+            // Build a useful response from the DB data we already fetched
+            const q = input.message.toLowerCase();
+            const lines: string[] = [];
+
+            if (contextParts.length) {
+              // Detect what the founder is asking about and surface relevant data
+              if (/audit|finding|error|fail|problem|issue/i.test(q)) {
+                const activityCtx = contextParts.find((p) => p.startsWith("Your recent actions"));
+                lines.push(activityCtx ? `Here's what I have from recent activity:\n\n${activityCtx}` : "No recent activity recorded for this agent.");
+              } else if (/lead|customer|prospect/i.test(q)) {
+                const leadsCtx = contextParts.find((p) => p.startsWith("Recent leads"));
+                lines.push(leadsCtx ? leadsCtx : "No recent leads data available right now.");
+              } else if (/booking|test.?drive|appointment|slot/i.test(q)) {
+                const bookCtx = contextParts.find((p) => p.startsWith("Recent test-drive"));
+                lines.push(bookCtx ? bookCtx : "No recent bookings found.");
+              } else if (/status|health|how.+doing|summary|report/i.test(q)) {
+                lines.push(`Status summary for ${persona.displayName}:\n\n${contextParts.join("\n\n")}`);
+              } else {
+                // Default: surface everything available
+                lines.push(`Here's what I can see right now:\n\n${contextParts.join("\n\n")}`);
+              }
+              lines.push("\n_(AI reasoning temporarily unavailable — showing live DB data directly.)_");
+            } else {
+              lines.push(`I'm ${persona.displayName}. No live data available right now, and the AI reasoning layer is temporarily offline. Try asking about bookings, leads, or agent activity once the system reconnects.`);
+            }
+            reply = lines.join("\n");
           }
           // Record the failure so agents learn from it
           void recordOutcome({
             agentId: internalAgentId,
             relatedAction: "founder_chat",
             outcome: "failure",
-            detail: "LLM unavailable — served template fallback",
+            detail: `LLM unavailable — served data-driven fallback. Error: ${llmErr instanceof Error ? llmErr.message.slice(0, 120) : String(llmErr).slice(0, 120)}`,
           });
         }
 

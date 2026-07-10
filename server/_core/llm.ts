@@ -1,5 +1,5 @@
 import { ENV } from "./env";
-import { withCircuitBreaker, CircuitOpenError } from "./agentResilience";
+import { withCircuitBreaker, CircuitOpenError, isQuotaError } from "./agentResilience";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -276,6 +276,33 @@ const normalizeResponseFormat = ({
   };
 };
 
+async function callLLMEndpoint(
+  apiUrl: string,
+  apiKey: string,
+  payload: Record<string, unknown>,
+  breakerName: "openai" | "forge",
+): Promise<InvokeResult> {
+  return withCircuitBreaker(breakerName, async () => {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`,
+      );
+    }
+
+    return (await response.json()) as InvokeResult;
+  });
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
@@ -290,30 +317,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  const payload: Record<string, unknown> = {
-    model: resolveModel(),
-    messages: messages.map(normalizeMessage),
-  };
-
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
-  }
-
   const normalizedToolChoice = normalizeToolChoice(
     toolChoice || tool_choice,
     tools
   );
-  if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
-  }
-
-  // OpenAI: keep replies snappy for WhatsApp. Manus Forge: keep prior high limits + thinking.
-  if (ENV.usesOpenAI) {
-    payload.max_tokens = 1024;
-  } else {
-    payload.max_tokens = 32768;
-    payload.thinking = { budget_tokens: 128 };
-  }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
@@ -322,35 +329,61 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
   });
 
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
-  }
-
-  const breakerName = ENV.usesOpenAI ? "openai" : "forge";
-  try {
-    return await withCircuitBreaker(breakerName, async () => {
-      const response = await fetch(resolveApiUrl(), {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${ENV.llmApiKey}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`,
-        );
-      }
-
-      return (await response.json()) as InvokeResult;
-    });
-  } catch (err) {
-    if (err instanceof CircuitOpenError) {
-      console.error(`[LLM] Circuit breaker open for "${breakerName}" — skipping LLM call:`, err.message);
+  const buildPayload = (model: string, useOpenAILimits: boolean): Record<string, unknown> => {
+    const p: Record<string, unknown> = {
+      model,
+      messages: messages.map(normalizeMessage),
+    };
+    if (tools && tools.length > 0) p.tools = tools;
+    if (normalizedToolChoice) p.tool_choice = normalizedToolChoice;
+    if (normalizedResponseFormat) p.response_format = normalizedResponseFormat;
+    if (useOpenAILimits) {
+      p.max_tokens = 1024;
+    } else {
+      p.max_tokens = 32768;
+      p.thinking = { budget_tokens: 128 };
     }
-    throw err;
+    return p;
+  };
+
+  // Primary: OpenAI (when key is configured)
+  if (ENV.usesOpenAI) {
+    try {
+      return await callLLMEndpoint(
+        "https://api.openai.com/v1/chat/completions",
+        ENV.openaiApiKey,
+        buildPayload(process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini", true),
+        "openai",
+      );
+    } catch (err) {
+      if (err instanceof CircuitOpenError || isQuotaError(err)) {
+        // OpenAI quota exhausted or circuit open — fall through to Forge
+        console.warn("[LLM] OpenAI unavailable, falling back to Manus Forge:", err instanceof Error ? err.message : String(err));
+      } else {
+        throw err;
+      }
+    }
   }
+
+  // Fallback: Manus Forge (always attempted when OpenAI fails or key not set)
+  if (ENV.forgeApiKey) {
+    const forgeUrl = ENV.forgeApiUrl
+      ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+      : "https://forge.manus.im/v1/chat/completions";
+    try {
+      return await callLLMEndpoint(
+        forgeUrl,
+        ENV.forgeApiKey,
+        buildPayload(process.env.LLM_MODEL?.trim() || "gemini-2.5-flash", false),
+        "forge",
+      );
+    } catch (err) {
+      if (err instanceof CircuitOpenError) {
+        console.error("[LLM] Circuit breaker open for forge — both LLMs unavailable.");
+      }
+      throw err;
+    }
+  }
+
+  throw new Error("No LLM available: OpenAI quota exhausted and no Forge API key configured.");
 }
