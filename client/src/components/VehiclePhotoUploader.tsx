@@ -75,6 +75,15 @@ export default function VehiclePhotoUploader({
     { enabled: !!vehicleId },
   );
 
+  const onPrimaryUrlChangeRef = useRef(onPrimaryUrlChange);
+  onPrimaryUrlChangeRef.current = onPrimaryUrlChange;
+  const lastPrimaryRef = useRef<string>("");
+
+  useEffect(() => {
+    lastPrimaryRef.current = "";
+    setSlots({});
+  }, [vehicleId]);
+
   useEffect(() => {
     if (!existing?.length) return;
     const next: Partial<Record<PhotoAngleId, SlotState>> = {};
@@ -88,8 +97,11 @@ export default function VehiclePhotoUploader({
     });
     setSlots(next);
     const primary = existing.find((p) => p.caption === "front_3_4")?.url ?? existing[0]?.url;
-    if (primary) onPrimaryUrlChange(primary);
-  }, [existing, onPrimaryUrlChange]);
+    if (primary && primary !== lastPrimaryRef.current) {
+      lastPrimaryRef.current = primary;
+      onPrimaryUrlChangeRef.current(primary);
+    }
+  }, [existing]);
 
   const filledCount = useMemo(
     () => PHOTO_ANGLES.filter((a) => slots[a.id]?.url).length,
@@ -114,9 +126,12 @@ export default function VehiclePhotoUploader({
         next.front_3_4?.url ??
         PHOTO_ANGLES.map((a) => next[a.id]?.url).find(Boolean) ??
         "";
-      if (primary) onPrimaryUrlChange(primary);
+      if (primary && primary !== lastPrimaryRef.current) {
+        lastPrimaryRef.current = primary;
+        onPrimaryUrlChangeRef.current(primary);
+      }
     },
-    [vehicleId, onPendingPhotosChange, onPrimaryUrlChange],
+    [vehicleId, onPendingPhotosChange],
   );
 
   const persistUpload = useCallback(
@@ -159,7 +174,10 @@ export default function VehiclePhotoUploader({
           return next;
         });
         if (angleId === "front_3_4" || filledCount === 0) {
-          onPrimaryUrlChange(url);
+          if (url !== lastPrimaryRef.current) {
+            lastPrimaryRef.current = url;
+            onPrimaryUrlChangeRef.current(url);
+          }
         }
         toast.success(`${PHOTO_ANGLES.find((a) => a.id === angleId)?.label} added`);
       } catch {
@@ -171,7 +189,7 @@ export default function VehiclePhotoUploader({
         toast.error("Could not upload photo — try again");
       }
     },
-    [persistUpload, syncPending, onPrimaryUrlChange, filledCount],
+    [persistUpload, syncPending, filledCount],
   );
 
   const assignBulk = useCallback(
@@ -217,7 +235,7 @@ export default function VehiclePhotoUploader({
     if (vehicleId) {
       await setPrimary.mutateAsync({ vehicleId, photoUrl: url });
     }
-    onPrimaryUrlChange(url);
+    onPrimaryUrlChangeRef.current(url);
     toast.success("Set as main showroom photo");
   };
 

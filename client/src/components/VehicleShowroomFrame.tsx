@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { Car } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,10 +38,20 @@ export default function VehicleShowroomFrame({
   children,
   hoverZoom = true,
 }: VehicleShowroomFrameProps) {
-  const images = Array.isArray(src) ? src.filter(Boolean) : (src?.trim() ? [src] : []);
+  const images = useMemo(() => {
+    if (Array.isArray(src)) {
+      return src.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    }
+    if (typeof src === "string" && src.trim()) return [src];
+    return [];
+  }, [src]);
   const hasPhoto = images.length > 0;
   
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [images.length, images[0]]);
 
   useEffect(() => {
     if (images.length <= 1) return;

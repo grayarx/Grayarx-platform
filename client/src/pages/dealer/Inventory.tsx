@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "wouter";
 import {
   Loader2,
@@ -171,19 +171,19 @@ function vehicleToForm(v: {
     model: v.model ?? "",
     year: v.year != null ? String(v.year) : "",
     price: v.price ? String(Number(v.price)) : "",
-    km: v.km != null ? String(v.km) : "",
+    km: v.km != null && v.km > 0 ? String(v.km) : "",
     fuel: v.fuel ?? "",
     transmission: v.transmission ?? "",
     bodyType: v.bodyType ?? "",
     color: v.color ?? "",
     condition: (v.condition as FormState["condition"]) ?? "used",
     vin: v.vin ?? "",
-    engineCc: v.engineCc != null ? String(v.engineCc) : "",
-    doors: v.doors != null ? String(v.doors) : "",
-    seats: v.seats != null ? String(v.seats) : "",
+    engineCc: v.engineCc != null && v.engineCc > 0 ? String(v.engineCc) : "",
+    doors: v.doors != null && v.doors > 0 ? String(v.doors) : "",
+    seats: v.seats != null && v.seats > 0 ? String(v.seats) : "",
     features,
     serviceHistory: v.serviceHistory ?? "",
-    previousOwners: v.previousOwners != null ? String(v.previousOwners) : "",
+    previousOwners: v.previousOwners != null && v.previousOwners > 0 ? String(v.previousOwners) : "",
     imageUrl: v.primaryPhotoUrl || v.imageUrl || "",
     location: v.location ?? "",
     description: v.description ?? "",
@@ -196,18 +196,9 @@ function blockNegativeKey(e: KeyboardEvent<HTMLInputElement>) {
   }
 }
 
-function sanitizeNumericInput(
-  raw: string,
-  opts: { min?: number; max?: number; allowEmpty?: boolean } = {},
-): string {
-  const { min = 0, max, allowEmpty = true } = opts;
-  if (allowEmpty && raw === "") return "";
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return allowEmpty ? "" : String(min);
-  let v = Math.floor(n);
-  if (v < min) v = min;
-  if (max != null && v > max) v = max;
-  return String(v);
+function digitsOnlyInput(raw: string): string {
+  if (raw === "") return "";
+  return raw.replace(/[^\d]/g, "");
 }
 
 function parseOptionalInt(
@@ -215,8 +206,11 @@ function parseOptionalInt(
   opts: { min?: number; max?: number } = {},
 ): number | undefined {
   if (!raw.trim()) return undefined;
-  const n = Number(sanitizeNumericInput(raw, { ...opts, allowEmpty: false }));
-  return Number.isFinite(n) ? n : undefined;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return undefined;
+  if (opts.min != null && n < opts.min) return undefined;
+  if (opts.max != null && n > opts.max) return undefined;
+  return n;
 }
 
 function buildPayload(form: FormState) {
@@ -272,6 +266,10 @@ export default function Inventory() {
   const [bodyFilter, setBodyFilter] = useState<string>("all");
 
   const [pendingGallery, setPendingGallery] = useState<PendingGalleryPhoto[]>([]);
+
+  const handlePrimaryUrlChange = useCallback((url: string) => {
+    setForm((f) => (f.imageUrl === url ? f : { ...f, imageUrl: url }));
+  }, []);
 
   const attachPhoto = trpc.dealer.attachPhotoFromUrl.useMutation();
 
@@ -429,6 +427,8 @@ export default function Inventory() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            {open ? (
+            <>
             <DialogHeader>
               <DialogTitle>{editingId != null ? "Edit vehicle" : "Add a new vehicle"}</DialogTitle>
             </DialogHeader>
@@ -475,15 +475,11 @@ export default function Inventory() {
               <div>
                 <Label>Year</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={1980}
-                  max={2030}
                   value={form.year}
                   onKeyDown={blockNegativeKey}
-                  onChange={(e) =>
-                    setForm({ ...form, year: sanitizeNumericInput(e.target.value, { min: 1980, max: 2030 }) })
-                  }
+                  onChange={(e) => setForm({ ...form, year: digitsOnlyInput(e.target.value) })}
                   className="mt-1"
                   placeholder="2023"
                 />
@@ -491,14 +487,11 @@ export default function Inventory() {
               <div>
                 <Label>Price (ZAR)</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={1}
                   value={form.price}
                   onKeyDown={blockNegativeKey}
-                  onChange={(e) =>
-                    setForm({ ...form, price: sanitizeNumericInput(e.target.value, { min: 1 }) })
-                  }
+                  onChange={(e) => setForm({ ...form, price: digitsOnlyInput(e.target.value) })}
                   className="mt-1"
                   placeholder="650000"
                 />
@@ -507,14 +500,11 @@ export default function Inventory() {
               <div>
                 <Label>Mileage (km)</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={0}
                   value={form.km}
                   onKeyDown={blockNegativeKey}
-                  onChange={(e) =>
-                    setForm({ ...form, km: sanitizeNumericInput(e.target.value, { min: 0 }) })
-                  }
+                  onChange={(e) => setForm({ ...form, km: digitsOnlyInput(e.target.value) })}
                   className="mt-1"
                   placeholder="42000"
                 />
@@ -590,17 +580,12 @@ export default function Inventory() {
               <div>
                 <Label>Engine (cc)</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={0}
-                  max={20000}
                   value={form.engineCc}
                   onKeyDown={blockNegativeKey}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      engineCc: sanitizeNumericInput(e.target.value, { min: 0, max: 20000 }),
-                    })
+                    setForm({ ...form, engineCc: digitsOnlyInput(e.target.value) })
                   }
                   className="mt-1"
                   placeholder="1998"
@@ -620,15 +605,11 @@ export default function Inventory() {
               <div>
                 <Label>Doors</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={2}
-                  max={6}
                   value={form.doors}
                   onKeyDown={blockNegativeKey}
-                  onChange={(e) =>
-                    setForm({ ...form, doors: sanitizeNumericInput(e.target.value, { min: 2, max: 6 }) })
-                  }
+                  onChange={(e) => setForm({ ...form, doors: digitsOnlyInput(e.target.value) })}
                   className="mt-1"
                   placeholder="4"
                 />
@@ -636,15 +617,11 @@ export default function Inventory() {
               <div>
                 <Label>Seats</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={1}
-                  max={20}
                   value={form.seats}
                   onKeyDown={blockNegativeKey}
-                  onChange={(e) =>
-                    setForm({ ...form, seats: sanitizeNumericInput(e.target.value, { min: 1, max: 20 }) })
-                  }
+                  onChange={(e) => setForm({ ...form, seats: digitsOnlyInput(e.target.value) })}
                   className="mt-1"
                   placeholder="5"
                 />
@@ -674,17 +651,12 @@ export default function Inventory() {
               <div>
                 <Label>Previous owners</Label>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min={0}
-                  max={20}
                   value={form.previousOwners}
                   onKeyDown={blockNegativeKey}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      previousOwners: sanitizeNumericInput(e.target.value, { min: 0, max: 20 }),
-                    })
+                    setForm({ ...form, previousOwners: digitsOnlyInput(e.target.value) })
                   }
                   className="mt-1"
                   placeholder="1"
@@ -729,7 +701,7 @@ export default function Inventory() {
               <div className="col-span-1 sm:col-span-2">
                 <VehiclePhotoUploader
                   vehicleId={editingId}
-                  onPrimaryUrlChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                  onPrimaryUrlChange={handlePrimaryUrlChange}
                   onPendingPhotosChange={setPendingGallery}
                 />
               </div>
@@ -765,6 +737,8 @@ export default function Inventory() {
                 )}
               </Button>
             </DialogFooter>
+            </>
+            ) : null}
           </DialogContent>
         </Dialog>
         </div>
@@ -858,9 +832,6 @@ export default function Inventory() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((v) => {
             const photo = v.primaryPhotoUrl || v.imageUrl;
-            const photosArray = v.images && v.images.length > 0 
-              ? v.images 
-              : [photo].filter(Boolean) as string[];
             const features = Array.isArray(v.features)
               ? (v.features as string[])
               : [];
@@ -871,8 +842,8 @@ export default function Inventory() {
               >
                 {/* Photo — studio frame composites any upload onto premium backdrop */}
                 <VehicleShowroomFrame
-                  src={photosArray}
-                  alt={v.title}
+                  src={photo ?? null}
+                  alt={v.title ?? "Vehicle"}
                   className="rounded-t-2xl"
                 />
                 <div className="absolute top-3 left-3 flex gap-2 z-[4] pointer-events-none">
@@ -965,7 +936,7 @@ export default function Inventory() {
                         <span className="text-foreground">{v.color}</span>
                       </span>
                     )}
-                    {v.engineCc && (
+                    {v.engineCc != null && v.engineCc > 0 && (
                       <span className="text-muted-foreground">
                         Engine:{" "}
                         <span className="text-foreground">{v.engineCc} cc</span>
