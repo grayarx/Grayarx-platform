@@ -8,7 +8,7 @@ export default function LegalHub() {
     <LegalLayout
       title="Legal & compliance centre"
       subtitle="Everything your dealership needs to review, sign, and stay compliant with South African law."
-      effectiveDate="9 July 2026"
+      effectiveDate="10 July 2026"
       showHubCrumb={false}
     >
       <p>
@@ -17,6 +17,19 @@ export default function LegalHub() {
         Electronic Communications and Transactions Act. Use this page as the single link to share
         with dealership owners, compliance officers, or your attorney.
       </p>
+
+      <h2>Security &amp; data protection at a glance</h2>
+      <ul>
+        <li><strong>Encryption:</strong> All data encrypted at rest (AES-256) and in transit (TLS 1.3).</li>
+        <li><strong>Database:</strong> TiDB Cloud — SOC 2 compliant, geo-redundant, automated backups.</li>
+        <li><strong>File storage:</strong> Cloudflare R2 with private bucket policies (no public listing).</li>
+        <li><strong>Authentication:</strong> JWT / httpOnly cookies; bcrypt password hashing.</li>
+        <li><strong>Tenant isolation:</strong> Each dealership's data is strictly isolated — no cross-dealer data leakage.</li>
+        <li><strong>Secrets:</strong> All API keys stored as Railway environment variables, never in code.</li>
+        <li><strong>POPIA:</strong> GrayArx acts as Operator; the dealership is the Responsible Party. Full POPIA compliance per Act 4 of 2013.</li>
+        <li><strong>Data ownership:</strong> Dealers own 100% of their data. Export available within 30 days of cancellation.</li>
+        <li><strong>AI &amp; WhatsApp:</strong> Messages processed via Meta's Cloud API. AI responses via OpenAI GPT / Google Gemini. Customers are informed they may be interacting with an AI.</li>
+      </ul>
 
       <div className="not-prose">
         <LegalDocumentLinks />

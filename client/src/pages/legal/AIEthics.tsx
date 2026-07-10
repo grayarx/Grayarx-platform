@@ -5,7 +5,7 @@ export default function AIEthics() {
     <LegalLayout
       title="AI Ethics & Transparency"
       subtitle="How GrayArx builds and operates AI responsibly."
-      effectiveDate="22 May 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>Our principles</h2>
       <p>

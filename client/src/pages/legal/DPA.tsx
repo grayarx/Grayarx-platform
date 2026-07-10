@@ -5,7 +5,7 @@ export default function DPA() {
     <LegalLayout
       title="Data Processing Agreement"
       subtitle="Where GrayArx acts as your operator under POPIA."
-      effectiveDate="22 May 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>1. Purpose</h2>
       <p>

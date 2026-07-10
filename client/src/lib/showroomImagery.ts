@@ -94,9 +94,10 @@ export function buildEditorialPanels(vehicles: InventoryRow[]) {
     return {
       ...panel,
       image: photo ?? LOCAL_EDITORIAL_IMAGES[i % LOCAL_EDITORIAL_IMAGES.length],
-      title: v ? v.title : panel.title,
+      // Always keep the editorial marketing headline — never replace with a car name
+      title: panel.title,
       href: v ? `/showroom/${v.id}` : panel.href,
-      subtitle: v && v.price ? undefined : panel.tagline,
+      subtitle: panel.tagline,
       liveListing: !!v,
     };
   });

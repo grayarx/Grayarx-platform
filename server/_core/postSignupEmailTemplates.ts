@@ -43,9 +43,9 @@ export function getWelcomeEmailTemplate(dealershipName: string, ownerName: strin
                 <h2>🚀 You're All Set</h2>
                 <p>Your dealership is ready to:</p>
                 <ul>
-                  <li><strong>Capture leads 24/7</strong> with Mia, your AI Email Agent</li>
+                  <li><strong>Engage buyers 24/7</strong> with Nala, your WhatsApp AI agent</li>
                   <li><strong>Qualify buyers</strong> with intelligent pre-approval screening</li>
-                  <li><strong>Book test drives</strong> with Lerato, your Booking Agent</li>
+                  <li><strong>Book test drives</strong> automatically through your AI booking agent</li>
                   <li><strong>Reach customers</strong> in all 11 South African languages</li>
                 </ul>
               </div>
@@ -71,9 +71,13 @@ export function getWelcomeEmailTemplate(dealershipName: string, ownerName: strin
             </div>
 
             <div class="footer">
-              <p>GrayArx — The Dealership AI Operating System</p>
+              <p>GrayArx (Pty) Ltd &mdash; The Dealership AI Operating System</p>
               <p>Built for South African dealerships. Powered by AI. Trusted by dealership owners.</p>
-              <p><a href="https://www.grayarx.com/privacy" style="color: #d4af37; text-decoration: none;">Privacy Policy</a> | <a href="https://www.grayarx.com/terms" style="color: #d4af37; text-decoration: none;">Terms of Service</a></p>
+              <p style="font-size: 11px; color: #888; margin-top: 8px;">
+                Your data is encrypted at rest (AES-256) and in transit (TLS 1.3). GrayArx is POPIA-compliant &mdash; your dealership remains the Responsible Party for customer data. We do not sell or monetise your data.
+              </p>
+              <p><a href="https://www.grayarx.com/privacy-policy" style="color: #d4af37; text-decoration: none;">Privacy Policy</a> | <a href="https://www.grayarx.com/terms" style="color: #d4af37; text-decoration: none;">Terms of Service</a> | <a href="https://www.grayarx.com/legal" style="color: #d4af37; text-decoration: none;">Legal Centre</a></p>
+              <p style="font-size: 11px; color: #888;">Questions? <a href="mailto:legal@grayarx.com" style="color: #d4af37; text-decoration: none;">legal@grayarx.com</a> | <a href="mailto:privacy@grayarx.com" style="color: #d4af37; text-decoration: none;">privacy@grayarx.com</a></p>
             </div>
           </div>
         </body>
@@ -142,8 +146,12 @@ export function getSetupGuideEmailTemplate(dealershipName: string): EmailTemplat
             </div>
 
             <div class="footer">
-              <p>Questions? Reply to this email or visit our <a href="https://www.grayarx.com/help" style="color: #d4af37; text-decoration: none;">Help Center</a></p>
-              <p>GrayArx — The Dealership AI Operating System</p>
+              <p>Questions? Reply to this email or visit our <a href="https://www.grayarx.com/help" style="color: #d4af37; text-decoration: none;">Help Centre</a></p>
+              <p>GrayArx (Pty) Ltd &mdash; The Dealership AI Operating System</p>
+              <p style="font-size: 11px; color: #888; margin-top: 8px;">
+                Your data is encrypted at rest (AES-256) and in transit (TLS 1.3). POPIA-compliant &mdash; we do not sell or monetise your data.
+              </p>
+              <p><a href="https://www.grayarx.com/legal" style="color: #d4af37; text-decoration: none;">Legal Centre</a> | <a href="mailto:privacy@grayarx.com" style="color: #d4af37; text-decoration: none;">privacy@grayarx.com</a></p>
             </div>
           </div>
         </body>
@@ -186,13 +194,13 @@ export function getFirstLeadTipsEmailTemplate(dealershipName: string): EmailTemp
 
               <div class="tip">
                 <h3>💬 Tip #1: Respond Fast</h3>
-                <p>Mia (your AI Email Agent) has already sent an intelligent reply. Check your leads dashboard to see the conversation.</p>
+                <p>Nala (your WhatsApp AI agent) has already sent an intelligent reply. Check your leads dashboard to see the conversation.</p>
                 <a href="https://www.grayarx.com/dashboard/leads" class="cta-button">View Leads</a>
               </div>
 
               <div class="tip">
                 <h3>📞 Tip #2: Follow Up Within 24 Hours</h3>
-                <p>The first 24 hours are critical. Lerato (your Booking Agent) can schedule a test drive automatically. Just enable WhatsApp booking in your settings.</p>
+                <p>The first 24 hours are critical. Your AI booking agent can schedule a test drive automatically. Enable WhatsApp booking in your settings.</p>
                 <a href="https://www.grayarx.com/dashboard/settings/agents" class="cta-button">Enable Booking</a>
               </div>
 
@@ -218,7 +226,11 @@ export function getFirstLeadTipsEmailTemplate(dealershipName: string): EmailTemp
 
             <div class="footer">
               <p>Questions? We're here to help. Reply to this email anytime.</p>
-              <p>GrayArx — The Dealership AI Operating System</p>
+              <p>GrayArx (Pty) Ltd &mdash; The Dealership AI Operating System</p>
+              <p style="font-size: 11px; color: #888; margin-top: 8px;">
+                Your data is encrypted at rest (AES-256) and in transit (TLS 1.3). POPIA-compliant &mdash; we do not sell or monetise your data.
+              </p>
+              <p><a href="https://www.grayarx.com/legal" style="color: #d4af37; text-decoration: none;">Legal Centre</a> | <a href="mailto:privacy@grayarx.com" style="color: #d4af37; text-decoration: none;">privacy@grayarx.com</a></p>
             </div>
           </div>
         </body>

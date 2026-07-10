@@ -5,7 +5,7 @@ export default function AUP() {
     <LegalLayout
       title="Acceptable Use Policy"
       subtitle="What you can — and can't — do with GrayArx."
-      effectiveDate="22 May 2026"
+      effectiveDate="10 July 2026"
     >
       <p>
         This Acceptable Use Policy ("AUP") sets out the conduct expected of customers using GrayArx. It complements the Terms of Service and is enforced to keep the platform safe for dealerships and consumers.

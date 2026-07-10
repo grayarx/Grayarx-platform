@@ -5,7 +5,7 @@ export default function CreditDisclaimer() {
     <LegalLayout
       title="Credit & Finance Disclaimer"
       subtitle="Trade-in valuations and finance tools are illustrative only — not credit offers."
-      effectiveDate="1 June 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>1. Purpose</h2>
       <p>

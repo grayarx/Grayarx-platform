@@ -5,7 +5,7 @@ export default function PrivacyPolicy() {
     <LegalLayout
       title="Privacy Policy"
       subtitle="POPIA-compliant data handling, in plain English."
-      effectiveDate="22 May 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>1. Who we are</h2>
       <p>
@@ -69,27 +69,71 @@ export default function PrivacyPolicy() {
         To exercise any of these rights, email <strong>privacy@grayarx.com</strong>. We will respond within 30 days.
       </p>
 
-      <h2>9. Security</h2>
+      <h2>9. Data security</h2>
       <p>
-        We use industry-standard security controls including encryption in transit (TLS 1.3) and at rest (AES-256), role-based access control, audit logging, multi-factor authentication, and regular penetration testing. In the event of a security compromise that affects personal information, we will notify the Information Regulator and affected data subjects as required by section 22 of POPIA.
+        GrayArx takes the security of your data and your customers' personal information seriously. We have implemented the following technical and organisational controls:
       </p>
+      <ul>
+        <li><strong>Encryption at rest:</strong> All data stored in our database and object storage is encrypted using AES-256.</li>
+        <li><strong>Encryption in transit:</strong> All communications between your browser, our servers, and third-party services use TLS 1.3.</li>
+        <li><strong>Database:</strong> We use TiDB Cloud — an enterprise-grade, SOC 2 compliant, geo-redundant distributed database with automated backups and point-in-time recovery.</li>
+        <li><strong>File and photo storage:</strong> Vehicle images and uploaded files are stored in Cloudflare R2 object storage with private bucket policies. Files are never publicly listable and are accessed only via signed, time-limited URLs.</li>
+        <li><strong>Authentication:</strong> User sessions are protected with JWT tokens stored in secure httpOnly cookies. Passwords are hashed using bcrypt with an appropriate cost factor — we never store plaintext passwords.</li>
+        <li><strong>API protection:</strong> All dealer-facing API routes require an authenticated session. No dealership data is accessible without a valid, active session token.</li>
+        <li><strong>Tenant isolation:</strong> No dealer's data is ever visible to or shared with another dealership. Each dealership ID has its own logical data partition enforced at the application and query layer.</li>
+        <li><strong>Secrets management:</strong> API keys, tokens, and credentials are stored as Railway environment variables and are never committed to source code or exposed to the client.</li>
+        <li><strong>Infrastructure:</strong> The platform runs on Railway with zero-downtime deployments and automated health monitoring.</li>
+        <li><strong>Backups:</strong> Regular automated backups are maintained via TiDB Cloud's native backup service.</li>
+        <li><strong>Incident response:</strong> In the event of a security compromise that affects personal information, we will notify the Information Regulator and affected data subjects as required by section 22 of POPIA.</li>
+      </ul>
 
-      <h2>10. Cookies</h2>
+      <h2>10. WhatsApp and AI communications</h2>
+      <p>
+        When your dealership uses our WhatsApp AI agent (Nala) or email agent (Mia), the following applies:
+      </p>
+      <ul>
+        <li><strong>WhatsApp processing:</strong> WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. Message content passes through Meta's infrastructure before reaching GrayArx.</li>
+        <li><strong>AI-generated responses:</strong> AI replies are generated using industry-standard large language models — OpenAI GPT and/or Google Gemini (via Manus Forge). Prompts and responses are not used to train foundation models.</li>
+        <li><strong>Conversation logs:</strong> All conversation logs are stored encrypted and are accessible only to the relevant dealership. No other dealership can view your customers' conversations.</li>
+        <li><strong>AI disclosure to customers:</strong> Customers are always informed — via an opening message or disclosure — that they may be interacting with an AI assistant. Dealerships are responsible for ensuring this disclosure is clear and maintained.</li>
+      </ul>
+
+      <h2>11. Dealer data ownership</h2>
+      <ul>
+        <li>Dealers own 100% of the data they upload to or generate within the GrayArx platform.</li>
+        <li>Upon subscription termination, dealers may request a full data export within 30 days. After 30 days we may delete the data subject to our retention obligations.</li>
+        <li>GrayArx does not use your inventory, lead, or customer data to train third-party AI models, nor does it share that data with competitors or other dealerships.</li>
+        <li>Each dealership's data is logically isolated — enforced at both the application and database levels by dealership ID.</li>
+      </ul>
+
+      <h2>12. POPIA — roles and responsibilities</h2>
+      <p>
+        GrayArx complies fully with the Protection of Personal Information Act (POPIA), Act 4 of 2013. Under this framework:
+      </p>
+      <ul>
+        <li><strong>GrayArx acts as an Operator (Processor):</strong> We process personal information on behalf of dealerships and only according to their instructions.</li>
+        <li><strong>The dealership is the Responsible Party:</strong> The dealership determines the purpose and means of processing customer data and must obtain valid POPIA consent before capturing customer information via the GrayArx platform.</li>
+        <li><strong>Data deletion requests:</strong> Customers may request deletion of their personal information at any time by contacting <strong>privacy@grayarx.com</strong>. We will process verified deletion requests within 30 days.</li>
+        <li><strong>Data residency:</strong> Data is stored in South Africa or in compliant cross-border jurisdictions with adequate protections under section 72 of POPIA.</li>
+        <li><strong>We do not sell or monetise personal information:</strong> We never sell, share for commercial gain, or monetise your customers' personal data.</li>
+      </ul>
+
+      <h2>14. Cookies</h2>
       <p>
         We use essential cookies to keep you signed in and to remember preferences. We use limited analytics cookies to understand how the platform is used. You can disable non-essential cookies in your browser at any time without affecting service.
       </p>
 
-      <h2>11. Children</h2>
+      <h2>15. Children</h2>
       <p>
         GrayArx is a B2B platform for dealerships and is not directed at children under 18. We do not knowingly collect personal information from children.
       </p>
 
-      <h2>12. Changes to this policy</h2>
+      <h2>16. Changes to this policy</h2>
       <p>
         We may update this policy from time to time. Material changes will be communicated via email and posted here at least 14 days before they take effect.
       </p>
 
-      <h2>13. Contact</h2>
+      <h2>17. Contact</h2>
       <p>
         Information Officer<br />
         GrayArx (Pty) Ltd · Enterprise No. 2026/407647/07<br />

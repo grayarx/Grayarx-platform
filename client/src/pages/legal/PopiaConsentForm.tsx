@@ -10,7 +10,7 @@ export default function PopiaConsentForm() {
     <LegalLayout
       title="POPIA Consent & Acknowledgment Form"
       subtitle="Dealership acknowledgment of POPIA obligations when using GrayArx."
-      effectiveDate="1 June 2026"
+      effectiveDate="10 July 2026"
     >
       <div className="not-prose mb-8 flex flex-wrap gap-3 print:hidden">
         <Button variant="outline" onClick={() => window.print()}>

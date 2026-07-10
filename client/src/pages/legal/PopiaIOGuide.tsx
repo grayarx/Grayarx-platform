@@ -7,7 +7,7 @@ export default function PopiaIOGuide() {
     <LegalLayout
       title="POPIA Information Officer"
       subtitle="What registration means for GrayArx and your dealership."
-      effectiveDate="9 July 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>What is an Information Officer?</h2>
       <p>

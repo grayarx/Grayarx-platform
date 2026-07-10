@@ -42,7 +42,19 @@ const FAQS = [
   },
   {
     q: "Is my data POPIA compliant?",
-    a: "Yes. GrayArx includes consent capture, audit logs, and South African data residency. Policies, the dealer agreement, and POPIA sign-off forms are at /legal (public) or Legal in your dealer console.",
+    a: "Yes. GrayArx complies fully with the Protection of Personal Information Act (POPIA), Act 4 of 2013. We include consent capture, audit logs, and South African data residency. GrayArx acts as the Operator; your dealership is the Responsible Party and must obtain customer consent before capturing data. Customers may request data deletion at any time via privacy@grayarx.com. Policies, the dealer agreement, and POPIA sign-off forms are at /legal (public) or Legal in your dealer console.",
+  },
+  {
+    q: "How is my data secured?",
+    a: "All data is encrypted at rest (AES-256) and in transit (TLS 1.3). We use TiDB Cloud (SOC 2 compliant, geo-redundant) for the database, and Cloudflare R2 object storage with private bucket policies for photos and files. Authentication uses JWT tokens in secure httpOnly cookies with bcrypt password hashing. Every dealer route requires an authenticated session — no data is accessible without login. Each dealership's data is strictly isolated; no other dealer can see your data. API keys are stored as environment variables on Railway, never in code.",
+  },
+  {
+    q: "Does GrayArx use my data to train AI models?",
+    a: "No. GrayArx does not use your inventory, lead, or customer data to train AI foundation models, nor does it share that data with competitors or other dealerships. You own 100% of your data. Upon cancelling your subscription you may request a full data export within 30 days.",
+  },
+  {
+    q: "How does the WhatsApp AI agent handle customer data?",
+    a: "WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. AI responses are generated using industry-standard LLMs (OpenAI GPT / Google Gemini via Manus Forge). Conversation logs are stored encrypted and accessible only to your dealership. Customers should always be informed — either at the start of the conversation or via a disclosure — that they may be interacting with an AI assistant.",
   },
   {
     q: "Where are the legal documents and agreements?",

@@ -450,12 +450,9 @@ export default function Home() {
                         Live listing
                       </span>
                     )}
-                    <p className="font-tech text-[10px] uppercase tracking-[0.25em] text-primary/70 mb-2">
+                    <p className="font-tech text-[10px] uppercase tracking-[0.25em] text-primary/70 mb-4">
                       {panel.subtitle ?? panel.tagline}
                     </p>
-                    <h3 className="font-display text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-primary transition-colors duration-300">
-                      {panel.title}
-                    </h3>
                     <span className="inline-flex items-center gap-2 font-tech text-xs uppercase tracking-[0.2em] text-white/70 group-hover:text-primary transition-colors">
                       {panel.cta}
                       <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

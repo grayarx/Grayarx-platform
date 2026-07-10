@@ -101,12 +101,9 @@ export default function HomeFeaturedDeals() {
                       )}
                     </div>
                     <div>
-                      <p className="font-tech text-[9px] uppercase tracking-[0.22em] text-primary/80 mb-1">
+                      <p className="font-tech text-[9px] uppercase tracking-[0.22em] text-primary/80 mb-3">
                         Live listing
                       </p>
-                      <h3 className="font-display text-lg md:text-xl font-bold text-white leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                        {v.title}
-                      </h3>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-white/70 mb-3">
                         {v.year && (
                           <span className="inline-flex items-center gap-1">

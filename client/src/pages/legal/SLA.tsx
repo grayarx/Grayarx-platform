@@ -5,7 +5,7 @@ export default function SLA() {
     <LegalLayout
       title="Service Level Agreement"
       subtitle="A 99.5% monthly uptime commitment with measurable credits."
-      effectiveDate="22 May 2026"
+      effectiveDate="10 July 2026"
     >
       <h2>1. Uptime commitment</h2>
       <p>

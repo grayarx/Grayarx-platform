@@ -10,7 +10,7 @@ export default function DealerAgreement() {
     <LegalLayout
       title="Dealer Agreement"
       subtitle="Pilot subscription contract between GrayArx and your dealership."
-      effectiveDate="1 June 2026"
+      effectiveDate="10 July 2026"
     >
       <div className="not-prose mb-8 flex flex-wrap gap-3 print:hidden">
         <Button variant="outline" onClick={() => window.print()}>

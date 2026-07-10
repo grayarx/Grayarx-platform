@@ -6,23 +6,84 @@ import { storePopiaConsent, getLatestPopiaConsent, checkPopiaConsentExpired, rec
  */
 export const POPIA_FORM_TEXT_V1 = `
 GrayArx POPIA Consent & Acknowledgment Form
+Version 1.0 — Effective 10 July 2026
+GrayArx (Pty) Ltd, Enterprise No. 2026/407647/07
+Sjampanije Street, Roodepoort, Gauteng 1736, South Africa
+Information Officer: privacy@grayarx.com | Legal: legal@grayarx.com
 
-By signing this form, you confirm that you:
-- Have read and understood the POPIA Consent & Acknowledgment Form
-- Understand your obligations under POPIA
-- Commit to complying with all POPIA requirements
-- Accept full responsibility for POPIA compliance
-- Authorize GrayArx to process personal information as described
+─────────────────────────────────────────────────────────────────────────────
+ROLES UNDER POPIA (Act 4 of 2013)
+─────────────────────────────────────────────────────────────────────────────
+GrayArx (Pty) Ltd acts as an OPERATOR under POPIA. It processes personal
+information on behalf of the dealership and only according to the dealership's
+documented instructions.
 
-You acknowledge that:
-- You are the "Responsible Party" under POPIA
-- GrayArx acts as a "Processor" on your behalf
-- You have obtained lawful consent for all personal information processing
-- You will honor all data subject rights (access, correction, deletion, objection)
-- You will notify GrayArx of any data breaches within 24 hours
-- You will comply with the National Credit Act (NCA), Consumer Protection Act (CPA), and Electronic Communications and Transactions Act (ECTA)
+The dealership is the RESPONSIBLE PARTY. The dealership determines the purpose
+and means of processing customer personal information and bears primary
+responsibility for lawful processing, consent, and data subject rights.
+
+─────────────────────────────────────────────────────────────────────────────
+DEALER ACKNOWLEDGMENTS AND COMMITMENTS
+─────────────────────────────────────────────────────────────────────────────
+By signing this form, the authorised dealership representative confirms that they:
+
+1. Have read and understood their obligations as Responsible Party under POPIA.
+2. Will obtain valid, informed consent from customers before capturing or
+   processing their personal information via the GrayArx platform.
+3. Will honour all data subject rights under POPIA including:
+   - Right to access personal information
+   - Right to correction of inaccurate information
+   - Right to deletion / erasure upon request (contact privacy@grayarx.com)
+   - Right to object to processing for direct marketing
+   - Right to withdraw consent at any time
+4. Will notify GrayArx within 24 hours of becoming aware of any personal
+   information security compromise or data breach at the dealership level.
+5. Will comply with applicable South African law including POPIA, the National
+   Credit Act (NCA), Consumer Protection Act (CPA), and the Electronic
+   Communications and Transactions Act (ECTA).
+6. Acknowledge that customers interacting with GrayArx AI agents (WhatsApp,
+   email) must be informed that they may be communicating with an AI assistant.
+7. Accept full responsibility for POPIA compliance in their customer-facing use
+   of the GrayArx platform.
+
+─────────────────────────────────────────────────────────────────────────────
+GRAYARX SECURITY AND DATA PROTECTION COMMITMENTS
+─────────────────────────────────────────────────────────────────────────────
+GrayArx commits to the following security measures on behalf of dealerships:
+
+- All data encrypted at rest (AES-256) and in transit (TLS 1.3).
+- Database: TiDB Cloud (SOC 2 compliant, geo-redundant, automated backups).
+- File storage: Cloudflare R2 with private bucket policies.
+- Authentication: JWT tokens / httpOnly cookies; bcrypt password hashing.
+- Tenant isolation: each dealership's data is logically isolated by dealership
+  ID — no cross-dealer data access is possible.
+- Secrets (API keys, tokens) stored as Railway environment variables, never in
+  source code.
+- Regular automated backups via TiDB Cloud's native backup service.
+- No dealer inventory, lead, or customer data is used to train third-party AI
+  models or shared with competitors.
+- WhatsApp messages processed via Meta's Cloud API under Meta's DPA.
+- AI responses generated via OpenAI GPT / Google Gemini (Manus Forge).
+- Conversation logs stored encrypted, accessible only to the relevant dealership.
+
+─────────────────────────────────────────────────────────────────────────────
+DEALER DATA OWNERSHIP
+─────────────────────────────────────────────────────────────────────────────
+- The dealership owns 100% of the data it uploads or generates on GrayArx.
+- Upon contract termination, the dealership may request a full data export
+  within 30 days. After 30 days GrayArx may delete data subject to statutory
+  retention obligations.
+- GrayArx does not sell, share for commercial gain, or monetise customer
+  personal information.
+
+─────────────────────────────────────────────────────────────────────────────
+DATA RESIDENCY
+─────────────────────────────────────────────────────────────────────────────
+Data is stored in South Africa or in compliant cross-border jurisdictions with
+adequate protections as required by POPIA section 72.
 
 For full details, visit: www.grayarx.com/legal/popia-consent-form
+Information Regulator (South Africa): www.inforegulator.org.za
 `;
 
 export const signPopiaConsentSchema = z.object({
