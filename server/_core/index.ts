@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -71,6 +72,8 @@ async function startServer() {
   }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+  // Serve local uploads when Forge is not configured
+  app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
   registerOAuthRoutes(app);
   registerCustomAuthRoutes(app);
   registerScheduledRoutes(app);
