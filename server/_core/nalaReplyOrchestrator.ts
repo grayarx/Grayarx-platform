@@ -9,7 +9,7 @@ import {
   type VehicleChatContext,
 } from "../../shared/nalaShowroomChat";
 import { composeShowroomBotReply, polishNalaReply } from "../../shared/nalaGrammarPolish";
-import { GREETING, replyNeedsNameCapture } from "../../shared/nalaTranslations";
+import { replyNeedsNameCapture } from "../../shared/nalaTranslations";
 import { scoreListingDeal } from "../../shared/priceIntelligence";
 import { generateNalaShowroomReply } from "./nalaShowroomLlm";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
@@ -73,16 +73,17 @@ export function buildNoVehicleWhatsAppReply(
   lang: LanguageCode,
   siteUrl: string,
   topMatches: Array<{ title: string; price?: number | string | null }> = [],
+  dealershipName = "GrayArx",
 ): string {
   if (GREETING_RE.test(message.trim())) {
-    const greet = GREETING[lang] ?? GREETING.en;
+    // Use a no-vehicle intro — the vehicle GREETING template requires {name}/{price}/{specs} vars
     const intro =
       lang === "af"
-        ? `Welkom by GrayArx! Ek is Nala — jou AI-verkoopsassistent.`
+        ? `Welkom by ${dealershipName}! Ek is *Nala* — jou AI-verkoopsassistent.\n\nVra my enigiets in enige van Suid-Afrika se 11 amptelike tale.`
         : lang === "zu"
-          ? `Siyakwamukela ku-GrayArx! Ngingu-Nala — umsizi wakho we-AI.`
-          : `Welcome to GrayArx! I'm Nala — your AI sales assistant.`;
-    let reply = `${greet}\n\n${intro}`;
+          ? `Siyakwamukela ku-${dealershipName}! Ngingu-*Nala* — umsizi wakho we-AI.\n\nNgibuze noma yini ngolimi lwazo zonke izilimi ezisemthethweni eziyi-11 zaseNingizimu Afrika.`
+          : `Welcome to *${dealershipName}*! I'm *Nala* — your AI sales assistant.\n\nAsk me anything in any of South Africa's 11 official languages.`;
+    let reply = intro;
     if (topMatches.length > 0) {
       const lines = topMatches.slice(0, 3).map((v) => {
         const price =
@@ -209,6 +210,7 @@ export async function resolveNalaReply(input: {
       lang,
       siteUrl,
       input.inventoryHints ?? [],
+      input.dealershipName,
     );
     return {
       reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(fallback, lang) : fallback,

@@ -385,9 +385,48 @@ export async function handleIncomingWhatsAppMessage(
     return { success: true, response: result.reply };
   } catch (error) {
     console.error("[WhatsAppService] Error handling incoming message:", error);
+    return replyOnlyFallback(phone, message, dealershipId, error);
+  }
+}
+
+/** When DB/conversation persistence fails, still send a Nala reply via Meta API. */
+async function replyOnlyFallback(
+  phone: string,
+  message: string,
+  dealershipId: string,
+  cause: unknown,
+): Promise<{ success: boolean; response?: string; error?: string }> {
+  try {
+    const formattedPhone = formatPhoneNumber(phone);
+    const { resolveRoutedReply } = await import("./agentIntentRouter");
+    const result = await resolveRoutedReply({
+      message,
+      vehicle: null,
+      dealershipId: Number(dealershipId) || 1,
+      dealershipName: "GrayArx",
+      customerPhone: formattedPhone,
+      channel: "whatsapp",
+    });
+    const sent = await sendWhatsAppMessage({
+      phone: formattedPhone,
+      message: result.reply,
+      type: "automated_reply",
+      dealershipId,
+    });
+    if (!sent.success) {
+      return { success: false, error: sent.error ?? "Failed to send WhatsApp reply" };
+    }
+    console.warn(
+      `[WhatsAppService] Reply-only fallback used for +${formattedPhone} after: ${
+        cause instanceof Error ? cause.message : "unknown error"
+      }`,
+    );
+    return { success: true, response: result.reply };
+  } catch (fallbackError) {
+    console.error("[WhatsAppService] Reply-only fallback failed:", fallbackError);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: fallbackError instanceof Error ? fallbackError.message : "Unknown error",
     };
   }
 }
