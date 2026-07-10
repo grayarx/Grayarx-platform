@@ -89,7 +89,8 @@ export function registerWebhookRoutes(app: Express): void {
   app.post("/api/webhooks/whatsapp", async (req: Request, res: Response) => {
     try {
       const signature = req.headers["x-hub-signature-256"] as string;
-      const payload = JSON.stringify(req.body);
+      // Use raw body bytes — Meta signs the original request bytes, not re-serialized JSON
+      const payload = (req as any).rawBody ?? JSON.stringify(req.body);
 
       // Validate webhook signature
       if (!validateWebhookSignature(signature, payload)) {

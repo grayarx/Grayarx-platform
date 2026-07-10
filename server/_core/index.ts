@@ -63,8 +63,12 @@ async function startServer() {
   const server = createServer(app);
   registerSecurityHeaders(app);
   registerCanonicalRedirect(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
+  // Configure body parser — capture raw body so webhook HMAC validation uses
+  // the exact bytes Meta signed (not a re-serialized JSON.stringify).
+  app.use(express.json({
+    limit: "50mb",
+    verify: (req: any, _res, buf) => { req.rawBody = buf.toString("utf8"); },
+  }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
