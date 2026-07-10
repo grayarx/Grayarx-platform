@@ -1599,15 +1599,19 @@ export const appRouter = router({
       }
       const roster = PILOT_AGENT_LIST;
       const stats = await getAgentStats();
-      const empty = { actionCount: 0, lastActionAt: null as number | null };
+      const empty = { actionCount: 0, lastActionAt: null as Date | null, lastAction: null as string | null };
+      const ACTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
       return {
         primaryInbox: PRIMARY_INBOX,
         agents: roster.map((persona) => {
           const s = stats[persona.id] ?? empty;
+          const lastMs = s.lastActionAt ? new Date(s.lastActionAt).getTime() : 0;
+          const recentlyActive =
+            s.actionCount > 0 && lastMs > Date.now() - ACTIVE_WINDOW_MS;
           return {
             ...persona,
             stats: s,
-            status: s.actionCount > 0 ? "active" : "idle",
+            status: recentlyActive ? "active" : "idle",
           };
         }),
       };

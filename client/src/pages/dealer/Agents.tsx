@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DealerShell from "@/components/DealerShell";
@@ -78,15 +79,42 @@ function formatRelative(date: Date | string | null): string {
 
 export default function Agents() {
   const [filter, setFilter] = useState<AgentId | "all">("all");
+  const feedRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
   const roster = trpc.agent.list.useQuery(undefined, {
     refetchInterval: 15_000,
   });
-  const feed = trpc.agent.feed.useQuery(
-    filter === "all" ? undefined : { agentId: filter },
-    { refetchInterval: 10_000 },
+
+  const feedInput = useMemo(
+    () => ({
+      limit: 100,
+      ...(filter !== "all" ? { agentId: filter } : {}),
+    }),
+    [filter],
   );
+
+  const feed = trpc.agent.feed.useQuery(feedInput, {
+    refetchInterval: 10_000,
+  });
+
+  const agentById = useMemo(
+    () =>
+      Object.fromEntries(
+        (roster.data?.agents ?? []).map((a) => [a.id, a]),
+      ) as Record<string, (typeof roster.data)["agents"][number]>,
+    [roster.data],
+  );
+
+  const selectAgentFilter = (id: AgentId) => {
+    setFilter((prev) => (prev === id ? "all" : id));
+  };
+
+  useEffect(() => {
+    if (filter !== "all") {
+      feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [filter]);
 
   const ping = trpc.agent.ping.useMutation({
     onSuccess: (res) => {
@@ -153,11 +181,11 @@ export default function Agents() {
                   role="button"
                   tabIndex={0}
                   title={`View ${agent.displayName}'s activity`}
-                  onClick={() => setFilter(id)}
+                  onClick={() => selectAgentFilter(id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setFilter(id);
+                      selectAgentFilter(id);
                     }
                   }}
                   className={cn(
@@ -254,6 +282,7 @@ export default function Agents() {
       </div>
 
       {/* Unified activity feed */}
+      <div ref={feedRef} className="scroll-mt-24">
       <Card className="p-0 bg-card/60 border-white/10 backdrop-blur overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between border-b border-white/10 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
@@ -261,7 +290,9 @@ export default function Agents() {
             <div>
               <h3 className="font-serif text-lg">Shared Activity Feed</h3>
               <p className="text-xs text-muted-foreground">
-                Every action by every agent — the shared memory they all read.
+                {filter === "all"
+                  ? "Every action by every agent — the shared memory they all read."
+                  : `Filtered to ${agentById[filter]?.displayName ?? filter} — click the card again or All to reset.`}
               </p>
             </div>
           </div>
@@ -275,27 +306,76 @@ export default function Agents() {
                 onClick={() => setFilter(key)}
                 className={
                   filter === key
-                    ? "bg-gold text-charcoal hover:bg-gold/90 capitalize"
-                    : "capitalize text-muted-foreground hover:text-foreground"
+                    ? "bg-gold text-charcoal hover:bg-gold/90"
+                    : "text-muted-foreground hover:text-foreground"
                 }
               >
-                {key}
+                {key === "all"
+                  ? "All"
+                  : agentById[key]?.displayName ?? key}
               </Button>
             ))}
           </div>
         </div>
+        {filter !== "all" && (
+          <div className="px-5 py-2 border-b border-gold/20 bg-gold/5 flex items-center justify-between gap-2 text-xs">
+            <span>
+              Showing activity for{" "}
+              <strong className="text-gold">
+                {agentById[filter]?.displayName ?? filter}
+              </strong>
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-gold hover:text-gold"
+              onClick={() => setFilter("all")}
+            >
+              Clear filter
+            </Button>
+          </div>
+        )}
         <div className="max-h-[520px] overflow-y-auto">
-          {feed.isLoading && (
+          {(feed.isLoading || feed.isFetching) && !feed.data?.length && (
             <div className="p-6 space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           )}
-          {!feed.isLoading && (feed.data?.length ?? 0) === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No activity yet. Once a lead comes in, the Prospector runs, or a
-              call is placed, you'll see it here in real time.
+          {!feed.isLoading && !feed.isFetching && (feed.data?.length ?? 0) === 0 && (
+            <div className="p-10 text-center text-sm text-muted-foreground space-y-3">
+              {filter === "all" ? (
+                <>
+                  <p>
+                    No activity logged yet. Agents wake up when leads arrive,
+                    WhatsApp messages come in, or you hit <strong>Test agent</strong> on a
+                    card above.
+                  </p>
+                  <p className="text-xs">
+                    Tip: click any agent card to filter this feed to just that agent.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    <strong>{agentById[filter]?.displayName ?? filter}</strong> has no
+                    logged actions yet.
+                  </p>
+                  <p className="text-xs">
+                    Use <strong>Test agent</strong> on their card to verify wiring, or wait
+                    for a real lead/booking/WhatsApp event.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => setFilter("all")}
+                  >
+                    Show all agents
+                  </Button>
+                </>
+              )}
             </div>
           )}
           {feed.data?.map((row) => {
@@ -340,6 +420,7 @@ export default function Agents() {
           })}
         </div>
       </Card>
+      </div>
     </DealerShell>
   );
 }
