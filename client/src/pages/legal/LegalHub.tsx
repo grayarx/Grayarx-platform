@@ -1,5 +1,6 @@
 import LegalLayout from "@/components/LegalLayout";
 import { LegalDocumentLinks } from "@/components/LegalDocumentLinks";
+import ComplianceContactForm from "@/components/ComplianceContactForm";
 import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine } from "@shared/companyLegal";
 
 export default function LegalHub() {
@@ -20,6 +21,13 @@ export default function LegalHub() {
       <div className="not-prose">
         <LegalDocumentLinks />
       </div>
+
+      <h2 className="mt-12">Contact privacy or legal team</h2>
+      <p>
+        Use this form if you cannot email directly — it creates a monitored ticket and alerts our
+        Information Officer queue (same as mailing {GRAYARX_LEGAL.informationOfficerEmail}).
+      </p>
+      <ComplianceContactForm />
 
       <h2 className="mt-12">Information Officer & legal contacts</h2>
       <ul>
@@ -44,7 +52,8 @@ export default function LegalHub() {
 
       <p className="text-sm text-muted-foreground">
         These documents are provided for operational use during the GrayArx pilot programme.
-        Formal attorney review is recommended before scaling beyond pilot dealerships.
+        Formal attorney review is recommended before scaling beyond pilot dealerships.{" "}
+        <a href="/legal/popia-information-officer">POPIA Information Officer guide</a>.
       </p>
     </LegalLayout>
   );

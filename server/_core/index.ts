@@ -39,6 +39,17 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Apply idempotent SQL migrations (compliance inbox, etc.)
+  try {
+    const { spawn } = await import("child_process");
+    spawn("node", ["scripts/apply-pending-migrations.mjs"], {
+      detached: true,
+      stdio: "ignore",
+    }).unref();
+  } catch {
+    /* non-fatal */
+  }
+
   const app = express();
   const server = createServer(app);
   registerSecurityHeaders(app);

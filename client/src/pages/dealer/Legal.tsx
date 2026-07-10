@@ -1,5 +1,6 @@
 import DealerShell from "@/components/DealerShell";
 import { LegalDocumentLinks } from "@/components/LegalDocumentLinks";
+import ComplianceContactForm from "@/components/ComplianceContactForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GRAYARX_LEGAL } from "@shared/companyLegal";
 import { Scale, Mail } from "lucide-react";
@@ -24,7 +25,16 @@ export default function DealerLegal() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LegalDocumentLinks />
+          <LegalDocumentLinks showPilotBanner={false} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/10 mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Send a compliance message</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ComplianceContactForm compact />
         </CardContent>
       </Card>
 

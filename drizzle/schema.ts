@@ -3372,6 +3372,25 @@ export const featureDefinitions = mysqlTable("feature_definitions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/** Privacy / legal / compliance mailbox — web forms + Resend inbound. */
+export const complianceInquiries = mysqlTable("compliance_inquiries", {
+  id: int("id").autoincrement().primaryKey(),
+  mailbox: mysqlEnum("mailbox", ["privacy", "legal", "hello", "other"]).default("other").notNull(),
+  source: mysqlEnum("source", ["web_form", "resend_inbound", "manual"]).default("web_form").notNull(),
+  senderName: varchar("senderName", { length: 255 }),
+  senderEmail: varchar("senderEmail", { length: 320 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["new", "read", "replied", "archived"]).default("new").notNull(),
+  externalId: varchar("externalId", { length: 255 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+});
+
+export type ComplianceInquiry = typeof complianceInquiries.$inferSelect;
+export type InsertComplianceInquiry = typeof complianceInquiries.$inferInsert;
+
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
 export type DealershipSubscription = typeof dealershipSubscriptions.$inferSelect;

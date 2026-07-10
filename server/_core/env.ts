@@ -29,4 +29,10 @@ export const ENV = {
   appleOAuthClientId: process.env.APPLE_OAUTH_CLIENT_ID || "",
   appleOAuthClientSecret: process.env.APPLE_OAUTH_CLIENT_SECRET || "",
   appUrl: process.env.APP_URL || "http://localhost:3000",
+  /** Gmail / inbox that receives founder alerts when privacy@ or legal@ get mail. */
+  founderAlertEmail:
+    process.env.FOUNDER_ALERT_EMAIL ||
+    process.env.OWNER_EMAIL ||
+    process.env.EMAIL_USER ||
+    "grayarx@gmail.com",
 };

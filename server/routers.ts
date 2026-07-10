@@ -17,6 +17,7 @@ import { auditRouter } from "./routers/auditRouter";
 // import { servicesRouter } from "./routers/servicesRouter";
 import { campaignRouter } from "./routers/campaignRouter";
 import { complianceRouter } from "./routers/complianceRouter";
+import { complianceMailboxRouter } from "./routers/complianceMailboxRouter";
 // import { complianceTrainingRouter } from "./routers/complianceTrainingRouter";
 // import { complianceTrainingAlertsRouter } from "./routers/complianceTrainingAlertsRouter";
 import { chatbotRouter } from "./routers/chatbotRouter";
@@ -115,6 +116,7 @@ import { storagePut } from "./storage";
 import { AGENTS, AGENT_LIST, PILOT_AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
+import { alertFounder } from "./_core/founderAlert";
 import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
 import { placeOutboundCall } from "./_core/calling";
 import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
@@ -326,6 +328,7 @@ export const appRouter = router({
   adminUsers: adminUserRouter,
   // services: servicesRouter,
   compliance: complianceRouter,
+  complianceMailbox: complianceMailboxRouter,
   // complianceTraining: complianceTrainingRouter,
   // complianceTrainingAlerts: complianceTrainingAlertsRouter,
   // auditTrailExport: auditTrailExportRouter,
@@ -554,9 +557,11 @@ export const appRouter = router({
           });
         }
 
-        notifyOwner({
+        alertFounder({
           title: "New GrayArx lead",
-          content: `${input.dealershipName} (${input.contactName}, ${input.email})`,
+          content: `${input.dealershipName} (${input.contactName}, ${input.email}, ${input.phone})`,
+          category: "lead",
+          actionUrl: "https://www.grayarx.com/admin/ops",
         }).catch(() => undefined);
         return { success: true } as const;
       }),
@@ -2309,10 +2314,19 @@ export const appRouter = router({
           notes: input.notes ? `${input.notes}\n[ref: ${reference}]` : `[ref: ${reference}]`,
         });
         try {
-          await notifyOwner({
+          await alertFounder({
             title: `New onboarding application — ${input.dealershipName}`,
-            content: `Reference: ${reference}\nOwner: ${input.ownerName} <${input.ownerEmail}>\nRegion: ${input.region}\nLanguage: ${input.primaryLanguage}\n\nReview at /admin/onboarding`,
+            content: `Reference: ${reference}\nOwner: ${input.ownerName} <${input.ownerEmail}>\nPhone: ${input.ownerPhone}\nRegion: ${input.region}\nLanguage: ${input.primaryLanguage}`,
+            category: "onboarding",
+            actionUrl: "https://www.grayarx.com/admin/onboarding",
           });
+          const { sendOnboardingWelcomeEmail } = await import("./_core/onboardingEmails");
+          sendOnboardingWelcomeEmail({
+            to: input.ownerEmail,
+            ownerName: input.ownerName,
+            dealershipName: input.dealershipName,
+            reference,
+          }).catch((e) => console.warn("[publicOnboarding] welcome email failed", e));
         } catch (e) {
           console.warn("[publicOnboarding] notify failed", e);
         }

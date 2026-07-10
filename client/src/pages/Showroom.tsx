@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import FloatingPilotCTA from "@/components/FloatingPilotCTA";
 import { Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -781,6 +782,7 @@ export default function Showroom() {
         </div>
       </section>
 
+      <FloatingPilotCTA />
       <Footer />
 
       <ShowroomChatAgent

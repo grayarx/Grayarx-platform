@@ -132,7 +132,9 @@ import CreditDisclaimer from "./pages/legal/CreditDisclaimer";
 import LegalHub from "./pages/legal/LegalHub";
 import DealerAgreement from "./pages/legal/DealerAgreement";
 import PopiaConsentForm from "./pages/legal/PopiaConsentForm";
+import PopiaIOGuide from "./pages/legal/PopiaIOGuide";
 import DealerLegal from "./pages/dealer/Legal";
+import AdminCompliance from "./pages/admin/AdminCompliance";
 import { POPIAConsentModal } from "./components/POPIAConsentModal";
 import { POPIAReconfirmationBanner } from "./components/POPIAReconfirmationBanner";
 import { usePopiaConsent } from "./hooks/usePopiaConsent";
@@ -246,6 +248,9 @@ function Router() {
       <Route path="/admin/fallback">
         <AdminRouteGuard><AdminFallback /></AdminRouteGuard>
       </Route>
+      <Route path="/admin/compliance">
+        <AdminRouteGuard><AdminCompliance /></AdminRouteGuard>
+      </Route>
       <Route path="/admin/ops">
         <AdminRouteGuard><AdminOps /></AdminRouteGuard>
       </Route>
@@ -330,6 +335,7 @@ function Router() {
       {/* Legal */}
       <Route path="/legal/dealer-agreement" component={DealerAgreement} />
       <Route path="/legal/popia-consent-form" component={PopiaConsentForm} />
+      <Route path="/legal/popia-information-officer" component={PopiaIOGuide} />
       <Route path="/legal" component={LegalHub} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms" component={Terms} />

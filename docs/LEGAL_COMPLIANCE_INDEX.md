@@ -16,8 +16,18 @@ Master checklist for South African regulatory requirements. Last reviewed: **9 J
 | Credit & Finance Disclaimer | `/credit-disclaimer` | `docs/legal/CREDIT_DISCLAIMER.md` |
 | **Dealer Agreement (sign-off)** | `/legal/dealer-agreement` | `docs/legal/DEALER_AGREEMENT.md` |
 | **POPIA Consent Form (sign-off)** | `/legal/popia-consent-form` | `docs/legal/POPIA_CONSENT_FORM.md` |
+| **POPIA Information Officer guide** | `/legal/popia-information-officer` | `docs/POPIA_INFORMATION_OFFICER.md` |
 
 All linked from site footer and **`/dealer/legal`** in the dealer console.
+
+## Compliance monitoring (live)
+
+| Channel | Implementation |
+|---------|----------------|
+| Web form | `/legal` → `complianceMailbox.submit` → DB + founder Gmail alert |
+| Resend inbound | `/api/webhooks/resend-inbound` for privacy@ / legal@ |
+| Admin inbox | `/admin/compliance` |
+| Setup guide | `docs/COMPLIANCE_MAILBOX_SETUP.md` |
 
 ## South African law mapping
 

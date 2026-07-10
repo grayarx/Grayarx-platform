@@ -36,6 +36,7 @@ const ADMIN_LINKS = [
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
   { href: "/admin/approvals", label: "Approvals", icon: CheckSquare },
   { href: "/admin/kagiso-roadmap", label: "Kagiso Roadmap", icon: Sparkles, founderOnly: true },
+  { href: "/admin/compliance", label: "Compliance", icon: ShieldAlert, founderOnly: true },
   { href: "/admin/fallback", label: "Fallback Inbox", icon: Mailbox },
   { href: "/admin/preapprovals", label: "Pre-Approvals", icon: HandCoins },
   { href: "/admin/dealerships", label: "Dealerships", icon: Building2 },

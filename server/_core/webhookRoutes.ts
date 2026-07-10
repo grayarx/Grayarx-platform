@@ -95,6 +95,31 @@ export function registerWebhookRoutes(app: Express): void {
   });
 
   /**
+   * Resend inbound email webhook — forward privacy@ / legal@ to founder inbox + DB.
+   * Configure in Resend dashboard → Webhooks → email.received
+   * URL: https://www.grayarx.com/api/webhooks/resend-inbound
+   */
+  app.post("/api/webhooks/resend-inbound", async (req: Request, res: Response) => {
+    try {
+      const secret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
+      if (secret) {
+        const sig = req.headers["x-resend-signature"] as string | undefined;
+        if (sig !== secret) {
+          console.warn("[Resend Inbound] Invalid signature");
+          return res.status(403).json({ error: "Invalid signature" });
+        }
+      }
+
+      const { processResendInboundEmail } = await import("./complianceMailbox");
+      const result = await processResendInboundEmail(req.body);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("[Resend Inbound] error:", error);
+      res.status(200).json({ ok: false });
+    }
+  });
+
+  /**
    * Health check endpoint for webhooks
    */
   app.get("/api/webhooks/health", (req: Request, res: Response) => {
@@ -113,6 +138,12 @@ export function registerWebhookRoutes(app: Express): void {
           phoneNumberId: phoneIdConfigured ? "configured" : "not configured",
           accessToken: tokenConfigured ? "configured" : "not configured",
           canAutoReply: phoneIdConfigured && tokenConfigured,
+        },
+        resendInbound: {
+          url: "/api/webhooks/resend-inbound",
+          status: "active",
+          webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET ? "configured" : "optional",
+          note: "Receives privacy@ / legal@ via Resend inbound — alerts founder Gmail",
         },
       },
     });
