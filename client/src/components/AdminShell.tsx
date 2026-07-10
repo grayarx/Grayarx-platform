@@ -66,7 +66,7 @@ export default function AdminShell({
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Logo size={64} />
+        <Logo variant="full" size={64} />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export default function AdminShell({
         <Navigation />
         <section className="pt-32 pb-20">
           <div className="container max-w-lg text-center">
-            <Logo size={96} className="mx-auto" />
+            <Logo variant="full" size={72} className="mx-auto" />
             <h1 className="font-display text-3xl font-bold mt-8">
               Sign in to access the admin console
             </h1>

@@ -31,6 +31,7 @@ export function normalizeBuyerMessage(text: string): string {
   const rules: Array<[RegExp, string]> = [
     // Afrikaans
     [/\bkleer\b/gi, "kleur"],
+    [/\bkleere\b/gi, "kleur"],
     [/\bkler\b/gi, "kleur"],
     [/\bwatse\b/gi, "wat"],
     [/\bwt\s+kleur/gi, "wat kleur"],

@@ -17,6 +17,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { resolveMake, resolveModel } from "@shared/vehicleCatalog";
 import {
+  answerShowroomQuestion,
   detectShowroomLanguage,
   formatVehicleDisplayName,
   getFlowPrompt,
@@ -26,9 +27,12 @@ import {
   replyNeedsNameCapture,
   thanksForEnquiry,
   type ShowroomLang,
+  type VehicleChatContext,
 } from "@shared/nalaShowroomChat";
+import { composeShowroomBotReply } from "@shared/nalaGrammarPolish";
 import type { LanguageCode } from "@shared/languages";
 import { isLanguageCode } from "@shared/languages";
+import { classifyAgentRoute, webLeratoHandoff } from "@shared/agentIntentRouting";
 import { formatVehiclePrice } from "@/lib/formatPrice";
 
 import type { RoutedAgentId } from "@shared/agentIntentRouting";
@@ -85,6 +89,62 @@ function uid() {
 function browserPreferredLang(): LanguageCode {
   const raw = (navigator.language || "en").split("-")[0]?.toLowerCase() ?? "en";
   return isLanguageCode(raw) ? raw : "en";
+}
+
+function toVehicleChatContext(vehicle: ChatVehicle): VehicleChatContext {
+  return {
+    title: vehicle.title,
+    year: vehicle.year,
+    price: vehicle.price,
+    km: vehicle.km,
+    fuel: vehicle.fuel,
+    transmission: vehicle.transmission,
+    location: vehicle.location,
+    color: vehicle.color ?? null,
+    make: vehicle.make,
+    model: vehicle.model,
+    description: vehicle.description ?? null,
+  };
+}
+
+function resolveLocalMenuReply(
+  vehicle: ChatVehicle,
+  message: string,
+  lang: LanguageCode,
+  dealershipName: string,
+): { reply: string; agent: RoutedAgentId; intent: string; language: LanguageCode } {
+  const route = classifyAgentRoute({ message, afterHours: false });
+
+  if (route.agent === "lerato") {
+    return {
+      agent: "lerato",
+      intent: route.intent,
+      language: lang,
+      reply: webLeratoHandoff(lang, dealershipName),
+    };
+  }
+
+  if (route.agent === "tumi") {
+    const heuristic = answerShowroomQuestion(toVehicleChatContext(vehicle), message, lang);
+    return {
+      agent: "tumi",
+      intent: "trade_in",
+      language: lang,
+      reply: composeShowroomBotReply(heuristic.reply, lang, {
+        appendFollowUp: !replyNeedsNameCapture(heuristic.reply),
+      }),
+    };
+  }
+
+  const heuristic = answerShowroomQuestion(toVehicleChatContext(vehicle), message, lang);
+  return {
+    agent: "nala",
+    intent: heuristic.intent,
+    language: heuristic.language,
+    reply: composeShowroomBotReply(heuristic.reply, lang, {
+      appendFollowUp: heuristic.answered && !replyNeedsNameCapture(heuristic.reply),
+    }),
+  };
 }
 
 export function ShowroomChatAgent({
@@ -328,13 +388,31 @@ export function ShowroomChatAgent({
       const lang = detectShowroomLanguage(val);
       setChatLang(lang);
       setBusy(true);
+
+      const vehicleId = Number.parseInt(String(vehicle.id), 10);
+      let res: {
+        reply: string;
+        agent?: RoutedAgentId;
+        intent: string;
+        language: LanguageCode;
+      };
+
       try {
-        const res = await showroomChat.mutateAsync({
-          vehicleId: Number(vehicle.id),
-          message: val,
-          dealershipName,
-          language: lang,
-        });
+        if (Number.isFinite(vehicleId) && vehicleId > 0) {
+          res = await showroomChat.mutateAsync({
+            vehicleId,
+            message: val,
+            dealershipName,
+            language: lang,
+          });
+        } else {
+          throw new Error("invalid vehicle id");
+        }
+      } catch {
+        res = resolveLocalMenuReply(vehicle, val, lang, dealershipName);
+      }
+
+      try {
         addBot(res.reply, res.agent ?? "nala");
 
         if (res.agent === "lerato" && res.intent === "test_drive") {
@@ -364,8 +442,6 @@ export function ShowroomChatAgent({
             addBot(getLocalizedPrompt("askName", res.language as ShowroomLang));
           }
         }
-      } catch (e) {
-        addBot(getFlowPrompt("errorGeneric", lang));
       } finally {
         setBusy(false);
       }

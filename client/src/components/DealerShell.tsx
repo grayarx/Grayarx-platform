@@ -101,7 +101,7 @@ export default function DealerShell({
         <Navigation />
         <section className="pt-32 pb-20">
           <div className="container max-w-lg text-center">
-            <Logo size={96} className="mx-auto" />
+            <Logo variant="full" size={72} className="mx-auto" />
             <h1 className="font-display text-3xl font-bold mt-8">
               Sign in to access the dealer console
             </h1>

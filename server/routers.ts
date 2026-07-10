@@ -50,6 +50,8 @@ import {
   answerShowroomQuestion,
   detectLanguage,
 } from "../shared/nalaShowroomChat";
+import { composeShowroomBotReply } from "../shared/nalaGrammarPolish";
+import { replyNeedsNameCapture } from "../shared/nalaTranslations";
 import { isLanguageCode } from "../shared/languages";
 import { notifyTradeInSeller, notifyTradeInWrittenOffer } from "./_core/tradeInSellerNotify";
 import { phonesMatch } from "@shared/saMarketGuides";
@@ -776,17 +778,33 @@ export const appRouter = router({
 
         const dealerName = input.dealershipName ?? dealership?.name ?? "GrayArx Dealership";
         const vehicleCtx = vehicleRowToContext(row);
-        const resolved = await resolveRoutedReply({
-          message: input.message,
-          vehicle: vehicleCtx,
-          vehicleId: input.vehicleId,
-          dealershipId,
-          dealershipName: dealerName,
-          businessHoursOverride: dealership?.businessHoursJson ?? undefined,
-          language: lang,
-          channel: "web",
-          includeDealScore: true,
-        });
+        let resolved;
+        try {
+          resolved = await resolveRoutedReply({
+            message: input.message,
+            vehicle: vehicleCtx,
+            vehicleId: input.vehicleId,
+            dealershipId,
+            dealershipName: dealerName,
+            businessHoursOverride: dealership?.businessHoursJson ?? undefined,
+            language: lang,
+            channel: "web",
+            includeDealScore: true,
+          });
+        } catch (routeErr) {
+          console.warn("[showroom.chat] route failed, using template fallback", routeErr);
+          const heuristic = answerShowroomQuestion(vehicleCtx, input.message, lang);
+          resolved = {
+            agent: "nala" as const,
+            reply: composeShowroomBotReply(heuristic.reply, lang, {
+              appendFollowUp: heuristic.answered && !replyNeedsNameCapture(heuristic.reply),
+            }),
+            language: lang,
+            intent: heuristic.intent,
+            answered: heuristic.answered,
+            source: "template" as const,
+          };
+        }
         return {
           reply: resolved.reply,
           language: resolved.language,

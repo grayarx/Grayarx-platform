@@ -5,10 +5,10 @@
 
 export const IMAGE_WIDTHS = [480, 768, 1200, 1600, 1920] as const;
 
-export const LUXURY_HERO_FALLBACK = "/corvette-exterior.jpg";
+export const LUXURY_HERO_FALLBACK = "/hero-car.jpg";
 
 export const LOCAL_EDITORIAL_IMAGES = [
-  LUXURY_HERO_FALLBACK,
+  "/hero-car.jpg",
   "/corvette-exterior.jpg",
   "/corvette-interior.jpg",
   "/dashboard-preview.png",

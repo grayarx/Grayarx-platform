@@ -1,4 +1,10 @@
-import { vehiclePrimaryUrl, isStockPhotoUrl, isWatermarkedRenderUrl, LUXURY_HERO_FALLBACK, LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
+import {
+  vehiclePrimaryUrl,
+  isStockPhotoUrl,
+  isWatermarkedRenderUrl,
+  LUXURY_HERO_FALLBACK,
+  LOCAL_EDITORIAL_IMAGES,
+} from "@shared/imagePipeline";
 import { scoreListingDeal } from "@shared/priceIntelligence";
 
 export type InventoryRow = {
@@ -87,7 +93,7 @@ export function buildEditorialPanels(vehicles: InventoryRow[]) {
     const photo = v ? vehiclePrimaryUrl(v) : null;
     return {
       ...panel,
-      image: photo ?? LUXURY_HERO_FALLBACK,
+      image: photo ?? LOCAL_EDITORIAL_IMAGES[i % LOCAL_EDITORIAL_IMAGES.length],
       title: v ? v.title : panel.title,
       href: v ? `/showroom/${v.id}` : panel.href,
       subtitle: v && v.price ? undefined : panel.tagline,

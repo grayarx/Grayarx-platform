@@ -6,6 +6,7 @@
 import {
   classifyAgentRoute,
   extractCustomerName,
+  webLeratoHandoff,
   type RoutedAgentId,
 } from "../../shared/agentIntentRouting";
 import { detectLanguage, type VehicleChatContext } from "../../shared/nalaShowroomChat";
@@ -89,12 +90,7 @@ function tumiTradeInReply(
 }
 
 function webBookingHandoff(lang: LanguageCode, dealer: string): string {
-  const templates: Partial<Record<LanguageCode, string>> = {
-    en: `I'm **Lerato** at ${dealer}. Tap **Book a test drive** on this page, or tell me your name and when you'd like to visit — I'll pencil you in.`,
-    af: `Ek is **Lerato** by ${dealer}. Tik **Book a test drive** op hierdie bladsy, of stuur jou naam en wanneer jy wil kom.`,
-    zu: `Ngingu-**Lerato** e-${dealer}. Chofoza **Book a test drive** noma ungazise igama nesikhathi.`,
-  };
-  return templates[lang] ?? templates.en!;
+  return webLeratoHandoff(lang, dealer);
 }
 
 async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageCode): Promise<RoutedReplyResult> {

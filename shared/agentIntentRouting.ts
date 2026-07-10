@@ -4,6 +4,7 @@
  */
 
 import { classifyShowroomIntent } from "./nalaShowroomChat";
+import type { LanguageCode } from "./languages";
 
 export type RoutedAgentId = "nala" | "lerato" | "tumi" | "bongi";
 
@@ -81,4 +82,14 @@ export function extractCustomerName(message: string): string | null {
     if (m?.[1]) return m[1].trim();
   }
   return null;
+}
+
+/** Web showroom chat — Lerato handoff when buyer asks to book / test drive. */
+export function webLeratoHandoff(lang: LanguageCode, dealershipName: string): string {
+  const templates: Partial<Record<LanguageCode, string>> = {
+    en: `I'm **Lerato** at ${dealershipName}. Tap **Toetsrit** below, or tell me your name and when you'd like to visit — I'll pencil you in.`,
+    af: `Ek is **Lerato** by ${dealershipName}. Tik **Toetsrit** hieronder, of stuur jou naam en wanneer jy wil kom.`,
+    zu: `Ngingu-**Lerato** e-${dealershipName}. Chofoza **Toetsrit** ngezansi, noma ungazise igama nesikhathi.`,
+  };
+  return templates[lang] ?? templates.en!;
 }

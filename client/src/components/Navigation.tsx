@@ -83,16 +83,11 @@ export default function Navigation() {
       )}
     >
       <div className="container flex h-16 md:h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <Logo size={40} variant="icon" />
-          <div className="hidden sm:flex flex-col leading-tight">
-            <span className="font-display text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
-              GrayArx
-            </span>
-            <span className="font-tech text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
-              AI Platform
-            </span>
-          </div>
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="GrayArx home">
+          <Logo size={36} variant="icon" className="transition-transform group-hover:scale-[1.02]" />
+          <span className="hidden sm:block font-display text-[1.05rem] font-bold tracking-[0.18em] text-foreground group-hover:text-primary transition-colors">
+            GRAYARX
+          </span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-6 xl:gap-8">

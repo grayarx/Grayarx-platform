@@ -22,8 +22,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { trpc } from "@/lib/trpc";
-import { buildEditorialPanels } from "@/lib/showroomImagery";
-import { LOCAL_EDITORIAL_IMAGES, LUXURY_HERO_FALLBACK } from "@shared/imagePipeline";
+import { buildEditorialPanels, pickHeroImage } from "@/lib/showroomImagery";
+import { LOCAL_EDITORIAL_IMAGES } from "@shared/imagePipeline";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
 import { AGENTS } from "@shared/agents";
 import { useMemo } from "react";
@@ -148,7 +148,7 @@ export default function Home() {
   const { data: inventoryStats } = trpc.showroom.stats.useQuery();
   const liveCount = inventoryStats?.available ?? 0;
 
-  const heroSrc = LUXURY_HERO_FALLBACK;
+  const heroSrc = useMemo(() => pickHeroImage(inventory ?? []), [inventory]);
 
   const editorialPanels = useMemo(() => {
     const live = buildEditorialPanels(inventory ?? []);
@@ -165,7 +165,7 @@ export default function Home() {
     title: "GrayArx — Dealership Operating System",
     description:
       "Deal scores, trade-in intelligence, and finance for South African dealerships. Built to outsell classifieds.",
-    ogImage: "https://www.grayarx.com/corvette-exterior.jpg",
+    ogImage: "https://www.grayarx.com/hero-car.jpg",
     ogUrl: "https://www.grayarx.com/",
     ogType: "website",
     themeColor: "#060608",
@@ -193,7 +193,7 @@ export default function Home() {
             staticAsset={heroSrc.startsWith("/")}
             sizes="100vw"
             className="img-premium absolute inset-0 h-full w-full"
-            fallbackSrc="/corvette-exterior.jpg"
+            fallbackSrc="/hero-car.jpg"
           />
         </div>
         <div className="hero-cinematic-veil-full" />

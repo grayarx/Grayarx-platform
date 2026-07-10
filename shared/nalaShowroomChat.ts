@@ -72,8 +72,9 @@ type Intent =
 /** Multilingual intent keywords — order matters (first match wins) */
 const INTENT_KEYWORDS: Record<Exclude<Intent, "general">, string[]> = {
   color: [
-    "colour", "color", "kleur", "kleer", "umbala", "mmala", "muvala", "what colour", "watse kleur",
-    "wat kleur", "watter kleur", "ngiyiphi umbala", "yintoni umbala", "mmala ke eng", "mmala ke ofe",
+    "colour", "color", "kleur", "kleer", "kleere", "umbala", "mmala", "muvala", "what colour", "watse kleur",
+    "wat kleur", "watter kleur", "kleur van", "van kar", "kom hy in", "kom dit in",
+    "ngiyiphi umbala", "yintoni umbala", "mmala ke eng", "mmala ke ofe",
     "cor", "qual cor", "het julle hom in", "het julle dit in",
   ],
   price: [
