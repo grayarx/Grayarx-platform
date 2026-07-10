@@ -38,6 +38,30 @@ export const VEHICLE_MAKES = [
   "Mitsubishi",
   "Tesla",
   "BYD",
+  "Datsun",
+  "Dodge",
+  "RAM",
+  "Cadillac",
+  "Infiniti",
+  "Genesis",
+  "Alfa Romeo",
+  "Maserati",
+  "Bentley",
+  "Lamborghini",
+  "Ferrari",
+  "McLaren",
+  "Aston Martin",
+  "Koenigsegg",
+  "Pagani",
+  "Bugatti",
+  "Rolls-Royce",
+  "SsangYong",
+  "BAIC",
+  "JAC",
+  "Proton",
+  "MG",
+  "DFSK",
+  "Ineos",
 ] as const;
 
 export type VehicleMake = (typeof VEHICLE_MAKES)[number];
@@ -100,6 +124,35 @@ export const MAKE_ALIASES: Record<string, string> = {
   tesla: "Tesla",
   byd: "BYD",
   kia: "Kia",
+  lambo: "Lamborghini",
+  lamborghini: "Lamborghini",
+  ferrari: "Ferrari",
+  mclaren: "McLaren",
+  koeng: "Koenigsegg",
+  koenigsegg: "Koenigsegg",
+  pagani: "Pagani",
+  bugatti: "Bugatti",
+  bentley: "Bentley",
+  "rolls royce": "Rolls-Royce",
+  rolls: "Rolls-Royce",
+  "aston martin": "Aston Martin",
+  aston: "Aston Martin",
+  maserati: "Maserati",
+  "alfa romeo": "Alfa Romeo",
+  alfa: "Alfa Romeo",
+  dodge: "Dodge",
+  ram: "RAM",
+  cadillac: "Cadillac",
+  infiniti: "Infiniti",
+  genesis: "Genesis",
+  datsun: "Datsun",
+  mg: "MG",
+  proton: "Proton",
+  ssangyong: "SsangYong",
+  baic: "BAIC",
+  jac: "JAC",
+  dfsk: "DFSK",
+  ineos: "Ineos",
 };
 
 export const MODELS_BY_MAKE: Record<string, string[]> = {
@@ -195,14 +248,65 @@ export const MODELS_BY_MAKE: Record<string, string[]> = {
   Suzuki: ["Swift", "Baleno", "Ignis", "Vitara", "Jimny", "Ertiga", "Fronx"],
   Mazda: ["Mazda2", "Mazda3", "CX-3", "CX-30", "CX-5", "CX-60", "BT-50"],
   Renault: ["Kwid", "Sandero", "Stepway", "Duster", "Koleos", "Triber"],
-  Chevrolet: ["Spark", "Cruze", "Trailblazer", "Utility"],
+  Chevrolet: [
+    "Spark",
+    "Cruze",
+    "Trailblazer",
+    "Utility",
+    "Corvette",
+    "Corvette Stingray",
+    "Corvette Z06",
+    "Camaro",
+    "Silverado",
+  ],
   Jeep: ["Wrangler", "Grand Cherokee", "Compass", "Renegade", "Gladiator"],
   "Land Rover": ["Defender", "Discovery", "Discovery Sport", "Range Rover", "Range Rover Sport", "Range Rover Evoque"],
   Volvo: ["XC40", "XC60", "XC90", "S60", "V60"],
-  Porsche: ["911", "Cayenne", "Macan", "Panamera", "Taycan", "Boxster", "Cayman"],
-  Lexus: ["UX", "NX", "RX", "ES", "IS", "LX"],
-  Mini: ["Cooper", "Cooper S", "Countryman", "Clubman"],
-  Tesla: ["Model 3", "Model Y", "Model X", "Model S"],
+  Tesla: ["Model 3", "Model Y", "Model X", "Model S", "Cybertruck"],
+  Lamborghini: [
+    "Huracán",
+    "Huracán EVO",
+    "Huracán STO",
+    "Aventador",
+    "Urus",
+    "Revuelto",
+    "Gallardo",
+  ],
+  Ferrari: [
+    "488",
+    "488 GTB",
+    "F8 Tributo",
+    "Roma",
+    "Portofino",
+    "SF90",
+    "296 GTB",
+    "812 Superfast",
+    "California",
+    "Purosangue",
+  ],
+  Porsche: ["911", "911 Carrera", "911 Turbo", "Cayenne", "Macan", "Panamera", "Taycan", "Boxster", "Cayman", "718"],
+  McLaren: ["570S", "600LT", "720S", "765LT", "Artura", "GT", "P1"],
+  Koenigsegg: ["Agera", "Agera RS", "Regera", "Jesko", "Gemera", "CC850"],
+  Bentley: ["Continental GT", "Flying Spur", "Bentayga", "Mulsanne"],
+  "Rolls-Royce": ["Ghost", "Wraith", "Dawn", "Cullinan", "Phantom", "Spectre"],
+  "Aston Martin": ["DB11", "DB12", "Vantage", "DBS", "DBX", "Valkyrie"],
+  Maserati: ["Ghibli", "Levante", "Quattroporte", "MC20", "Grecale", "GranTurismo"],
+  "Alfa Romeo": ["Giulia", "Stelvio", "Tonale", "Giulietta", "4C"],
+  RAM: ["1500", "2500", "3500"],
+  Cadillac: ["Escalade", "CT4", "CT5", "XT4", "XT5", "XT6"],
+  Infiniti: ["Q50", "Q60", "QX50", "QX60", "QX80"],
+  Genesis: ["G70", "G80", "G90", "GV60", "GV70", "GV80"],
+  Jaguar: ["XE", "XF", "F-Pace", "E-Pace", "I-Pace", "F-Type"],
+  Lexus: ["UX", "NX", "RX", "ES", "IS", "LX", "LC"],
+  Mini: ["Cooper", "Cooper S", "Countryman", "Clubman", "Paceman"],
+  Dodge: ["Challenger", "Charger", "Durango"],
+  Datsun: ["Go", "Go+", "Cross"],
+  MG: ["ZS", "HS", "MG3", "MG4", "Cyberster"],
+  SsangYong: ["Korando", "Rexton", "Musso", "Tivoli"],
+  BAIC: ["X55", "B40", "BJ40"],
+  Ineos: ["Grenadier"],
+  Pagani: ["Huayra", "Zonda"],
+  Bugatti: ["Chiron", "Veyron", "Mistral"],
 };
 
 export const BODY_TYPES = [
@@ -221,6 +325,27 @@ export const BODY_TYPES = [
 export const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"] as const;
 
 export const TRANSMISSION_TYPES = ["Automatic", "Manual", "DCT", "CVT"] as const;
+
+export const VEHICLE_COLORS = [
+  "White",
+  "Black",
+  "Silver",
+  "Grey",
+  "Mineral Grey",
+  "Blue",
+  "Red",
+  "Yellow",
+  "Orange",
+  "Green",
+  "Brown",
+  "Beige",
+  "Gold",
+  "Bronze",
+  "Purple",
+  "Pearl White",
+  "Metallic Black",
+  "Champagne",
+] as const;
 
 /** Resolve shorthand/typo to canonical make, or return trimmed input if unknown. */
 export function resolveMake(input: string): string {
@@ -291,10 +416,17 @@ export function resolveModel(make: string, input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return trimmed;
   const models = getModelsForMake(make);
+  if (models.length === 0) return trimmed;
   const lower = trimmed.toLowerCase();
   const exact = models.find((m) => m.toLowerCase() === lower);
   if (exact) return exact;
-  const starts = models.find((m) => m.toLowerCase().startsWith(lower));
-  if (starts && lower.length >= 2) return starts;
+  // Autocomplete only when the typed prefix uniquely identifies one catalog model.
+  if (lower.length >= 2) {
+    const prefixMatches = models.filter((m) => m.toLowerCase().startsWith(lower));
+    if (prefixMatches.length === 1) return prefixMatches[0];
+    const exactAmongPrefixes = prefixMatches.find((m) => m.toLowerCase() === lower);
+    if (exactAmongPrefixes) return exactAmongPrefixes;
+  }
+  // Keep custom / exotic models (Corvette C8, Huracán EVO, etc.) — never guess.
   return trimmed;
 }

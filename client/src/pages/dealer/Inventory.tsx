@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "wouter";
 import {
   Loader2,
@@ -19,7 +19,14 @@ import {
 import DealerShell from "@/components/DealerShell";
 import SearchableSelect from "@/components/SearchableSelect";
 import { MakeSelect, ModelSelect } from "@/components/SmartVehicleSelect";
-import { resolveMake, resolveModel } from "@shared/vehicleCatalog";
+import {
+  BODY_TYPES,
+  FUEL_TYPES,
+  TRANSMISSION_TYPES,
+  VEHICLE_COLORS,
+  resolveMake,
+  resolveModel,
+} from "@shared/vehicleCatalog";
 import { formatVehiclePrice, isSuspiciousPrice, parsePriceInput } from "@/lib/formatPrice";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -40,7 +47,6 @@ import VehiclePhotoUploader, {
   type PendingGalleryPhoto,
 } from "@/components/VehiclePhotoUploader";
 import VehicleShowroomFrame from "@/components/VehicleShowroomFrame";
-import VehicleGallery from "@/components/VehicleGallery";
 import {
   Select,
   SelectContent,
@@ -49,18 +55,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const FUEL_OPTIONS = ["Petrol", "Diesel", "Hybrid", "Electric"] as const;
-const TRANSMISSION_OPTIONS = ["Automatic", "Manual", "DCT", "CVT"] as const;
-const BODY_OPTIONS = [
-  "Sedan",
-  "SUV",
-  "Bakkie",
-  "Hatchback",
-  "Coupe",
-  "MPV",
-  "Wagon",
-  "Convertible",
-] as const;
+const FUEL_OPTIONS = FUEL_TYPES;
+const TRANSMISSION_OPTIONS = TRANSMISSION_TYPES;
+const BODY_OPTIONS = BODY_TYPES;
+const COLOR_OPTIONS = VEHICLE_COLORS;
 const CONDITION_OPTIONS = ["new", "used", "demo", "certified"] as const;
 const SERVICE_OPTIONS = ["full", "partial", "none"] as const;
 
@@ -192,36 +190,68 @@ function vehicleToForm(v: {
   };
 }
 
+function blockNegativeKey(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key === "-" || e.key === "+" || e.key === "e" || e.key === "E") {
+    e.preventDefault();
+  }
+}
+
+function sanitizeNumericInput(
+  raw: string,
+  opts: { min?: number; max?: number; allowEmpty?: boolean } = {},
+): string {
+  const { min = 0, max, allowEmpty = true } = opts;
+  if (allowEmpty && raw === "") return "";
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return allowEmpty ? "" : String(min);
+  let v = Math.floor(n);
+  if (v < min) v = min;
+  if (max != null && v > max) v = max;
+  return String(v);
+}
+
+function parseOptionalInt(
+  raw: string,
+  opts: { min?: number; max?: number } = {},
+): number | undefined {
+  if (!raw.trim()) return undefined;
+  const n = Number(sanitizeNumericInput(raw, { ...opts, allowEmpty: false }));
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function buildPayload(form: FormState) {
   let title = form.title.trim();
   if (!title) {
     title = [form.year, form.make, form.model].filter(Boolean).join(" ").trim() || "Untitled vehicle";
   }
   const make = form.make ? resolveMake(form.make) : undefined;
-  const model = form.model && make ? resolveModel(make, form.model) : form.model || undefined;
+  const model =
+    form.model && make
+      ? resolveModel(make, form.model)
+      : form.model.trim() || undefined;
   const priceNum = parsePriceInput(form.price);
   return {
     title,
     make,
     model,
-    year: form.year ? Number(form.year) : undefined,
+    year: parseOptionalInt(form.year, { min: 1980, max: 2030 }),
     price: priceNum ?? undefined,
-    km: form.km ? Number(form.km) : undefined,
+    km: parseOptionalInt(form.km, { min: 0 }),
     fuel: form.fuel || undefined,
     transmission: form.transmission || undefined,
     bodyType: form.bodyType || undefined,
     color: form.color || undefined,
     condition: form.condition,
     vin: form.vin || undefined,
-    engineCc: form.engineCc ? Number(form.engineCc) : undefined,
-    doors: form.doors ? Number(form.doors) : undefined,
-    seats: form.seats ? Number(form.seats) : undefined,
+    engineCc: parseOptionalInt(form.engineCc, { min: 0, max: 20000 }),
+    doors: parseOptionalInt(form.doors, { min: 2, max: 6 }),
+    seats: parseOptionalInt(form.seats, { min: 1, max: 20 }),
     features: form.features.length ? form.features : undefined,
     serviceHistory:
       form.serviceHistory && form.serviceHistory !== "any"
         ? (form.serviceHistory as "full" | "partial" | "none")
         : undefined,
-    previousOwners: form.previousOwners ? Number(form.previousOwners) : undefined,
+    previousOwners: parseOptionalInt(form.previousOwners, { min: 0, max: 20 }),
     imageUrl: form.imageUrl || undefined,
     primaryPhotoUrl: form.imageUrl || undefined,
     location: form.location || undefined,
@@ -303,6 +333,14 @@ export default function Inventory() {
     const priceNum = parsePriceInput(form.price);
     if (priceNum === null || priceNum <= 1) {
       toast.error("Enter a valid price above R1. Use Settings → Fix R1 prices for bulk imports.");
+      return;
+    }
+    if (form.doors.trim() && (Number(form.doors) < 2 || Number(form.doors) > 6)) {
+      toast.error("Doors must be between 2 and 6.");
+      return;
+    }
+    if (form.seats.trim() && (Number(form.seats) < 1 || Number(form.seats) > 20)) {
+      toast.error("Seats must be between 1 and 20.");
       return;
     }
     const payload = buildPayload(form);
@@ -413,7 +451,13 @@ export default function Inventory() {
                 <div className="mt-1">
                   <MakeSelect
                     value={form.make}
-                    onChange={(make) => setForm({ ...form, make, model: "" })}
+                    onChange={(make) =>
+                      setForm((f) => ({
+                        ...f,
+                        make,
+                        model: make === f.make ? f.model : "",
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -433,8 +477,13 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={1980}
+                  max={2030}
                   value={form.year}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
+                  onKeyDown={blockNegativeKey}
+                  onChange={(e) =>
+                    setForm({ ...form, year: sanitizeNumericInput(e.target.value, { min: 1980, max: 2030 }) })
+                  }
                   className="mt-1"
                   placeholder="2023"
                 />
@@ -444,8 +493,12 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={1}
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  onKeyDown={blockNegativeKey}
+                  onChange={(e) =>
+                    setForm({ ...form, price: sanitizeNumericInput(e.target.value, { min: 1 }) })
+                  }
                   className="mt-1"
                   placeholder="650000"
                 />
@@ -456,8 +509,12 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={0}
                   value={form.km}
-                  onChange={(e) => setForm({ ...form, km: e.target.value })}
+                  onKeyDown={blockNegativeKey}
+                  onChange={(e) =>
+                    setForm({ ...form, km: sanitizeNumericInput(e.target.value, { min: 0 }) })
+                  }
                   className="mt-1"
                   placeholder="42000"
                 />
@@ -519,12 +576,15 @@ export default function Inventory() {
               </div>
               <div>
                 <Label>Colour</Label>
-                <Input
-                  value={form.color}
-                  onChange={(e) => setForm({ ...form, color: e.target.value })}
-                  className="mt-1"
-                  placeholder="Mineral Grey"
-                />
+                <div className="mt-1">
+                  <SearchableSelect
+                    value={form.color}
+                    onChange={(v) => setForm({ ...form, color: v })}
+                    options={COLOR_OPTIONS}
+                    placeholder="Red, Black, Silver…"
+                    allowCustom
+                  />
+                </div>
               </div>
 
               <div>
@@ -532,9 +592,15 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={0}
+                  max={20000}
                   value={form.engineCc}
+                  onKeyDown={blockNegativeKey}
                   onChange={(e) =>
-                    setForm({ ...form, engineCc: e.target.value })
+                    setForm({
+                      ...form,
+                      engineCc: sanitizeNumericInput(e.target.value, { min: 0, max: 20000 }),
+                    })
                   }
                   className="mt-1"
                   placeholder="1998"
@@ -556,8 +622,13 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={2}
+                  max={6}
                   value={form.doors}
-                  onChange={(e) => setForm({ ...form, doors: e.target.value })}
+                  onKeyDown={blockNegativeKey}
+                  onChange={(e) =>
+                    setForm({ ...form, doors: sanitizeNumericInput(e.target.value, { min: 2, max: 6 }) })
+                  }
                   className="mt-1"
                   placeholder="4"
                 />
@@ -567,8 +638,13 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={1}
+                  max={20}
                   value={form.seats}
-                  onChange={(e) => setForm({ ...form, seats: e.target.value })}
+                  onKeyDown={blockNegativeKey}
+                  onChange={(e) =>
+                    setForm({ ...form, seats: sanitizeNumericInput(e.target.value, { min: 1, max: 20 }) })
+                  }
                   className="mt-1"
                   placeholder="5"
                 />
@@ -600,9 +676,15 @@ export default function Inventory() {
                 <Input
                   type="number"
                   inputMode="numeric"
+                  min={0}
+                  max={20}
                   value={form.previousOwners}
+                  onKeyDown={blockNegativeKey}
                   onChange={(e) =>
-                    setForm({ ...form, previousOwners: e.target.value })
+                    setForm({
+                      ...form,
+                      previousOwners: sanitizeNumericInput(e.target.value, { min: 0, max: 20 }),
+                    })
                   }
                   className="mt-1"
                   placeholder="1"

@@ -25,8 +25,9 @@ export function MakeSelect({
       onChange={onChange}
       options={VEHICLE_MAKES}
       placeholder="Toyota, VW, BMW…"
+      allowCustom
       resolveValue={resolveMake}
-      searchOptions={searchMakes}
+      searchOptions={(q) => searchMakes(q, 20)}
       matchHint={getMakeMatchHint}
       className={className}
     />
