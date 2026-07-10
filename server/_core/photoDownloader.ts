@@ -52,7 +52,8 @@ export async function mirrorExternalPhoto(
   vehicleTitle: string,
   externalRef: string | null,
 ): Promise<string | null> {
-  if (!externalUrl || !isExternalPhotoUrl(externalUrl)) {
+  const s3PublicUrl = process.env.S3_PUBLIC_URL ?? undefined;
+  if (!externalUrl || !isExternalPhotoUrl(externalUrl, s3PublicUrl)) {
     return null;
   }
   if (isBlockedUrl(externalUrl)) {
@@ -110,5 +111,6 @@ export async function mirrorExternalPhoto(
 }
 
 export function shouldMirrorPhoto(url: string | null | undefined): boolean {
-  return isExternalPhotoUrl(url ?? null);
+  const s3PublicUrl = process.env.S3_PUBLIC_URL ?? undefined;
+  return isExternalPhotoUrl(url ?? null, s3PublicUrl);
 }

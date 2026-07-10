@@ -1540,6 +1540,19 @@ export async function findRoadmapByHash(hash: string) {
  */
 export async function getKagisoSnapshot() {
   const db = await getDb();
+
+  // Import circuit breaker state lazily to avoid circular dependency risk
+  let circuitBreakerState: Record<string, { state: string; failures: number }> = {};
+  try {
+    const { getResilienceStatus } = await import("./_core/agentResilience");
+    const raw = getResilienceStatus();
+    for (const [name, info] of Object.entries(raw)) {
+      circuitBreakerState[name] = { state: info.state, failures: info.failures };
+    }
+  } catch {
+    // Best-effort — audit proceeds without circuit breaker data
+  }
+
   if (!db) {
     return {
       dealerships: 0,
@@ -1552,6 +1565,8 @@ export async function getKagisoSnapshot() {
       preApprovalsPending: 0,
       fallbackUnresolved: 0,
       brandKitIncomplete: 0,
+      agentActivityCount: 0,
+      circuitBreakerState,
     };
   }
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -1563,6 +1578,17 @@ export async function getKagisoSnapshot() {
   );
   const allPreApprovals = await db.select().from(preApprovals);
   const allFallback = await db.select().from(fallbackMessages);
+
+  // Count agent activity entries (cheap COUNT query)
+  let agentActivityCount = 0;
+  try {
+    const countResult = await db
+      .select({ total: sql<number>`count(*)`.as("total") })
+      .from(agentActivity);
+    agentActivityCount = Number(countResult[0]?.total ?? 0);
+  } catch {
+    // Best-effort
+  }
 
   const brandKitIncomplete = allDealerships.filter((d) => {
     return (
@@ -1586,6 +1612,8 @@ export async function getKagisoSnapshot() {
     ).length,
     fallbackUnresolved: allFallback.filter((f) => !f.resolvedAt).length,
     brandKitIncomplete,
+    agentActivityCount,
+    circuitBreakerState,
   };
 }
 

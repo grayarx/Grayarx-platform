@@ -204,8 +204,8 @@ export async function draftFallbackReply(
     if (polished && polished.length > 20) {
       return { reply: polished, language };
     }
-  } catch {
-    // Swallow; we fall through to the template.
+  } catch (err) {
+    console.warn("[Bongi] LLM failed, using template fallback:", err instanceof Error ? err.message : String(err));
   }
   return { reply: baseTemplate, language };
 }

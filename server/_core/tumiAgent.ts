@@ -403,8 +403,8 @@ Write the memo now.`;
     });
     const memo = r.choices?.[0]?.message?.content ?? "";
     if (typeof memo === "string" && memo.trim().length > 0) return memo;
-  } catch {
-    // fall through to deterministic fallback
+  } catch (err) {
+    console.warn("[Tumi] LLM failed, using deterministic fallback:", err instanceof Error ? err.message : String(err));
   }
 
   // Deterministic fallback memo

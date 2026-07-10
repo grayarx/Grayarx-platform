@@ -292,7 +292,7 @@ export default function VehicleDetail() {
                       GrayArx price intelligence
                     </h3>
                     <p className="text-muted-foreground text-xs leading-relaxed">
-                      AutoTrader shows asking prices. We compare this listing to our SA market guide so you know if
+                      Classified portals show asking prices. We compare this listing to our SA market guide so you know if
                       you're saving or overpaying before you enquire.
                     </p>
                     <div className="grid grid-cols-2 gap-3 pt-1">

@@ -269,7 +269,7 @@ async function getMediaUrl(mediaId: string, phoneNumberId: string): Promise<stri
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     if (!accessToken) return undefined;
 
-    const url = `https://graph.facebook.com/v18.0/${mediaId}`;
+    const url = `https://graph.facebook.com/v22.0/${mediaId}`;
 
     const response = await fetch(url, {
       method: "GET",

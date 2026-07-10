@@ -45,7 +45,7 @@ export default function CSVPhotoManager() {
   return (
     <DealerShell
       title="Photo manager"
-      subtitle="One-click fixes — save AutoTrader photos permanently and see what's missing."
+      subtitle="One-click fixes — save external photos permanently and see what's missing."
     >
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-primary/20">
@@ -113,7 +113,7 @@ export default function CSVPhotoManager() {
               Save external photos
             </CardTitle>
             <CardDescription>
-              Copies AutoTrader &amp; Cars.co.za images into GrayArx so links never break when listings
+              Copies external listing images into GrayArx so links never break when listings
               expire.
             </CardDescription>
           </CardHeader>
@@ -165,7 +165,7 @@ export default function CSVPhotoManager() {
             <Upload className="h-8 w-8 text-primary mb-3" />
             <h3 className="font-semibold mb-1">Import from CSV</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Paste AutoTrader export — use | between photo URLs for galleries.
+              Paste your CSV export — use | between photo URLs for galleries.
             </p>
             <Button asChild variant="outline" size="sm">
               <Link href="/dealer/inventory/import">Import CSV</Link>

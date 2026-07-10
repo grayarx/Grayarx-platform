@@ -63,6 +63,15 @@ export async function alertFounder(opts: {
     // Forge not configured in production — email is the primary channel.
   }
 
+  if (!emailSent && !pushSent) {
+    console.error(
+      "[founderAlert] CRITICAL: Both email and push failed for alert:",
+      opts.title,
+      "| content:",
+      opts.content.slice(0, 200),
+    );
+  }
+
   return { emailSent, pushSent };
 }
 

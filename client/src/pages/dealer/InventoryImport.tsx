@@ -192,7 +192,7 @@ export default function InventoryImportPage() {
   return (
     <DealerShell
       title="Import Inventory CSV"
-      subtitle="Drag a file from AutoTrader, Cars.co.za, or your DMS. Stock feeds your showroom instantly."
+      subtitle="Drag a CSV from your DMS or stock export. Your inventory feeds the showroom instantly."
     >
       <AnimatePresence>
         {isImporting && (
@@ -509,7 +509,7 @@ export default function InventoryImportPage() {
                           Save photos to GrayArx
                         </Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Recommended — copies AutoTrader/Cars.co.za images so links never break
+                          Recommended — copies external listing images so links never break
                         </p>
                       </div>
                       <Switch

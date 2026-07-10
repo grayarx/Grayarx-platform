@@ -237,11 +237,11 @@ export default function Onboarding() {
                   id="csvUrl"
                   value={form.csvUrl}
                   onChange={(e) => setForm({ ...form, csvUrl: e.target.value })}
-                  placeholder="https://autotrader.co.za/dealer/abc/export.csv"
+                  placeholder="https://yourdms.co.za/export/stock.csv"
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Paste a public link to your AutoTrader / Cars.co.za stock export. We'll import it automatically.
+                  Paste a public link to your DMS or stock export CSV. We'll import it automatically.
                 </p>
               </div>
 

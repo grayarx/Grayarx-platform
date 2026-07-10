@@ -293,7 +293,7 @@ class WhatsAppIntegrationService {
       throw new Error("WhatsApp configuration not available");
     }
 
-    const url = `https://graph.facebook.com/v18.0/${this.config.phoneNumberId}${endpoint}`;
+    const url = `https://graph.facebook.com/v22.0/${this.config.phoneNumberId}${endpoint}`;
 
     const headers = {
       Authorization: `Bearer ${this.config.apiToken}`,

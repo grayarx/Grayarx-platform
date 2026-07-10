@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { withCircuitBreaker, CircuitOpenError } from "./agentResilience";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -325,21 +326,31 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.llmApiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const breakerName = ENV.usesOpenAI ? "openai" : "forge";
+  try {
+    return await withCircuitBreaker(breakerName, async () => {
+      const response = await fetch(resolveApiUrl(), {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${ENV.llmApiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`,
+        );
+      }
+
+      return (await response.json()) as InvokeResult;
+    });
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      console.error(`[LLM] Circuit breaker open for "${breakerName}" — skipping LLM call:`, err.message);
+    }
+    throw err;
   }
-
-  return (await response.json()) as InvokeResult;
 }

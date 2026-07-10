@@ -61,6 +61,7 @@ import Leads from "./pages/dealer/Leads";
 import Bookings from "./pages/dealer/Bookings";
 import Inventory from "./pages/dealer/Inventory";
 import Agents from "./pages/dealer/Agents";
+import AgentChat from "./pages/dealer/AgentChat";
 import DealerNetwork from "./pages/dealer/DealerNetwork";
 
 // Admin / founder
@@ -200,6 +201,12 @@ function Router() {
       <Route path="/dealer/legal" component={DealerLegal} />
       <Route path="/dealer/trade-ins" component={TradeInNetwork} />
       <Route path="/dealer/inventory-management" component={InventoryManagementPage} />
+      <Route path="/dealer/agents/chat/:agentId">
+        <AdminRouteGuard><AgentChat /></AdminRouteGuard>
+      </Route>
+      <Route path="/dealer/agents/chat">
+        <AdminRouteGuard><AgentChat /></AdminRouteGuard>
+      </Route>
       <Route path="/dealer/agents">
         <AdminRouteGuard><Agents /></AdminRouteGuard>
       </Route>

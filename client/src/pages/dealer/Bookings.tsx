@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
+  Pencil,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import { trpc } from "@/lib/trpc";
@@ -32,6 +33,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
@@ -218,6 +228,17 @@ export default function Bookings() {
  * GrayArx product). Test drives are scoped automatically to the user's
  * dealership server-side via `adminBookings.list`.
  */
+type ReclassifyBooking = { id: number; referenceNumber: string; customerName: string };
+type ActualType = "general_viewing" | "consultation" | "call" | "inquiry" | "other";
+
+const ACTUAL_TYPE_OPTIONS: { value: ActualType; label: string }[] = [
+  { value: "general_viewing", label: "General viewing" },
+  { value: "consultation", label: "Consultation" },
+  { value: "call", label: "Phone call / enquiry" },
+  { value: "inquiry", label: "Online inquiry" },
+  { value: "other", label: "Other" },
+];
+
 function TestDrivesTab() {
   const [statusFilter, setStatusFilter] = useState<
     | "all"
@@ -228,6 +249,11 @@ function TestDrivesTab() {
     | "cancelled"
     | "no_show"
   >("all");
+  const [reclassifyTarget, setReclassifyTarget] = useState<ReclassifyBooking | null>(null);
+  const [reclassifyType, setReclassifyType] = useState<ActualType>("general_viewing");
+  const [reclassifyNotes, setReclassifyNotes] = useState("");
+  const [cancelBooking, setCancelBooking] = useState(true);
+
   const utils = trpc.useUtils();
   const { data, isLoading, isError, error, refetch } = trpc.adminBookings.list.useQuery({
     status: statusFilter === "all" ? undefined : statusFilter,
@@ -236,6 +262,17 @@ function TestDrivesTab() {
     onSuccess: () => {
       utils.adminBookings.list.invalidate();
       toast.success("Booking updated");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const reclassify = trpc.adminBookings.reclassify.useMutation({
+    onSuccess: (res) => {
+      utils.adminBookings.list.invalidate();
+      toast.success(
+        `Booking reclassified as "${ACTUAL_TYPE_OPTIONS.find((o) => o.value === res.actualType)?.label ?? res.actualType}"`,
+      );
+      setReclassifyTarget(null);
+      setReclassifyNotes("");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -415,6 +452,19 @@ function TestDrivesTab() {
                         <XCircle className="h-3 w-3 mr-1" /> Cancel
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px] text-amber-300 border-amber-500/30 hover:text-amber-200"
+                      onClick={() => {
+                        setReclassifyTarget({ id: b.id, referenceNumber: b.referenceNumber, customerName: b.customerName });
+                        setReclassifyType("general_viewing");
+                        setReclassifyNotes("");
+                        setCancelBooking(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" /> Reclassify
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -422,6 +472,76 @@ function TestDrivesTab() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Reclassify modal */}
+      <Dialog open={!!reclassifyTarget} onOpenChange={(open) => !open && setReclassifyTarget(null)}>
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              Reclassify booking — {reclassifyTarget?.referenceNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This booking for <strong className="text-foreground">{reclassifyTarget?.customerName}</strong> was
+            logged as a test drive but may have been something else. Choose the actual type below.
+          </p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Actual booking type</Label>
+              <Select value={reclassifyType} onValueChange={(v) => setReclassifyType(v as ActualType)}>
+                <SelectTrigger className="bg-background border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACTUAL_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea
+                placeholder="Add any context about what actually happened…"
+                value={reclassifyNotes}
+                onChange={(e) => setReclassifyNotes(e.target.value)}
+                rows={3}
+                className="bg-background border-border resize-none"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={cancelBooking}
+                onChange={(e) => setCancelBooking(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-muted-foreground">Cancel this test-drive slot (recommended)</span>
+            </label>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setReclassifyTarget(null)}>
+              Discard
+            </Button>
+            <Button
+              className="btn-gold font-semibold"
+              disabled={reclassify.isPending}
+              onClick={() => {
+                if (!reclassifyTarget) return;
+                reclassify.mutate({
+                  id: reclassifyTarget.id,
+                  actualType: reclassifyType,
+                  notes: reclassifyNotes || undefined,
+                  cancelBooking,
+                });
+              }}
+            >
+              {reclassify.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save reclassification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

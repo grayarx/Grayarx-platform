@@ -265,7 +265,7 @@ export async function calculateTradeInOffer(
 Based on ${mileageKm.toLocaleString("en-ZA")} km, ${condition} condition, and ${serviceHistory} service history, 
 we can realistically offer R${finalOffer.toLocaleString("en-ZA")} as a trade-in (before physical inspection). 
 
-This is based on current market prices from AutoTrader and Cars.co.za. The final offer may be adjusted after we inspect the vehicle in person.`,
+This is based on current SA market prices. The final offer may be adjusted after we inspect the vehicle in person.`,
   };
 }
 

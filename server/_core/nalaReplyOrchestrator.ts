@@ -15,6 +15,7 @@ import { generateNalaShowroomReply, generateNalaGeneralWhatsAppReply } from "./n
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
 import type { LanguageCode } from "../../shared/languages";
 import { detectsBookingIntent } from "../../shared/agentIntentRouting";
+import { isQuotaError } from "./agentResilience";
 
 export function stripMarkdownForWhatsApp(text: string): string {
   return text
@@ -706,7 +707,10 @@ export async function resolveNalaReply(input: {
           isBookingIntent,
         };
       } catch (e) {
-        console.warn("[nalaReplyOrchestrator] General WhatsApp LLM failed — using template", e);
+        console.warn("[nalaReplyOrchestrator] General WhatsApp LLM failed — using template", e instanceof Error ? e.message : String(e));
+        if (isQuotaError(e)) {
+          console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
+        }
       }
     }
 
@@ -781,6 +785,9 @@ export async function resolveNalaReply(input: {
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
     console.warn(`[nalaReplyOrchestrator] LLM failed (${reason}) — using template`);
+    if (isQuotaError(e)) {
+      console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
+    }
     let reply = polishNalaReply(heuristic.reply, lang);
     if (input.includeDealScore !== false && heuristic.intent === "price") {
       reply = appendDealScoreToReply(reply, input.vehicle, lang);

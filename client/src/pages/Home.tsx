@@ -165,7 +165,7 @@ const CAPABILITIES = [
   {
     icon: Car,
     title: "Inventory that stays honest",
-    desc: "CSV from AutoTrader or your DMS syncs showroom, chat, and WhatsApp from one source of truth.",
+    desc: "Your CSV or DMS export syncs showroom, chat, and WhatsApp from one source of truth.",
   },
   {
     icon: Zap,
@@ -545,7 +545,7 @@ export default function Home() {
               <span className="text-cyber-gradient">without friction</span>
             </h2>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              AutoTrader stops at a listing. GrayArx carries the buyer through the money decisions
+              Classified portals stop at a listing. GrayArx carries the buyer through the money decisions
               that actually close the deal.
             </p>
           </motion.div>

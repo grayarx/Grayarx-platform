@@ -62,7 +62,7 @@ export default function TradeInStatus() {
             Track your trade-in activity
           </h1>
           <p className="text-muted-foreground">
-            See which dealerships invited you for inspection. AutoTrader doesn't tell you who's interested — we do.
+            See which dealerships invited you for inspection. Classified portals don't tell you who's interested — we do.
           </p>
         </div>
       </section>

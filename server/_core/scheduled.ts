@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { invokeLLM } from "./llm";
 import { createProspects, getProspectsSchedule } from "../db";
 import { sendScheduledReportHandler } from "./scheduledReportHandler";
+import { alertFounder } from "./founderAlert";
 
 /**
  * Weekly rotation of SA provinces — every night the prospector targets the
@@ -188,6 +189,12 @@ export function registerScheduledRoutes(app: Express) {
       return res.json(summary);
     } catch (err) {
       console.error("[Scheduled] kagiso-audit failed", err);
+      alertFounder({
+        title: "Scheduled job failed: kagiso-audit",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
       return res.status(500).json({
         error: String(err),
         stack: err instanceof Error ? err.stack : undefined,
@@ -211,6 +218,12 @@ export function registerScheduledRoutes(app: Express) {
       return res.json({ ok: true, ...summary });
     } catch (err) {
       console.error("[Scheduled] lead-followup-tick failed", err);
+      alertFounder({
+        title: "Scheduled job failed: lead-followup-tick",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
       return res.status(500).json({ ok: false, error: String(err) });
     }
   });
@@ -226,6 +239,12 @@ export function registerScheduledRoutes(app: Express) {
       res.json({ ok: true, region, created });
     } catch (err) {
       console.error("[Scheduled] prospect-nightly failed", err);
+      alertFounder({
+        title: "Scheduled job failed: prospect-nightly",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
       res.status(500).json({ ok: false, error: String(err) });
     }
   });

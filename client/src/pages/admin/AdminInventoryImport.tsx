@@ -6,7 +6,7 @@ export default function AdminInventoryImport() {
   return (
     <AdminShell
       title="Inventory import"
-      subtitle="Import stock CSVs on behalf of any dealership. Photos are auto-downloaded from AutoTrader / Cars.co.za and stored in S3."
+      subtitle="Import stock CSVs on behalf of any dealership. External listing photos are auto-downloaded and stored in S3."
     >
       <Card className="card-premium">
         <CardContent className="p-8 text-center">

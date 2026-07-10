@@ -35,7 +35,9 @@ export type AuditSection =
   | "brand_kit"
   | "language_coverage"
   | "ui_health"
-  | "commercial";
+  | "commercial"
+  | "agent_errors"
+  | "memory_health";
 
 export const AUDIT_SECTIONS: AuditSection[] = [
   "data_health",
@@ -48,6 +50,8 @@ export const AUDIT_SECTIONS: AuditSection[] = [
   "language_coverage",
   "ui_health",
   "commercial",
+  "agent_errors",
+  "memory_health",
 ];
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
@@ -421,6 +425,141 @@ function walkCommercial(_snap: KagisoSnapshot): Finding[] {
   ];
 }
 
+function walkAgentErrors(snap: KagisoSnapshot): Finding[] {
+  const findings: Finding[] = [];
+  const cb = snap.circuitBreakerState ?? {};
+
+  if (cb["openai"]?.state === "open") {
+    findings.push({
+      title: "OpenAI circuit breaker is open — LLM offline",
+      description:
+        "The OpenAI circuit breaker has tripped after repeated failures. All AI-generated replies are falling back to templates. Agents cannot learn or generate personalised responses.",
+      rationale:
+        "Check OpenAI billing quota or API key. Top up credits or rotate the key. Replies degrade to static templates until resolved.",
+      category: "agent_improvement",
+      priority: "critical",
+      severity: "critical",
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: true,
+      auditSection: "agent_errors",
+      hash: stableHash(["agent_errors", "openai_circuit_open"]),
+      evidenceJson: { breakerState: cb["openai"] },
+    });
+  } else if ((cb["openai"]?.failures ?? 0) >= 3) {
+    findings.push({
+      title: "OpenAI has 3+ consecutive failures — at risk of circuit open",
+      description:
+        `OpenAI has recorded ${cb["openai"]?.failures} consecutive failures. If it reaches 5, the circuit breaker will open and all LLM calls will be blocked.`,
+      rationale:
+        "Investigate API key validity and OpenAI quota before the breaker fully opens.",
+      category: "agent_improvement",
+      priority: "high",
+      severity: "high",
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: true,
+      auditSection: "agent_errors",
+      hash: stableHash(["agent_errors", "openai_failures_high", Math.min(cb["openai"]?.failures ?? 0, 10)]),
+      evidenceJson: { breakerState: cb["openai"] },
+    });
+  }
+
+  if (cb["whatsapp"]?.state === "open") {
+    findings.push({
+      title: "WhatsApp circuit breaker is open — messaging offline",
+      description:
+        "The WhatsApp API circuit breaker has tripped. Nala cannot send or receive WhatsApp messages. Inbound customer leads are unserviced.",
+      rationale:
+        "Check WhatsApp Business API credentials and Meta phone number registration. This is a revenue-impacting outage.",
+      category: "integration",
+      priority: "high",
+      severity: "high",
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: true,
+      auditSection: "agent_errors",
+      hash: stableHash(["agent_errors", "whatsapp_circuit_open"]),
+      evidenceJson: { breakerState: cb["whatsapp"] },
+    });
+  }
+
+  if (cb["resend"]?.state === "open") {
+    findings.push({
+      title: "Resend email circuit breaker is open — email offline",
+      description:
+        "The Resend transactional email circuit breaker has tripped. Mia cannot send drip emails, follow-ups, or notifications.",
+      rationale:
+        "Check Resend API key and account status. Email follow-up cadences will stall until resolved.",
+      category: "integration",
+      priority: "medium",
+      severity: "medium",
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: true,
+      auditSection: "agent_errors",
+      hash: stableHash(["agent_errors", "resend_circuit_open"]),
+      evidenceJson: { breakerState: cb["resend"] },
+    });
+  }
+
+  return findings;
+}
+
+function walkMemoryHealth(snap: KagisoSnapshot): Finding[] {
+  const count = snap.agentActivityCount ?? 0;
+
+  if (count > 500) {
+    return [
+      {
+        title: "Memory healthy — agents have rich interaction history",
+        description: `The agent_activity table holds ${count} entries. Agents now have enough context to surface meaningful patterns and personalise replies via memory retrieval.`,
+        rationale:
+          "Rich memory = smarter agents. No action required — recorded as a positive checkpoint.",
+        category: "agent_improvement",
+        priority: "low",
+        severity: "info",
+        creditCostEstimate: 0,
+        roiEstimateZar: null,
+        llmTokensEstimate: 0,
+        agentAutonomous: false,
+        humanRequired: false,
+        auditSection: "memory_health",
+        hash: stableHash(["memory_health", "rich_v1"]),
+        evidenceJson: { agentActivityCount: count },
+      },
+    ];
+  }
+
+  return [
+    {
+      title: "Agent memory is thin — reply quality improves as agents interact",
+      description: `Only ${count} agent_activity entries exist. Memory-augmented generation has little context to draw from. Reply personalisation will improve as interactions accumulate.`,
+      rationale:
+        "Encourage usage: each customer interaction, drip email, and booking confirmation adds to the shared brain. No immediate action required.",
+      category: "agent_improvement",
+      priority: "medium",
+      severity: "medium",
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: false,
+      auditSection: "memory_health",
+      hash: stableHash(["memory_health", "thin_v1", Math.min(count, 10)]),
+      evidenceJson: { agentActivityCount: count },
+    },
+  ];
+}
+
 /* -------------------------------------------------------------------------- */
 
 const SECTION_WALKERS: Record<AuditSection, (s: KagisoSnapshot) => Finding[]> = {
@@ -434,6 +573,8 @@ const SECTION_WALKERS: Record<AuditSection, (s: KagisoSnapshot) => Finding[]> = 
   language_coverage: walkLanguageCoverage,
   ui_health: walkUiHealth,
   commercial: walkCommercial,
+  agent_errors: walkAgentErrors,
+  memory_health: walkMemoryHealth,
 };
 
 /**

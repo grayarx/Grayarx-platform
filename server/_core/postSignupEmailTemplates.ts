@@ -113,7 +113,7 @@ export function getSetupGuideEmailTemplate(dealershipName: string): EmailTemplat
             <div class="content">
               <div class="step">
                 <h3><span class="step-number">1</span>Upload Your Inventory</h3>
-                <p>Import your vehicle stock via CSV. We support AutoTrader and Cars.co.za formats. This takes 5 minutes.</p>
+                <p>Import your vehicle stock via CSV from your DMS or stock export. This takes 5 minutes.</p>
                 <a href="https://www.grayarx.com/dashboard/inventory/import" class="cta-button">Import Vehicles</a>
               </div>
 

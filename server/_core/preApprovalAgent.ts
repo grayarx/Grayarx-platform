@@ -240,8 +240,8 @@ export async function draftPreApprovalReply(
     ) {
       return { reply: polished, language };
     }
-  } catch {
-    // Fall through to template
+  } catch (err) {
+    console.warn("[Naledi] LLM failed, using template fallback:", err instanceof Error ? err.message : String(err));
   }
   return { reply: baseTemplate, language };
 }

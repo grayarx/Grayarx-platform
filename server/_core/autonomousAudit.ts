@@ -37,6 +37,7 @@ import {
 import { runKagisoFullAudit } from "./kagisoFullAudit";
 import { proposePatchesForFindings } from "./kagisoPatchGenerator";
 import { notifyOwner } from "./notification";
+import { analyseAgentPatterns } from "./agentLearning";
 
 /** How long to wait between autonomous audit runs. */
 export const AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -201,6 +202,39 @@ export async function triggerKagisoAuditIfDue(
       } catch (err) {
         console.error("[AutonomousAudit] notifyOwner failed", err);
       }
+    }
+
+    // Cross-agent learning: surface failure patterns as roadmap findings
+    try {
+      const patterns = await analyseAgentPatterns();
+      for (const fp of patterns.failurePatterns) {
+        if (fp.failureCount < 2) continue; // only report repeated failures
+        const hash = `kg-learn-${fp.agentId}-${fp.action}`.replace(/[^a-z0-9-]/g, "").slice(0, 32);
+        const existing = await findRoadmapByHash(hash);
+        if (existing) continue;
+        await createRoadmapItem({
+          title: `Agent failure pattern: ${fp.agentId} / ${fp.action} (${fp.failureCount}x)`,
+          description: `Agent "${fp.agentId}" has recorded ${fp.failureCount} failure outcomes for action "${fp.action}". This pattern suggests a recurring issue that may need attention.`,
+          rationale:
+            "Cross-agent learning detected a repeated failure. Investigate the root cause to improve agent reliability.",
+          category: "agent_improvement",
+          priority: fp.failureCount >= 5 ? "high" : "medium",
+          severity: fp.failureCount >= 5 ? "high" : "medium",
+          creditCostEstimate: 10,
+          roiEstimateZar: null,
+          llmTokensEstimate: 400,
+          agentAutonomous: true,
+          humanRequired: false,
+          auditSection: "agent_activity",
+          evidenceJson: { agentId: fp.agentId, action: fp.action, failureCount: fp.failureCount },
+          hash,
+          source: "kagiso_full_audit",
+          dealershipScope: "platform",
+        });
+        inserted += 1;
+      }
+    } catch (err) {
+      console.error("[AutonomousAudit] analyseAgentPatterns failed:", err);
     }
 
     lastRunCache = Date.now();

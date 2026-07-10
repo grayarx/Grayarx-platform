@@ -19,6 +19,15 @@ import {
   type LanguageCode as SharedLanguageCode,
   type LanguageMeta,
 } from "../../shared/languages";
+import {
+  getRelevantMemory,
+  getCrossAgentMemory,
+  recordOutcome,
+  formatMemoryContext,
+  type MemoryEntry,
+} from "./agentMemory";
+
+export type { MemoryEntry };
 
 /**
  * Re-export the shared canonical type so existing call sites keep working.
@@ -308,14 +317,23 @@ export function scoreDraft(
  * Run the LLM with the agent's persona + language rules, then if the draft
  * fails the heuristic check, ask the model to rewrite it once. This is the
  * "self-check pass" — it costs at most 2 LLM calls.
+ *
+ * When `memory` is provided, relevant past interactions are prepended to the
+ * context so the agent learns from what worked before.
  */
 export async function generateAgentReply(input: {
   agentId: AgentId;
   language: LanguageCode;
   customerMessage: string;
   context?: string;
+  memory?: MemoryEntry[];
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
-  const systemPrompt = buildSystemPrompt(input.agentId, input.language, input.context);
+  const memoryBlock =
+    input.memory && input.memory.length > 0
+      ? formatMemoryContext(input.memory)
+      : "";
+  const fullContext = [memoryBlock, input.context].filter(Boolean).join("\n\n");
+  const systemPrompt = buildSystemPrompt(input.agentId, input.language, fullContext || undefined);
 
   const first = await invokeLLM({
     messages: [
@@ -346,4 +364,57 @@ export async function generateAgentReply(input: {
   const check2 = scoreDraft(draft2, input.language);
 
   return { reply: draft2, score: check2.score, issues: check2.issues, attempts: 2 };
+}
+
+/**
+ * Memory-augmented reply generator — fetches relevant past interactions for
+ * the agent and injects them into the system prompt before calling the LLM.
+ * Records a success outcome after generation so future calls benefit from
+ * the interaction history.
+ */
+export async function generateMemoryAugmentedReply(input: {
+  agentId: string;
+  language: LanguageCode;
+  customerMessage: string;
+  context?: string;
+}): Promise<{
+  reply: string;
+  score: number;
+  issues: string[];
+  attempts: number;
+  memoryUsed: number;
+}> {
+  const [agentMemories, crossMemories] = await Promise.all([
+    getRelevantMemory(input.agentId, input.customerMessage, 5),
+    getCrossAgentMemory(input.customerMessage, 3),
+  ]);
+
+  // Merge, deduplicate by identity key
+  const seen = new Set<string>();
+  const combined: MemoryEntry[] = [];
+  for (const e of [...agentMemories, ...crossMemories]) {
+    const key = `${e.agentId}|${e.action}|${e.createdAt.getTime()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      combined.push(e);
+    }
+  }
+
+  const result = await generateAgentReply({
+    agentId: input.agentId as AgentId,
+    language: input.language,
+    customerMessage: input.customerMessage,
+    context: input.context,
+    memory: combined,
+  });
+
+  // Record the outcome so future retrievals can see what worked
+  await recordOutcome({
+    agentId: input.agentId,
+    relatedAction: "memory_augmented_reply",
+    outcome: "success",
+    detail: `Score ${result.score} in ${result.attempts} attempt(s) with ${combined.length} memory entries`,
+  });
+
+  return { ...result, memoryUsed: combined.length };
 }

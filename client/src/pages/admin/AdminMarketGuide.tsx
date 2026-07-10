@@ -22,7 +22,7 @@ export default function AdminMarketGuide() {
   });
 
   return (
-    <AdminShell title="Market guides" subtitle="Live Tumi valuation refresh — AutoTrader / Cars.co.za signals">
+    <AdminShell title="Market guides" subtitle="Live Tumi valuation refresh — SA market price signals">
       <div className="flex gap-3 mb-6">
         <Button
           className="btn-gold"

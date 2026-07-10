@@ -270,7 +270,7 @@ export const whatsappRouter = {
     .mutation(async ({ input: creds }) => {
       try {
         // Validate credentials by making a test API call
-        const testUrl = `https://graph.facebook.com/v18.0/${creds.phoneNumberId}`;
+        const testUrl = `https://graph.facebook.com/v22.0/${creds.phoneNumberId}`;
 
         const response = await fetch(testUrl, {
           method: "GET",

@@ -12,6 +12,7 @@ import {
   enqueueWhatsappMessage,
   logWhatsappWebhook,
 } from "../db";
+import { isTransientError } from "./agentResilience";
 
 interface WhatsAppMessage {
   phone: string;
@@ -123,7 +124,7 @@ export async function sendWhatsAppMessage(
     }
 
     // Call Meta WhatsApp Cloud API (facebook graph — not Instagram)
-    const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+    const metaUrl = `https://graph.facebook.com/v22.0/${whatsappBusinessPhoneId}/messages`;
 
     const payload = {
       messaging_product: "whatsapp",
@@ -148,10 +149,25 @@ export async function sendWhatsAppMessage(
 
     if (!response.ok) {
       const errorData = await response.json();
+      const errorStr = `WhatsApp API error: ${response.status} ${JSON.stringify(errorData)}`;
       console.error("[WhatsApp] API Error:", errorData);
+      // Auto-enqueue for retry when the failure looks transient (5xx / timeout)
+      if (isTransientError(new Error(errorStr))) {
+        try {
+          await enqueueWhatsappMessage({
+            conversationId: resolvedDealershipId || 1,
+            phoneNumber: formattedPhone,
+            messageContent: message.message,
+            messageType: "text",
+          });
+          console.error("[WhatsApp] Send failed, enqueued for retry:", { phone: formattedPhone, error: errorStr });
+        } catch (qErr) {
+          console.error("[WhatsApp] Failed to enqueue retry:", qErr);
+        }
+      }
       return {
         success: false,
-        error: `WhatsApp API error: ${response.status} ${JSON.stringify(errorData)}`,
+        error: errorStr,
       };
     }
 
@@ -219,7 +235,7 @@ export async function sendWhatsAppTemplate(
 
     const formattedPhone = formatPhoneNumber(phone);
 
-    const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+    const metaUrl = `https://graph.facebook.com/v22.0/${whatsappBusinessPhoneId}/messages`;
 
     const payload = {
       messaging_product: "whatsapp",
@@ -330,7 +346,7 @@ export async function sendVehiclePhotosViaWhatsApp(
   }
 
   const formattedPhone = formatPhoneNumber(phone);
-  const metaUrl = `https://graph.facebook.com/v18.0/${whatsappBusinessPhoneId}/messages`;
+  const metaUrl = `https://graph.facebook.com/v22.0/${whatsappBusinessPhoneId}/messages`;
   const appUrl = (process.env.APP_URL ?? "").replace(/\/+$/, "");
   // Make relative paths absolute — Meta must be able to fetch the URL
   const resolvedUrls = photoUrls.map((u) =>

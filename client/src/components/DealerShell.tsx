@@ -15,6 +15,7 @@ import {
   Store,
   Handshake,
   Scale,
+  MessageSquare,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -39,12 +40,13 @@ const PHOTO_HINT_ROUTES = [
 const DEALER_LINKS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, tip: "KPIs, recent activity, quick actions" },
   { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "AI teammates and shared activity feed" },
+  { href: "/dealer/agents/chat", label: "Agent Chat", icon: MessageSquare, tip: "Chat directly with Nala, Lerato, Kagiso and more" },
   { href: "/dealer/leads", label: "Leads", icon: Users, tip: "Inbound enquiries from web, email, WhatsApp" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Test drives (Lerato) and platform demos" },
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
-  { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save AutoTrader images, photo health" },
+  { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save external listing images, photo health" },
   { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, branding" },
   { href: "/dealer/legal", label: "Legal", icon: Scale, tip: "Policies, dealer agreement, POPIA forms" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
@@ -66,7 +68,9 @@ export default function DealerShell({
   const [location] = useLocation();
   const isFounder = user?.role === "founder" || user?.role === "admin";
   const dealerLinks = DEALER_LINKS.filter(
-    (l) => l.href !== "/dealer/agents" || isFounder,
+    (l) =>
+      (l.href !== "/dealer/agents" && l.href !== "/dealer/agents/chat") ||
+      isFounder,
   );
 
   const showPhotoHint = PHOTO_HINT_ROUTES.some(
@@ -152,7 +156,13 @@ export default function DealerShell({
             <nav className="flex gap-1 min-w-max">
               {dealerLinks.map((link) => {
                 const Icon = link.icon;
-                const active = location === link.href;
+                // Agent Chat link: active on /dealer/agents/chat and sub-paths
+                const active =
+                  link.href === "/dealer/agents/chat"
+                    ? location.startsWith("/dealer/agents/chat")
+                    : link.href === "/dealer/agents"
+                    ? location === "/dealer/agents"
+                    : location === link.href;
                 return (
                   <Link
                     key={link.href}

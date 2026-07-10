@@ -29,6 +29,8 @@ import { generateAgentReply } from "./agentPrompts";
 import { logAgentActivity } from "../db";
 import type { LanguageCode } from "@shared/languages";
 import { LANGUAGES } from "@shared/languages";
+import { isQuotaError } from "./agentResilience";
+import { alertFounder } from "./founderAlert";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,6 +40,16 @@ const STEP_DELAYS: Record<DripStep, number> = {
   day_1: 1 * DAY_MS,
   day_3: 3 * DAY_MS,
   day_7: 7 * DAY_MS,
+};
+
+/** Fallback drip text when the LLM is unavailable (English template — always safe). */
+const STEP_TEMPLATES: Record<DripStep, string> = {
+  day_1:
+    "Hi there, just a quick follow-up from the team — we're still here and happy to help. Would you prefer we send a brochure, or would a 30-minute demo suit you better? Reply any time.",
+  day_3:
+    "Hi, we noticed you haven't had a chance to get back to us yet — no worries at all. If you'd like a quick 15-minute walk-through call or to browse our live inventory at your own pace, just let us know. POPIA-compliant: your details are used only to assist you.",
+  day_7:
+    "This is our final check-in for now. No pressure — if the timing isn't right, we completely understand. You're welcome to join our quarterly newsletter so we can keep you in the loop. Just reply STOP if you'd prefer we don't contact you again.",
 };
 
 const STEP_PROMPTS: Record<DripStep, string> = {
@@ -91,7 +103,10 @@ export async function tickFollowups(now: Date = new Date()): Promise<{
   cancelled: number;
 }> {
   const db = await getDb();
-  if (!db) return { processed: 0, sent: 0, failed: 0, cancelled: 0 };
+  if (!db) {
+    console.error("[Mia/leadDrip] DB unavailable — tickFollowups returning zero counts (silent success risk)");
+    return { processed: 0, sent: 0, failed: 0, cancelled: 0 };
+  }
 
   const due = await db
     .select()
@@ -167,15 +182,52 @@ Compose the ${row.step.replace("_", " ")} follow-up.`;
       });
       sent++;
     } catch (err) {
-      await db
-        .update(leadFollowups)
-        .set({
-          status: "failed",
-          errorMessage: String(err).slice(0, 1000),
-        })
-        .where(eq(leadFollowups.id, row.id));
-      failed++;
+      const step = row.step as DripStep;
+      const quota = isQuotaError(err);
+
+      if (quota) {
+        // Quota exhausted — use template immediately, mark sent so we don't block this lead forever
+        const template = STEP_TEMPLATES[step];
+        console.warn(
+          `[Mia] Quota error on lead ${row.leadId} step ${step} — using template fallback`,
+          err instanceof Error ? err.message : String(err),
+        );
+        await db
+          .update(leadFollowups)
+          .set({
+            status: "sent",
+            sentAt: new Date(),
+            draftPreview: template.slice(0, 4000),
+            errorMessage: `template_fallback:quota:${String(err).slice(0, 200)}`,
+          })
+          .where(eq(leadFollowups.id, row.id));
+        sent++;
+      } else {
+        // Transient LLM failure — push dueAt forward by 2 hours for a retry window
+        const retryAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        console.warn(
+          `[Mia] LLM failed for lead ${row.leadId} step ${step} — rescheduling in 2h`,
+          err instanceof Error ? err.message : String(err),
+        );
+        await db
+          .update(leadFollowups)
+          .set({
+            dueAt: retryAt,
+            errorMessage: `retry_pending:${String(err).slice(0, 200)}`,
+          })
+          .where(eq(leadFollowups.id, row.id));
+        failed++;
+      }
     }
+  }
+
+  if (failed >= 3) {
+    alertFounder({
+      title: "Mia drip: systemic LLM failures",
+      content: `tickFollowups processed ${due.length} rows and encountered ${failed} LLM failures in a single tick — possible OpenAI outage or quota issue.`,
+      category: "ops",
+      actionUrl: "https://www.grayarx.com/admin/ops",
+    }).catch(() => {});
   }
 
   return { processed: due.length, sent, failed, cancelled };

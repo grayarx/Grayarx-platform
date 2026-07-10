@@ -44,14 +44,14 @@ export const PHOTO_GUIDE_STEPS = [
   {
     step: 1,
     title: "Import stock",
-    body: "Upload your AutoTrader or DMS CSV — keep “Save photos to GrayArx” on.",
+    body: 'Upload your DMS or stock export CSV — keep "Save photos to GrayArx" on.',
     href: "/dealer/inventory/import",
     time: "30 sec",
   },
   {
     step: 2,
     title: "Save external photos",
-    body: "One click copies marketplace images so links never break.",
+    body: "One click copies external listing images so links never break.",
     href: "/dealer/csv-photo",
     time: "10 sec",
   },

@@ -26,7 +26,7 @@ const FAQS = [
   },
   {
     q: "How do I add vehicles to my showroom?",
-    a: "Go to Dashboard → Inventory → Add vehicle. You can also bulk-import from AutoTrader or Cars.co.za CSV via Import CSV. Imported stock feeds your web showroom and chatbot automatically.",
+    a: "Go to Dashboard → Inventory → Add vehicle. You can also bulk-import via Import CSV using your DMS or stock export file. Imported stock feeds your web showroom and chatbot automatically.",
   },
   {
     q: "How do the AI agents work?",

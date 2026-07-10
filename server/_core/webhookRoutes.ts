@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { processWhatsAppWebhook, verifyWebhookToken, validateWebhookSignature } from "./whatsappWebhook";
 import { getDb } from "../db";
 import { dealerships } from "../../drizzle/schema";
+import { alertFounder } from "./founderAlert";
 
 /**
  * Map Meta phone_number_id → GrayArx dealership.
@@ -133,14 +134,41 @@ export function registerWebhookRoutes(app: Express): void {
       if (result.success) {
         console.log(`[WhatsApp Webhook] Processed ${result.processed} events successfully`);
         res.status(200).json({ success: true, processed: result.processed });
+      } else if (!result.success && result.processed === 0) {
+        // Total failure — return 500 so Meta retries delivery
+        console.error(
+          `[WhatsApp Webhook] Total failure: 0 events processed, ${result.errors.length} errors`,
+          result.errors,
+        );
+        // Alert founder if batch has 3+ errors
+        if (result.errors.length >= 3) {
+          alertFounder({
+            title: "WhatsApp webhook: total processing failure",
+            content: `Batch of ${result.errors.length} errors, 0 events processed.\n\nErrors:\n${result.errors.slice(0, 5).join("\n")}`,
+            category: "ops",
+            actionUrl: "https://www.grayarx.com/admin/ops",
+          }).catch(() => {});
+        }
+        res.status(500).json({ success: false, processed: 0, errors: result.errors });
       } else {
-        console.warn(`[WhatsApp Webhook] Processed ${result.processed} events with ${result.errors.length} errors`);
+        // Partial success — return 200 so Meta doesn't retry; include error details for our logs
+        console.warn(
+          `[WhatsApp Webhook] Partial: processed ${result.processed} events, ${result.errors.length} errors`,
+        );
+        if (result.errors.length >= 3) {
+          alertFounder({
+            title: "WhatsApp webhook: partial failure",
+            content: `${result.errors.length} errors in batch (${result.processed} events succeeded).\n\nErrors:\n${result.errors.slice(0, 5).join("\n")}`,
+            category: "ops",
+            actionUrl: "https://www.grayarx.com/admin/ops",
+          }).catch(() => {});
+        }
         res.status(200).json({ success: false, processed: result.processed, errors: result.errors });
       }
     } catch (error) {
       console.error("[WhatsApp Webhook] Error processing webhook:", error);
-      // Always return 200 to Meta to acknowledge receipt
-      res.status(200).json({ error: "Error processing webhook" });
+      // Return 500 so Meta retries — this is a total unhandled failure
+      res.status(500).json({ error: "Error processing webhook" });
     }
   });
 
@@ -189,7 +217,7 @@ export function registerWebhookRoutes(app: Express): void {
 
     try {
       const metaResp = await fetch(
-        `https://graph.facebook.com/v18.0/${phoneId}?fields=display_phone_number,verified_name,quality_rating,status`,
+        `https://graph.facebook.com/v22.0/${phoneId}?fields=display_phone_number,verified_name,quality_rating,status`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const metaData = await metaResp.json().catch(() => ({}));

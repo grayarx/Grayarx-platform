@@ -31,7 +31,7 @@ export default function UpgradeJourneyCard({
           <h3 className="font-display font-semibold">Your upgrade path</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          AutoTrader stops at a single guide number. GrayArx connects your trade-in to finance and
+          Classified portals stop at a single guide number. GrayArx connects your trade-in to finance and
           stock — see what you actually need to bridge.
         </p>
 

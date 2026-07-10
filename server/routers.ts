@@ -132,7 +132,8 @@ import { notifyOwner } from "./_core/notification";
 import { alertFounder } from "./_core/founderAlert";
 import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
 import { placeOutboundCall } from "./_core/calling";
-import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
+import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, generateMemoryAugmentedReply, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
+import { recordOutcome } from "./_core/agentMemory";
 import { runAudit, type AuditInput, applyFindingToSettings } from "./_core/improvementAgent";
 import { proposeNewAgent, type ProposalContext } from "./_core/proposeNewAgent";
 import { runFallbackAgent, isAfterHoursSAST } from "./_core/fallbackAgent";
@@ -2129,7 +2130,7 @@ export const appRouter = router({
       }),
   }),
 
-  // ---- CSV inventory importer (AutoTrader / Cars.co.za / dealer export) ----
+  // ---- CSV inventory importer (DMS / dealer stock export) ----
   inventoryImport: router({
     preview: protectedProcedure
       .input(z.object({ csv: z.string().min(1).max(2_000_000) }))
@@ -2302,7 +2303,7 @@ export const appRouter = router({
       };
     }),
 
-    /** Copy external AutoTrader/Cars.co.za (and other) photos into GrayArx storage. */
+    /** Copy external listing photos into GrayArx storage so links never break. */
     mirrorMissingPhotos: protectedProcedure.mutation(async () => {
       const all = await listVehicles(500);
       let mirrored = 0;
@@ -3430,6 +3431,72 @@ export const appRouter = router({
         });
         return { ok: true as const, status, confirmation };
       }),
+
+    /**
+     * Reclassify a booking that was incorrectly categorised as a test drive.
+     * Marks the booking with a "RECLASSIFIED" note so the original intent is
+     * preserved, and optionally sets status to cancelled if it was never a
+     * real test drive. Does NOT delete the row — the audit trail stays intact.
+     */
+    reclassify: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int(),
+          actualType: z.enum([
+            "general_viewing",
+            "consultation",
+            "call",
+            "inquiry",
+            "other",
+          ]),
+          notes: z.string().max(2000).optional(),
+          cancelBooking: z.boolean().optional().default(true),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const user: any = ctx.user;
+        const existing = await getTestDriveBooking(input.id);
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+        }
+        if (
+          !isFounderOrAdmin(user) &&
+          (!user?.dealershipId || user.dealershipId !== existing.dealershipId)
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This booking belongs to another dealership.",
+          });
+        }
+        const reclassifiedNote = [
+          `[RECLASSIFIED] Was logged as test_drive — actual type: ${input.actualType.replace(/_/g, " ")}`,
+          input.notes ?? null,
+          existing.notes ?? null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await updateTestDriveBookingStatus(input.id, {
+          ...(input.cancelBooking ? { status: "cancelled" } : {}),
+          notes: reclassifiedNote,
+          resolvedBy: user?.id ?? null,
+          resolvedAt: new Date(),
+        });
+        await logAgentActivity({
+          agentId: "booking",
+          action: "booking_reclassified",
+          subjectType: "test_drive_booking",
+          subjectId: input.id,
+          summary: `Booking ${existing.referenceNumber} for ${existing.customerName} reclassified from test_drive → ${input.actualType.replace(/_/g, " ")}`,
+          payload: {
+            reference: existing.referenceNumber,
+            reclassifiedBy: user?.id ?? null,
+            actualType: input.actualType,
+            cancelled: input.cancelBooking,
+          },
+        });
+        return { ok: true as const, actualType: input.actualType };
+      }),
   }),
 
   // ---- Admin: pre-approvals queue ----
@@ -4238,6 +4305,347 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const { getPerformanceSummary } = await import("./performanceMetrics");
         return getPerformanceSummary(ctx.user.dealershipId || 0, input?.days ?? 30);
+      }),
+  }),
+
+  // ---- Agent Chat — founder/admin direct chat with named agents ----
+  agentChat: router({
+    /**
+     * Send a message to a named agent (by display name) and receive an
+     * intelligent reply. The agent has access to relevant DB context (recent
+     * bookings, leads, activity) and can perform real actions when the message
+     * contains an explicit intent like "cancel", "reclassify", "update status".
+     */
+    sendMessage: protectedProcedure
+      .input(
+        z.object({
+          agentId: z.enum([
+            "nala",
+            "kagiso",
+            "lerato",
+            "tumi",
+            "mia",
+            "sipho",
+            "thandi",
+            "bongi",
+            "naledi",
+            "themba",
+          ]),
+          message: z.string().min(1).max(2000),
+          conversationId: z.string().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const user: any = ctx.user;
+        const db = await getDb();
+
+        // Map display name → internal AgentId
+        const nameToId: Record<string, string> = {
+          nala: "whatsapp",
+          kagiso: "improvement",
+          lerato: "booking",
+          tumi: "tradein",
+          mia: "email",
+          sipho: "prospector",
+          thandi: "accountant",
+          bongi: "fallback",
+          naledi: "preapproval",
+          themba: "calling",
+        };
+        const internalAgentId = nameToId[input.agentId] as any;
+        const persona = AGENTS[internalAgentId as keyof typeof AGENTS];
+
+        // Build context blob for the agent (recent relevant data)
+        const contextParts: string[] = [];
+        const dealershipId: number | undefined = user?.dealershipId ?? undefined;
+
+        try {
+          // Always include recent activity for this agent
+          const recentActivity = await listAgentActivity({ agentId: internalAgentId, limit: 10 });
+          if (recentActivity.length) {
+            contextParts.push(
+              "Your recent actions:\n" +
+                recentActivity
+                  .map((a) => `- [${new Date(a.createdAt).toLocaleString("en-ZA")}] ${a.summary}`)
+                  .join("\n"),
+            );
+          }
+
+          // Booking agent gets test-drive context
+          if (internalAgentId === "booking" && db) {
+            const bookings = await listTestDriveBookings(dealershipId, undefined, 20);
+            if (bookings.length) {
+              contextParts.push(
+                "Recent test-drive bookings:\n" +
+                  bookings
+                    .slice(0, 10)
+                    .map(
+                      (b) =>
+                        `- ${b.referenceNumber}: ${b.customerName} (${b.status}) — ${b.suggestedSlotStart ? new Date(b.suggestedSlotStart).toLocaleString("en-ZA") : "no slot"}`,
+                    )
+                    .join("\n"),
+              );
+            }
+          }
+
+          // Lead-facing agents get leads context
+          if ((internalAgentId === "whatsapp" || internalAgentId === "email") && db) {
+            const leadsData = await listLeads(20);
+            if (leadsData && leadsData.length) {
+              contextParts.push(
+                "Recent leads:\n" +
+                  leadsData
+                    .slice(0, 10)
+                    .map((l: any) => `- ${l.name ?? l.customerName ?? "?"} (${l.status}) — ${l.source ?? "unknown source"}`)
+                    .join("\n"),
+              );
+            }
+          }
+        } catch {
+          // context enrichment is best-effort
+        }
+
+        // Build a founder-chat-specific system prompt
+        const agentSystemPrompt = [
+          `You are ${persona.displayName}, the ${persona.role} at GrayArx — the AI operating system for South African car dealerships.`,
+          `You are chatting directly with the GrayArx founder/admin via an internal console. This is NOT a customer-facing channel.`,
+          `Be concise, honest, and action-oriented. You can refer to internal data.`,
+          `Your personality: professional, SA-context aware, helpful. Short replies (under 150 words) unless asked for detail.`,
+          ``,
+          `Your role: ${persona.description}`,
+          ``,
+          contextParts.length
+            ? `Current data context:\n${contextParts.join("\n\n")}`
+            : "No live data available right now.",
+          ``,
+          "If the founder asks you to perform an action (cancel a booking, update a status, etc.), respond with:",
+          "1. Confirmation of what you understood",
+          "2. The action you took (or will take)",
+          "3. Any caveats or follow-up needed",
+          "If you cannot perform an action directly, say so clearly and suggest how to do it manually.",
+          "",
+          "IMPORTANT: Never claim to be a human. Never use forbidden AI phrases like 'As an AI...'",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        // Detect intent for real DB actions (simple keyword parsing)
+        type ActionResult = { actionTaken: string; details: string } | null;
+        let actionResult: ActionResult = null;
+        const lowerMsg = input.message.toLowerCase();
+
+        // Action: reclassify a booking
+        const reclassifyMatch =
+          /reclassif|wasn.t a test drive|not a test drive|mark.+as.+(viewing|consult|call|inquiry)/i.test(
+            input.message,
+          );
+        const refMatch = input.message.match(/\bGA-[A-Z0-9]+\b/i);
+
+        if (reclassifyMatch && refMatch && internalAgentId === "booking") {
+          try {
+            const bookings = await listTestDriveBookings(dealershipId, undefined, 200);
+            const target = bookings.find(
+              (b) => b.referenceNumber.toUpperCase() === refMatch[0].toUpperCase(),
+            );
+            if (target && db) {
+              let actualType: "general_viewing" | "consultation" | "call" | "inquiry" | "other" = "general_viewing";
+              if (/consult/i.test(input.message)) actualType = "consultation";
+              else if (/\bcall\b/i.test(input.message)) actualType = "call";
+              else if (/inquiry|enquiry/i.test(input.message)) actualType = "inquiry";
+
+              const reclassifiedNote = `[RECLASSIFIED via Agent Chat] Actual type: ${actualType.replace(/_/g, " ")}\nReclassified by: ${user?.email ?? "founder"} at ${new Date().toISOString()}`;
+              await updateTestDriveBookingStatus(target.id, {
+                status: "cancelled",
+                notes: reclassifiedNote,
+                resolvedBy: user?.id ?? null,
+                resolvedAt: new Date(),
+              });
+              actionResult = {
+                actionTaken: "reclassify_booking",
+                details: `Booking ${target.referenceNumber} reclassified from test_drive → ${actualType.replace(/_/g, " ")} and cancelled.`,
+              };
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
+        // Cancel a booking by reference
+        const cancelMatch = /cancel|cancel.+booking/i.test(input.message);
+        if (cancelMatch && refMatch && internalAgentId === "booking" && !actionResult) {
+          try {
+            const bookings = await listTestDriveBookings(dealershipId, undefined, 200);
+            const target = bookings.find(
+              (b) => b.referenceNumber.toUpperCase() === refMatch[0].toUpperCase(),
+            );
+            if (target && db) {
+              await updateTestDriveBookingStatus(target.id, {
+                status: "cancelled",
+                notes: `Cancelled via Agent Chat by ${user?.email ?? "founder"} at ${new Date().toISOString()}`,
+                resolvedBy: user?.id ?? null,
+                resolvedAt: new Date(),
+              });
+              actionResult = {
+                actionTaken: "cancel_booking",
+                details: `Booking ${target.referenceNumber} for ${target.customerName} has been cancelled.`,
+              };
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
+        // Build context message with action result
+        const userMessage = actionResult
+          ? `${input.message}\n\n[System: Action already executed — ${actionResult.details} Please confirm and summarise what happened for the founder.]`
+          : input.message;
+
+        // Call memory-augmented LLM — fetches relevant past interactions automatically
+        let reply = "";
+        let memoryUsed = 0;
+        try {
+          const memResult = await generateMemoryAugmentedReply({
+            agentId: internalAgentId,
+            language: "en",
+            customerMessage: userMessage,
+            context: contextParts.length ? contextParts.join("\n\n") : undefined,
+          });
+          reply = memResult.reply;
+          memoryUsed = memResult.memoryUsed;
+        } catch {
+          // Template fallback if LLM is unavailable
+          if (actionResult) {
+            reply = `Done. ${actionResult.details} Let me know if you need anything else.`;
+          } else {
+            reply = `Hi! I'm ${persona.displayName}, your ${persona.role}. I received your message but my language model is currently offline. ${persona.description}`;
+          }
+          // Record the failure so agents learn from it
+          void recordOutcome({
+            agentId: internalAgentId,
+            relatedAction: "founder_chat",
+            outcome: "failure",
+            detail: "LLM unavailable — served template fallback",
+          });
+        }
+
+        // Parse any "action: <type> <args>" directives embedded in the reply
+        const actionLineMatches = reply.match(/^action:\s+(\S+)\s+(.+)$/gim) ?? [];
+        for (const line of actionLineMatches) {
+          const m = line.match(/^action:\s+(\S+)\s+(.+)$/i);
+          if (!m) continue;
+          const [, directive, rest] = m;
+          const parts = rest.trim().split(/\s+/);
+          const ref = parts[0] ?? "";
+          const extra = parts.slice(1).join(" ");
+          try {
+            if (directive === "cancel_booking" && !actionResult) {
+              const bookings = await listTestDriveBookings(dealershipId, undefined, 200);
+              const target = bookings.find(
+                (b) => b.referenceNumber.toUpperCase() === ref.toUpperCase(),
+              );
+              if (target && db) {
+                await updateTestDriveBookingStatus(target.id, {
+                  status: "cancelled",
+                  notes: `Cancelled via AI directive at ${new Date().toISOString()}`,
+                  resolvedBy: null,
+                  resolvedAt: new Date(),
+                });
+                actionResult = {
+                  actionTaken: "cancel_booking",
+                  details: `Booking ${target.referenceNumber} cancelled via AI directive.`,
+                };
+              }
+            } else if (directive === "update_lead_status") {
+              const leadId = parseInt(ref, 10);
+              if (!isNaN(leadId) && extra) {
+                await updateLeadStatus(leadId, extra as any);
+                actionResult = {
+                  actionTaken: "update_lead_status",
+                  details: `Lead ${leadId} status updated to "${extra}" via AI directive.`,
+                };
+              }
+            } else if (directive === "reschedule_booking" && !actionResult) {
+              const bookings = await listTestDriveBookings(dealershipId, undefined, 200);
+              const target = bookings.find(
+                (b) => b.referenceNumber.toUpperCase() === ref.toUpperCase(),
+              );
+              if (target && db && extra) {
+                const newDate = new Date(extra);
+                if (!isNaN(newDate.getTime())) {
+                  await updateTestDriveBookingStatus(target.id, {
+                    status: "confirmed",
+                    notes: `Rescheduled via AI directive to ${extra}`,
+                    resolvedBy: null,
+                    resolvedAt: null,
+                  });
+                  actionResult = {
+                    actionTaken: "reschedule_booking",
+                    details: `Booking ${target.referenceNumber} rescheduled to ${extra}.`,
+                  };
+                }
+              }
+            }
+          } catch {
+            // best-effort directive execution
+          }
+        }
+
+        const conversationId =
+          input.conversationId ?? `chat-${input.agentId}-${Date.now()}`;
+
+        // Log to agent_activity
+        await logAgentActivity({
+          agentId: internalAgentId,
+          action: "founder_chat",
+          subjectType: "agent_chat",
+          subjectId: null,
+          summary: `Founder asked: "${input.message.slice(0, 80)}${input.message.length > 80 ? "…" : ""}"`,
+          payload: {
+            conversationId,
+            userMessage: input.message,
+            agentReply: reply,
+            actionTaken: actionResult ?? null,
+            memoryUsed,
+            userId: user?.id ?? null,
+          },
+        });
+
+        return {
+          reply,
+          agentId: input.agentId,
+          agentName: persona.displayName,
+          conversationId,
+          actionTaken: actionResult ?? null,
+          timestamp: new Date().toISOString(),
+        };
+      }),
+
+    /**
+     * Fetch recent agent chat history from agent_activity, optionally
+     * filtered to a specific agent by display name.
+     */
+    getHistory: protectedProcedure
+      .input(z.object({ agentId: z.string().optional(), limit: z.number().int().min(1).max(100).optional() }))
+      .query(async ({ input }) => {
+        const nameToId: Record<string, string> = {
+          nala: "whatsapp",
+          kagiso: "improvement",
+          lerato: "booking",
+          tumi: "tradein",
+          mia: "email",
+          sipho: "prospector",
+          thandi: "accountant",
+          bongi: "fallback",
+          naledi: "preapproval",
+          themba: "calling",
+        };
+        const internalId = input.agentId ? nameToId[input.agentId] : undefined;
+        const rows = await listAgentActivity({
+          agentId: internalId as any,
+          limit: input.limit ?? 50,
+        });
+        // Filter to only founder_chat actions
+        return rows.filter((r) => r.action === "founder_chat");
       }),
   }),
 
