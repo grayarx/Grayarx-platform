@@ -3,12 +3,18 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { passwordResetTokens, users } from "../../drizzle/schema";
-import { eq, gt } from "drizzle-orm";
+import { eq, gt, sql } from "drizzle-orm";
 import { sendProspectEmail } from "./emailSendingService";
 import { getSessionCookieOptions } from "./cookies";
 import { COOKIE_NAME, REMEMBER_ME_MS, SESSION_MS } from "../../shared/const";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { isFounderEmail } from "../../shared/founderAccess";
+import { promoteUserToFounder } from "../db";
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
 /**
  * Generate a secure random token
@@ -47,11 +53,13 @@ export const authEnhancedRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
 
-      // Find user by email
-      const user = await db!
+      const email = normalizeEmail(input.email);
+
+      // Find user by email (case-insensitive)
+      const user = await db
         .select()
         .from(users)
-        .where(eq(users.email, input.email))
+        .where(sql`LOWER(${users.email}) = ${email}`)
         .limit(1);
 
       if (!user || user.length === 0) {
@@ -216,16 +224,33 @@ export const authEnhancedRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-        const rows = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
-        const user = rows[0];
+        const email = normalizeEmail(input.email);
+        const rows = await db
+          .select()
+          .from(users)
+          .where(sql`LOWER(${users.email}) = ${email}`)
+          .limit(1);
+        let user = rows[0];
 
-        if (!user || !user.passwordHash) {
+        if (!user) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        }
+
+        if (!user.passwordHash) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message:
+              "No password on this account. Use Forgot password or sign up with email and password.",
+          });
         }
 
         const valid = await bcrypt.compare(input.password, user.passwordHash);
         if (!valid) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        }
+
+        if (isFounderEmail(user.email) && user.role !== "founder" && user.role !== "admin") {
+          user = await promoteUserToFounder(user.id);
         }
 
         const sessionMs = input.rememberMe ? REMEMBER_ME_MS : SESSION_MS;
@@ -260,26 +285,36 @@ export const authEnhancedRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-        const existing = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+        const email = normalizeEmail(input.email);
+        const existing = await db
+          .select()
+          .from(users)
+          .where(sql`LOWER(${users.email}) = ${email}`)
+          .limit(1);
         if (existing.length > 0) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Email already registered" });
         }
 
         const passwordHash = await bcrypt.hash(input.password, 12);
         const openId = `local_${crypto.randomUUID()}`;
+        const role = isFounderEmail(email) ? "founder" : "user";
 
         await db.insert(users).values({
           openId,
-          email: input.email,
+          email,
           name: input.name || null,
           passwordHash,
           loginMethod: "email",
           lastSignedIn: new Date(),
-          role: "user",
+          role,
           emailVerified: 0,
         });
 
-        const newRows = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+        const newRows = await db
+          .select()
+          .from(users)
+          .where(sql`LOWER(${users.email}) = ${email}`)
+          .limit(1);
         const user = newRows[0];
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User creation failed" });
 
