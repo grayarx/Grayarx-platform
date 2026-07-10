@@ -68,27 +68,46 @@ Write-Output "grayarx-logo-emblem.png"
   copyFileSync(emblemPath, iconSourcePath);
 }
 
-/** Horizontal nav lockup: emblem + GRAYARX (no tagline) */
+/** Horizontal nav lockup: emblem + GRAYARX wordmark side-by-side */
 async function cropNavWordmark() {
   const src = existsSync(masterPath) ? masterPath : fullLogoPath;
   if (!existsSync(src)) {
     console.warn("Skip nav wordmark — no source logo");
     return;
   }
+  const emblem = existsSync(emblemPath) ? emblemPath : src;
   const ps = `
 Add-Type -AssemblyName System.Drawing
 $src = "${src.replace(/\\/g, "\\\\")}"
+$emblemSrc = "${emblem.replace(/\\/g, "\\\\")}"
 $out = "${navLogoPath.replace(/\\/g, "\\\\")}"
-$img = [System.Drawing.Image]::FromFile($src)
-$w = $img.Width; $h = $img.Height
-$cropH = [int]($h * 0.68)
-$bmp = New-Object System.Drawing.Bitmap $w, $cropH
+$master = [System.Drawing.Image]::FromFile($src)
+$emblemImg = [System.Drawing.Image]::FromFile($emblemSrc)
+$mw = $master.Width; $mh = $master.Height
+$wordY = [int]($mh * 0.665)
+$wordH = [int]($mh * 0.105)
+$wordX = [int]($mw * 0.08)
+$wordCropW = [int]($mw * 0.84)
+$wordBmp = New-Object System.Drawing.Bitmap $wordCropW, $wordH
+$wg = [System.Drawing.Graphics]::FromImage($wordBmp)
+$wg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$wg.DrawImage($master, (New-Object System.Drawing.Rectangle 0, 0, $wordCropW, $wordH), (New-Object System.Drawing.Rectangle $wordX, $wordY, $wordCropW, $wordH), [System.Drawing.GraphicsUnit]::Pixel)
+$wg.Dispose()
+$navH = 96
+$emblemPx = $navH
+$wordScale = $navH / [double]$wordH
+$wordW = [int]($wordCropW * $wordScale)
+$gap = 10
+$canvasW = $emblemPx + $gap + $wordW
+$bmp = New-Object System.Drawing.Bitmap $canvasW, $navH
 $g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::Transparent)
 $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-$g.DrawImage($img, (New-Object System.Drawing.Rectangle 0, 0, $w, $cropH), (New-Object System.Drawing.Rectangle 0, 0, $w, $cropH), [System.Drawing.GraphicsUnit]::Pixel)
+$g.DrawImage($emblemImg, 0, 0, $emblemPx, $emblemPx)
+$g.DrawImage($wordBmp, $emblemPx + $gap, 0, $wordW, $navH)
 $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
-$g.Dispose(); $bmp.Dispose(); $img.Dispose()
+$g.Dispose(); $bmp.Dispose(); $wordBmp.Dispose(); $emblemImg.Dispose(); $master.Dispose()
 Write-Output "grayarx-logo-nav.png"
 `;
   runPowerShell(ps);
@@ -107,6 +126,7 @@ async function buildIconSizes() {
   }
 
   const sizes: Array<{ name: string; px: number }> = [
+    { name: "favicon-16.png", px: 16 },
     { name: "favicon-32.png", px: 32 },
     { name: "icon-96x96.png", px: 96 },
     { name: "icon-192x192.png", px: 192 },
@@ -123,14 +143,19 @@ Add-Type -AssemblyName System.Drawing
 $src = "${source.replace(/\\/g, "\\\\")}"
 $outs = @("${outs}")
 $pxs = @(${pxs})
-$img = [System.Drawing.Image]::FromFile($src)
+  $img = [System.Drawing.Image]::FromFile($src)
 for ($i = 0; $i -lt $outs.Length; $i++) {
   $px = $pxs[$i]
   $bmp = New-Object System.Drawing.Bitmap $px, $px
   $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $g.Clear([System.Drawing.Color]::FromArgb(6, 6, 8))
   $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-  $g.DrawImage($img, 0, 0, $px, $px)
+  $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $pad = if ($px -le 32) { 0.12 } else { 0.06 }
+  $inner = [int]($px * (1 - 2 * $pad))
+  $offset = [int]($px * $pad)
+  $g.DrawImage($img, $offset, $offset, $inner, $inner)
   $bmp.Save($outs[$i], [System.Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose(); $bmp.Dispose()
 }

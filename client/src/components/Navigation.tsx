@@ -83,11 +83,12 @@ export default function Navigation() {
       )}
     >
       <div className="container flex h-16 md:h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="GrayArx home">
-          <Logo size={36} variant="icon" className="transition-transform group-hover:scale-[1.02]" />
-          <span className="hidden sm:block font-display text-[1.05rem] font-bold tracking-[0.18em] text-foreground group-hover:text-primary transition-colors">
-            GRAYARX
-          </span>
+        <Link href="/" className="flex items-center shrink-0 group" aria-label="GrayArx home">
+          <Logo
+            size={40}
+            variant="nav"
+            className="transition-opacity group-hover:opacity-95 max-h-10 md:max-h-11"
+          />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-6 xl:gap-8">

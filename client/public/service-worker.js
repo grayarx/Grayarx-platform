@@ -1,11 +1,12 @@
-const CACHE_NAME = "grayarx-v2";
-const RUNTIME_CACHE = "grayarx-runtime-v2";
+const CACHE_NAME = "grayarx-v3";
+const RUNTIME_CACHE = "grayarx-runtime-v3";
 const STATIC_ASSETS = [
   "/manifest.json",
 ];
 
 /** Brand icons must always revalidate — stale SW cache caused wrong tab favicon */
 const BRAND_ICON_PATHS = new Set([
+  "/favicon-16.png",
   "/favicon-32.png",
   "/favicon.ico",
   "/icon-96x96.png",
@@ -15,6 +16,7 @@ const BRAND_ICON_PATHS = new Set([
   "/logo.svg",
   "/grayarx-logo-full.png",
   "/grayarx-logo-emblem.png",
+  "/grayarx-logo-nav.png",
 ]);
 
 // Install event - cache static assets

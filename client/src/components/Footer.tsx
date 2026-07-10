@@ -11,11 +11,8 @@ export default function Footer() {
       <div className="container relative py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-10">
           <div className="md:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-6 group" aria-label="GrayArx home">
-              <Logo size={32} variant="icon" />
-              <span className="font-display text-base font-bold tracking-[0.16em] group-hover:text-primary transition-colors">
-                GRAYARX
-              </span>
+            <Link href="/" className="inline-flex items-center shrink-0 mb-6 group" aria-label="GrayArx home">
+              <Logo size={36} variant="nav" className="group-hover:opacity-95 transition-opacity" />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               The Dealership AI Operating System. Your 24/7 AI sales team built for South African

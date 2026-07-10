@@ -12,7 +12,6 @@ interface LogoProps {
 }
 
 export const LOGO_ICON_URL = "/grayarx-logo-emblem.png";
-export const LOGO_ICON_2X_URL = "/icon-96x96.png";
 export const LOGO_NAV_URL = "/grayarx-logo-nav.png";
 export const LOGO_FULL_URL = "/grayarx-logo-full.png";
 
@@ -32,13 +31,14 @@ export default function Logo({ size = 40, className, variant = "icon" }: LogoPro
   }
 
   if (variant === "nav") {
+    const px = Math.round(size);
     return (
       <img
         src={LOGO_NAV_URL}
         alt="GrayArx"
         className={cn("select-none object-contain object-left shrink-0", className)}
-        style={{ height: size, width: "auto", maxWidth: Math.round(size * 3.4) }}
-        height={size}
+        style={{ height: px, width: "auto", maxWidth: Math.round(px * 4.2) }}
+        height={px}
         draggable={false}
       />
     );
@@ -47,8 +47,7 @@ export default function Logo({ size = 40, className, variant = "icon" }: LogoPro
   const px = Math.round(size);
   return (
     <img
-      src={LOGO_ICON_2X_URL}
-      srcSet={`${LOGO_ICON_2X_URL} 1x, ${LOGO_ICON_URL} 2x`}
+      src={LOGO_ICON_URL}
       alt="GrayArx"
       className={cn("select-none object-contain shrink-0", className)}
       style={{ width: px, height: px, maxWidth: px, maxHeight: px }}
