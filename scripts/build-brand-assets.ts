@@ -8,7 +8,9 @@ import { execSync } from "child_process";
 
 const publicDir = join(process.cwd(), "client/public");
 const assetsDir = join(process.cwd(), "client/src/assets");
+const fullLogoPath = join(publicDir, "grayarx-logo-full.png");
 const masterPath = join(publicDir, "logo.png");
+const emblemPath = join(publicDir, "grayarx-logo-emblem.png");
 
 async function downloadIfMissing(url: string, dest: string) {
   if (existsSync(dest) && readFileSync(dest).length > 10_000) return;
@@ -24,8 +26,35 @@ function runPowerShell(script: string) {
   });
 }
 
+async function cropEmblemFromFullLogo() {
+  if (!existsSync(fullLogoPath)) {
+    console.warn("Skip emblem crop — grayarx-logo-full.png not found");
+    return;
+  }
+  const ps = `
+Add-Type -AssemblyName System.Drawing
+$src = "${fullLogoPath.replace(/\\/g, "\\\\")}"
+$out = "${emblemPath.replace(/\\/g, "\\\\")}"
+$img = [System.Drawing.Image]::FromFile($src)
+$w = $img.Width; $h = $img.Height
+$crop = [int]([Math]::Min($w * 0.78, $h * 0.42))
+$x = [int](($w - $crop) / 2)
+$y = [int]($h * 0.06)
+$bmp = New-Object System.Drawing.Bitmap $crop, $crop
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+$g.DrawImage($img, (New-Object System.Drawing.Rectangle 0, 0, $crop, $crop), (New-Object System.Drawing.Rectangle $x, $y, $crop, $crop), [System.Drawing.GraphicsUnit]::Pixel)
+$bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
+$g.Dispose(); $bmp.Dispose(); $img.Dispose()
+Write-Output "grayarx-logo-emblem.png"
+`;
+  runPowerShell(ps);
+  copyFileSync(emblemPath, join(publicDir, "logo-icon.png"));
+}
+
 async function cropLogoIcon() {
-  const emblemPath = join(publicDir, "logo-icon.png");
+  const legacyEmblemPath = join(publicDir, "logo-icon.png");
   const ps = `
 Add-Type -AssemblyName System.Drawing
 $src = "${masterPath.replace(/\\/g, "\\\\")}"
@@ -38,7 +67,7 @@ $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQuality
 $g.DrawImage($img, (New-Object System.Drawing.Rectangle 0, 0, $size, $size), (New-Object System.Drawing.Rectangle $x, $y, $size, $size), [System.Drawing.GraphicsUnit]::Pixel)
 $crop.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
 $g.Dispose(); $crop.Dispose(); $img.Dispose()
-Write-Output "logo-icon.png"
+Write-Output "logo-icon.png (legacy master)"
 `;
   runPowerShell(ps);
 }
@@ -46,6 +75,9 @@ Write-Output "logo-icon.png"
 /** Nav bundle + browser tab favicons from the circuit-board GA emblem */
 async function buildIconSizes() {
   const emblemPath = join(publicDir, "logo-icon.png");
+  if (!existsSync(emblemPath) && existsSync(join(publicDir, "grayarx-logo-emblem.png"))) {
+    copyFileSync(join(publicDir, "grayarx-logo-emblem.png"), emblemPath);
+  }
   const sizes: Array<{ name: string; px: number }> = [
     { name: "favicon-32.png", px: 32 },
     { name: "icon-96x96.png", px: 96 },
@@ -86,17 +118,21 @@ Write-Output "icon sizes"
 }
 
 async function main() {
-  await downloadIfMissing("https://www.grayarx.com/logo.png", masterPath);
+  if (existsSync(fullLogoPath)) {
+    await cropEmblemFromFullLogo();
+    await buildIconSizes();
+  } else {
+    await downloadIfMissing("https://www.grayarx.com/logo.png", masterPath);
+    await cropLogoIcon();
+    await buildIconSizes();
+  }
   await downloadIfMissing(
     "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/grayarx-logo-email-DQpzBzJ8VxvYZZ47wcX6UB.webp",
     join(publicDir, "grayarx-logo-animated.webp"),
   );
-  await cropLogoIcon();
-  await buildIconSizes();
   console.log("\nDone.");
-  console.log("- logo-icon.png = circuit-board GA emblem (email + hosted URL)");
-  console.log("- favicon-32.png / icon-192x192.png = browser tab (search bar) icon");
-  console.log("- client/src/assets/logo-icon.png = lightweight nav bundle");
+  console.log("- grayarx-logo-full.png = full wordmark (auth pages)");
+  console.log("- grayarx-logo-emblem.png = GA circuit emblem (nav + favicons)");
 }
 
 main().catch((e) => {

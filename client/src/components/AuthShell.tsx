@@ -31,11 +31,8 @@ export default function AuthShell({ title, subtitle, children, footer }: AuthShe
 
         <div className="holo-card rounded-2xl md:rounded-3xl p-8 md:p-10 scan-line border border-primary/20">
           <div className="flex flex-col items-center mb-8">
-            <Logo size={48} />
-            <p className="font-tech text-[9px] uppercase tracking-[0.28em] text-primary/70 mt-4 mb-2">
-              GrayArx
-            </p>
-            <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-center">
+            <Logo variant="full" size={120} />
+            <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-center mt-6">
               {title}
             </h1>
             <p className="text-sm text-muted-foreground text-center mt-2 max-w-xs leading-relaxed">

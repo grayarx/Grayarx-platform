@@ -24,12 +24,15 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   const loginMutation = trpc.auth.loginWithEmail.useMutation();
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     setEmail(loadRememberedEmail());
     setRememberMe(isRememberMeEnabled());
+    setHasHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -48,7 +51,8 @@ export default function Login() {
       if (result.success) {
         persistRememberMe(email, rememberMe);
         toast.success("Welcome back — redirecting…");
-        setTimeout(() => setLocation("/dashboard"), 400);
+        await utils.auth.me.invalidate();
+        setLocation("/dashboard");
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -60,7 +64,7 @@ export default function Login() {
     }
   };
 
-  if (isLoading) {
+  if (!hasHydrated || isLoading) {
     return (
       <div className="min-h-screen bg-[#060608] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

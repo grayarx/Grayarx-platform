@@ -1,7 +1,7 @@
 import LegalLayout from "@/components/LegalLayout";
 import { LegalDocumentLinks } from "@/components/LegalDocumentLinks";
 import ComplianceContactForm from "@/components/ComplianceContactForm";
-import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine } from "@shared/companyLegal";
+import { GRAYARX_LEGAL, grayArxRegisteredAddressSingleLine, grayArxTaxStatusLine } from "@shared/companyLegal";
 
 export default function LegalHub() {
   return (
@@ -12,10 +12,10 @@ export default function LegalHub() {
       showHubCrumb={false}
     >
       <p>
-        GrayArx ({GRAYARX_LEGAL.legalName}, Enterprise No. {GRAYARX_LEGAL.enterpriseNumber})
-        operates under POPIA, the Consumer Protection Act, and the Electronic Communications
-        and Transactions Act. Use this page as the single link to share with dealership owners,
-        compliance officers, or your attorney.
+        GrayArx ({GRAYARX_LEGAL.legalName}, Enterprise No. {GRAYARX_LEGAL.enterpriseNumber}) —{" "}
+        {grayArxTaxStatusLine()} Operates under POPIA, the Consumer Protection Act, and the
+        Electronic Communications and Transactions Act. Use this page as the single link to share
+        with dealership owners, compliance officers, or your attorney.
       </p>
 
       <div className="not-prose">

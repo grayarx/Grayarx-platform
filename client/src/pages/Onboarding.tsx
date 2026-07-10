@@ -108,7 +108,7 @@ export default function Onboarding() {
         <div className="pointer-events-none absolute inset-0 gradient-mesh opacity-60" aria-hidden />
         <div className="container max-w-2xl relative">
           <div className="text-center mb-10">
-            <Logo size={64} className="mx-auto" />
+            <Logo variant="full" size={100} className="mx-auto" />
             <h1 className="font-display text-4xl md:text-5xl font-bold mt-6">
               Onboard your dealership
             </h1>

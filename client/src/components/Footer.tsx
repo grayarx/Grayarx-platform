@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import Logo from "./Logo";
+import { GRAYARX_LEGAL } from "@shared/companyLegal";
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import { OWNER_PHONE_DISPLAY, OWNER_PHONE_E164, OWNER_EMAIL, OWNER_WHATSAPP_URL } from "@/lib/contact";
 
@@ -11,7 +12,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-10">
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-3 mb-6 group">
-              <Logo size={36} />
+              <Logo size={36} variant="icon" />
               <div className="flex flex-col leading-tight">
                 <span className="font-display text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
                   GrayArx
@@ -91,7 +92,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
             <p className="font-tech text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-              © {new Date().getFullYear()} GrayArx (Pty) Ltd · Ent. 2026/407647/07
+              © {new Date().getFullYear()} GrayArx (Pty) Ltd · Ent. {GRAYARX_LEGAL.enterpriseNumber} · Income tax ref {GRAYARX_LEGAL.incomeTaxReference}
             </p>
             <p className="font-tech text-[9px] uppercase tracking-[0.12em] text-muted-foreground/70 mt-1">
               POPIA compliant · Built for South African dealerships

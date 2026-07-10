@@ -24,12 +24,22 @@ export interface AuthState {
   error: Error | null;
 }
 
+const AUTH_ME_OPTS = {
+  retry: false,
+  refetchOnWindowFocus: false,
+  staleTime: 60_000,
+} as const;
+
 export function useAuth(): AuthState {
-  const { data: user, isLoading, error } = trpc.auth.me.useQuery();
+  const { data: user, isLoading, isFetched, error } = trpc.auth.me.useQuery(
+    undefined,
+    AUTH_ME_OPTS,
+  );
 
   return {
     user: (user as AuthUser | null) || null,
-    isLoading,
+    // Only block UI on the first auth check — background refetches must not unmount forms.
+    isLoading: isLoading && !isFetched,
     isAuthenticated: !!user,
     error: error as Error | null,
   };

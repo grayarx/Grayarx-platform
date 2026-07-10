@@ -84,7 +84,7 @@ export default function Navigation() {
     >
       <div className="container flex h-16 md:h-20 items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <Logo size={36} />
+          <Logo size={40} variant="icon" />
           <div className="hidden sm:flex flex-col leading-tight">
             <span className="font-display text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
               GrayArx

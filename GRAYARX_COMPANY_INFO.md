@@ -15,7 +15,7 @@
 | **Registration Date** | May 23, 2026 |
 | **Certificate Issue Date** | May 25, 2026 |
 | **Tracking Number** | 9458952817 |
-| **Tax Reference Number** | 9172598295 |
+| **Tax Reference Number** | 9172596295 |
 | **Status** | Registered & Active |
 
 ---
@@ -97,7 +97,7 @@
 
 | Item | Status | Details |
 |------|--------|---------|
-| **SARS Tax Registration** | âœ… Registered | Reference: 9172598295 |
+| **SARS Tax Registration** | ✅ Registered | Reference: 9172596295 |
 | **Company Registration** | âœ… Registered | Enterprise: 2026/407647/07 |
 | **Name Reservation** | âœ… Valid | Until: Nov 22, 2026 |
 | **Data Encryption** | âœ… Enabled | All credentials encrypted |

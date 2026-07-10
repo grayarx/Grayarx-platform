@@ -24,8 +24,8 @@ export default function DealerAgreement() {
       <h2>1. Parties</h2>
       <p>
         <strong>GrayArx</strong> means {GRAYARX_LEGAL.legalName} (Enterprise No.{" "}
-        {GRAYARX_LEGAL.enterpriseNumber}), registered address {grayArxRegisteredAddressSingleLine()}.
-        {grayArxTaxStatusLine()}.
+        {GRAYARX_LEGAL.enterpriseNumber}), registered address {grayArxRegisteredAddressSingleLine()}.{" "}
+        {grayArxTaxStatusLine()}
       </p>
       <p>
         <strong>Dealer</strong> means the motor vehicle dealership entering into this Agreement
