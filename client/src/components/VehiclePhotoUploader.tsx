@@ -20,8 +20,8 @@ interface VehiclePhotoUploaderProps {
 
 const MAX_PHOTOS = 8;
 
-/** Resize + compress via canvas. Targets ≤200 KB so DB data URLs stay small. */
-function compressImage(file: File, maxPx = 1200, quality = 0.82): Promise<string> {
+/** Resize + compress via canvas. Targets ≤60 KB so data URLs stay within all limits. */
+function compressImage(file: File, maxPx = 900, quality = 0.72): Promise<string> {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
