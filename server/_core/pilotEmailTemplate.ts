@@ -52,7 +52,7 @@ function segmentBody(segment: PilotOutreachSegment): { headline: string; bullets
           "Vehicle chat on every listing (colour, price, finance, availability)",
           "WhatsApp auto-replies with specialist routing (booking vs trade-in)",
           "Lead inbox with reference numbers — nothing falls through",
-          "30-day pilot — features only, pricing discussed on call",
+          "7-day pilot — features only, pricing discussed on call",
         ],
       };
     case "after_hours_leak":
@@ -90,7 +90,7 @@ export function generateSegmentPilotEmailHTML(vars: TemplateVars): string {
   const body = `
 <p style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111827;">Hi <strong>${name}</strong>,</p>
 <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#4b5563;">
-  We're inviting a small group of dealerships${cityBit} to the GrayArx <strong style="color:#111827;">pilot programme</strong> — a free 30-day trial of our AI sales team for your showroom.
+  We're inviting a small group of dealerships${cityBit} to the GrayArx <strong style="color:#111827;">pilot programme</strong> — a free 7-day trial of our AI sales team for your showroom.
 </p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background-color:#0a0a0c;margin-bottom:28px;">
   <tr>
