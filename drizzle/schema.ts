@@ -1,4 +1,4 @@
-import { boolean as mysqlBoolean } from "drizzle-orm/mysql-core";
+import { boolean as mysqlBoolean, mediumtext } from "drizzle-orm/mysql-core";
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, date, tinyint } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
@@ -94,8 +94,8 @@ export const vehicles = mysqlTable("vehicles", {
   features: json("features"), // ["Leather seats","Sunroof","Reverse camera",...]
   serviceHistory: varchar("serviceHistory", { length: 32 }), // full | partial | none
   previousOwners: int("previousOwners"),
-  imageUrl: text("imageUrl"), // legacy primary photo (kept for back-compat)
-  primaryPhotoUrl: text("primaryPhotoUrl"),
+  imageUrl: mediumtext("imageUrl"), // legacy primary photo (kept for back-compat)
+  primaryPhotoUrl: mediumtext("primaryPhotoUrl"),
   location: varchar("location", { length: 128 }),
   description: text("description"),
   status: mysqlEnum("status", ["available", "reserved", "sold"]).default("available").notNull(),
@@ -113,7 +113,7 @@ export const vehicles = mysqlTable("vehicles", {
 export const vehiclePhotos = mysqlTable("vehicle_photos", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
-  url: text("url").notNull(),
+  url: mediumtext("url").notNull(),
   storageKey: varchar("storageKey", { length: 255 }).notNull(),
   position: int("position").default(0).notNull(),
   caption: varchar("caption", { length: 200 }),
