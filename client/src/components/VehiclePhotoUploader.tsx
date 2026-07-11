@@ -43,15 +43,37 @@ type SlotState = {
   uploading?: boolean;
 };
 
-function fileToBase64(file: File): Promise<string> {
-  return file.arrayBuffer().then((buf) =>
-    btoa(new Uint8Array(buf).reduce((acc, b) => acc + String.fromCharCode(b), "")),
-  );
+/**
+ * Compress + resize image via canvas before upload.
+ * Targets ≤200 KB so data URLs stored in DB stay small
+ * and API responses don't balloon.
+ */
+function compressImage(file: File, maxPx = 1200, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("No canvas")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      // Strip the "data:image/jpeg;base64," prefix — server adds it back
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      resolve(dataUrl.replace(/^data:[^;]+;base64,/, ""));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
-function mimeFor(file: File) {
-  if (file.type === "image/png") return "image/png" as const;
-  if (file.type === "image/webp") return "image/webp" as const;
+function mimeFor(_file: File) {
+  // After canvas compression everything becomes JPEG
   return "image/jpeg" as const;
 }
 
@@ -150,12 +172,12 @@ export default function VehiclePhotoUploader({
 
   const persistUpload = useCallback(
     async (file: File, angleId: PhotoAngleId) => {
-      if (file.size > 12 * 1024 * 1024) {
-        toast.error("Photo too large (max 12 MB)");
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("Photo too large (max 20 MB)");
         return null;
       }
       const mt = mimeFor(file);
-      const base64 = await fileToBase64(file);
+      const base64 = await compressImage(file);
       const { url } = await uploadPhoto.mutateAsync({
         dataBase64: base64,
         mimeType: mt,
@@ -488,25 +510,25 @@ export default function VehiclePhotoUploader({
                   <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <GripVertical className="h-4 w-4 text-white drop-shadow" />
                   </div>
-                  {/* Delete button — always visible so it's easy to find */}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
-                    className="absolute top-1 right-1 p-1.5 rounded-full bg-black/70 border border-red-500/50 text-red-400 hover:bg-red-600 hover:text-white hover:scale-110 transition-all opacity-90"
-                    title="Delete photo"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  {/* Hover overlay: set as hero */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2 gap-1">
+                  {/* Action bar — always visible at bottom of photo */}
+                  <div className="absolute bottom-0 left-0 right-0 flex z-10">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); void makePrimary(angle.id); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/70 text-white hover:bg-primary/90 text-[10px] font-semibold"
+                      className="flex-1 flex items-center justify-center gap-1 py-1 bg-black/70 text-white hover:bg-primary/90 text-[9px] font-semibold transition-colors"
                       title="Set as hero photo"
                     >
-                      <Star className="h-3 w-3" />
-                      Set hero
+                      <Star className="h-2.5 w-2.5" />
+                      Hero
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
+                      className="flex-1 flex items-center justify-center gap-1 py-1 bg-red-600/80 text-white hover:bg-red-600 text-[9px] font-semibold transition-colors"
+                      title="Delete photo"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                      Delete
                     </button>
                   </div>
                 </>
