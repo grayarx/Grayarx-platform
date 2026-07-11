@@ -1482,7 +1482,7 @@ export const appRouter = router({
       .input(
         z.object({
           vehicleId: z.number().int(),
-          photoUrl: z.string().min(1).max(500),
+          photoUrl: z.string().min(1), // no max — supports base64 data URLs
         }),
       )
       .mutation(async ({ input }) => {
@@ -1522,7 +1522,7 @@ export const appRouter = router({
       .input(
         z.object({
           vehicleId: z.number().int(),
-          url: z.string().min(1).max(500),
+          url: z.string().min(1), // no max — supports base64 data URLs
           caption: z.string().max(200).optional(),
           setPrimary: z.boolean().optional(),
         }),
