@@ -1,0 +1,6 @@
+[OAuth] Initialized with baseURL: 
+Custom auth disabled
+[AutonomousAudit] middleware attached — Kagiso runs every 24h autonomously
+Server running on http://localhost:4997/
+WebSocket server available at ws://localhost:4997/api/ws
+[Startup] Set dealership 1 whatsappPhoneNumberId=1236174859569229

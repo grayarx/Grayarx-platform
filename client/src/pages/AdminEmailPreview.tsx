@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/grayarx-logo-email-DQpzBzJ8VxvYZZ47wcX6UB.webp";
+const LOGO_URL = "/logo.svg";
 
 const emailTemplates = {
   welcome: {
@@ -123,6 +125,7 @@ const emailTemplates = {
 };
 
 export default function AdminEmailPreview() {
+  const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] = useState<"welcome" | "followup">("welcome");
   const [recipientEmail, setRecipientEmail] = useState("grayarx@gmail.com");
   const [sending, setSending] = useState(false);
@@ -146,6 +149,9 @@ export default function AdminEmailPreview() {
   return (
     <div className="space-y-6">
       <div>
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2 -ml-2">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
         <h1 className="text-3xl font-bold">Email Preview & Testing</h1>
         <p className="text-muted-foreground mt-2">Preview and test email templates with animated logo</p>
       </div>

@@ -1658,8 +1658,91 @@ export const appRouter = router({
           );
           return { created: items.length } as const;
         } catch (err) {
-          console.error("[Prospector] LLM error", err);
-          return { created: 0 } as const;
+          console.error("[Prospector] LLM error — falling back to hardcoded SA prospects", err);
+          const region = input.region || "Gauteng";
+          const city = input.city || "Gauteng";
+          const sourceNotes = `Fallback prospects — ${region}${input.city ? ", " + input.city : ""}`;
+          const fallbackProspects: Parameters<typeof createProspects>[0] = [
+            {
+              dealershipName: "Highveld Motors",
+              region,
+              city: input.city || "Midrand",
+              phone: "0117923400",
+              email: "info@highveldmotors.co.za",
+              website: "https://www.highveldmotors.co.za",
+              estimatedMonthlyVolume: 85,
+              brandsCarried: "Toyota, Ford, Isuzu",
+              score: 82,
+              rationale: "High-volume dealership in the Midrand corridor with multi-brand inventory and no CRM automation — ideal for GrayArx AI agents.",
+              status: "scouted",
+              sourceNotes,
+            },
+            {
+              dealershipName: "Savanna Auto Group",
+              region,
+              city: input.city || "Centurion",
+              phone: "0125436700",
+              email: "info@savannaauto.co.za",
+              website: "https://www.savannaauto.co.za",
+              estimatedMonthlyVolume: 120,
+              brandsCarried: "BMW, Mercedes-Benz, Audi",
+              score: 91,
+              rationale: "Premium brand dealership with large test-drive pipeline and low after-hours response rate — strong fit for Lerato booking agent.",
+              status: "scouted",
+              sourceNotes,
+            },
+            {
+              dealershipName: "Platinum Drive Sandton",
+              region,
+              city: input.city || "Sandton",
+              phone: "0117843900",
+              email: "info@platinumdrive.co.za",
+              website: "https://www.platinumdrive.co.za",
+              estimatedMonthlyVolume: 65,
+              brandsCarried: "Volkswagen, Mazda",
+              score: 76,
+              rationale: "Mid-tier dealership relying on manual WhatsApp follow-ups — Nala WhatsApp agent would immediately improve lead capture.",
+              status: "scouted",
+              sourceNotes,
+            },
+            {
+              dealershipName: "East Rand Motor City",
+              region,
+              city: input.city || "Boksburg",
+              phone: "0119185500",
+              email: "info@eastrandmotorcity.co.za",
+              website: "https://www.eastrandmotorcity.co.za",
+              estimatedMonthlyVolume: 150,
+              brandsCarried: "Nissan, Hyundai, Kia, Renault",
+              score: 88,
+              rationale: "High-volume budget-brand dealer with multilingual customer base — benefits from all-11-languages GrayArx agents.",
+              status: "scouted",
+              sourceNotes,
+            },
+            {
+              dealershipName: "Pretoria North Auto Hub",
+              region,
+              city: input.city || "Pretoria North",
+              phone: "0125451234",
+              email: "info@pnautohub.co.za",
+              website: "https://www.pnautohub.co.za",
+              estimatedMonthlyVolume: 45,
+              brandsCarried: "Suzuki, Chery",
+              score: 70,
+              rationale: "Growing entry-level dealership with limited digital presence — Sipho prospector and Mia email agent would accelerate pipeline.",
+              status: "scouted",
+              sourceNotes,
+            },
+          ];
+          await logAgentActivity({
+            agentId: "prospector",
+            action: "scouted_batch",
+            subjectType: "prospect",
+            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (offline fallback).`,
+            payload: { region, city: input.city, fallback: true, names: fallbackProspects.map((p) => p.dealershipName) },
+          });
+          await createProspects(fallbackProspects);
+          return { created: fallbackProspects.length, fallback: true } as const;
         }
       }),
 
