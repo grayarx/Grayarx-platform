@@ -1208,8 +1208,9 @@ export const appRouter = router({
 
     listVehicles: protectedProcedure.query(async ({ ctx }) => {
       const isAdmin = isFounderOrAdmin(ctx.user);
-      // Founder/admin can see all stock; dealers only see their own dealership's vehicles.
-      return listVehicles(200, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId ?? null });
+      // Accounts with no dealership assigned see nothing (prevents cross-tenant bleed).
+      if (!isAdmin && !ctx.user.dealershipId) return [];
+      return listVehicles(200, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId! });
     }),
     createVehicle: protectedProcedure
       .input(

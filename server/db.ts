@@ -244,12 +244,19 @@ export async function listVehicles(
   if (!db) return [];
 
   const baseQuery = db.select().from(vehicles);
-  const rows = opts?.dealershipId != null
-    ? await baseQuery
-        .where(eq(vehicles.dealershipId, opts.dealershipId))
-        .orderBy(desc(vehicles.createdAt))
-        .limit(limit)
-    : await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
+  let rows;
+  if (opts === undefined) {
+    // No filter at all — admin/founder full-access path only
+    rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
+  } else if (opts.dealershipId != null) {
+    rows = await baseQuery
+      .where(eq(vehicles.dealershipId, opts.dealershipId))
+      .orderBy(desc(vehicles.createdAt))
+      .limit(limit);
+  } else {
+    // opts provided but dealershipId is null/undefined → no dealership assigned, return nothing
+    return [];
+  }
 
   if (rows.length === 0) return [];
 
