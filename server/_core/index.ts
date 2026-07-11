@@ -151,6 +151,103 @@ async function startServer() {
     }
   })();
 
+  // ── Auto-seed: create demo dealership + dealer user + vehicles if DB is empty ──
+  (async () => {
+    try {
+      const { getDb } = await import("../db");
+      const { dealerships, users, vehicles } = await import("../../drizzle/schema");
+      const { eq, sql } = await import("drizzle-orm");
+      const bcrypt = (await import("bcryptjs")).default;
+      const db = await getDb();
+      if (!db) return;
+
+      const allDealerships = await db.select({ id: dealerships.id }).from(dealerships).limit(1);
+      if (allDealerships.length > 0) return; // already seeded
+
+      console.log("[Startup] No dealerships found — seeding demo dealership…");
+
+      // Create demo dealership
+      const insertResult: any = await db.insert(dealerships).values({
+        name: "GrayArx Demo Dealership",
+        contactEmail: "dealer@grayarx.com",
+        contactPhone: "+27101234567",
+        region: "Gauteng",
+        status: "active",
+        plan: "professional",
+        publicShortcode: "demo",
+        showroomTheme: "futuristic",
+        whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
+      });
+      const demoId = Number(insertResult.insertId ?? 1);
+      console.log(`[Startup] Created demo dealership id=${demoId}`);
+
+      // Create dealer user
+      const dealerEmail = "dealer@grayarx.com";
+      const [existingDealer] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${dealerEmail}`)
+        .limit(1);
+      if (!existingDealer) {
+        const hash = await bcrypt.hash("Dealer2024!", 12);
+        await db.insert(users).values({
+          openId: `local_dealer_${Date.now()}`,
+          email: dealerEmail,
+          name: "Demo Dealer",
+          passwordHash: hash,
+          loginMethod: "email",
+          role: "dealer_owner",
+          dealershipId: demoId,
+          lastSignedIn: new Date(),
+        });
+        console.log("[Startup] Created demo dealer user (dealer@grayarx.com / Dealer2024!)");
+      }
+
+      // Create admin user if missing
+      const adminEmail = "admin@grayarx.com";
+      const [existingAdmin] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${adminEmail}`)
+        .limit(1);
+      if (!existingAdmin) {
+        const hash = await bcrypt.hash("AdminPassword123!", 12);
+        await db.insert(users).values({
+          openId: `local_admin_${Date.now()}`,
+          email: adminEmail,
+          name: "GrayArx Administrator",
+          passwordHash: hash,
+          loginMethod: "email",
+          role: "admin",
+          lastSignedIn: new Date(),
+        });
+        console.log("[Startup] Created admin user (admin@grayarx.com / AdminPassword123!)");
+      }
+
+      // Add demo vehicles
+      const demoVehicles = [
+        { title: "2022 McLaren P1 GTR", make: "McLaren", model: "P1 GTR", year: 2022, price: "8950000.00", km: 1200, fuel: "Petrol", transmission: "Automatic", bodyType: "Coupe", color: "Papaya Orange", location: "Sandton", primaryPhotoUrl: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=900&q=80", imageUrl: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=900&q=80", externalRef: "MCL-P1-GTR-001" },
+        { title: "2023 Porsche 911 Carrera S", make: "Porsche", model: "911 Carrera S", year: 2023, price: "1890000.00", km: 8500, fuel: "Petrol", transmission: "Automatic", bodyType: "Coupe", color: "Arctic Grey", location: "Sandton", primaryPhotoUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80", imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80", externalRef: "POR-911-S-002" },
+        { title: "2022 Lamborghini Huracán EVO", make: "Lamborghini", model: "Huracán EVO", year: 2022, price: "4750000.00", km: 6200, fuel: "Petrol", transmission: "Automatic", bodyType: "Coupe", color: "Giallo Midas", location: "Cape Town", primaryPhotoUrl: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=900&q=80", imageUrl: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=900&q=80", externalRef: "LAM-HURA-EVO-003" },
+        { title: "2021 Mercedes-Benz C63 AMG", make: "Mercedes-Benz", model: "C63 AMG", year: 2021, price: "1245000.00", km: 32000, fuel: "Petrol", transmission: "Automatic", bodyType: "Sedan", color: "Obsidian Black", location: "Johannesburg", primaryPhotoUrl: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=900&q=80", imageUrl: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=900&q=80", externalRef: "MBZ-C63-AMG-004" },
+        { title: "2022 Ferrari Roma", make: "Ferrari", model: "Roma", year: 2022, price: "5100000.00", km: 4800, fuel: "Petrol", transmission: "Automatic", bodyType: "Coupe", color: "Rosso Corsa", location: "Pretoria", primaryPhotoUrl: "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=900&q=80", imageUrl: "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=900&q=80", externalRef: "FER-ROMA-005" },
+      ];
+      for (const v of demoVehicles) {
+        await db.insert(vehicles).values({
+          ...v,
+          dealershipId: demoId,
+          condition: "used",
+          status: "available",
+          views: 0,
+          leadCount: 0,
+        });
+      }
+      console.log(`[Startup] Added ${demoVehicles.length} demo vehicles to showroom.`);
+    } catch (e) {
+      console.warn("[Startup] Demo seed skipped:", (e as Error).message);
+    }
+  })();
+
   // Graceful shutdown
   process.on("SIGTERM", () => {
     console.log("SIGTERM received, shutting down gracefully...");

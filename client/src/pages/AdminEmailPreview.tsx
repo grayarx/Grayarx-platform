@@ -56,7 +56,7 @@ const emailTemplates = {
             
             <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
             
-            <p>We're offering a <strong>free 30-day trial</strong> — no credit card required.</p>
+            <p>We're offering a <strong>free 7-day pilot</strong> — no credit card required.</p>
             
             <a href="https://www.grayarx.com/onboarding" class="cta-button">Start Free Trial</a>
             
