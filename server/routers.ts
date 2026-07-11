@@ -256,6 +256,7 @@ import { getChatbotDeployment } from "./_core/chatbotDeploymentService";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { prospects } from "../drizzle/schema";
+import { pickNextProspects } from "./_core/saProspectPool";
 // import { founderProfileRouter } from "./_core/founderProfileRouter";
 // import { stagingEnvironmentRouter } from "./_core/stagingEnvironmentRouter";
 import { tier2Router } from "./_core/tier2Improvements";
@@ -1570,6 +1571,10 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input }) => {
+        // Fetch names already in the DB so we can deduplicate both paths
+        const existingRows = await listProspects(1000);
+        const existingNames = existingRows.map((r) => r.dealershipName);
+
         const system = `You are GrayArx Prospector, an AI scout for a South African dealership SaaS. Generate ${input.count} REALISTIC potential dealership prospects in ${input.city ? input.city + ", " : ""}${input.region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email (use info@dealership-slug.co.za style), website, estimatedMonthlyVolume (10-200), brandsCarried (comma list of 2-4 brands), score (0-100 based on fit), rationale (1 sentence why they're a good fit for GrayArx AI agents). Return JSON only.`;
         const userMsg = `Region: ${input.region}\nCity: ${input.city ?? "any"}\nTarget monthly volume: ${input.targetVolume ?? "any"}\nBrand focus: ${input.brandFocus ?? "any"}\nGenerate ${input.count} prospects.`;
         try {
@@ -1626,7 +1631,7 @@ export const appRouter = router({
           });
           const raw = response.choices?.[0]?.message?.content ?? "{\"prospects\":[]}";
           const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
-          const items = (parsed.prospects ?? []) as Array<{
+          const allItems = (parsed.prospects ?? []) as Array<{
             dealershipName: string;
             region: string;
             city: string;
@@ -1638,7 +1643,12 @@ export const appRouter = router({
             score: number;
             rationale: string;
           }>;
-          if (items.length === 0) return { created: 0 } as const;
+          // Deduplicate against existing DB records
+          const existingSet = new Set(existingNames.map((n) => n.toLowerCase().trim()));
+          const items = allItems.filter(
+            (p) => !existingSet.has(p.dealershipName.toLowerCase().trim()),
+          );
+          if (items.length === 0) return { created: 0, poolRemaining: null } as const;
           await logAgentActivity({
             agentId: "prospector",
             action: "scouted_batch",
@@ -1662,93 +1672,46 @@ export const appRouter = router({
               sourceNotes: `AI Prospector — ${input.region}${input.city ? ", " + input.city : ""}`,
             })),
           );
-          return { created: items.length } as const;
+          return { created: items.length, poolRemaining: null } as const;
         } catch (err) {
-          console.error("[Prospector] LLM error — falling back to hardcoded SA prospects", err);
+          console.error("[Prospector] LLM unavailable — using rotating SA prospect pool", err);
           const region = input.region || "Gauteng";
-          const city = input.city || "Gauteng";
-          const sourceNotes = `Fallback prospects — ${region}${input.city ? ", " + input.city : ""}`;
-          const fallbackProspects: Parameters<typeof createProspects>[0] = [
-            {
-              dealershipName: "Sandton Motors",
-              region: input.region || "Gauteng",
-              city: input.city || "Johannesburg",
-              phone: "0117840200",
-              email: "info@sandtonmotors.co.za",
-              website: "https://www.sandtonmotors.co.za",
-              estimatedMonthlyVolume: 210,
-              brandsCarried: "BMW, Mercedes-Benz, Audi, Porsche",
-              score: 93,
-              rationale: "High-volume luxury dealership in the Sandton CBD with a large walk-in pipeline and no after-hours AI coverage — prime fit for all GrayArx agents.",
-              status: "scouted",
-              sourceNotes,
-            },
-            {
-              dealershipName: "Cape Auto World",
-              region: input.region || "Western Cape",
-              city: input.city || "Cape Town",
-              phone: "0214470800",
-              email: "info@capeautoworld.co.za",
-              website: "https://www.capeautoworld.co.za",
-              estimatedMonthlyVolume: 155,
-              brandsCarried: "Toyota, Volkswagen, Hyundai",
-              score: 84,
-              rationale: "Mid-range multi-brand dealer serving Cape Town's growing market — Nala WhatsApp agent would capture the high volume of inbound inquiries.",
-              status: "scouted",
-              sourceNotes,
-            },
-            {
-              dealershipName: "Durban Drive",
-              region: input.region || "KwaZulu-Natal",
-              city: input.city || "Durban",
-              phone: "0313682500",
-              email: "info@durbandrive.co.za",
-              website: "https://www.durbandrive.co.za",
-              estimatedMonthlyVolume: 310,
-              brandsCarried: "Toyota, Ford, Nissan, Isuzu",
-              score: 89,
-              rationale: "High-volume dealership serving Durban's multilingual market — all-11-languages GrayArx agents would immediately improve lead capture and conversion.",
-              status: "scouted",
-              sourceNotes,
-            },
-            {
-              dealershipName: "Pretoria Premium Cars",
-              region: input.region || "Gauteng",
-              city: input.city || "Pretoria",
-              phone: "0124609100",
-              email: "info@pretoriapremiumcars.co.za",
-              website: "https://www.pretoriapremiumcars.co.za",
-              estimatedMonthlyVolume: 105,
-              brandsCarried: "Mercedes-Benz, BMW, Lexus",
-              score: 90,
-              rationale: "Luxury segment dealer in Pretoria with a long test-drive booking cycle — Lerato booking agent would cut scheduling time by 40%.",
-              status: "scouted",
-              sourceNotes,
-            },
-            {
-              dealershipName: "Garden Route Motors",
-              region: input.region || "Western Cape",
-              city: input.city || "George",
-              phone: "0448741200",
-              email: "info@gardenroutemotors.co.za",
-              website: "https://www.gardenroutemotors.co.za",
-              estimatedMonthlyVolume: 82,
-              brandsCarried: "Suzuki, Kia, Renault",
-              score: 74,
-              rationale: "Boutique dealership in the Garden Route with limited digital presence — Sipho prospector and Mia email agent would accelerate their pipeline significantly.",
-              status: "scouted",
-              sourceNotes,
-            },
-          ];
+          const sourceNotes = `Pool fallback — ${region}${input.city ? ", " + input.city : ""}`;
+
+          const { batch, poolRemaining } = pickNextProspects(existingNames, 8);
+
+          if (batch.length === 0) {
+            return {
+              created: 0,
+              poolRemaining: 0,
+              message: "All prospects in pool have been added — expand the pool or try again next month",
+            } as const;
+          }
+
+          const fallbackProspects: Parameters<typeof createProspects>[0] = batch.map((p) => ({
+            dealershipName: p.name,
+            region: p.province,
+            city: p.city,
+            phone: p.phone,
+            email: p.email,
+            website: p.website ?? "",
+            estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+            brandsCarried: p.brands.join(", "),
+            score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
+            rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
+            status: "scouted" as const,
+            sourceNotes,
+          }));
+
           await logAgentActivity({
             agentId: "prospector",
             action: "scouted_batch",
             subjectType: "prospect",
-            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (offline fallback).`,
-            payload: { region, city: input.city, fallback: true, names: fallbackProspects.map((p) => p.dealershipName) },
+            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (pool fallback, ${poolRemaining} remaining).`,
+            payload: { region, city: input.city, fallback: true, poolRemaining, names: fallbackProspects.map((p) => p.dealershipName) },
           });
           await createProspects(fallbackProspects);
-          return { created: fallbackProspects.length, fallback: true } as const;
+          return { created: fallbackProspects.length, fallback: true, poolRemaining } as const;
         }
       }),
 
