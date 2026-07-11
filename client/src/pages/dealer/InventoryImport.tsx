@@ -48,6 +48,7 @@ type PreviewRow = {
   imageUrls?: string[];
   photoScore?: number;
   photoWarnings?: string[];
+  dataWarnings?: string[];
 };
 
 
@@ -64,6 +65,7 @@ export default function InventoryImportPage() {
     validRows: PreviewRow[];
     skippedRows: Array<{ index: number; reason: string }>;
     duplicateRefs: string[];
+    warningRows?: number;
     photoSummary?: {
       avgScore: number;
       rowsWithoutPhotos: number;
@@ -76,6 +78,7 @@ export default function InventoryImportPage() {
   const [lastImport, setLastImport] = useState<{
     created: number;
     repaired: number;
+    importedWithWarnings: number;
     failed: Array<{ title: string; reason: string }>;
   } | null>(null);
 
@@ -133,6 +136,7 @@ export default function InventoryImportPage() {
       setLastImport({
         created: res.created,
         repaired: res.repaired ?? 0,
+        importedWithWarnings: res.importedWithWarnings ?? 0,
         failed: res.failedRows ?? [],
       });
       utils.dealer.listVehicles.invalidate();
@@ -365,19 +369,33 @@ export default function InventoryImportPage() {
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-4"
               >
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   <Stat label="Total rows" value={preview.totalRows} />
-                  <Stat label="Valid" value={preview.validRows.length} tone="good" />
+                  <Stat label="Will import" value={preview.validRows.length} tone="good" />
+                  <Stat
+                    label="Need fixing"
+                    value={preview.warningRows ?? 0}
+                    tone={(preview.warningRows ?? 0) > 0 ? "warn" : "neutral"}
+                  />
                   <Stat
                     label="Skipped"
                     value={preview.skippedRows.length + preview.duplicateRefs.length}
                     tone={
                       preview.skippedRows.length + preview.duplicateRefs.length > 0
-                        ? "warn"
+                        ? "error"
                         : "neutral"
                     }
                   />
                 </div>
+                {(preview.warningRows ?? 0) > 0 && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300 flex items-start gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>{preview.warningRows} vehicle{(preview.warningRows ?? 0) === 1 ? "" : "s"} will import with issues</strong> — price set to R 1 or photos missing.
+                      They'll appear in Inventory flagged in amber. Click any listing to fix it.
+                    </span>
+                  </div>
+                )}
 
                 {preview.photoSummary && (
                   <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm space-y-2">
@@ -410,15 +428,18 @@ export default function InventoryImportPage() {
                       Will import ({preview.validRows.length})
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
-                      {preview.validRows.slice(0, 20).map((r, i) => (
+                      {preview.validRows.slice(0, 20).map((r, i) => {
+                        const allWarnings = [...(r.dataWarnings ?? []), ...(r.photoWarnings ?? [])];
+                        const hasIssues = allWarnings.length > 0;
+                        return (
                         <motion.div
                           key={i}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.03, duration: 0.25 }}
-                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/20 transition-colors"
+                          className={`flex items-start gap-3 px-3 py-2.5 hover:bg-muted/20 transition-colors ${hasIssues ? "bg-amber-500/5 border-l-2 border-amber-500/40" : ""}`}
                         >
-                          <div className="w-14 h-10 rounded-md overflow-hidden bg-muted shrink-0 border border-border/50">
+                          <div className="w-14 h-10 rounded-md overflow-hidden bg-muted shrink-0 border border-border/50 mt-0.5">
                             <img
                               src={r.imageUrl || PLACEHOLDER_IMG}
                               alt=""
@@ -432,18 +453,19 @@ export default function InventoryImportPage() {
                             <div className="text-sm font-medium text-foreground truncate">
                               {r.title}
                             </div>
-                            {typeof r.photoScore === "number" && (
+                            {/* Per-row warnings — shown inline so the user knows exactly what to fix */}
+                            {allWarnings.map((w, wi) => (
+                              <p key={wi} className="text-[10px] text-amber-400 mt-0.5 leading-tight">
+                                ⚠ {w}
+                              </p>
+                            ))}
+                            {!hasIssues && typeof r.photoScore === "number" && (
                               <div className="text-[10px] text-muted-foreground mt-0.5">
                                 Photo score: {r.photoScore}/100
                                 {r.imageUrls && r.imageUrls.length > 1
                                   ? ` · ${r.imageUrls.length} angles`
                                   : ""}
                               </div>
-                            )}
-                            {r.photoWarnings && r.photoWarnings.length > 0 && (
-                              <p className="text-[10px] text-amber-500/90 mt-0.5 truncate">
-                                {r.photoWarnings[0]}
-                              </p>
                             )}
                             <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
                               {r.year && (
@@ -467,12 +489,13 @@ export default function InventoryImportPage() {
                             </div>
                           </div>
                           <span
-                            className={`shrink-0 text-sm font-semibold ${isSuspiciousPrice(r.price) ? "text-amber-400" : "text-primary"}`}
+                            className={`shrink-0 text-sm font-semibold mt-0.5 ${r.price === null || isSuspiciousPrice(r.price) ? "text-amber-400" : "text-primary"}`}
                           >
-                            {formatVehiclePrice(r.price)}
+                            {r.price === null ? "Fix price" : formatVehiclePrice(r.price)}
                           </span>
                         </motion.div>
-                      ))}
+                        );
+                      })}
                       {preview.validRows.length > 20 && (
                         <div className="px-4 py-2.5 text-xs text-muted-foreground text-center">
                           + {preview.validRows.length - 20} more vehicles
@@ -542,7 +565,7 @@ export default function InventoryImportPage() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-xl border border-green-500/30 bg-green-500/5 p-4 text-sm"
+                    className="rounded-xl border border-green-500/30 bg-green-500/5 p-4 text-sm space-y-2"
                   >
                     <p className="text-green-300 font-medium flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
@@ -553,8 +576,20 @@ export default function InventoryImportPage() {
                         `${lastImport.repaired} price${lastImport.repaired === 1 ? "" : "s"} updated`}
                       {lastImport.created === 0 && lastImport.repaired === 0 && "Import complete"}
                     </p>
+                    {lastImport.importedWithWarnings > 0 && (
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+                        <p className="font-medium flex items-center gap-1.5 mb-1">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          {lastImport.importedWithWarnings} vehicle{lastImport.importedWithWarnings === 1 ? "" : "s"} need attention
+                        </p>
+                        <p>These imported successfully but have missing price or photos. Open Inventory, find the amber-flagged listings, and click Edit to fix them.</p>
+                        <Link href="/dealer/inventory" className="mt-1.5 inline-block text-primary underline font-medium">
+                          Go to Inventory →
+                        </Link>
+                      </div>
+                    )}
                     {lastImport.failed.length > 0 && (
-                      <ul className="mt-2 text-xs text-amber-200 list-disc ml-4">
+                      <ul className="text-xs text-red-300 list-disc ml-4">
                         {lastImport.failed.slice(0, 5).map((f, i) => (
                           <li key={i}>
                             {f.title}: {f.reason}
@@ -580,14 +615,16 @@ function Stat({
 }: {
   label: string;
   value: number;
-  tone?: "neutral" | "good" | "warn";
+  tone?: "neutral" | "good" | "warn" | "error";
 }) {
   const toneClass =
     tone === "good"
       ? "text-green-300"
       : tone === "warn"
         ? "text-amber-300"
-        : "text-foreground";
+        : tone === "error"
+          ? "text-red-400"
+          : "text-foreground";
   return (
     <div className="rounded-xl border border-border bg-muted/30 px-3 py-2.5">
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>

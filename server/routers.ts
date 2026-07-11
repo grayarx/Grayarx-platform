@@ -2183,6 +2183,7 @@ export const appRouter = router({
         const preview = parseInventoryCsv(input.csv);
         let created = 0;
         let repaired = 0;
+        let importedWithWarnings = 0;
         const existingDuplicates: string[] = [];
         const failedRows: Array<{ title: string; reason: string }> = [];
         for (const row of preview.validRows) {
@@ -2208,14 +2209,18 @@ export const appRouter = router({
                   row.externalRef,
                 );
             const primary = storedImageUrl || primaryUrl;
+            // Founders/admins have no dealershipId — fall back to 1 (the primary
+            // test/seed dealership) so imported vehicles are never orphaned.
+            const importDealershipId = ctx.user.dealershipId ?? 1;
             const result = await createVehicle({
               ownerUserId: ctx.user.id,
-              dealershipId: ctx.user.dealershipId ?? null,
+              dealershipId: importDealershipId,
               title: row.title,
               make: row.make,
               model: row.model,
               year: row.year,
-              price: String(row.price),
+              // null price → store as "1" (R1 placeholder, flagged as suspicious — dealer fixes in inventory)
+              price: row.price != null ? String(row.price) : "1",
               km: row.km,
               fuel: row.fuel,
               transmission: row.transmission,
@@ -2246,6 +2251,9 @@ export const appRouter = router({
               }
             }
             created++;
+            if (row.dataWarnings.length > 0 || row.photoWarnings.length > 0) {
+              importedWithWarnings++;
+            }
           } catch (err) {
             const reason = err instanceof Error ? err.message : String(err);
             failedRows.push({ title: row.title, reason });
@@ -2268,6 +2276,7 @@ export const appRouter = router({
         return {
           created,
           repaired,
+          importedWithWarnings,
           skipped: preview.skippedRows,
           duplicatesInCsv: preview.duplicateRefs,
           duplicatesAgainstDb: existingDuplicates,

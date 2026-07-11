@@ -16,6 +16,7 @@ export type ParsedVehicleRow = {
   make: string | null;
   model: string | null;
   year: number | null;
+  /** null means price was missing/invalid — vehicle still imports at R 0, fix in inventory */
   price: number | null;
   km: number | null;
   fuel: string | null;
@@ -29,13 +30,18 @@ export type ParsedVehicleRow = {
   externalRef: string | null;
   photoScore: number;
   photoWarnings: string[];
+  /** Non-photo data warnings (price missing, field truncated, etc.) */
+  dataWarnings: string[];
 };
 
 export type ImportPreview = {
   totalRows: number;
   validRows: ParsedVehicleRow[];
+  /** Rows skipped entirely (no title AND no make+model — truly un-importable) */
   skippedRows: Array<{ index: number; reason: string }>;
   duplicateRefs: string[];
+  /** Rows that will import but have fixable issues (price=0, no photos, etc.) */
+  warningRows: number;
   photoSummary: {
     avgScore: number;
     rowsWithoutPhotos: number;
@@ -53,6 +59,9 @@ const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
     "price zar",
     "price in zar",
     "price_zar",
+    "price (zar)",
+    "price usd",
+    "price (usd)",
     "price inc vat",
     "price incl vat",
     "price including vat",
@@ -76,7 +85,8 @@ const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
   fuel: ["fuel", "fuel type", "fueltype"],
   transmission: ["transmission", "gearbox"],
   location: ["location", "city", "branch", "dealership location"],
-  imageUrl: ["image", "image url", "imageurl", "photo", "photo url", "photos", "photos url", "photo urls", "primary photo", "thumbnail", "img", "picture", "main image"],
+  imageUrl: ["image", "image url", "imageurl", "photo", "photo url", "photos", "photos url", "photo urls", "primary photo", "thumbnail", "img", "picture", "main image",
+    "photo 1", "photo 1 (front angle)", "front angle", "photo 1 front angle"],
   imageUrls: ["image urls", "photo urls", "photos urls", "gallery", "images"],
   description: ["description", "notes", "comments", "details"],
   externalRef: ["stock", "stock id", "stock no", "stock number", "stock code", "stock_id", "vin", "vin number", "registration", "reg", "reg no", "ref", "reference", "listing id", "id"],
@@ -157,6 +167,34 @@ function parsePrice(raw: string | undefined): number | null {
   return n;
 }
 
+/**
+ * Validate a single photo URL and return a human-readable reason if it is
+ * unsuitable for the showroom, or null if it looks fine.
+ */
+function photoUrlIssue(url: string): string | null {
+  if (!url || !url.trim()) return "URL is empty";
+  const trimmed = url.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return `Not a valid URL: "${trimmed.slice(0, 40)}"`;
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return `Must be an http/https URL (got ${parsed.protocol})`;
+  }
+  // Bare domain — no path beyond "/"
+  if (parsed.pathname === "/" && !parsed.search) {
+    return `Bare domain only — needs a full image path (e.g. pinterest.com/pin/…/image.jpg)`;
+  }
+  // Known non-image hosting sites that are commonly pasted by mistake
+  const badHosts = ["pinterest.com", "www.pinterest.com", "facebook.com", "instagram.com", "twitter.com", "x.com"];
+  if (badHosts.includes(parsed.hostname)) {
+    return `${parsed.hostname} blocks direct image embedding — use a direct .jpg/.png link or Unsplash`;
+  }
+  return null; // looks OK
+}
+
 function inferPriceColumnIndex(header: string[], sampleRows: string[][]): number | null {
   if (sampleRows.length === 0) return null;
   let bestIdx: number | null = null;
@@ -199,6 +237,20 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     if (idx !== null) colIndex[key] = idx;
   });
 
+  // Detect numbered photo columns: "Photo 1", "Photo 2 (Rear Angle)", etc.
+  // Collect all their column indices so we can merge them per row.
+  const numberedPhotoColIndices: number[] = [];
+  for (let i = 0; i < header.length; i++) {
+    const h = normaliseHeader(header[i]);
+    // Match "photo N" or "photo N (anything)" or "image N"
+    if (/^(photo|image)\s*\d+/.test(h)) {
+      // Don't double-count if already resolved as primary imageUrl
+      if (i !== colIndex.imageUrl) {
+        numberedPhotoColIndices.push(i);
+      }
+    }
+  }
+
   const sampleRows = lines.slice(1, Math.min(lines.length, 12)).map((l) => splitCsvLine(l));
   if (colIndex.price === undefined) {
     const inferred = inferPriceColumnIndex(header, sampleRows);
@@ -237,6 +289,8 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       return idx === undefined ? undefined : cells[idx];
     };
 
+    const dataWarnings: string[] = [];
+
     const make = get("make")?.trim() || null;
     const model = get("model")?.trim() || null;
     const yearNum = toNumber(get("year"));
@@ -244,19 +298,57 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     if (!title) {
       title = [yearNum, make, model].filter(Boolean).join(" ").trim();
     }
+    // Truly un-importable — no identity at all
     if (!title) {
-      skippedRows.push({ index: i, reason: "No title and no make/model" });
+      skippedRows.push({ index: i, reason: "No title and no make/model — cannot identify this vehicle" });
       continue;
     }
 
-    const priceNum = parsePrice(get("price"));
+    // Price: warn but still import at R 0 so the dealer can fix it in inventory
+    const rawPrice = get("price");
+    const priceNum = parsePrice(rawPrice);
     if (priceNum === null) {
-      skippedRows.push({ index: i, reason: "Missing or invalid price (need a real ZAR amount, not POA/R1)" });
-      continue;
+      if (!rawPrice || !rawPrice.trim()) {
+        dataWarnings.push("Price is missing — vehicle will import at R 0. Update in Inventory.");
+      } else if (/^(poa|p\.o\.a|tba|tbc|n\/a|negotiable|contact|call)/i.test(rawPrice.trim())) {
+        dataWarnings.push(`Price is "${rawPrice.trim()}" (not a number) — set to R 0. Update in Inventory.`);
+      } else {
+        dataWarnings.push(`Price "${rawPrice.trim()}" could not be parsed — confirm currency is ZAR, remove $ or commas. Set to R 0 for now.`);
+      }
     }
 
+    // Collect photo URLs from primary column + numbered columns
     const rawImage = get("imageUrl")?.trim() || null;
-    const imageUrls = parseMultiPhotoField(rawImage);
+    let candidateUrls = parseMultiPhotoField(rawImage);
+    for (const idx of numberedPhotoColIndices) {
+      const url = cells[idx]?.trim();
+      if (url && url.length > 4 && !candidateUrls.includes(url)) {
+        candidateUrls.push(url);
+      }
+    }
+    candidateUrls = [...new Set(candidateUrls)];
+
+    // Validate each candidate and collect specific photo warnings
+    const imageUrls: string[] = [];
+    const photoValidationWarnings: string[] = [];
+    for (const url of candidateUrls) {
+      const issue = photoUrlIssue(url);
+      if (issue) {
+        photoValidationWarnings.push(`Photo URL rejected — ${issue}`);
+      } else {
+        imageUrls.push(url);
+      }
+    }
+    if (photoValidationWarnings.length > 0 && imageUrls.length === 0) {
+      dataWarnings.push(
+        `All ${photoValidationWarnings.length} photo URL(s) are invalid. Add real image links in Inventory. Reason: ${photoValidationWarnings[0]}`,
+      );
+    } else if (photoValidationWarnings.length > 0) {
+      dataWarnings.push(
+        `${photoValidationWarnings.length} photo URL(s) rejected (${photoValidationWarnings[0]}). ${imageUrls.length} photo(s) kept.`,
+      );
+    }
+
     const imageUrl = imageUrls[0] ?? null;
     const photoCheck = validatePhotoSet(imageUrls);
 
@@ -285,7 +377,8 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       description: get("description")?.trim() || null,
       externalRef,
       photoScore: photoCheck.score,
-      photoWarnings: photoCheck.warnings,
+      photoWarnings: [...photoCheck.warnings, ...photoValidationWarnings],
+      dataWarnings,
     });
   }
 
@@ -298,6 +391,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     validRows,
     skippedRows,
     duplicateRefs,
+    warningRows: validRows.filter((r) => r.dataWarnings.length > 0 || r.photoWarnings.length > 0).length,
     photoSummary: {
       avgScore,
       rowsWithoutPhotos: validRows.filter((r) => r.imageUrls.length === 0).length,
