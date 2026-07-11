@@ -156,18 +156,35 @@ async function startServer() {
     try {
       const { getDb } = await import("../db");
       const { dealerships, users, vehicles } = await import("../../drizzle/schema");
-      const { eq, sql } = await import("drizzle-orm");
+      const { eq, sql, isNull } = await import("drizzle-orm");
       const bcrypt = (await import("bcryptjs")).default;
       const db = await getDb();
       if (!db) return;
 
       const allDealerships = await db.select({ id: dealerships.id }).from(dealerships).limit(1);
-      if (allDealerships.length > 0) return; // already seeded
+
+      // ── Always-on healing: assign orphaned vehicles to the primary dealership ──
+      if (allDealerships.length > 0) {
+        const primaryId = allDealerships[0].id;
+        const orphaned = await db
+          .select({ id: vehicles.id })
+          .from(vehicles)
+          .where(isNull(vehicles.dealershipId))
+          .limit(1);
+        if (orphaned.length > 0) {
+          await db
+            .update(vehicles)
+            .set({ dealershipId: primaryId })
+            .where(isNull(vehicles.dealershipId));
+          console.log(`[Startup] Assigned orphaned vehicles → dealership ${primaryId}`);
+        }
+        return;
+      }
 
       console.log("[Startup] No dealerships found — seeding demo dealership…");
 
       // Create demo dealership
-      const insertResult: any = await db.insert(dealerships).values({
+      await db.insert(dealerships).values({
         name: "GrayArx Demo Dealership",
         contactEmail: "dealer@grayarx.com",
         contactPhone: "+27101234567",
@@ -178,7 +195,13 @@ async function startServer() {
         showroomTheme: "futuristic",
         whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
       });
-      const demoId = Number(insertResult.insertId ?? 1);
+      // Query back to get the real ID (avoids insertId ambiguity across drivers)
+      const [created] = await db
+        .select({ id: dealerships.id })
+        .from(dealerships)
+        .where(eq(dealerships.publicShortcode, "demo"))
+        .limit(1);
+      const demoId = created?.id ?? 1;
       console.log(`[Startup] Created demo dealership id=${demoId}`);
 
       // Create dealer user
