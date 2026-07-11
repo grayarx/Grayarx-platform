@@ -252,9 +252,14 @@ function parseAiFilters(query: string) {
 }
 
 export default function Showroom() {
-  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery();
-  const { data: contactOptions } = trpc.showroom.contactOptions.useQuery();
+  // Fetch appearance first to obtain the dealership context (id, theme, branding).
+  // The vehicle list is then scoped to that dealership — no cross-tenant leakage.
   const { data: appearance } = trpc.showroom.appearance.useQuery();
+  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery(
+    { dealershipId: appearance?.dealershipId ?? undefined },
+    { enabled: appearance?.dealershipId != null },
+  );
+  const { data: contactOptions } = trpc.showroom.contactOptions.useQuery();
 
   const theme = appearance?.theme ?? "classic";
   const themeClass = useMemo(() => {

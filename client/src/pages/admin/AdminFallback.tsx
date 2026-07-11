@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mailbox, Clock, Phone, MessageSquare } from "lucide-react";
+import { Plus, Mailbox, Clock, Phone, MessageSquare, Send } from "lucide-react";
 
 const CHANNEL_ICON: Record<string, typeof Mailbox> = {
   email: Mailbox,
@@ -41,6 +41,24 @@ export default function AdminFallback() {
     onSuccess: () => {
       utils.adminFallback.list.invalidate();
       toast.success("Marked resolved");
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  // Reply-via-WhatsApp state
+  const [replyTarget, setReplyTarget] = useState<{ id: number; phone: string; name: string; dealershipId?: number } | null>(null);
+  const [replyText, setReplyText] = useState("");
+
+  const sendWA = trpc.whatsapp.sendMessage.useMutation({
+    onSuccess: (r: any) => {
+      if (r.success) {
+        toast.success("WhatsApp reply sent");
+        resolve.mutate({ messageId: replyTarget!.id });
+        setReplyTarget(null);
+        setReplyText("");
+      } else {
+        toast.error(r.error ?? "Send failed");
+      }
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
@@ -317,14 +335,34 @@ export default function AdminFallback() {
                     </p>
                   </div>
                   {!resolved && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => resolve.mutate({ messageId: m.id })}
-                      disabled={resolve.isPending}
-                    >
-                      Mark resolved
-                    </Button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {m.customerContact && (
+                        <Button
+                          size="sm"
+                          className="btn-gold"
+                          onClick={() => {
+                            setReplyTarget({
+                              id: m.id,
+                              phone: m.customerContact,
+                              name: m.customerName ?? "Customer",
+                              dealershipId: m.dealershipId,
+                            });
+                            setReplyText("");
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Reply via WhatsApp
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolve.mutate({ messageId: m.id })}
+                        disabled={resolve.isPending}
+                      >
+                        Mark resolved
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -332,6 +370,64 @@ export default function AdminFallback() {
           );
         })}
       </div>
+
+      {/* WhatsApp reply dialog */}
+      <Dialog open={!!replyTarget} onOpenChange={(v) => { if (!v) { setReplyTarget(null); setReplyText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Reply via WhatsApp to {replyTarget?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Phone number</Label>
+              <p className="text-sm font-mono mt-1">{replyTarget?.phone}</p>
+            </div>
+            <div>
+              <Label htmlFor="wa-reply">Your message</Label>
+              <Textarea
+                id="wa-reply"
+                className="mt-1"
+                rows={5}
+                placeholder="Type your reply…"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This will send a WhatsApp message directly from the dealership's registered number.
+              The conversation is marked resolved automatically after sending.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReplyTarget(null); setReplyText(""); }}>
+              Cancel
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={!replyText.trim() || sendWA.isPending}
+              onClick={() =>
+                replyTarget &&
+                sendWA.mutate({
+                  phoneNumber: replyTarget.phone,
+                  message: replyText.trim(),
+                  dealershipId: replyTarget.dealershipId,
+                })
+              }
+            >
+              {sendWA.isPending ? (
+                "Sending…"
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send WhatsApp
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }

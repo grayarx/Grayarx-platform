@@ -231,21 +231,41 @@ export async function createVehicle(data: InsertVehicle) {
   return result;
 }
 
-export async function listVehicles(limit = 2000) {
+/**
+ * List vehicles with tenant isolation.
+ * - Pass `dealershipId` to scope results to a single dealership (dealer view / public showroom).
+ * - Omit `dealershipId` only in founder/admin contexts that legitimately need all stock.
+ */
+export async function listVehicles(
+  limit = 2000,
+  opts?: { dealershipId?: number | null },
+) {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select().from(vehicles).orderBy(desc(vehicles.createdAt)).limit(limit);
+
+  const baseQuery = db.select().from(vehicles);
+  const rows = opts?.dealershipId != null
+    ? await baseQuery
+        .where(eq(vehicles.dealershipId, opts.dealershipId))
+        .orderBy(desc(vehicles.createdAt))
+        .limit(limit)
+    : await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
+
   if (rows.length === 0) return [];
-  
+
   const vehicleIds = rows.map(r => r.id);
-  const photos = await db.select().from(vehiclePhotos).where(inArray(vehiclePhotos.vehicleId, vehicleIds)).orderBy(vehiclePhotos.position);
-  
+  const photos = await db
+    .select()
+    .from(vehiclePhotos)
+    .where(inArray(vehiclePhotos.vehicleId, vehicleIds))
+    .orderBy(vehiclePhotos.position);
+
   const photosByVehicle = photos.reduce((acc, p) => {
     if (!acc[p.vehicleId]) acc[p.vehicleId] = [];
     acc[p.vehicleId].push(p.url);
     return acc;
   }, {} as Record<number, string[]>);
-  
+
   return rows.map(r => ({
     ...r,
     images: photosByVehicle[r.id] || [],
@@ -259,11 +279,17 @@ export async function getVehicle(id: number) {
   return result[0] ?? null;
 }
 
-/** List vehicles for in-memory CSV price repair (single DB round-trip). */
-export async function listVehiclesForPriceRepair(limit = 2000) {
+/**
+ * List vehicles for in-memory CSV price repair.
+ * Pass `dealershipId` to scope to one dealership; omit for founder-level bulk repair.
+ */
+export async function listVehiclesForPriceRepair(
+  limit = 2000,
+  opts?: { dealershipId?: number | null },
+) {
   const db = await getDb();
   if (!db) return [];
-  return db
+  const base = db
     .select({
       id: vehicles.id,
       title: vehicles.title,
@@ -273,8 +299,10 @@ export async function listVehiclesForPriceRepair(limit = 2000) {
       year: vehicles.year,
       externalRef: vehicles.externalRef,
     })
-    .from(vehicles)
-    .limit(limit);
+    .from(vehicles);
+  return opts?.dealershipId != null
+    ? base.where(eq(vehicles.dealershipId, opts.dealershipId)).limit(limit)
+    : base.limit(limit);
 }
 
 /** Apply many price updates in parallel chunks (much faster than per-row queries). */

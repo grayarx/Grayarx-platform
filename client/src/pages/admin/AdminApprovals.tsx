@@ -3,7 +3,17 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { MessageSquare, Send } from "lucide-react";
 import { useState } from "react";
 
 const RISK_COLORS: Record<string, string> = {
@@ -28,6 +38,22 @@ export default function AdminApprovals() {
   const utils = trpc.useUtils();
   const { data: queue, isLoading } = trpc.adminApprovals.list.useQuery();
   const [busyId, setBusyId] = useState<number | null>(null);
+
+  const [waTarget, setWaTarget] = useState<{ phone: string; context: string } | null>(null);
+  const [waText, setWaText] = useState("");
+
+  const sendWA = trpc.whatsapp.sendMessage.useMutation({
+    onSuccess: (r: any) => {
+      if (r.success) {
+        toast.success("WhatsApp message sent");
+        setWaTarget(null);
+        setWaText("");
+      } else {
+        toast.error(r.error ?? "Send failed");
+      }
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
 
   const decide = trpc.adminApprovals.decide.useMutation({
     onSuccess: () => {
@@ -72,35 +98,105 @@ export default function AdminApprovals() {
                     {new Date(item.createdAt).toLocaleString()}
                   </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    className="btn-gold"
-                    disabled={busyId === item.id}
-                    onClick={() => {
-                      setBusyId(item.id);
-                      decide.mutate({ approvalId: item.id, decision: "approved" });
-                    }}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === item.id}
-                    onClick={() => {
-                      setBusyId(item.id);
-                      decide.mutate({ approvalId: item.id, decision: "rejected" });
-                    }}
-                  >
-                    Reject
-                  </Button>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="btn-gold"
+                      disabled={busyId === item.id}
+                      onClick={() => {
+                        setBusyId(item.id);
+                        decide.mutate({ approvalId: item.id, decision: "approved" });
+                      }}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === item.id}
+                      onClick={() => {
+                        setBusyId(item.id);
+                        decide.mutate({ approvalId: item.id, decision: "rejected" });
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                  {/* Manual WhatsApp reply if the payload contains a contact */}
+                  {item.payload?.contact && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-primary"
+                      onClick={() => {
+                        setWaTarget({
+                          phone: item.payload.contact,
+                          context: item.summary,
+                        });
+                        setWaText("");
+                      }}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                      Message customer
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Ad-hoc WhatsApp message dialog */}
+      <Dialog open={!!waTarget} onOpenChange={(v) => { if (!v) { setWaTarget(null); setWaText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Message customer via WhatsApp</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Sending to</Label>
+              <p className="text-sm font-mono mt-0.5">{waTarget?.phone}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Context</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{waTarget?.context}</p>
+            </div>
+            <div>
+              <Label htmlFor="wa-approval-msg">Your message</Label>
+              <Textarea
+                id="wa-approval-msg"
+                className="mt-1"
+                rows={5}
+                placeholder="Type a message to the customer…"
+                value={waText}
+                onChange={(e) => setWaText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setWaTarget(null); setWaText(""); }}>
+              Cancel
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={!waText.trim() || sendWA.isPending}
+              onClick={() =>
+                waTarget &&
+                sendWA.mutate({ phoneNumber: waTarget.phone, message: waText.trim() })
+              }
+            >
+              {sendWA.isPending ? "Sending…" : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send WhatsApp
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }

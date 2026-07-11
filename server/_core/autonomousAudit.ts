@@ -38,6 +38,7 @@ import { runKagisoFullAudit } from "./kagisoFullAudit";
 import { proposePatchesForFindings } from "./kagisoPatchGenerator";
 import { notifyOwner } from "./notification";
 import { analyseAgentPatterns } from "./agentLearning";
+import { ENV } from "./env";
 
 /** How long to wait between autonomous audit runs. */
 export const AUDIT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -193,10 +194,11 @@ export async function triggerKagisoAuditIfDue(
         .join("\n\n");
       try {
         const ok = await notifyOwner({
-          title: `Kagiso flagged ${newAlertableFindings.length} new ${
+          title: `⚠️ Kagiso flagged ${newAlertableFindings.length} new ${
             newAlertableFindings.length === 1 ? "issue" : "issues"
-          } needing review`,
-          content: `Kagiso's autonomous audit just inserted ${newAlertableFindings.length} high/critical finding(s):\n\n${lines}\n\nView them on /admin/kagiso-roadmap`,
+          } needing human review`,
+          content: `Kagiso's autonomous audit just inserted ${newAlertableFindings.length} high/critical finding(s):\n\n${lines}`,
+          actionUrl: `${ENV.appUrl}/admin/kagiso-roadmap`,
         });
         if (ok) alerted = newAlertableFindings.length;
       } catch (err) {

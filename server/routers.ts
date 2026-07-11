@@ -129,6 +129,7 @@ import { storagePut } from "./storage";
 import { AGENTS, AGENT_LIST, PILOT_AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
+import { ENV } from "./_core/env";
 import { alertFounder } from "./_core/founderAlert";
 import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
 import { placeOutboundCall } from "./_core/calling";
@@ -615,13 +616,25 @@ export const appRouter = router({
         notifyOwner({
           title: "New GrayArx demo booking",
           content: `${input.dealershipName} — ${input.preferredDate} ${input.preferredTime}`,
+          actionUrl: `${ENV.appUrl}/admin/bookings`,
         }).catch(() => undefined);
         return { success: true } as const;
       }),
   }),
 
   showroom: router({
-    list: publicProcedure.query(async () => listVehicles(2000)),
+    /**
+     * Tenant-scoped vehicle list.
+     * The caller MUST pass a dealershipId to scope results to a single tenant.
+     * Returns [] if no dealershipId is provided so the GrayArx marketing home
+     * page never leaks another dealership's stock to an unrelated visitor.
+     */
+    list: publicProcedure
+      .input(z.object({ dealershipId: z.number().int().optional() }).optional())
+      .query(async ({ input }) => {
+        if (!input?.dealershipId) return [];
+        return listVehicles(2000, { dealershipId: input.dealershipId });
+      }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
       .input(z.object({ id: z.number().int() }))
@@ -642,12 +655,7 @@ export const appRouter = router({
     /**
      * Public discovery: which dealership shortcode should the front-end
      * link to from the showroom "Get pre-approved" CTA?
-     *
-     * For now there is no per-vehicle dealershipId column on the vehicles
-     * table, so we fall back to the first active dealership that has a
-     * publicShortcode set. This keeps the public CTA functional without
-     * leaking dealership identity through the URL until per-vehicle
-     * ownership is wired in a future migration.
+     * Falls back to the first active dealership with a publicShortcode set.
      */
     primaryShortcode: publicProcedure.query(async () => {
       const all = await listAllDealerships();
@@ -687,27 +695,32 @@ export const appRouter = router({
       };
     }),
     /** Public showroom look — driven by the primary dealership's chosen template. */
-    appearance: publicProcedure.query(async () => {
-      const all = await listAllDealerships();
-      const candidate =
-        all.find(
-          (d) =>
-            (d.status === "active" || d.status === "onboarding") &&
-            !!d.publicShortcode,
-        ) ?? all[0];
-      if (!candidate) {
+    appearance: publicProcedure
+      .input(z.object({ dealershipId: z.number().int().optional() }).optional())
+      .query(async ({ input }) => {
+        const all = await listAllDealerships();
+        const candidate = input?.dealershipId
+          ? (all.find((d) => d.id === input.dealershipId) ?? all[0])
+          : (all.find(
+              (d) =>
+                (d.status === "active" || d.status === "onboarding") &&
+                !!d.publicShortcode,
+            ) ?? all[0]);
+        if (!candidate) {
+          return {
+            dealershipId: null as number | null,
+            theme: resolveShowroomTheme(null),
+            accentColor: null as string | null,
+            dealershipName: "GrayArx Dealership",
+          };
+        }
         return {
-          theme: resolveShowroomTheme(null),
-          accentColor: null as string | null,
-          dealershipName: "GrayArx Dealership",
+          dealershipId: candidate.id,
+          theme: resolveShowroomTheme(candidate.showroomTheme),
+          accentColor: candidate.brandAccentColor ?? null,
+          dealershipName: candidate.name ?? "GrayArx Dealership",
         };
-      }
-      return {
-        theme: resolveShowroomTheme(candidate.showroomTheme),
-        accentColor: candidate.brandAccentColor ?? null,
-        dealershipName: candidate.name ?? "GrayArx Dealership",
-      };
-    }),
+      }),
     enquire: publicProcedure
       .input(
         z.object({
@@ -1193,7 +1206,11 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
-    listVehicles: protectedProcedure.query(async () => listVehicles(200)),
+    listVehicles: protectedProcedure.query(async ({ ctx }) => {
+      const isAdmin = isFounderOrAdmin(ctx.user);
+      // Founder/admin can see all stock; dealers only see their own dealership's vehicles.
+      return listVehicles(200, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId ?? null });
+    }),
     createVehicle: protectedProcedure
       .input(
         z.object({
@@ -1224,6 +1241,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const result = await createVehicle({
           ownerUserId: ctx.user.id,
+          dealershipId: ctx.user.dealershipId ?? null,
           title: input.title,
           make: input.make ?? null,
           model: input.model ?? null,
@@ -1278,8 +1296,16 @@ export const appRouter = router({
           description: z.string().max(2000).optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { id, ...rest } = input;
+        // Ownership guard: non-admin dealers can only update their own dealership's vehicles.
+        if (!isFounderOrAdmin(ctx.user)) {
+          const existing = await getVehicle(id);
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found." });
+          if (existing.dealershipId !== ctx.user.dealershipId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "You can only edit your own dealership's vehicles." });
+          }
+        }
         const patch: Record<string, unknown> = { ...rest };
         if (typeof rest.price === "number") patch.price = rest.price.toFixed(2);
         await updateVehicle(id, patch as never);
@@ -1287,7 +1313,15 @@ export const appRouter = router({
       }),
     deleteVehicle: protectedProcedure
       .input(z.object({ id: z.number().int() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Ownership guard: non-admin dealers can only delete their own dealership's vehicles.
+        if (!isFounderOrAdmin(ctx.user)) {
+          const existing = await getVehicle(input.id);
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found." });
+          if (existing.dealershipId !== ctx.user.dealershipId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "You can only delete your own dealership's vehicles." });
+          }
+        }
         await deleteVehicle(input.id);
         return { success: true } as const;
       }),
@@ -2175,6 +2209,7 @@ export const appRouter = router({
             const primary = storedImageUrl || primaryUrl;
             const result = await createVehicle({
               ownerUserId: ctx.user.id,
+              dealershipId: ctx.user.dealershipId ?? null,
               title: row.title,
               make: row.make,
               model: row.model,
@@ -2657,7 +2692,8 @@ export const appRouter = router({
         try {
           await notifyOwner({
             title: `Bongi handled an after-hours ${input.channel} message`,
-            content: `Dealership: ${dealership?.name ?? "unknown"}\nCustomer: ${input.customerName ?? "—"}${input.customerContact ? ` (${input.customerContact})` : ""}\nReference: ${drafted.referenceNumber}\nFollow up at: /admin/fallback`,
+            content: `Dealership: ${dealership?.name ?? "unknown"}\nCustomer: ${input.customerName ?? "—"}${input.customerContact ? ` (${input.customerContact})` : ""}\nReference: ${drafted.referenceNumber}`,
+            actionUrl: `${ENV.appUrl}/admin/fallback`,
           });
         } catch {
           // best-effort; never fail the trigger because the notification failed.
@@ -3026,8 +3062,9 @@ export const appRouter = router({
           await notifyOwner({
             title: afterHours
               ? `Bongi handled an after-hours ${input.channel} message`
-              : `New inbound ${input.channel} message (in-hours — please respond)`,
-            content: `Dealership: ${dealership.name}\nCustomer: ${input.customerName ?? "—"}${input.customerContact ? ` (${input.customerContact})` : ""}\nReference: ${drafted.referenceNumber}\nMessage: ${input.inboundMessage.slice(0, 500)}\nFollow up at: /admin/fallback`,
+              : `⚠️ Human reply needed — ${input.channel} message (in-hours)`,
+            content: `Dealership: ${dealership.name}\nCustomer: ${input.customerName ?? "—"}${input.customerContact ? ` (${input.customerContact})` : ""}\nReference: ${drafted.referenceNumber}\nMessage: ${input.inboundMessage.slice(0, 500)}`,
+            actionUrl: `${ENV.appUrl}/admin/fallback`,
           });
         } catch {
           // best-effort
@@ -3156,8 +3193,9 @@ export const appRouter = router({
         });
         try {
           await notifyOwner({
-            title: `New finance pre-approval (${dealership.name})`,
-            content: `Applicant: ${input.fullName}\nContact: ${input.email} · ${input.phone}\nReference: ${drafted.referenceNumber}\nVehicle price: ${input.vehiclePrice ?? "—"}\nDeposit: ${input.desiredDeposit ?? "—"}\nTerm: ${input.desiredTermMonths ?? "—"} months\nAffordability hint: ${drafted.affordabilityHint.flag}\nReview at: /admin/preapprovals`,
+            title: `⚠️ Human decision needed — Finance pre-approval (${dealership.name})`,
+            content: `Applicant: ${input.fullName}\nContact: ${input.email} · ${input.phone}\nReference: ${drafted.referenceNumber}\nVehicle price: ${input.vehiclePrice ?? "—"}\nDeposit: ${input.desiredDeposit ?? "—"}\nTerm: ${input.desiredTermMonths ?? "—"} months\nAffordability hint: ${drafted.affordabilityHint.flag}`,
+            actionUrl: `${ENV.appUrl}/admin/pre-approvals`,
           });
         } catch {
           // best-effort
@@ -3264,8 +3302,9 @@ export const appRouter = router({
         });
         try {
           await notifyOwner({
-            title: `New test drive request (${dealership.name})`,
-            content: `Customer: ${input.customerName} · ${input.customerContact}\nReference: ${drafted.referenceNumber}\nSuggested slot: ${drafted.suggestedSlotStart.toISOString()}\n${drafted.slotShifted ? "NOTE: shifted to in-hours from request\n" : ""}Vehicle: ${vehicleTitle ?? "—"}\nReview at: /admin/bookings`,
+            title: `⚠️ Human confirmation needed — Test drive (${dealership.name})`,
+            content: `Customer: ${input.customerName} · ${input.customerContact}\nReference: ${drafted.referenceNumber}\nSuggested slot: ${drafted.suggestedSlotStart.toISOString()}\n${drafted.slotShifted ? "NOTE: shifted to in-hours from request\n" : ""}Vehicle: ${vehicleTitle ?? "—"}`,
+            actionUrl: `${ENV.appUrl}/dealer/bookings`,
           });
         } catch {
           // best-effort

@@ -4,6 +4,12 @@ import { ENV } from "./env";
 export type NotificationPayload = {
   title: string;
   content: string;
+  /**
+   * Optional deep-link URL appended to the notification content.
+   * When the founder taps the notification, this URL tells them exactly
+   * where to go in the platform to act (e.g. /admin/approvals, /admin/pre-approvals).
+   */
+  actionUrl?: string;
 };
 
 const TITLE_MAX_LENGTH = 1200;
@@ -38,7 +44,12 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
   }
 
   const title = trimValue(input.title);
-  const content = trimValue(input.content);
+  // Append action URL to content so tapping the notification takes the founder
+  // directly to the relevant admin page.
+  const baseContent = trimValue(input.content);
+  const content = input.actionUrl
+    ? `${baseContent}\n\n→ ${input.actionUrl}`
+    : baseContent;
 
   if (title.length > TITLE_MAX_LENGTH) {
     throw new TRPCError({

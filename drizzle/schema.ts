@@ -74,6 +74,8 @@ export type InsertBooking = typeof bookings.$inferInsert;
 export const vehicles = mysqlTable("vehicles", {
   id: int("id").autoincrement().primaryKey(),
   ownerUserId: int("ownerUserId"),
+  /** Tenant isolation — every vehicle belongs to exactly one dealership. */
+  dealershipId: int("dealershipId"),
   title: varchar("title", { length: 255 }).notNull(),
   make: varchar("make", { length: 64 }),
   model: varchar("model", { length: 64 }),

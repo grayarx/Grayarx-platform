@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, MessageSquareWarning, Inbox } from "lucide-react";
+import { CheckCircle2, XCircle, MessageSquareWarning, Inbox, Send } from "lucide-react";
 
 type Decision = "approved" | "declined" | "more_info";
 
@@ -67,10 +67,39 @@ export default function AdminPreApprovals() {
   const [decision, setDecision] = useState<Decision>("approved");
   const [note, setNote] = useState("");
 
+  // WhatsApp reply state
+  const [waTarget, setWaTarget] = useState<{ phone: string; name: string } | null>(null);
+  const [waText, setWaText] = useState("");
+
+  const sendWA = trpc.whatsapp.sendMessage.useMutation({
+    onSuccess: (r: any) => {
+      if (r.success) {
+        toast.success("WhatsApp message sent to applicant");
+        setWaTarget(null);
+        setWaText("");
+      } else {
+        toast.error(r.error ?? "Send failed");
+      }
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const decide = trpc.adminPreApprovals.decide.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Decision recorded");
       utils.adminPreApprovals.list.invalidate();
+      // After recording decision, prompt to send WhatsApp to applicant
+      const row = (list.data ?? []).find((r: any) => r.id === variables.id) as any;
+      if (row?.phone) {
+        const msg =
+          variables.decision === "approved"
+            ? `Hi ${row.fullName}, great news! Your finance pre-approval application (ref: ${row.referenceNumber}) has been reviewed and we'd like to discuss next steps. Please contact us at your earliest convenience.`
+            : variables.decision === "declined"
+              ? `Hi ${row.fullName}, thank you for your application (ref: ${row.referenceNumber}). Unfortunately we are unable to proceed at this time. Please contact us if you'd like to discuss alternatives.`
+              : `Hi ${row.fullName}, we've reviewed your application (ref: ${row.referenceNumber}) and need a bit more information. We'll be in touch shortly.`;
+        setWaTarget({ phone: row.phone, name: row.fullName });
+        setWaText(msg);
+      }
       setOpenId(null);
       setNote("");
     },
@@ -328,6 +357,59 @@ export default function AdminPreApprovals() {
               }
             >
               {decide.isPending ? "Saving…" : "Record decision"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post-decision WhatsApp reply dialog */}
+      <Dialog open={!!waTarget} onOpenChange={(v) => { if (!v) { setWaTarget(null); setWaText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Send WhatsApp to {waTarget?.name}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Notify the applicant of your decision. Edit the message before sending.
+            </p>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Phone</Label>
+              <p className="text-sm font-mono mt-0.5">{waTarget?.phone}</p>
+            </div>
+            <div>
+              <Label htmlFor="wa-pre-approval">Message</Label>
+              <Textarea
+                id="wa-pre-approval"
+                className="mt-1"
+                rows={6}
+                value={waText}
+                onChange={(e) => setWaText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setWaTarget(null); setWaText(""); }}>
+              Skip
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={!waText.trim() || sendWA.isPending}
+              onClick={() =>
+                waTarget &&
+                sendWA.mutate({
+                  phoneNumber: waTarget.phone,
+                  message: waText.trim(),
+                })
+              }
+            >
+              {sendWA.isPending ? "Sending…" : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send WhatsApp
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

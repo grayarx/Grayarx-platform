@@ -9,9 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, CheckCircle2, Clock, AlertCircle, Mail, MessageSquare, TrendingUp, Download } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Users, CheckCircle2, Clock, AlertCircle, Mail, MessageSquare, TrendingUp, Download, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+
+const PILOT_DURATION_DAYS = 7;
+
+function getPilotProgress(joinedAt: Date): { daysElapsed: number; daysRemaining: number; pct: number; expired: boolean } {
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const elapsed = Math.floor((Date.now() - joinedAt.getTime()) / msPerDay);
+  const daysElapsed = Math.min(elapsed, PILOT_DURATION_DAYS);
+  const daysRemaining = Math.max(0, PILOT_DURATION_DAYS - elapsed);
+  const expired = elapsed >= PILOT_DURATION_DAYS;
+  const pct = Math.min(100, Math.round((elapsed / PILOT_DURATION_DAYS) * 100));
+  return { daysElapsed, daysRemaining, pct, expired };
+}
 
 interface PilotDealership {
   id: number;
@@ -165,7 +178,14 @@ export default function AdminPilotDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Pilot Program Dashboard</h1>
-        <p className="text-slate-600 mt-1">Manage GrayArx pilot dealerships and track performance</p>
+        <p className="text-slate-600 mt-1">
+          Manage GrayArx {PILOT_DURATION_DAYS}-day pilot dealerships and track performance
+        </p>
+        <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+          <Calendar className="w-4 h-4" />
+          Each dealership runs a <strong>{PILOT_DURATION_DAYS}-day free pilot</strong> — full platform access, no cost, no commitment.
+          After 7 days they convert or we follow up.
+        </div>
       </div>
 
       {/* Stats */}
@@ -176,7 +196,7 @@ export default function AdminPilotDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-xs text-slate-500 mt-1">5 pilot spots</p>
+            <p className="text-xs text-slate-500 mt-1">{PILOT_DURATION_DAYS}-day pilot · 5 spots</p>
           </CardContent>
         </Card>
 
@@ -242,11 +262,10 @@ export default function AdminPilotDashboard() {
                 <TableRow>
                   <TableHead>Dealership</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Pilot progress</TableHead>
                   <TableHead>Deployment</TableHead>
-                  <TableHead className="text-right">Vehicles</TableHead>
                   <TableHead className="text-right">Messages</TableHead>
                   <TableHead className="text-right">Bookings</TableHead>
-                  <TableHead className="text-right">Pre-Approvals</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -262,13 +281,26 @@ export default function AdminPilotDashboard() {
                     <TableCell>
                       <Badge className={getStatusColor(dealership.status)}>{dealership.status}</Badge>
                     </TableCell>
+                    <TableCell className="min-w-[160px]">
+                      {(() => {
+                        const prog = getPilotProgress(dealership.joinedAt);
+                        return (
+                          <div className="space-y-1">
+                            <Progress value={prog.pct} className="h-1.5" />
+                            <p className="text-xs text-slate-500">
+                              {prog.expired
+                                ? "Pilot ended"
+                                : `Day ${prog.daysElapsed} of ${PILOT_DURATION_DAYS} · ${prog.daysRemaining}d left`}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{dealership.deploymentType}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">{dealership.vehicleCount}</TableCell>
                     <TableCell className="text-right">{dealership.chatbotMessages.toLocaleString()}</TableCell>
                     <TableCell className="text-right font-semibold">{dealership.testDriveBookings}</TableCell>
-                    <TableCell className="text-right">{dealership.preApprovals}</TableCell>
                     <TableCell>
                       <Dialog>
                         <DialogTrigger asChild>
@@ -306,6 +338,24 @@ export default function AdminPilotDashboard() {
                               <div>
                                 <Label className="text-xs text-slate-600">Joined</Label>
                                 <p className="font-medium">{dealership.joinedAt.toLocaleDateString()}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <Label className="text-xs text-slate-600">
+                                  Pilot progress ({PILOT_DURATION_DAYS}-day)
+                                </Label>
+                                {(() => {
+                                  const prog = getPilotProgress(dealership.joinedAt);
+                                  return (
+                                    <div className="mt-1 space-y-1">
+                                      <Progress value={prog.pct} className="h-2" />
+                                      <p className="text-xs text-slate-500">
+                                        {prog.expired
+                                          ? "Pilot period ended — follow up for conversion"
+                                          : `Day ${prog.daysElapsed} of ${PILOT_DURATION_DAYS} · ${prog.daysRemaining} day${prog.daysRemaining === 1 ? "" : "s"} remaining`}
+                                      </p>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
 

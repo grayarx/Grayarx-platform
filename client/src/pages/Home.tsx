@@ -192,21 +192,18 @@ const TRUST_POINTS = [
 ];
 
 export default function Home() {
-  const { data: inventory } = trpc.showroom.list.useQuery();
-
-  const editorialPanels = useMemo(() => {
-    const live = buildEditorialPanels(inventory ?? []);
-    // Use live listing photos if any vehicle has a non-stock photo
-    const hasRealPhotos = live.some((p) => p.liveListing);
-    if (hasRealPhotos) return live;
-
-    // Each static panel has its own curated image — use it directly
-    return EDITORIAL_STATIC.map((p) => ({
-      ...p,
-      liveListing: false,
-      subtitle: p.tagline,
-    }));
-  }, [inventory]);
+  // The GrayArx home is a marketing page — it never fetches a specific dealership's
+  // live inventory. All editorial panels use curated static imagery so no
+  // dealership's stock leaks to unrelated visitors.
+  const editorialPanels = useMemo(
+    () =>
+      EDITORIAL_STATIC.map((p) => ({
+        ...p,
+        liveListing: false as const,
+        subtitle: p.tagline,
+      })),
+    [],
+  );
 
   useDocumentMeta({
     title: "GrayArx — Dealership Operating System",

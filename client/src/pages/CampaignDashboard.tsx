@@ -18,11 +18,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
 import { PILOT_SEGMENT_LABELS, type PilotOutreachSegment } from "@shared/pilotProspectSegments";
-import { CheckCircle2, Eye, Loader2, Mail, Megaphone, Send, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Eye, HelpCircle, Loader2, Mail, Megaphone, Send, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+const SEGMENT_TOOLTIPS: Record<PilotOutreachSegment, string> = {
+  no_website_social_only:
+    "Dealers who only have a Facebook page or WhatsApp number — no real website. Pain point: their stock is invisible to Google. GrayArx gives them a full AI showroom instantly.",
+  basic_website_no_showroom:
+    "Dealers with a basic website (usually WordPress or a listing page) but no live chat, no AI qualification, and no after-hours agent. Pain point: leads fall through overnight and on weekends.",
+  after_hours_leak:
+    "Dealers whose site or staff goes offline at 5pm. Buyers browse at 8pm and get nothing. Bongi (GrayArx after-hours AI) captures and qualifies those leads automatically.",
+  whatsapp_manual:
+    "Dealers who handle WhatsApp enquiries manually — a staff member types every reply. Pain point: slow response, no booking flow, staff overloaded. Lerato (GrayArx WhatsApp AI) automates this 24/7.",
+};
 
 const SEGMENTS: PilotOutreachSegment[] = [
   "no_website_social_only",
@@ -72,14 +88,25 @@ export default function CampaignDashboard() {
       subtitle="Segmented Resend campaigns for Gauteng dealership research — dry-run first, then send."
       actions={
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={sendBulk.isPending}
-            onClick={() => sendBulk.mutate({ dryRun: true })}
-          >
-            {sendBulk.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Dry-run all segments
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={sendBulk.isPending}
+                onClick={() => sendBulk.mutate({ dryRun: true })}
+              >
+                {sendBulk.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Dry-run all segments
+                <HelpCircle className="h-3.5 w-3.5 ml-1.5 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-left">
+              <strong>Dry-run:</strong> Simulates the full send without emailing anyone.
+              The system counts exactly how many emails would go out per segment and returns{" "}
+              <code>resendId: "dry-run"</code> for every row. Zero emails hit real inboxes.
+              Use this to verify counts + spot duplicates before committing to a live send.
+            </TooltipContent>
+          </Tooltip>
         </div>
       }
     >
@@ -88,7 +115,20 @@ export default function CampaignDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="glass-gold border-primary/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Mailable prospects</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
+                Mailable prospects
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-left">
+                    Prospects where <code>emailVerified = true</code> — meaning the email was
+                    confirmed on their official website or business listing. These are safe to
+                    send to via Resend. Rows without a verified email are for WhatsApp/Facebook
+                    follow-up only.
+                  </TooltipContent>
+                </Tooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{totalMailable}</div>
@@ -185,12 +225,38 @@ export default function CampaignDashboard() {
                 <CardHeader className="pb-3">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="text-base">{PILOT_SEGMENT_LABELS[row.segment]}</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-1.5">
+                        {PILOT_SEGMENT_LABELS[row.segment]}
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-left">
+                            {SEGMENT_TOOLTIPS[row.segment]}
+                          </TooltipContent>
+                        </Tooltip>
+                      </CardTitle>
                       <CardDescription className="mt-1">{row.label}</CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">{row.mailable} mailable</Badge>
-                      <Badge variant="secondary">{row.total} researched</Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="cursor-help">{row.mailable} mailable</Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Prospects with a verified email — these are the only ones that will
+                          receive emails in a live send.
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="cursor-help">{row.total} researched</Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Total prospects researched for this segment, including those without
+                          a verified email (WhatsApp/Facebook follow-up candidates).
+                        </TooltipContent>
+                      </Tooltip>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
@@ -211,33 +277,50 @@ export default function CampaignDashboard() {
                           />
                         </DialogContent>
                       </Dialog>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={sendSegment.isPending || row.mailable === 0}
-                        onClick={() =>
-                          sendSegment.mutate({ segment: row.segment, dryRun: true })
-                        }
-                      >
-                        Dry-run
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="btn-gold"
-                        disabled={sendSegment.isPending || row.mailable === 0}
-                        onClick={() => {
-                          if (
-                            !window.confirm(
-                              `Send ${row.mailable} emails for segment "${PILOT_SEGMENT_LABELS[row.segment]}"?`,
-                            )
-                          ) {
-                            return;
-                          }
-                          sendSegment.mutate({ segment: row.segment, dryRun: false });
-                        }}
-                      >
-                        Send segment
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={sendSegment.isPending || row.mailable === 0}
+                            onClick={() =>
+                              sendSegment.mutate({ segment: row.segment, dryRun: true })
+                            }
+                          >
+                            Dry-run
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-left">
+                          Simulates sending this segment only — no emails are delivered.
+                          Returns a count of how many would be sent and flags any issues.
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            className="btn-gold"
+                            disabled={sendSegment.isPending || row.mailable === 0}
+                            onClick={() => {
+                              if (
+                                !window.confirm(
+                                  `Send ${row.mailable} emails for segment "${PILOT_SEGMENT_LABELS[row.segment]}"?`,
+                                )
+                              ) {
+                                return;
+                              }
+                              sendSegment.mutate({ segment: row.segment, dryRun: false });
+                            }}
+                          >
+                            Send segment
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-left">
+                          LIVE send — delivers real emails via Resend to all{" "}
+                          {row.mailable} verified addresses in this segment.
+                          Always dry-run first.
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </CardHeader>
