@@ -78,6 +78,7 @@ import {
   listVehiclePhotos,
   addVehiclePhoto,
   deleteVehiclePhoto,
+  reorderVehiclePhotos,
   setVehiclePrimaryPhoto,
   updateVehicle,
   deleteVehicle,
@@ -633,7 +634,7 @@ export const appRouter = router({
       .input(z.object({ dealershipId: z.number().int().optional() }).optional())
       .query(async ({ input }) => {
         if (!input?.dealershipId) return [];
-        return listVehicles(2000, { dealershipId: input.dealershipId });
+        return listVehicles(2000, { dealershipId: input.dealershipId, excludeSold: true });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
@@ -804,7 +805,7 @@ export const appRouter = router({
 
         // ── Multi-vehicle search: check if the user is asking about a make/body type ──
         const { listVehicles: listAllVehicles } = await import("./db");
-        const allVehicles = await listAllVehicles(200);
+        const allVehicles = await listAllVehicles(200, { excludeSold: true });
         const multiMatches = findVehiclesFromMessage(input.message, allVehicles);
         const detectedMake = detectMakeFromMessage(input.message);
         const detectedBodyTypes = detectBodyTypesFromMessage(input.message);
@@ -1472,6 +1473,29 @@ export const appRouter = router({
           primaryPhotoUrl: input.photoUrl,
           imageUrl: input.photoUrl,
         });
+        return { success: true } as const;
+      }),
+
+    /** Drag-to-reorder: update photo positions. orderedPhotoIds[0] becomes hero (position 0). */
+    reorderPhotos: protectedProcedure
+      .input(
+        z.object({
+          vehicleId: z.number().int(),
+          orderedPhotoIds: z.array(z.number().int()).min(1),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        await reorderVehiclePhotos(input.orderedPhotoIds);
+        // Sync primary photo URL to position 0
+        const photos = await listVehiclePhotos(input.vehicleId);
+        const hero = photos.find((p) => p.id === input.orderedPhotoIds[0]);
+        if (hero) {
+          await setVehiclePrimaryPhoto(input.vehicleId, hero.url);
+          await updateVehicle(input.vehicleId, {
+            primaryPhotoUrl: hero.url,
+            imageUrl: hero.url,
+          });
+        }
         return { success: true } as const;
       }),
 
@@ -2182,19 +2206,30 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const preview = parseInventoryCsv(input.csv);
         let created = 0;
-        let repaired = 0;
+        let updated = 0;
+        let unchanged = 0;
         let importedWithWarnings = 0;
-        const existingDuplicates: string[] = [];
         const failedRows: Array<{ title: string; reason: string }> = [];
         for (const row of preview.validRows) {
           if (row.externalRef) {
             const existing = await findVehicleByExternalRef(row.externalRef);
             if (existing) {
-              if (isR1Price(existing.price) && row.price && row.price > 1) {
-                await updateVehicle(existing.id, { price: String(row.price) });
-                repaired++;
+              // Build a patch of fields that actually changed
+              const patch: Record<string, unknown> = {};
+              if (row.price != null && row.price > 1 && String(row.price) !== String(existing.price)) {
+                patch.price = String(row.price);
+              }
+              if (row.status && row.status !== existing.status) {
+                patch.status = row.status;
+              }
+              if (row.km != null && row.km !== existing.km) {
+                patch.km = row.km;
+              }
+              if (Object.keys(patch).length > 0) {
+                await updateVehicle(existing.id, patch as never);
+                updated++;
               } else {
-                existingDuplicates.push(row.externalRef);
+                unchanged++;
               }
               continue;
             }
@@ -2229,6 +2264,7 @@ export const appRouter = router({
               primaryPhotoUrl: primary,
               description: row.description,
               externalRef: row.externalRef,
+              ...(row.status ? { status: row.status as "available" | "sold" | "pending" | "reserved" } : {}),
             });
             const vehicleId = (result as { insertId?: number })?.insertId;
             if (vehicleId && row.imageUrls.length > 0) {
@@ -2263,23 +2299,24 @@ export const appRouter = router({
           agentId: "improvement",
           action: "inventory_imported",
           subjectType: null,
-          summary: `Kagiso imported ${created} vehicle${created === 1 ? "" : "s"} via CSV (${preview.skippedRows.length} skipped, ${preview.duplicateRefs.length + existingDuplicates.length} duplicates, ${failedRows.length} failed${repaired ? `, ${repaired} R1 prices repaired` : ""}).`,
+          summary: `Imported ${created} new vehicle${created === 1 ? "" : "s"} via CSV (${updated} updated, ${unchanged} unchanged, ${preview.skippedRows.length} skipped, ${failedRows.length} failed).`,
           payload: {
             created,
-            repaired,
+            updated,
+            unchanged,
             skipped: preview.skippedRows.length,
             duplicatesInCsv: preview.duplicateRefs.length,
-            duplicatesAgainstDb: existingDuplicates.length,
             failed: failedRows.length,
           },
         });
         return {
           created,
-          repaired,
+          updated,
+          unchanged,
+          repaired: updated, // backward-compat alias
           importedWithWarnings,
           skipped: preview.skippedRows,
           duplicatesInCsv: preview.duplicateRefs,
-          duplicatesAgainstDb: existingDuplicates,
           failedRows,
         };
       }),

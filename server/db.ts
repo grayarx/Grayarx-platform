@@ -1,4 +1,4 @@
-import { eq, desc, sql, gte, lte, and, count, inArray } from "drizzle-orm";
+import { eq, desc, sql, gte, lte, and, count, inArray, ne, or, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
@@ -238,19 +238,34 @@ export async function createVehicle(data: InsertVehicle) {
  */
 export async function listVehicles(
   limit = 2000,
-  opts?: { dealershipId?: number | null },
+  opts?: { dealershipId?: number | null; excludeSold?: boolean },
 ) {
   const db = await getDb();
   if (!db) return [];
 
   const baseQuery = db.select().from(vehicles);
+  // When excludeSold is true, only return vehicles where status is not 'sold'
+  // (null/undefined status is treated as available)
+  const soldFilter = opts?.excludeSold
+    ? or(isNull(vehicles.status), ne(vehicles.status, "sold"))
+    : undefined;
+
   let rows;
   if (opts === undefined) {
     // No filter at all — admin/founder full-access path only
     rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
   } else if (opts.dealershipId != null) {
+    const whereClause = soldFilter
+      ? and(eq(vehicles.dealershipId, opts.dealershipId), soldFilter)
+      : eq(vehicles.dealershipId, opts.dealershipId);
     rows = await baseQuery
-      .where(eq(vehicles.dealershipId, opts.dealershipId))
+      .where(whereClause)
+      .orderBy(desc(vehicles.createdAt))
+      .limit(limit);
+  } else if (soldFilter) {
+    // No dealership scoping but excludeSold is active (e.g. agent global search)
+    rows = await baseQuery
+      .where(soldFilter)
       .orderBy(desc(vehicles.createdAt))
       .limit(limit);
   } else {
@@ -425,6 +440,15 @@ export async function deleteVehiclePhoto(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(vehiclePhotos).where(eq(vehiclePhotos.id, id));
+}
+
+/** Bulk-update photo positions (for drag-to-reorder). orderedPhotoIds[0] becomes position 0 (hero). */
+export async function reorderVehiclePhotos(orderedPhotoIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  for (let i = 0; i < orderedPhotoIds.length; i++) {
+    await db.update(vehiclePhotos).set({ position: i }).where(eq(vehiclePhotos.id, orderedPhotoIds[i]));
+  }
 }
 
 export async function setVehiclePrimaryPhoto(vehicleId: number, photoUrl: string) {
