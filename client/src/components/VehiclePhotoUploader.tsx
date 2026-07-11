@@ -113,10 +113,7 @@ export default function VehiclePhotoUploader({
     const primary = existing.find((p) => p.caption === "front_3_4")?.url ?? existing[0]?.url;
     if (primary && primary !== lastPrimaryRef.current) {
       lastPrimaryRef.current = primary;
-      // Editing: form already has primary URL from vehicleToForm — don't bounce parent state.
-      if (!vehicleId) {
-        onPrimaryUrlChangeRef.current(primary);
-      }
+      onPrimaryUrlChangeRef.current(primary);
     }
   }, [existing]);
 

@@ -1234,8 +1234,8 @@ export const appRouter = router({
           features: z.array(z.string().max(64)).max(40).optional(),
           serviceHistory: z.enum(["full", "partial", "none"]).optional(),
           previousOwners: z.number().int().min(0).max(20).optional(),
-          imageUrl: z.string().max(500).optional(),
-          primaryPhotoUrl: z.string().max(500).optional(),
+          imageUrl: z.string().optional(), // no max — supports base64 data URLs
+          primaryPhotoUrl: z.string().optional(), // no max — supports base64 data URLs
           location: z.string().max(128).optional(),
           description: z.string().max(2000).optional(),
         }),
@@ -1292,8 +1292,8 @@ export const appRouter = router({
           features: z.array(z.string().max(64)).max(40).optional(),
           serviceHistory: z.enum(["full", "partial", "none"]).optional(),
           previousOwners: z.number().int().min(0).max(20).optional(),
-          imageUrl: z.string().max(500).optional(),
-          primaryPhotoUrl: z.string().max(500).optional(),
+          imageUrl: z.string().optional(), // no max — supports base64 data URLs
+          primaryPhotoUrl: z.string().optional(), // no max — supports base64 data URLs
           location: z.string().max(128).optional(),
           description: z.string().max(2000).optional(),
         }),

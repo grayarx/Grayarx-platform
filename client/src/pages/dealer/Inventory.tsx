@@ -848,7 +848,8 @@ export default function Inventory() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((v) => {
-            const photo = v.primaryPhotoUrl || v.imageUrl;
+            const vImages = (v as unknown as { images?: string[] }).images;
+            const photo = v.primaryPhotoUrl || v.imageUrl || vImages?.[0];
             const features = Array.isArray(v.features)
               ? (v.features as string[])
               : [];
