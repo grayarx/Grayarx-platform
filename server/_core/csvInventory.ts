@@ -28,6 +28,8 @@ export type ParsedVehicleRow = {
   description: string | null;
   /** Source registration / vin / stock number used for dedupe. */
   externalRef: string | null;
+  /** Vehicle status: available | sold | pending | reserved */
+  status: string | null;
   photoScore: number;
   photoWarnings: string[];
   /** Non-photo data warnings (price missing, field truncated, etc.) */
@@ -49,7 +51,7 @@ export type ImportPreview = {
   };
 };
 
-const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
+const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record<string, string[]> = {
   title: ["title", "vehicle", "listing", "name", "listing title", "vehicle title", "advert title"],
   make: ["make", "manufacturer", "brand"],
   model: ["model", "variant", "series"],
@@ -90,8 +92,10 @@ const HEADER_ALIASES: Record<keyof ParsedVehicleRow, string[]> = {
   imageUrls: ["image urls", "photo urls", "photos urls", "gallery", "images"],
   description: ["description", "notes", "comments", "details"],
   externalRef: ["stock", "stock id", "stock no", "stock number", "stock code", "stock_id", "vin", "vin number", "registration", "reg", "reg no", "ref", "reference", "listing id", "id"],
+  status: ["status", "availability", "stock status", "listing status"],
   photoScore: ["photo score", "photography score"],
   photoWarnings: ["photo warnings", "photo issues"],
+  dataWarnings: [],
 };
 
 /** Split a single CSV line respecting quotes. */
@@ -218,7 +222,8 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    // Strip comment lines (lines starting with #) — used in template files
+    .filter((l) => l.length > 0 && !l.startsWith("#"));
 
   if (lines.length === 0) {
     return {
@@ -233,7 +238,9 @@ export function parseInventoryCsv(csv: string): ImportPreview {
   const header = splitCsvLine(lines[0]);
   const colIndex: Partial<Record<keyof ParsedVehicleRow, number>> = {};
   (Object.keys(HEADER_ALIASES) as Array<keyof ParsedVehicleRow>).forEach((key) => {
-    const idx = resolveColumn(header, HEADER_ALIASES[key]);
+    const aliases = HEADER_ALIASES[key];
+    if (!aliases || aliases.length === 0) return;
+    const idx = resolveColumn(header, aliases);
     if (idx !== null) colIndex[key] = idx;
   });
 
@@ -362,6 +369,24 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       seenRefs.add(refLower);
     }
 
+    // Parse status — normalise DMS values to our enum
+    const VALID_STATUSES = ["available", "sold", "pending", "reserved"];
+    const rawStatus = get("status")?.trim().toLowerCase() || null;
+    let status: string | null = null;
+    if (rawStatus) {
+      if (VALID_STATUSES.includes(rawStatus)) {
+        status = rawStatus;
+      } else if (/^(yes|y|true|1|sold out)$/i.test(rawStatus)) {
+        status = "sold";
+      } else if (/^(no|n|false|0|in stock|available|active)$/i.test(rawStatus)) {
+        status = "available";
+      } else if (/^(pend|hold|deposit)/i.test(rawStatus)) {
+        status = "pending";
+      } else if (/^(res|reserved)/i.test(rawStatus)) {
+        status = "reserved";
+      }
+    }
+
     validRows.push({
       title,
       make,
@@ -376,6 +401,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       imageUrls,
       description: get("description")?.trim() || null,
       externalRef,
+      status,
       photoScore: photoCheck.score,
       photoWarnings: [...photoCheck.warnings, ...photoValidationWarnings],
       dataWarnings,

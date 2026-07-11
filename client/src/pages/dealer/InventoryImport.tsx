@@ -27,11 +27,16 @@ import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 
 import { photoQualityLabel } from "@shared/photoStandards";
 
-const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,stock
-2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200|https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200,STK-001
-2020 VW Polo 1.0 TSI Comfortline,VW,Polo,2020,224900,68000,Petrol,Manual,Pretoria,,STK-002`;
+const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,stock,status
+2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200,STK-001,available
+2020 VW Polo 1.0 TSI Comfortline,VW,Polo,2020,224900,68000,Petrol,Manual,Pretoria,,STK-002,available
+2019 BMW 320i M Sport,BMW,320i,2019,389900,95000,Petrol,Automatic,Cape Town,,STK-003,sold`;
 
-const TEMPLATE_CSV = SAMPLE;
+const TEMPLATE_CSV = `# GrayArx inventory template
+# Re-import any time to sync price, km, and status — rows are matched by the stock/VIN column.
+# status values: available | sold | pending | reserved
+# Pipe-separate multiple photo URLs in the image column: url1|url2|url3 (aim for 8+ angles)
+${SAMPLE}`;
 
 const PLACEHOLDER_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='60' viewBox='0 0 80 60'%3E%3Crect fill='%231a1a1a' width='80' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23D4AF37' font-size='10'%3ENo photo%3C/text%3E%3C/svg%3E";
@@ -77,7 +82,8 @@ export default function InventoryImportPage() {
 
   const [lastImport, setLastImport] = useState<{
     created: number;
-    repaired: number;
+    updated: number;
+    unchanged: number;
     importedWithWarnings: number;
     failed: Array<{ title: string; reason: string }>;
   } | null>(null);
@@ -133,9 +139,12 @@ export default function InventoryImportPage() {
     onSuccess: (res) => {
       setImportProgress(100);
       setTimeout(() => setImportProgress(null), 800);
+      const resUpdated = (res as { updated?: number }).updated ?? res.repaired ?? 0;
+      const resUnchanged = (res as { unchanged?: number }).unchanged ?? 0;
       setLastImport({
         created: res.created,
-        repaired: res.repaired ?? 0,
+        updated: resUpdated,
+        unchanged: resUnchanged,
         importedWithWarnings: res.importedWithWarnings ?? 0,
         failed: res.failedRows ?? [],
       });
@@ -145,13 +154,16 @@ export default function InventoryImportPage() {
       utils.agent.feed.invalidate();
       const parts = [];
       if (res.created > 0) {
-        parts.push(`Imported ${res.created} vehicle${res.created === 1 ? "" : "s"}`);
+        parts.push(`${res.created} new`);
       }
-      if (res.repaired && res.repaired > 0) {
-        parts.push(`updated ${res.repaired} price${res.repaired === 1 ? "" : "s"}`);
+      if (resUpdated > 0) {
+        parts.push(`${resUpdated} updated`);
+      }
+      if (resUnchanged > 0) {
+        parts.push(`${resUnchanged} unchanged`);
       }
       toast.success(
-        parts.length > 0 ? parts.join(" · ") + "." : "No new vehicles to import.",
+        parts.length > 0 ? "Import complete — " + parts.join(" · ") + "." : "Nothing to import.",
       );
       if (res.created > 0) {
         setCsv("");
@@ -231,7 +243,7 @@ export default function InventoryImportPage() {
           <strong className="text-foreground">Required:</strong>{" "}
           <span className="font-mono text-foreground">title</span> (or{" "}
           <span className="font-mono">make + model</span>) and a valid{" "}
-          <span className="font-mono">price</span>. Re-importing the same file updates any vehicles that were missing prices.
+          <span className="font-mono">price</span>. Re-importing the same stock numbers <strong>updates</strong> price, km, and status — great for syncing your DMS daily.
         </CardContent>
       </Card>
 
@@ -343,7 +355,7 @@ export default function InventoryImportPage() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               Headers we recognise: title, make, model, year, price/price_zar, km/mileage_km, fuel,
               transmission, location, image/photos (use <strong>|</strong> for multiple angles — aim for 8+),
-              stock/vin/ref.
+              stock/vin/ref, <strong>status</strong> (available|sold|pending|reserved).
             </p>
           </CardContent>
         </Card>
@@ -569,12 +581,11 @@ export default function InventoryImportPage() {
                   >
                     <p className="text-green-300 font-medium flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
-                      {lastImport.created > 0 &&
-                        `${lastImport.created} vehicle${lastImport.created === 1 ? "" : "s"} imported`}
-                      {lastImport.created > 0 && lastImport.repaired > 0 && " · "}
-                      {lastImport.repaired > 0 &&
-                        `${lastImport.repaired} price${lastImport.repaired === 1 ? "" : "s"} updated`}
-                      {lastImport.created === 0 && lastImport.repaired === 0 && "Import complete"}
+                      {[
+                        lastImport.created > 0 ? `${lastImport.created} new` : "",
+                        lastImport.updated > 0 ? `${lastImport.updated} updated` : "",
+                        lastImport.unchanged > 0 ? `${lastImport.unchanged} unchanged` : "",
+                      ].filter(Boolean).join(" · ") || "Import complete"}
                     </p>
                     {lastImport.importedWithWarnings > 0 && (
                       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">

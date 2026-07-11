@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera,
   CheckCircle2,
+  GripVertical,
   ImagePlus,
   Loader2,
   Star,
@@ -69,6 +70,9 @@ export default function VehiclePhotoUploader({
 }: VehiclePhotoUploaderProps) {
   const [slots, setSlots] = useState<Partial<Record<PhotoAngleId, SlotState>>>({});
   const [dragOver, setDragOver] = useState(false);
+  const [slotOrder, setSlotOrder] = useState<PhotoAngleId[]>(PHOTO_ANGLES.map((a) => a.id));
+  const [draggingAngle, setDraggingAngle] = useState<PhotoAngleId | null>(null);
+  const [dragOverAngle, setDragOverAngle] = useState<PhotoAngleId | null>(null);
   const bulkRef = useRef<HTMLInputElement>(null);
   const slotRefs = useRef<Partial<Record<PhotoAngleId, HTMLInputElement | null>>>({});
 
@@ -77,6 +81,7 @@ export default function VehiclePhotoUploader({
   const attachUrl = trpc.dealer.attachPhotoFromUrl.useMutation();
   const deletePhoto = trpc.dealer.deletePhoto.useMutation();
   const setPrimary = trpc.dealer.setPrimaryPhoto.useMutation();
+  const reorderPhotos = trpc.dealer.reorderPhotos.useMutation();
   const { data: existing, refetch } = trpc.dealer.listPhotos.useQuery(
     { vehicleId: vehicleId! },
     { enabled: !!vehicleId },
@@ -89,6 +94,7 @@ export default function VehiclePhotoUploader({
   useEffect(() => {
     lastPrimaryRef.current = "";
     setSlots({});
+    setSlotOrder(PHOTO_ANGLES.map((a) => a.id));
   }, [vehicleId]);
 
   useEffect(() => {
@@ -242,12 +248,70 @@ export default function VehiclePhotoUploader({
   const makePrimary = async (angleId: PhotoAngleId) => {
     const url = slots[angleId]?.url;
     if (!url) return;
+    // Move this angle to front of order
+    setSlotOrder((prev) => {
+      const next = [angleId, ...prev.filter((id) => id !== angleId)];
+      return next;
+    });
     if (vehicleId) {
       await setPrimary.mutateAsync({ vehicleId, photoUrl: url });
     }
     onPrimaryUrlChangeRef.current(url);
     toast.success("Set as main showroom photo");
   };
+
+  const handleSlotDragStart = useCallback((angleId: PhotoAngleId) => {
+    setDraggingAngle(angleId);
+  }, []);
+
+  const handleSlotDragOver = useCallback(
+    (e: React.DragEvent, angleId: PhotoAngleId) => {
+      e.preventDefault();
+      if (angleId !== draggingAngle) setDragOverAngle(angleId);
+    },
+    [draggingAngle],
+  );
+
+  const handleSlotDrop = useCallback(
+    async (targetAngle: PhotoAngleId) => {
+      if (!draggingAngle || draggingAngle === targetAngle) {
+        setDraggingAngle(null);
+        setDragOverAngle(null);
+        return;
+      }
+
+      // Compute new order (same logic as the state updater, but synchronously)
+      const newOrder = (() => {
+        const next = [...slotOrder];
+        const fromIdx = next.indexOf(draggingAngle);
+        const toIdx = next.indexOf(targetAngle);
+        if (fromIdx === -1 || toIdx === -1) return slotOrder;
+        next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, draggingAngle);
+        return next;
+      })();
+
+      setSlotOrder(newOrder);
+      setDraggingAngle(null);
+      setDragOverAngle(null);
+
+      if (vehicleId) {
+        const orderedIds = newOrder
+          .map((id) => slots[id]?.photoId)
+          .filter((id): id is number => id != null);
+        if (orderedIds.length > 0) {
+          try {
+            await reorderPhotos.mutateAsync({ vehicleId, orderedPhotoIds: orderedIds });
+            await refetch();
+            toast.success("Photos reordered");
+          } catch {
+            toast.error("Could not save new order");
+          }
+        }
+      }
+    },
+    [draggingAngle, slotOrder, slots, vehicleId, reorderPhotos, refetch],
+  );
 
   const uploading = uploadPhoto.isPending || addPhoto.isPending || attachUrl.isPending;
 
@@ -331,16 +395,29 @@ export default function VehiclePhotoUploader({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {PHOTO_ANGLES.map((angle) => {
+        {slotOrder.map((angleId, orderIdx) => {
+          const angle = PHOTO_ANGLES.find((a) => a.id === angleId)!;
+          if (!angle) return null;
           const slot = slots[angle.id];
-          const isPrimary = slot?.url && slots.front_3_4?.url === slot.url;
+          const isHero = orderIdx === 0 && !!slot?.url;
+          const isDragSource = draggingAngle === angle.id;
+          const isDragTarget = dragOverAngle === angle.id;
           return (
             <div
               key={angle.id}
+              draggable={!!slot?.url}
+              onDragStart={() => handleSlotDragStart(angle.id)}
+              onDragOver={(e) => handleSlotDragOver(e, angle.id)}
+              onDragLeave={() => setDragOverAngle(null)}
+              onDrop={() => void handleSlotDrop(angle.id)}
+              onDragEnd={() => { setDraggingAngle(null); setDragOverAngle(null); }}
               className={cn(
-                "relative rounded-lg border overflow-hidden aspect-[4/3] group",
+                "relative rounded-lg border overflow-hidden aspect-[4/3] group transition-all",
                 slot?.url ? "border-primary/30" : "border-dashed border-muted-foreground/30",
                 angle.required && !slot?.url && "ring-1 ring-amber-500/30",
+                isDragSource && "opacity-40 scale-95",
+                isDragTarget && "ring-2 ring-primary scale-[1.02]",
+                slot?.url && "cursor-grab active:cursor-grabbing",
               )}
             >
               <input
@@ -371,18 +448,22 @@ export default function VehiclePhotoUploader({
                     hoverZoom={false}
                     className="rounded-none border-0"
                   />
+                  {/* Drag handle — always visible on touch, hover on desktop */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="h-4 w-4 text-white drop-shadow" />
+                  </div>
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                     <button
                       type="button"
-                      onClick={() => makePrimary(angle.id)}
+                      onClick={(e) => { e.stopPropagation(); void makePrimary(angle.id); }}
                       className="p-1.5 rounded-full bg-black/60 text-white hover:bg-primary/80"
-                      title="Set as main photo"
+                      title="Set as hero photo"
                     >
                       <Star className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeSlot(angle.id)}
+                      onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
                       className="p-1.5 rounded-full bg-black/60 text-white hover:bg-destructive/80"
                       title="Remove"
                     >
@@ -403,19 +484,25 @@ export default function VehiclePhotoUploader({
                   )}
                 </button>
               )}
-              {slot?.url && angle.id === "front_3_4" && (
-                <span className="absolute top-1 left-1 bg-primary/90 text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded text-primary-foreground font-bold">
+              {isHero && (
+                <span className="absolute top-1 left-1 bg-primary/90 text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded text-primary-foreground font-bold pointer-events-none">
                   Hero
                 </span>
               )}
               {slot?.url && (
-                <CheckCircle2 className="absolute bottom-1 right-1 h-4 w-4 text-green-500 drop-shadow" />
+                <CheckCircle2 className="absolute bottom-1 right-1 h-4 w-4 text-green-500 drop-shadow pointer-events-none" />
               )}
             </div>
           );
         })}
       </div>
 
+      {filledCount > 1 && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <GripVertical className="h-3.5 w-3.5 shrink-0" />
+          Drag photos to reorder — first slot is the hero image shown in listings.
+        </p>
+      )}
       {filledCount >= 3 && filledCount < 8 && (
         <p className="text-xs text-amber-500/90 flex items-center gap-2">
           <Star className="h-3.5 w-3.5 shrink-0" />

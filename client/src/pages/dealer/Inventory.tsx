@@ -15,6 +15,7 @@ import {
   Calendar,
   Upload,
   Pencil,
+  ShoppingBag,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import SearchableSelect from "@/components/SearchableSelect";
@@ -1025,6 +1026,22 @@ export default function Inventory() {
                           <Star className="h-3 w-3 text-primary" />
                           {v.leadCount} lead{v.leadCount === 1 ? "" : "s"}
                         </span>
+                      )}
+                      {v.status !== "sold" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm(`Mark "${v.title}" as sold?`))
+                              updateV.mutate({ id: v.id, status: "sold" });
+                          }}
+                          className="text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+                          aria-label="Mark as sold"
+                          title="Mark as sold"
+                        >
+                          <ShoppingBag className="h-4 w-4" />
+                        </Button>
                       )}
                       <Button
                         type="button"
