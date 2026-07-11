@@ -92,6 +92,9 @@ export async function storagePut(
     // in the database instead of writing to disk. Works natively as <img src>.
     const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
     const base64 = buffer.toString("base64");
+    if (base64.length > 60000) {
+      throw new Error("Image too large for storage — please use a smaller file (under 40KB compressed)");
+    }
     const mime = contentType.startsWith("image/") ? contentType : "image/jpeg";
     return { key, url: `data:${mime};base64,${base64}` };
   }
