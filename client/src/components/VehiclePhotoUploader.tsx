@@ -80,6 +80,7 @@ export default function VehiclePhotoUploader({
   const addPhoto = trpc.dealer.addPhoto.useMutation();
   const attachUrl = trpc.dealer.attachPhotoFromUrl.useMutation();
   const deletePhoto = trpc.dealer.deletePhoto.useMutation();
+  const deleteAllPhotos = trpc.dealer.deleteAllPhotos.useMutation();
   const setPrimary = trpc.dealer.setPrimaryPhoto.useMutation();
   const reorderPhotos = trpc.dealer.reorderPhotos.useMutation();
   const { data: existing, refetch } = trpc.dealer.listPhotos.useQuery(
@@ -245,6 +246,25 @@ export default function VehiclePhotoUploader({
     });
   };
 
+  const clearAll = async () => {
+    if (!vehicleId) {
+      // New vehicle — just clear local state
+      setSlots({});
+      setSlotOrder(PHOTO_ANGLES.map((a) => a.id));
+      syncPending({});
+      return;
+    }
+    try {
+      await deleteAllPhotos.mutateAsync({ vehicleId });
+      setSlots({});
+      setSlotOrder(PHOTO_ANGLES.map((a) => a.id));
+      await refetch();
+      toast.success("All photos deleted");
+    } catch {
+      toast.error("Could not delete photos — try again");
+    }
+  };
+
   const makePrimary = async (angleId: PhotoAngleId) => {
     const url = slots[angleId]?.url;
     if (!url) return;
@@ -324,13 +344,32 @@ export default function VehiclePhotoUploader({
             8 angles sell faster — tap a slot or drop photos below. No technical skills needed.
           </p>
         </div>
-        <div className="text-right">
-          <p className="font-display text-2xl font-bold tabular-nums">
-            {filledCount}/{RECOMMENDED_ANGLE_COUNT}
-          </p>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Quality: {photoQualityLabel(score)}
-          </p>
+        <div className="flex items-center gap-3">
+          {filledCount > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 gap-1.5"
+              onClick={clearAll}
+              disabled={deleteAllPhotos.isPending}
+            >
+              {deleteAllPhotos.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Delete all
+            </Button>
+          )}
+          <div className="text-right">
+            <p className="font-display text-2xl font-bold tabular-nums">
+              {filledCount}/{RECOMMENDED_ANGLE_COUNT}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Quality: {photoQualityLabel(score)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -449,25 +488,28 @@ export default function VehiclePhotoUploader({
                     className="rounded-none border-0"
                   />
                   {/* Drag handle — always visible on touch, hover on desktop */}
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <GripVertical className="h-4 w-4 text-white drop-shadow" />
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                  {/* Delete button — always visible so it's easy to find */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-destructive hover:scale-110 transition-all"
+                    title="Delete photo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  {/* Hover overlay: set as hero */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2 gap-1">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); void makePrimary(angle.id); }}
-                      className="p-1.5 rounded-full bg-black/60 text-white hover:bg-primary/80"
+                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/70 text-white hover:bg-primary/90 text-[10px] font-semibold"
                       title="Set as hero photo"
                     >
-                      <Star className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
-                      className="p-1.5 rounded-full bg-black/60 text-white hover:bg-destructive/80"
-                      title="Remove"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Star className="h-3 w-3" />
+                      Set hero
                     </button>
                   </div>
                 </>

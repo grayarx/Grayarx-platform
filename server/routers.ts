@@ -1460,6 +1460,24 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
+    /** Delete ALL photos for a vehicle and clear its primary/imageUrl. */
+    deleteAllPhotos: protectedProcedure
+      .input(z.object({ vehicleId: z.number().int() }))
+      .mutation(async ({ input, ctx }) => {
+        const vehicle = await getVehicle(input.vehicleId);
+        if (!vehicle) throw new Error("Vehicle not found");
+        // Non-admin users can only delete their own dealership's photos
+        if (ctx.user.role !== "admin" && ctx.user.role !== "founder") {
+          if (vehicle.dealershipId !== ctx.user.dealershipId) {
+            throw new Error("Not authorised");
+          }
+        }
+        const photos = await listVehiclePhotos(input.vehicleId);
+        await Promise.all(photos.map((p) => deleteVehiclePhoto(p.id)));
+        await updateVehicle(input.vehicleId, { primaryPhotoUrl: null, imageUrl: null });
+        return { deleted: photos.length } as const;
+      }),
+
     setPrimaryPhoto: protectedProcedure
       .input(
         z.object({

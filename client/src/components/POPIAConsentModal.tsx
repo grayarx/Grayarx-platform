@@ -162,7 +162,7 @@ export function POPIAConsentModal({
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-900">
-            You must read and agree to this form to use GrayArx. This is a legal requirement under the Protection of Personal Information Act (POPIA).
+            Please complete your POPIA acknowledgment. Required for dealers operating on the platform.
           </AlertDescription>
         </Alert>
 
@@ -201,7 +201,7 @@ export function POPIAConsentModal({
               onClick={onClose}
               disabled={submitting || isLoading}
             >
-              Cancel
+              Remind me later
             </Button>
             <Button
               onClick={handleSign}
