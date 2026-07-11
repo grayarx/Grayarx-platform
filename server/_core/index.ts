@@ -110,12 +110,14 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead. Browser must open at http://localhost:${port}/`);
+    console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead.`);
   }
 
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-    console.log(`WebSocket server available at ws://localhost:${port}/api/ws`);
+  // Bind to 0.0.0.0 so Railway's proxy can route traffic to the container.
+  // Binding to localhost/127.0.0.1 only is invisible to Railway's ingress and causes 522.
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${port}/`);
+    console.log(`WebSocket server available at ws://0.0.0.0:${port}/api/ws`);
   });
 
   // ── Self-healing: sync whatsappPhoneNumberId from env to DB on startup ──
