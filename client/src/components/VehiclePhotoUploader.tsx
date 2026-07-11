@@ -62,19 +62,21 @@ export default function VehiclePhotoUploader({
   const onPendingRef = useRef(onPendingPhotosChange);
   onPendingRef.current = onPendingPhotosChange;
 
-  const uploadPhoto = trpc.dealer.uploadVehiclePhoto.useMutation();
   const attachUrl = trpc.dealer.attachPhotoFromUrl.useMutation();
   const deletePhoto = trpc.dealer.deletePhoto.useMutation();
   const deleteAllPhotos = trpc.dealer.deleteAllPhotos.useMutation();
+
+  // Track whether we're in a manual-upload flow so useEffect doesn't override local state
+  const localUploadActive = useRef(false);
 
   const { data: existing, refetch } = trpc.dealer.listPhotos.useQuery(
     { vehicleId: vehicleId! },
     { enabled: !!vehicleId },
   );
 
-  // Load existing photos from DB
+  // Load existing photos from DB — only when we haven't just done a local upload
   useEffect(() => {
-    if (!existing) return;
+    if (!existing || localUploadActive.current) return;
     const loaded: PhotoSlot[] = existing.map((p) => ({
       state: "filled" as const,
       url: p.url,
@@ -107,23 +109,6 @@ export default function VehiclePhotoUploader({
   const filledCount = slots.filter((s) => s.state === "filled").length;
   const uploadingCount = slots.filter((s) => s.state === "uploading").length;
 
-  const uploadOne = useCallback(
-    async (file: File): Promise<string | null> => {
-      if (file.size > 20 * 1024 * 1024) {
-        toast.error("Photo too large (max 20 MB)");
-        return null;
-      }
-      const base64 = await compressImage(file);
-      const { url } = await uploadPhoto.mutateAsync({
-        dataBase64: base64,
-        mimeType: "image/jpeg",
-        filename: file.name.replace(/\.[^.]+$/, ""),
-      });
-      return url;
-    },
-    [uploadPhoto],
-  );
-
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
       const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
@@ -138,56 +123,79 @@ export default function VehiclePhotoUploader({
         return;
       }
 
-      // Optimistically add uploading placeholders
-      setSlots((prev) => [...prev, ...toUpload.map((): PhotoSlot => ({ state: "uploading" }))]);
+      localUploadActive.current = true;
 
-      for (let i = 0; i < toUpload.length; i++) {
+      for (const file of toUpload) {
+        if (file.size > 20 * 1024 * 1024) {
+          toast.error("Photo too large (max 20 MB)");
+          continue;
+        }
+
+        // Add uploading placeholder
+        setSlots((prev) => [...prev, { state: "uploading" }]);
+
         try {
-          const url = await uploadOne(toUpload[i]);
-          if (!url) throw new Error("No URL returned");
+          // Compress client-side — the data URL is ready immediately for display
+          const base64 = await compressImage(file);
+          const dataUrl = `data:image/jpeg;base64,${base64}`;
 
-          if (vehicleId) {
-            // Always mark as primary so the newly uploaded photo wins over
-            // any stale/broken Unsplash URLs already in the DB
-            await attachUrl.mutateAsync({
-              vehicleId,
-              url,
-              setPrimary: true,
-            });
-            // Refetch to get the DB-assigned photoId
-            const result = await refetch();
-            const freshPhotos = result.data ?? [];
-            setSlots(
-              freshPhotos.map((p) => ({ state: "filled" as const, url: p.url, photoId: p.id })),
-            );
-            // Use the uploaded URL directly — not freshPhotos[0] which
-            // might be an old broken Unsplash URL at position 0
-            onPrimaryRef.current(url);
-          } else {
-            // New vehicle — hold in local state
-            setSlots((prev) => {
-              const next = [...prev];
-              const idx = next.findIndex((s) => s.state === "uploading");
-              if (idx !== -1) next[idx] = { state: "filled", url };
-              else next.push({ state: "filled", url });
-              notifyPending(next);
-              return next;
-            });
-          }
-        } catch (err) {
-          console.error("[PhotoUploader] Upload failed", err);
-          // Remove one uploading placeholder
+          // Show photo immediately without waiting for server
           setSlots((prev) => {
             const next = [...prev];
-            const idx = next.findIndex((s) => s.state === "uploading");
-            if (idx !== -1) next.splice(idx, 1);
+            // Replace last uploading placeholder with the real image
+            for (let j = next.length - 1; j >= 0; j--) {
+              if (next[j].state === "uploading") {
+                next[j] = { state: "filled", url: dataUrl };
+                break;
+              }
+            }
             return next;
           });
-          toast.error("Could not upload photo — try again");
+
+          // Update the form primary URL immediately
+          onPrimaryRef.current(dataUrl);
+
+          if (vehicleId) {
+            // Persist to DB in the background — don't block photo display on this
+            attachUrl.mutateAsync({
+              vehicleId,
+              url: dataUrl,
+              setPrimary: true,
+            }).then(({ id }) => {
+              // Patch in the real photoId so Delete works
+              setSlots((prev) =>
+                prev.map((s) =>
+                  s.state === "filled" && s.url === dataUrl && !s.photoId
+                    ? { ...s, photoId: id }
+                    : s,
+                ),
+              );
+            }).catch((err) => {
+              console.error("[PhotoUploader] DB persist failed:", err);
+              // Photo is still visible locally; saving the form will also persist it
+            }).finally(() => {
+              localUploadActive.current = false;
+            });
+          } else {
+            // New vehicle — photos held in local state until form save
+            setSlots((prev) => { notifyPending(prev); return prev; });
+            localUploadActive.current = false;
+          }
+        } catch (err) {
+          console.error("[PhotoUploader] Compress failed:", err);
+          setSlots((prev) => {
+            const next = [...prev];
+            for (let j = next.length - 1; j >= 0; j--) {
+              if (next[j].state === "uploading") { next.splice(j, 1); break; }
+            }
+            return next;
+          });
+          localUploadActive.current = false;
+          toast.error("Could not process photo — try again");
         }
       }
     },
-    [slots, uploadOne, vehicleId, attachUrl, refetch, notifyPending],
+    [slots, vehicleId, attachUrl, notifyPending],
   );
 
   const removePhoto = useCallback(
