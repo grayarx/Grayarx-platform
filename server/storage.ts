@@ -91,10 +91,9 @@ export async function storagePut(
     // Local fallback — Railway's filesystem is ephemeral, so store as a base64 data URL
     // in the database instead of writing to disk. Works natively as <img src>.
     const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+    // DB columns are MEDIUMTEXT (16 MB). Client enforces ≤12 MB files before encoding,
+    // so base64 output tops out at ~16 MB — safely within the column limit.
     const base64 = buffer.toString("base64");
-    if (base64.length > 60000) {
-      throw new Error("Image too large for storage — please use a smaller file (under 40KB compressed)");
-    }
     const mime = contentType.startsWith("image/") ? contentType : "image/jpeg";
     return { key, url: `data:${mime};base64,${base64}` };
   }
