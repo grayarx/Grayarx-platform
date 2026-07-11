@@ -147,11 +147,12 @@ export default function VehiclePhotoUploader({
           if (!url) throw new Error("No URL returned");
 
           if (vehicleId) {
-            const isFirst = currentFilled + i === 0;
+            // Always mark as primary so the newly uploaded photo wins over
+            // any stale/broken Unsplash URLs already in the DB
             await attachUrl.mutateAsync({
               vehicleId,
               url,
-              setPrimary: isFirst,
+              setPrimary: true,
             });
             // Refetch to get the DB-assigned photoId
             const result = await refetch();
@@ -159,8 +160,9 @@ export default function VehiclePhotoUploader({
             setSlots(
               freshPhotos.map((p) => ({ state: "filled" as const, url: p.url, photoId: p.id })),
             );
-            const primary = freshPhotos[0]?.url ?? "";
-            if (primary) onPrimaryRef.current(primary);
+            // Use the uploaded URL directly — not freshPhotos[0] which
+            // might be an old broken Unsplash URL at position 0
+            onPrimaryRef.current(url);
           } else {
             // New vehicle — hold in local state
             setSlots((prev) => {
