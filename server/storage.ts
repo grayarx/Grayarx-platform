@@ -88,11 +88,12 @@ export async function storagePut(
 
     return { key, url: `/manus-storage/${key}` };
   } else {
-    // Local fallback
-    const filePath = path.join(UPLOADS_DIR, key);
-    await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {});
-    await fs.writeFile(filePath, typeof data === "string" ? Buffer.from(data) : Buffer.from(data));
-    return { key, url: `/uploads/${key}` };
+    // Local fallback — Railway's filesystem is ephemeral, so store as a base64 data URL
+    // in the database instead of writing to disk. Works natively as <img src>.
+    const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+    const base64 = buffer.toString("base64");
+    const mime = contentType.startsWith("image/") ? contentType : "image/jpeg";
+    return { key, url: `data:${mime};base64,${base64}` };
   }
 }
 

@@ -495,10 +495,10 @@ export default function VehiclePhotoUploader({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); void removeSlot(angle.id); }}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-destructive hover:scale-110 transition-all"
+                    className="absolute top-1 right-1 p-1.5 rounded-full bg-black/70 border border-red-500/50 text-red-400 hover:bg-red-600 hover:text-white hover:scale-110 transition-all opacity-90"
                     title="Delete photo"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                   {/* Hover overlay: set as hero */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2 gap-1">
