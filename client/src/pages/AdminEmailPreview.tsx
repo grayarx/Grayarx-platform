@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,7 +124,6 @@ const emailTemplates = {
 };
 
 export default function AdminEmailPreview() {
-  const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] = useState<"welcome" | "followup">("welcome");
   const [recipientEmail, setRecipientEmail] = useState("grayarx@gmail.com");
   const [sending, setSending] = useState(false);
@@ -149,7 +147,7 @@ export default function AdminEmailPreview() {
   return (
     <div className="space-y-6">
       <div>
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2 -ml-2">
+        <Button variant="ghost" onClick={() => window.history.back()} className="mb-2 -ml-2">
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
         <h1 className="text-3xl font-bold">Email Preview & Testing</h1>
