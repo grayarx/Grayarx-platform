@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 
 /** Circular GA crest only — never full lockup (looks zoomed at small sizes). */
-const LOGO_URL = "https://www.grayarx.com/logo-crest.png?v=11";
+const LOGO_URL = "https://www.grayarx.com/logo-crest.png?v=12";
 
 const emailTemplates = {
   welcome: {

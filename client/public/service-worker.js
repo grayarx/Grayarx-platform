@@ -1,5 +1,5 @@
-const CACHE_NAME = "grayarx-v10";
-const RUNTIME_CACHE = "grayarx-runtime-v10";
+const CACHE_NAME = "grayarx-v12";
+const RUNTIME_CACHE = "grayarx-runtime-v12";
 const STATIC_ASSETS = [
   "/manifest.json",
 ];
@@ -60,9 +60,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Always fetch fresh brand icons (tab favicon / nav emblem)
+  // Always fetch fresh brand icons (tab favicon / nav emblem) — never cache
+  // so a prior 404/HTML poison cannot stick after assets are restored.
   if (BRAND_ICON_PATHS.has(url.pathname)) {
-    event.respondWith(fetch(request));
+    event.respondWith(
+      fetch(request, { cache: "no-store" }).then((response) => {
+        if (!response.ok) {
+          return response;
+        }
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "no-store");
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      })
+    );
     return;
   }
 

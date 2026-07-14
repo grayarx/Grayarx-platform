@@ -28,8 +28,8 @@ if (existsSync(faviconIco) && existsSync(favicon32)) {
   const png = readFileSync(favicon32).length;
   ok("favicon.ico matches 32px size", ico === png, `${ico} vs ${png}`);
 }
-ok("index.html references favicon.ico v=11", readFileSync(indexHtml, "utf8").includes("favicon.ico?v=11"));
-ok("index.html references logo-crest cache bust", readFileSync(join(root, "client/src/components/Logo.tsx"), "utf8").includes("logo-crest.png?v=11"));
+ok("index.html references favicon.ico v=12", readFileSync(indexHtml, "utf8").includes("favicon.ico?v=12"));
+ok("index.html references logo-crest cache bust", readFileSync(join(root, "client/src/components/Logo.tsx"), "utf8").includes("logo-crest.png?v=12"));
 ok("logo-crest.png exists", existsSync(join(publicDir, "logo-crest.png")));
 ok("delete intent", classifyDashboardIntent("delete all my inventory") === "inventory_bulk_delete");
 ok("button label confirm", isInventoryBulkDeleteConfirm("Delete all 3 vehicles"));
