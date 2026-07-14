@@ -24,10 +24,16 @@ function timingSafeStringEqual(a: string, b: string): boolean {
  *
  * Resolution order:
  *  1. DB lookup: find a dealership whose whatsappPhoneNumberId matches.
- *  2. Env-var fallback: WHATSAPP_DEALERSHIP_ID (single-dealer / dev mode).
- *  3. Default to dealership 1 if nothing matches.
+ *  2. Auto-sync: if inbound phone_number_id is unknown, fill it only when
+ *     WHATSAPP_DEALERSHIP_ID dealer's field is empty (never overwrite).
+ *  3. Env-var fallback: WHATSAPP_DEALERSHIP_ID (single-dealer / dev mode).
+ *  4. Default to dealership 1 if nothing matches.
  */
 async function resolveDealershipIdFromPhoneNumberId(phoneNumberId: string | null): Promise<number> {
+  const configuredDealerId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
+  const fallbackDealerId =
+    Number.isFinite(configuredDealerId) && configuredDealerId > 0 ? configuredDealerId : 1;
+
   if (phoneNumberId) {
     try {
       const db = await getDb();
@@ -41,40 +47,46 @@ async function resolveDealershipIdFromPhoneNumberId(phoneNumberId: string | null
           console.log(`[WhatsApp Webhook] Resolved phone_number_id ${phoneNumberId} → dealership ${row.id}`);
           return row.id;
         }
+
+        // Auto-sync: fill empty field on the env fallback dealer only — never overwrite.
+        const [fallback] = await db
+          .select({
+            id: dealerships.id,
+            whatsappPhoneNumberId: dealerships.whatsappPhoneNumberId,
+          })
+          .from(dealerships)
+          .where(eq(dealerships.id, fallbackDealerId))
+          .limit(1);
+
+        if (fallback && !fallback.whatsappPhoneNumberId?.trim()) {
+          await db
+            .update(dealerships)
+            .set({ whatsappPhoneNumberId: phoneNumberId })
+            .where(eq(dealerships.id, fallbackDealerId));
+          console.log(
+            `[WhatsApp Webhook] Auto-synced phone_number_id ${phoneNumberId} → dealership ${fallbackDealerId} (was empty)`,
+          );
+          return fallbackDealerId;
+        }
+
+        if (fallback?.whatsappPhoneNumberId?.trim()) {
+          console.warn(
+            `[WhatsApp Webhook] phone_number_id ${phoneNumberId} unmatched; dealership ${fallbackDealerId} already has ${fallback.whatsappPhoneNumberId} — not overwriting`,
+          );
+        }
       }
     } catch (err) {
       console.warn("[WhatsApp Webhook] DB lookup failed, falling back to env var:", err);
     }
-
-    // Auto-save inbound phone_number_id so future sends use the correct Meta ID
-    if (phoneNumberId) {
-      try {
-        const db = await getDb();
-        if (db) {
-          const dealerId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
-          await db
-            .update(dealerships)
-            .set({ whatsappPhoneNumberId: phoneNumberId })
-            .where(eq(dealerships.id, dealerId));
-          console.log(`[WhatsApp Webhook] Synced phone_number_id ${phoneNumberId} → dealership ${dealerId}`);
-        }
-      } catch {
-        // non-fatal
-      }
-    }
   }
-
-  // Env-var fallback (single-dealer dev / pilot setup)
-  const configuredDealerId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
-  const dealerId = Number.isFinite(configuredDealerId) && configuredDealerId > 0 ? configuredDealerId : 1;
 
   if (phoneNumberId) {
     console.warn(
-      `[WhatsApp Webhook] No DB match for phone_number_id ${phoneNumberId}; using env fallback → dealership ${dealerId}`,
+      `[WhatsApp Webhook] No DB match for phone_number_id ${phoneNumberId}; using env fallback → dealership ${fallbackDealerId}`,
     );
   }
 
-  return dealerId;
+  return fallbackDealerId;
 }
 
 /**
@@ -337,6 +349,80 @@ export function registerWebhookRoutes(app: Express): void {
         },
       },
     });
+  });
+
+  /**
+   * Stripe Checkout webhook — marks invoices paid when checkout.session.completed.
+   * Optional: only active when STRIPE_SECRET_KEY (+ optional STRIPE_WEBHOOK_SECRET) set.
+   */
+  app.post("/api/webhooks/stripe", async (req: Request, res: Response) => {
+    try {
+      const { getStripe } = await import("./stripeCheckout");
+      const stripe = getStripe();
+      if (!stripe) {
+        return res.status(503).json({ error: "Stripe not configured" });
+      }
+
+      let event: { type: string; data: { object: Record<string, unknown> } };
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+      const sig = req.headers["stripe-signature"] as string | undefined;
+      const rawBody = (req as { rawBody?: Buffer | string }).rawBody;
+
+      if (webhookSecret && sig && rawBody) {
+        try {
+          event = stripe.webhooks.constructEvent(
+            rawBody,
+            sig,
+            webhookSecret,
+          ) as unknown as typeof event;
+        } catch (err) {
+          console.warn(
+            "[Stripe Webhook] Signature verification failed:",
+            err instanceof Error ? err.message : String(err),
+          );
+          return res.status(400).json({ error: "Invalid signature" });
+        }
+      } else {
+        // Dev / unsigned: accept JSON body (never rely on this in production without secret)
+        if (process.env.NODE_ENV === "production" && !webhookSecret) {
+          console.warn("[Stripe Webhook] STRIPE_WEBHOOK_SECRET missing in production");
+          return res.status(503).json({ error: "Webhook secret not configured" });
+        }
+        event = req.body as typeof event;
+      }
+
+      if (event?.type === "checkout.session.completed") {
+        const session = event.data.object as {
+          id?: string;
+          metadata?: { invoiceId?: string; source?: string };
+          amount_total?: number;
+        };
+        const invoiceId = Number(session.metadata?.invoiceId);
+        if (session.metadata?.source === "grayarx_invoice" && Number.isFinite(invoiceId) && invoiceId > 0) {
+          const db = await getDb();
+          if (db) {
+            const { invoices, payments } = await import("../../drizzle/schema");
+            await db.insert(payments).values({
+              invoiceId,
+              amount: ((session.amount_total ?? 0) / 100).toFixed(2) as unknown as string,
+              paymentDate: new Date(),
+              paymentMethod: "card",
+              reference: `stripe:${session.id ?? "checkout"}`,
+            });
+            await db
+              .update(invoices)
+              .set({ status: "paid" })
+              .where(eq(invoices.id, invoiceId));
+            console.log(`[Stripe Webhook] Marked invoice ${invoiceId} paid via Checkout`);
+          }
+        }
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("[Stripe Webhook] error:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
   });
 
   /**

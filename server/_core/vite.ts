@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+import { maybeServeVehicleOg } from "./vehicleOgHtml";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -38,6 +39,18 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+
+      // Social crawlers need vehicle OG meta before Vite transform
+      const ogHtml = await maybeServeVehicleOg(
+        req.path,
+        req.get("user-agent") ?? undefined,
+        template,
+      );
+      if (ogHtml) {
+        const page = await vite.transformIndexHtml(url, ogHtml);
+        return res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      }
+
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
@@ -59,7 +72,7 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath, { index: false }));
 
   // Never serve SPA index.html for API routes — webhooks must return JSON
-  app.use("*", (req, res, next) => {
+  app.use("*", async (req, res, next) => {
     if (req.path.startsWith("/api/")) {
       return res.status(404).json({ error: "API route not found", path: req.path });
     }
@@ -67,6 +80,25 @@ export function serveStatic(app: Express) {
     if (/\.[a-z0-9]+$/i.test(req.path)) {
       return res.status(404).send("Not found");
     }
-    res.sendFile(path.resolve(distPath, "index.html"));
+
+    const indexPath = path.resolve(distPath, "index.html");
+    try {
+      const baseHtml = await fs.promises.readFile(indexPath, "utf-8");
+      const ogHtml = await maybeServeVehicleOg(
+        req.path,
+        req.get("user-agent") ?? undefined,
+        baseHtml,
+      );
+      if (ogHtml) {
+        return res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(ogHtml);
+      }
+    } catch (err) {
+      console.warn(
+        "[serveStatic] OG / index read failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+
+    res.sendFile(indexPath);
   });
 }

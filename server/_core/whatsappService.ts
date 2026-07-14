@@ -73,15 +73,12 @@ export async function sendWhatsAppMessage(
   error?: string;
 }> {
   try {
-    // Priority: explicit inbound ID > DB lookup > env fallback
-    let whatsappBusinessPhoneId =
-      message.phoneNumberId ||
-      process.env.WHATSAPP_BUSINESS_PHONE_ID ||
-      process.env.WHATSAPP_PHONE_NUMBER_ID;
+    // Priority: explicit inbound ID > DB lookup by dealership > env fallback
+    let whatsappBusinessPhoneId = message.phoneNumberId || undefined;
     const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     const resolvedDealershipId = message.dealershipId ? Number(message.dealershipId) : 0;
 
-    if (!message.phoneNumberId && resolvedDealershipId > 0) {
+    if (!whatsappBusinessPhoneId && resolvedDealershipId > 0) {
       try {
         const { getDb } = await import("../db");
         const { dealerships } = await import("../../drizzle/schema");
@@ -100,6 +97,11 @@ export async function sendWhatsAppMessage(
       } catch (e) {
         console.warn("[WhatsAppService] DB lookup for phone ID failed, using fallback");
       }
+    }
+
+    if (!whatsappBusinessPhoneId) {
+      whatsappBusinessPhoneId =
+        process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
     }
 
     if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
@@ -313,13 +315,10 @@ export async function sendVehiclePhotosViaWhatsApp(
   dealershipId: string | number,
   phoneNumberId?: string,
 ): Promise<void> {
-  let whatsappBusinessPhoneId =
-    phoneNumberId ||
-    process.env.WHATSAPP_BUSINESS_PHONE_ID ||
-    process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let whatsappBusinessPhoneId = phoneNumberId || undefined;
   const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
-  if (!phoneNumberId && dealershipId && Number(dealershipId) > 0) {
+  if (!whatsappBusinessPhoneId && dealershipId && Number(dealershipId) > 0) {
     try {
       const { getDb } = await import("../db");
       const { dealerships } = await import("../../drizzle/schema");
@@ -338,6 +337,11 @@ export async function sendVehiclePhotosViaWhatsApp(
     } catch (e) {
       console.warn("[WhatsAppService] DB lookup for photo phone ID failed");
     }
+  }
+
+  if (!whatsappBusinessPhoneId) {
+    whatsappBusinessPhoneId =
+      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
   }
 
   if (!whatsappBusinessPhoneId || !whatsappAccessToken) {

@@ -333,4 +333,124 @@ export const billingRouter = router({
   getPricingTiers: protectedProcedure.query(async () => {
     return PRICING_TIERS;
   }),
+
+  /** Whether Stripe Checkout is available (STRIPE_SECRET_KEY set). */
+  stripeAvailable: protectedProcedure.query(async () => {
+    const { isStripeConfigured } = await import("./stripeCheckout");
+    return { available: isStripeConfigured() };
+  }),
+
+  /**
+   * Create a Stripe Checkout session for an existing invoice (ZAR).
+   * Falls back gracefully when Stripe is not configured.
+   */
+  createStripeCheckout: protectedProcedure
+    .input(
+      z.object({
+        invoiceId: z.number().int(),
+        successPath: z.string().optional(),
+        cancelPath: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "founder" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder/admin only" });
+      }
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not initialized" });
+      }
+
+      const invoice = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.id, input.invoiceId))
+        .limit(1);
+
+      if (!invoice.length) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      }
+
+      const inv = invoice[0];
+      if (inv.status === "paid") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invoice already paid" });
+      }
+
+      const dealer = await db
+        .select()
+        .from(dealerships)
+        .where(eq(dealerships.id, inv.dealershipId))
+        .limit(1);
+
+      const origin = (process.env.APP_URL || "https://www.grayarx.com").replace(/\/+$/, "");
+      const successPath = input.successPath || `/admin/invoices?paid=${inv.id}`;
+      const cancelPath = input.cancelPath || `/admin/invoices?cancelled=${inv.id}`;
+
+      const { createInvoiceCheckoutSession } = await import("./stripeCheckout");
+      const result = await createInvoiceCheckoutSession({
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        dealershipName: dealer[0]?.name || "Dealership",
+        amountZar: parseFloat(inv.totalAmount.toString()),
+        customerEmail: dealer[0]?.contactEmail,
+        successUrl: `${origin}${successPath.startsWith("/") ? successPath : `/${successPath}`}`,
+        cancelUrl: `${origin}${cancelPath.startsWith("/") ? cancelPath : `/${cancelPath}`}`,
+      });
+
+      if ("error" in result) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+      }
+
+      return result;
+    }),
+
+  /**
+   * Create Stripe Checkout for a subscription plan (one-time monthly payment link).
+   * Bank invoice path remains available via generateInvoice + recordBankTransfer.
+   */
+  createSubscriptionCheckout: protectedProcedure
+    .input(
+      z.object({
+        dealershipId: z.number().int(),
+        plan: z.enum(["starter", "professional", "enterprise"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "founder" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder/admin only" });
+      }
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not initialized" });
+      }
+
+      const dealer = await db
+        .select()
+        .from(dealerships)
+        .where(eq(dealerships.id, input.dealershipId))
+        .limit(1);
+
+      if (!dealer.length) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dealership not found" });
+      }
+
+      const origin = (process.env.APP_URL || "https://www.grayarx.com").replace(/\/+$/, "");
+      const { createSubscriptionCheckoutSession } = await import("./stripeCheckout");
+      const result = await createSubscriptionCheckoutSession({
+        dealershipId: input.dealershipId,
+        plan: input.plan,
+        dealershipName: dealer[0].name,
+        customerEmail: dealer[0].contactEmail,
+        successUrl: `${origin}/admin/invoices?stripe=success&dealershipId=${input.dealershipId}`,
+        cancelUrl: `${origin}/admin/invoices?stripe=cancelled`,
+      });
+
+      if ("error" in result) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+      }
+
+      return result;
+    }),
 });

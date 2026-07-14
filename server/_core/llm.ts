@@ -1,5 +1,6 @@
 import { ENV } from "./env";
 import { withCircuitBreaker, CircuitOpenError, isQuotaError } from "./agentResilience";
+import { resolveOpenAIModelForDealership } from "../../shared/llmModelTiers";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -67,6 +68,10 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
+  /** Explicit model override (wins over dealership / plan / env). */
+  model?: string;
+  /** When set, resolve OpenAI model from dealership plan / llmModel. */
+  dealershipId?: number;
 };
 
 export type ToolCall = {
@@ -225,6 +230,52 @@ const resolveModel = () =>
     ? process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
     : process.env.LLM_MODEL?.trim() || "gemini-2.5-flash";
 
+/** Short-lived cache so every Nala turn does not hit the DB for model lookup. */
+const dealerModelCache = new Map<number, { model: string; expiresAt: number }>();
+const DEALER_MODEL_TTL_MS = 60_000;
+
+async function resolveOpenAIModelForCall(params: InvokeParams): Promise<string> {
+  if (params.model?.trim()) return params.model.trim();
+
+  const dealershipId = params.dealershipId;
+  if (dealershipId && dealershipId > 0) {
+    const cached = dealerModelCache.get(dealershipId);
+    if (cached && cached.expiresAt > Date.now()) return cached.model;
+
+    try {
+      const { getDb } = await import("../db");
+      const { dealerships } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) {
+        const [row] = await db
+          .select({ plan: dealerships.plan, llmModel: dealerships.llmModel })
+          .from(dealerships)
+          .where(eq(dealerships.id, dealershipId))
+          .limit(1);
+        if (row) {
+          const model = resolveOpenAIModelForDealership({
+            plan: row.plan,
+            llmModel: row.llmModel,
+          });
+          dealerModelCache.set(dealershipId, {
+            model,
+            expiresAt: Date.now() + DEALER_MODEL_TTL_MS,
+          });
+          return model;
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "[LLM] dealership model lookup failed, using default:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  return process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+}
+
 const assertApiKey = () => {
   if (!ENV.llmApiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
@@ -348,11 +399,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   // Primary: OpenAI (when key is configured)
   if (ENV.usesOpenAI) {
+    const openAiModel = await resolveOpenAIModelForCall(params);
     try {
       return await callLLMEndpoint(
         "https://api.openai.com/v1/chat/completions",
         ENV.openaiApiKey,
-        buildPayload(process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini", true),
+        buildPayload(openAiModel, true),
         "openai",
       );
     } catch (err) {

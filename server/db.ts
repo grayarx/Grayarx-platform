@@ -1812,6 +1812,29 @@ export async function updateDealershipBrand(
   await db.update(dealerships).set(set).where(eq(dealerships.id, id));
 }
 
+/** Update Meta WhatsApp phone_number_id and/or LLM model override for a dealership. */
+export async function updateDealershipIntegrations(
+  id: number,
+  patch: {
+    whatsappPhoneNumberId?: string | null;
+    llmModel?: string | null;
+  },
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const set: Record<string, unknown> = {};
+  if (Object.prototype.hasOwnProperty.call(patch, "whatsappPhoneNumberId")) {
+    const v = patch.whatsappPhoneNumberId?.trim() || null;
+    set.whatsappPhoneNumberId = v;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "llmModel")) {
+    const v = patch.llmModel?.trim() || null;
+    set.llmModel = v;
+  }
+  if (Object.keys(set).length === 0) return;
+  await db.update(dealerships).set(set).where(eq(dealerships.id, id));
+}
+
 // Admin KPIs
 export async function getAdminOverview() {
   const db = await getDb();

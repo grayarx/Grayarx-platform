@@ -15,6 +15,8 @@ const MIGRATIONS = [
   "0063_market_guide_live.sql",
   "0064_compliance_inquiries.sql",
   "0065_pilot_email_sends.sql",
+  "0065_dealership_whatsapp_phone_number_id.sql",
+  "0066_dealership_llm_model.sql",
 ];
 
 async function main() {

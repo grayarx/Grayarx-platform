@@ -646,6 +646,7 @@ export async function resolveNalaReply(input: {
   message: string;
   vehicle?: VehicleChatContext | null;
   dealershipName: string;
+  dealershipId?: number;
   language?: LanguageCode;
   channel: "web" | "whatsapp";
   includeDealScore?: boolean;
@@ -693,6 +694,7 @@ export async function resolveNalaReply(input: {
           dealershipName: input.dealershipName,
           templateReply: templateFallback,
           inventoryHints: input.inventoryHints,
+          dealershipId: input.dealershipId,
         });
         const reply = addWhatsAppAIDisclosure(
           stripMarkdownForWhatsApp((llm.reply.trim() || templateFallback).trim()),
@@ -764,6 +766,7 @@ export async function resolveNalaReply(input: {
       dealershipName: input.dealershipName,
       templateReply: heuristic.reply,
       intent: heuristic.intent,
+      dealershipId: input.dealershipId,
     });
     let reply = (llm.reply.trim() || heuristic.reply).trim();
     reply = polishNalaReply(reply, lang);

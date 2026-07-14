@@ -301,6 +301,7 @@ export async function resolveRoutedReply(
         message: input.message,
         vehicle: input.vehicle,
         dealershipName: input.dealershipName,
+        dealershipId: input.dealershipId,
         language: lang,
         channel: input.channel,
         includeDealScore: input.includeDealScore,

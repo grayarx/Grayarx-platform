@@ -408,6 +408,11 @@ export const dealerships = mysqlTable("dealerships", {
    * dealership without relying on a single env-var (multi-tenant).
    */
   whatsappPhoneNumberId: varchar("whatsappPhoneNumberId", { length: 64 }),
+  /**
+   * Optional OpenAI model override (e.g. gpt-4o-mini, gpt-4o).
+   * When null, derived from `plan` via shared/llmModelTiers.ts.
+   */
+  llmModel: varchar("llmModel", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

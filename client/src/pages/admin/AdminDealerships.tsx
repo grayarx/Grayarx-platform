@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Settings2 } from "lucide-react";
+import { Building2, Settings2, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -29,12 +31,13 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminDealerships() {
   const { data, isLoading } = trpc.adminDealerships.list.useQuery();
-  const [activeDealershipId, setActiveDealershipId] = useState<number | null>(null);
+  const [modulesDealershipId, setModulesDealershipId] = useState<number | null>(null);
+  const [integrationsDealershipId, setIntegrationsDealershipId] = useState<number | null>(null);
 
   return (
     <AdminShell
       title="Dealerships"
-      subtitle="Every dealership currently on GrayArx. Click a card to manage modules and settings."
+      subtitle="Every dealership currently on GrayArx. Manage modules, WhatsApp phone_number_id, and LLM tier."
     >
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
       {!isLoading && (!data || data.length === 0) && (
@@ -66,31 +69,143 @@ export default function AdminDealerships() {
                   <div className="text-[10px] uppercase text-muted-foreground">Stock</div>
                 </div>
                 <div>
-                  <div className="font-display text-xl font-bold">{d.tier ?? "Starter"}</div>
-                  <div className="text-[10px] uppercase text-muted-foreground">Tier</div>
+                  <div className="font-display text-xl font-bold capitalize">{d.plan ?? "starter"}</div>
+                  <div className="text-[10px] uppercase text-muted-foreground">Plan</div>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => setActiveDealershipId(d.id)}
-              >
-                <Settings2 className="h-3.5 w-3.5 mr-2" />
-                Manage modules
-              </Button>
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setModulesDealershipId(d.id)}
+                >
+                  <Settings2 className="h-3.5 w-3.5 mr-2" />
+                  Modules
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setIntegrationsDealershipId(d.id)}
+                >
+                  <Plug className="h-3.5 w-3.5 mr-2" />
+                  WhatsApp / LLM
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {activeDealershipId !== null && (
+      {modulesDealershipId !== null && (
         <ModuleTogglesDialog
-          dealershipId={activeDealershipId}
-          onClose={() => setActiveDealershipId(null)}
+          dealershipId={modulesDealershipId}
+          onClose={() => setModulesDealershipId(null)}
+        />
+      )}
+      {integrationsDealershipId !== null && (
+        <IntegrationsDialog
+          dealershipId={integrationsDealershipId}
+          onClose={() => setIntegrationsDealershipId(null)}
         />
       )}
     </AdminShell>
+  );
+}
+
+function IntegrationsDialog({
+  dealershipId,
+  onClose,
+}: {
+  dealershipId: number;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.adminDealerships.getIntegrations.useQuery({ dealershipId });
+  const [phoneId, setPhoneId] = useState("");
+  const [llmModel, setLlmModel] = useState("");
+
+  useEffect(() => {
+    if (!data) return;
+    setPhoneId(data.whatsappPhoneNumberId ?? "");
+    setLlmModel(data.llmModel ?? "");
+  }, [data]);
+
+  const update = trpc.adminDealerships.updateIntegrations.useMutation({
+    onSuccess: () => {
+      toast.success("Integrations saved");
+      utils.adminDealerships.getIntegrations.invalidate({ dealershipId });
+      utils.adminDealerships.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">
+            WhatsApp & LLM · {data?.dealershipName ?? "…"}
+          </DialogTitle>
+          <DialogDescription>
+            Meta phone_number_id routes inbound WhatsApp to this dealer. LLM follows
+            plan (starter→mini, Growth→gpt-4o, enterprise→premium) unless overridden.
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading && <p className="text-muted-foreground py-4">Loading…</p>}
+        {!isLoading && data && (
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="wa-phone-id">WhatsApp phone_number_id</Label>
+              <Input
+                id="wa-phone-id"
+                className="font-mono mt-1"
+                value={phoneId}
+                onChange={(e) => setPhoneId(e.target.value)}
+                placeholder="e.g. 1245737138612982"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                From Meta Developer → WhatsApp → API Setup.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="llm-model">LLM model override (optional)</Label>
+              <Input
+                id="llm-model"
+                className="font-mono mt-1"
+                value={llmModel}
+                onChange={(e) => setLlmModel(e.target.value)}
+                placeholder="Leave blank to use plan default"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Plan <span className="capitalize font-medium">{data.plan}</span> resolves to{" "}
+                <code>{data.resolvedLlmModel}</code>
+                {data.llmModel ? " (override active)" : ""}.
+              </p>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            className="btn-gold"
+            disabled={update.isPending || isLoading}
+            onClick={() =>
+              update.mutate({
+                dealershipId,
+                whatsappPhoneNumberId: phoneId.trim() || null,
+                llmModel: llmModel.trim() || null,
+              })
+            }
+          >
+            {update.isPending ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -117,7 +232,7 @@ function ModuleTogglesDialog({
   const effective = (id: DealershipModuleId): boolean => {
     if (id in pending) return pending[id];
     if (id in stored) return Boolean(stored[id]);
-    return true; // default
+    return true;
   };
 
   const dirty = Object.keys(pending).length > 0;

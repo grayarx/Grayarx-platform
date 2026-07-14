@@ -210,6 +210,7 @@ export async function generateWhatsAppReply(input: {
   language: LanguageCode;
   customerMessage: string;
   context?: string;
+  dealershipId?: number;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const systemPrompt = buildWhatsAppSystemPrompt(input.language, input.context);
 
@@ -218,6 +219,7 @@ export async function generateWhatsAppReply(input: {
       { role: "system", content: systemPrompt },
       { role: "user", content: input.customerMessage },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft1 = first.choices?.[0]?.message?.content?.toString() ?? "";
   const check1 = scoreWhatsAppDraft(draft1, input.language);
@@ -235,6 +237,7 @@ export async function generateWhatsAppReply(input: {
         content: `Your draft has these problems: ${check1.issues.join("; ")}. Rewrite it as a short WhatsApp reply, fixing every problem.`,
       },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft2 = second.choices?.[0]?.message?.content?.toString() ?? draft1;
   const check2 = scoreWhatsAppDraft(draft2, input.language);
@@ -329,6 +332,7 @@ export async function generateAgentReply(input: {
   customerMessage: string;
   context?: string;
   memory?: MemoryEntry[];
+  dealershipId?: number;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const memoryBlock =
     input.memory && input.memory.length > 0
@@ -342,6 +346,7 @@ export async function generateAgentReply(input: {
       { role: "system", content: systemPrompt },
       { role: "user", content: input.customerMessage },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft1 = first.choices?.[0]?.message?.content?.toString() ?? "";
 
@@ -361,6 +366,7 @@ export async function generateAgentReply(input: {
         content: `Your draft has these problems: ${check1.issues.join("; ")}. Rewrite the reply, fixing every problem. Keep the same intent but obey every rule strictly.`,
       },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft2 = second.choices?.[0]?.message?.content?.toString() ?? draft1;
   const check2 = scoreDraft(draft2, input.language);

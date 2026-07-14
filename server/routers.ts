@@ -245,6 +245,7 @@ import {
   getDealershipByShortcode,
   setDealershipShortcode,
   updateDealershipBrand,
+  updateDealershipIntegrations,
   updateDealershipModules,
   getAdminOverview,
   createInvoice,
@@ -3884,6 +3885,48 @@ export const appRouter = router({
           patch.businessHoursJson = input.businessHoursJson ?? null;
         }
         await updateDealershipBrand(input.dealershipId, patch);
+        return { ok: true };
+      }),
+
+    /** Meta WhatsApp phone_number_id + optional LLM model override. */
+    getIntegrations: protectedProcedure
+      .input(z.object({ dealershipId: z.number().int() }))
+      .query(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) throw new TRPCError({ code: "FORBIDDEN" });
+        const d = await getDealershipById(input.dealershipId);
+        if (!d) throw new TRPCError({ code: "NOT_FOUND" });
+        const { resolveOpenAIModelForDealership } = await import("../shared/llmModelTiers");
+        return {
+          dealershipId: d.id,
+          dealershipName: d.name,
+          plan: d.plan,
+          whatsappPhoneNumberId: d.whatsappPhoneNumberId ?? null,
+          llmModel: d.llmModel ?? null,
+          resolvedLlmModel: resolveOpenAIModelForDealership({
+            plan: d.plan,
+            llmModel: d.llmModel,
+          }),
+        };
+      }),
+
+    updateIntegrations: protectedProcedure
+      .input(
+        z.object({
+          dealershipId: z.number().int(),
+          whatsappPhoneNumberId: z.string().max(64).nullable().optional(),
+          llmModel: z.string().max(64).nullable().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) throw new TRPCError({ code: "FORBIDDEN" });
+        const patch: Parameters<typeof updateDealershipIntegrations>[1] = {};
+        if (Object.prototype.hasOwnProperty.call(input, "whatsappPhoneNumberId")) {
+          patch.whatsappPhoneNumberId = input.whatsappPhoneNumberId ?? null;
+        }
+        if (Object.prototype.hasOwnProperty.call(input, "llmModel")) {
+          patch.llmModel = input.llmModel ?? null;
+        }
+        await updateDealershipIntegrations(input.dealershipId, patch);
         return { ok: true };
       }),
 

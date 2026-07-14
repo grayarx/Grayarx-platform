@@ -22,6 +22,7 @@ export async function generateNalaGeneralWhatsAppReply(input: {
   dealershipName: string;
   templateReply: string;
   inventoryHints?: Array<{ title: string; price?: number | string | null }>;
+  dealershipId?: number;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const langMeta = LANGUAGES[input.language];
   const stockLines = (input.inventoryHints ?? [])
@@ -55,6 +56,7 @@ export async function generateNalaGeneralWhatsAppReply(input: {
       { role: "system", content: systemPrompt },
       { role: "user", content: input.customerMessage },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft1 = first.choices?.[0]?.message?.content?.toString() ?? input.templateReply;
   const check1 = scoreWhatsAppDraft(draft1, input.language);
@@ -72,6 +74,7 @@ export async function generateNalaGeneralWhatsAppReply(input: {
         content: `Rewrite in flawless ${langMeta.englishName}. Fix: ${check1.issues.join("; ")}. Keep all prices and links exact.`,
       },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft2 = second.choices?.[0]?.message?.content?.toString() ?? draft1;
   const check2 = scoreWhatsAppDraft(draft2, input.language);
@@ -90,6 +93,7 @@ export async function generateNalaShowroomReply(input: {
   dealershipName: string;
   templateReply?: string;
   intent?: string;
+  dealershipId?: number;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const facts = buildVehicleFactsBlock(input.vehicle);
   const langMeta = LANGUAGES[input.language];
@@ -122,6 +126,7 @@ export async function generateNalaShowroomReply(input: {
       { role: "system", content: systemPrompt },
       { role: "user", content: input.customerMessage },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft1 = first.choices?.[0]?.message?.content?.toString() ?? input.templateReply ?? "";
   const check1 = scoreWhatsAppDraft(draft1, input.language);
@@ -139,6 +144,7 @@ export async function generateNalaShowroomReply(input: {
         content: `Rewrite in flawless ${langMeta.englishName}. Fix: ${check1.issues.join("; ")}. Keep all prices and facts exactly as given.`,
       },
     ],
+    dealershipId: input.dealershipId,
   });
   const draft2 = second.choices?.[0]?.message?.content?.toString() ?? draft1;
   const check2 = scoreWhatsAppDraft(draft2, input.language);

@@ -97,6 +97,27 @@ export default function AdminInvoices() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  const { data: stripeAvailable } = trpc.billing.stripeAvailable.useQuery();
+  const stripeCheckout = trpc.billing.createStripeCheckout.useMutation({
+    onSuccess: (res) => {
+      if (res.url) {
+        window.location.href = res.url;
+      } else {
+        toast.error("No Checkout URL returned");
+      }
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const generateSubInvoice = trpc.billing.generateInvoice.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Subscription invoice ${res.invoiceNumber} created`);
+      utils.thandi.listInvoices.invalidate();
+      utils.billing.listInvoices.invalidate();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const totalOutstanding = useMemo(() => {
     if (!invoicesQuery.data) return 0;
     return invoicesQuery.data
@@ -231,6 +252,25 @@ export default function AdminInvoices() {
             ))}
           </SelectContent>
         </Select>
+        {effectiveDealershipId && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={generateSubInvoice.isPending}
+            onClick={() =>
+              generateSubInvoice.mutate({ dealershipId: effectiveDealershipId })
+            }
+          >
+            {generateSubInvoice.isPending ? "Creating…" : "Post-pilot sub invoice (ZAR)"}
+          </Button>
+        )}
+        {stripeAvailable?.available ? (
+          <span className="text-xs text-emerald-500">Stripe Checkout enabled</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            Bank/EFT only (set STRIPE_SECRET_KEY for card Checkout)
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
@@ -307,27 +347,59 @@ export default function AdminInvoices() {
                       {new Date(inv.dueDate).toLocaleDateString("en-ZA")}
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={inv.status}
-                        onValueChange={(v) =>
-                          updateStatus.mutate({
-                            invoiceId: inv.id,
-                            status: v as any,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-[110px]">
-                          <Badge className={STATUS_TONE[inv.status] ?? ""}>
-                            {inv.status}
-                          </Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">draft</SelectItem>
-                          <SelectItem value="sent">sent</SelectItem>
-                          <SelectItem value="paid">paid</SelectItem>
-                          <SelectItem value="overdue">overdue</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-col gap-1">
+                        <Select
+                          value={inv.status}
+                          onValueChange={(v) =>
+                            updateStatus.mutate({
+                              invoiceId: inv.id,
+                              status: v as any,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-[110px]">
+                            <Badge className={STATUS_TONE[inv.status] ?? ""}>
+                              {inv.status}
+                            </Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">draft</SelectItem>
+                            <SelectItem value="sent">sent</SelectItem>
+                            <SelectItem value="paid">paid</SelectItem>
+                            <SelectItem value="overdue">overdue</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {inv.status !== "paid" && (
+                          <div className="flex flex-wrap gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[10px] px-2"
+                              onClick={() =>
+                                updateStatus.mutate({
+                                  invoiceId: inv.id,
+                                  status: "paid",
+                                })
+                              }
+                            >
+                              Mark paid (EFT)
+                            </Button>
+                            {stripeAvailable?.available && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] px-2"
+                                disabled={stripeCheckout.isPending}
+                                onClick={() =>
+                                  stripeCheckout.mutate({ invoiceId: inv.id })
+                                }
+                              >
+                                Stripe pay
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
