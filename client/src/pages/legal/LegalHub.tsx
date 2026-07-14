@@ -68,7 +68,7 @@ export default function LegalHub() {
                 <li><strong className="text-foreground/70">Secrets:</strong> All API keys stored as Railway environment variables, never in code.</li>
                 <li><strong className="text-foreground/70">POPIA:</strong> GrayArx acts as Operator; the dealership is the Responsible Party. Full POPIA compliance per Act 4 of 2013.</li>
                 <li><strong className="text-foreground/70">Data ownership:</strong> Dealers own 100% of their data. Export available within 30 days of cancellation.</li>
-                <li><strong className="text-foreground/70">AI &amp; WhatsApp:</strong> Messages processed via Meta's Cloud API. AI responses via OpenAI GPT / Google Gemini. Customers are informed they may be interacting with an AI.</li>
+                <li><strong className="text-foreground/70">AI &amp; WhatsApp:</strong> Messages processed via Meta's Cloud API. AI responses via OpenAI (template fallback when unavailable). Customers are informed they may be interacting with an AI.</li>
               </ul>
             </div>
           </div>

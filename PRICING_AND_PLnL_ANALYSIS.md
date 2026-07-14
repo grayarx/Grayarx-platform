@@ -1,5 +1,8 @@
 # GrayArx Pricing & Profit/Loss Analysis
 
+> **Superseded for pilot (July 2026):** Use [`docs/PRICING_WITH_COST_MODEL_2026.md`](docs/PRICING_WITH_COST_MODEL_2026.md).
+> Numbers below assumed Manus Forge LLM, older tier prices, and a contractor-heavy opex model.
+
 ## Executive Summary
 
 **Pricing Model:** Hybrid Monthly Subscription  

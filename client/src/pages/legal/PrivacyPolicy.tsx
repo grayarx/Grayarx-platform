@@ -93,7 +93,7 @@ export default function PrivacyPolicy() {
       </p>
       <ul>
         <li><strong>WhatsApp processing:</strong> WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. Message content passes through Meta's infrastructure before reaching GrayArx.</li>
-        <li><strong>AI-generated responses:</strong> AI replies are generated using industry-standard large language models — OpenAI GPT and/or Google Gemini (via Manus Forge). Prompts and responses are not used to train foundation models.</li>
+        <li><strong>AI-generated responses:</strong> AI replies are generated using industry-standard large language models (primarily OpenAI). When the model is unavailable, template replies are used. Prompts and responses are not used to train foundation models.</li>
         <li><strong>Conversation logs:</strong> All conversation logs are stored encrypted and are accessible only to the relevant dealership. No other dealership can view your customers' conversations.</li>
         <li><strong>AI disclosure to customers:</strong> Customers are always informed — via an opening message or disclosure — that they may be interacting with an AI assistant. Dealerships are responsible for ensuring this disclosure is clear and maintained.</li>
       </ul>

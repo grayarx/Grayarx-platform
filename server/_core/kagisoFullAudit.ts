@@ -421,14 +421,85 @@ function walkUiHealth(_snap: KagisoSnapshot): Finding[] {
   ];
 }
 
-function walkCommercial(_snap: KagisoSnapshot): Finding[] {
-  return [
+/**
+ * Infra upgrade milestones from docs/PRICING_WITH_COST_MODEL_2026.md §5 / §8.5.
+ * Kagiso surfaces these on the roadmap when dealer count crosses each trigger.
+ */
+const INFRA_UPGRADE_MILESTONES: Array<{
+  id: string;
+  minDealers: number;
+  title: string;
+  description: string;
+  rationale: string;
+  priority: Finding["priority"];
+  severity: Severity;
+}> = [
+  {
+    id: "resend_pro",
+    minDealers: 15,
+    title: "Upgrade Resend Free → Pro (email volume)",
+    description:
+      "Platform is at ~15+ dealerships. Resend free is 3,000 emails/mo — moderate transactional mail hits ~80% (~2,400) around 15–20 dealers. Upgrade to Pro (~$20/mo ≈ R360) before lead/booking mail hard-fails.",
+    rationale:
+      "Founder action in Resend dashboard. Kagiso cannot change billing; this is a scheduled upgrade reminder.",
+    priority: "high",
+    severity: "high",
+  },
+  {
+    id: "tidb_spend",
+    minDealers: 20,
+    title: "TiDB: leave free / confirm spending limit",
+    description:
+      "Approaching ~20 dealerships. Confirm TiDB Cloud free RU/storage headroom; if leaving free or adding a card, set a monthly spending limit immediately (pilot cap ~USD $30–50 ≈ R550–R900).",
+    rationale:
+      "Spend limits are set in TiDB Cloud (console or ticloud CLI) — not via GrayArx API. Founder must act before RU throttling or surprise bills.",
+    priority: "high",
+    severity: "high",
+  },
+  {
+    id: "railway_scale",
+    minDealers: 20,
+    title: "Railway: bump RAM / replicas for traffic",
+    description:
+      "~20–25 dealerships is when traffic spikes justify a Railway plan bump (+R500–1,500/mo typical).",
+    rationale:
+      "Founder scales hosting in Railway dashboard when latency or OOM appears — Kagiso only flags the milestone.",
+    priority: "medium",
+    severity: "medium",
+  },
+  {
+    id: "openai_budget",
+    minDealers: 20,
+    title: "OpenAI: raise budget / auto top-up floor",
+    description:
+      "~20 active dealerships (especially WhatsApp Growth) — revisit OpenAI monthly budget and keep auto top-up on so polish does not die on insufficient_quota.",
+    rationale:
+      "Billing is OpenAI dashboard only. Templates still work without quota; quality drops.",
+    priority: "high",
+    severity: "medium",
+  },
+  {
+    id: "infra_scale_60",
+    minDealers: 60,
+    title: "Larger infra: TiDB / Railway / OpenAI reserved budget",
+    description:
+      "~60 dealerships — plan TiDB dedicated or higher RU, Railway pro, OpenAI reserved budget, and CDN. Infra step-up roughly +R5k–15k/mo.",
+    rationale:
+      "Strategic founder decision from PRICING_WITH_COST_MODEL_2026 §5. Not autonomous.",
+    priority: "high",
+    severity: "high",
+  },
+];
+
+function walkCommercial(snap: KagisoSnapshot): Finding[] {
+  const dealers = snap.dealerships ?? 0;
+  const findings: Finding[] = [
     {
-      title: "Confirm pricing tier copy on /pricing matches commercial reality",
+      title: "Confirm pricing copy matches Showroom / Growth / Multi-site",
       description:
-        "Founder restructure superseded earlier pricing. Confirm Starter/Professional/Enterprise tier prices, ZAR figures, and Founding-50 lock-in terms are current on the public Pricing page.",
+        "Public /pricing is hidden during pilot (PILOT_PRICING_HIDDEN). When unhiding, confirm Showroom R3,999 / Growth R7,999 / Multi-site R11,999 and usage caps match shared/subscriptionTiers.ts.",
       rationale:
-        "Pricing is a founder-only call. Agent shouldn't change numbers without sign-off, but can prepare the diff.",
+        "Pricing is a founder-only call. Agent shouldn't change numbers without sign-off.",
       category: "billing",
       priority: "medium",
       severity: "medium",
@@ -438,10 +509,36 @@ function walkCommercial(_snap: KagisoSnapshot): Finding[] {
       agentAutonomous: false,
       humanRequired: true,
       auditSection: "commercial",
-      hash: stableHash(["commercial", "pricing_review_v1"]),
-      evidenceJson: { lastChecked: null },
+      hash: stableHash(["commercial", "pricing_review_v2"]),
+      evidenceJson: { dealerships: dealers, source: "docs/PRICING_WITH_COST_MODEL_2026.md" },
     },
   ];
+
+  for (const m of INFRA_UPGRADE_MILESTONES) {
+    if (dealers < m.minDealers) continue;
+    findings.push({
+      title: m.title,
+      description: m.description,
+      rationale: m.rationale,
+      category: "billing",
+      priority: m.priority,
+      severity: m.severity,
+      creditCostEstimate: 0,
+      roiEstimateZar: null,
+      llmTokensEstimate: 0,
+      agentAutonomous: false,
+      humanRequired: true,
+      auditSection: "commercial",
+      hash: stableHash(["commercial", "infra_upgrade", m.id, m.minDealers]),
+      evidenceJson: {
+        dealerships: dealers,
+        triggerAt: m.minDealers,
+        doc: "docs/PRICING_WITH_COST_MODEL_2026.md §5 / §8.5",
+      },
+    });
+  }
+
+  return findings;
 }
 
 function walkAgentErrors(snap: KagisoSnapshot): Finding[] {

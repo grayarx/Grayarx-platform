@@ -223,12 +223,19 @@ Fair-use policy in contract. Caps enforced in `shared/subscriptionTiers.ts` + `s
 
 ## 8. Cost control checklist — answers (do this now)
 
-### 8.1 gpt-4o-mini for all tiers?
+### 8.1 Model tiers — gpt-4o-mini, not GPT-5 / not GPT-4o for everyone
 
-**Recommend: No — not GPT-4o for everyone.**  
-- **Showroom + Growth:** default `gpt-4o-mini` (already wired in `shared/llmModelTiers.ts`).  
-- **Multi-site:** may use a stronger model (`gpt-4o` via `OPENAI_MODEL_PREMIUM` or dealership `llmModel`).  
-Full GPT-4o on every Nala turn is ~10× cost and unnecessary for stock Q&A.
+**User ask (“8.1 and not 5?”):** Do we need GPT-5 / expensive frontier models?
+
+**Answer: No for Nala stock Q&A.** Do **not** default everyone to GPT-5 (or even GPT-4o).
+
+| Tier | Default model | Why |
+| ---- | ------------- | --- |
+| **Showroom + Growth** | `gpt-4o-mini` | Stock Q&A + template polish; cost-safe |
+| **Multi-site** | `gpt-4o` (via `OPENAI_MODEL_PREMIUM` or dealership `llmModel`) | Stronger when needed |
+| **GPT-5 / frontier** | Opt-in override only | ~10–30× token cost vs mini; unnecessary for inventory facts |
+
+Wired in `shared/llmModelTiers.ts`. Cost/risk of GPT-5 platform-wide: one chatty yard can burn the OpenAI budget that should cover 20+ dealers on mini.
 
 ### 8.2 Template-first WhatsApp — ELI5
 
@@ -238,31 +245,55 @@ Full GPT-4o on every Nala turn is ~10× cost and unnecessary for stock Q&A.
 
 **Yes — implemented.** `TIER_USAGE_CAPS` + `usageCaps.ts` soft-block before OpenAI polish; overage logged for later billing.
 
-### 8.4 TiDB spend limit — how to set (dashboard)
+### 8.4 TiDB spend limit — free tier, dashboard, API, max R
 
-1. Log in to [TiDB Cloud](https://tidbcloud.pingcap.com/) with the GrayArx project.  
-2. Open your **cluster** → **Settings** (or **Billing / Cost control**, depending on UI version).  
-3. Find **Spending limit** / **Monthly budget** / **Cost alert**.  
-4. Set a monthly cap you’re comfortable with for pilot (e.g. **USD $30–50** ≈ R550–R900) so runaway RUs cannot surprise you.  
-5. Enable **email alerts** at 50% / 80% / 100% of the limit.  
-6. If you hit the cap, TiDB may throttle or stop billable overage depending on plan — treat that as a feature during pilot, then raise the limit when you have 20+ paying dealers.  
-7. Revisit after any big import/migration (bulk vehicle writes spike RUs).
+**Can GrayArx set this automatically via our app?** No — TiDB spending limits are **not** controlled through our Node API. They are set in **TiDB Cloud**:
 
-### 8.5 Resend free until 3k — monitoring
+| Method | How |
+| ------ | --- |
+| **Console (usual)** | [TiDB Cloud](https://tidbcloud.pingcap.com/) → open cluster → **Capacity used this month** → **Set Spending Limit** / **Edit** → enter monthly USD → **Update Spending Limit** (add card if prompted) |
+| **CLI** | `ticloud serverless spending-limit -c <cluster-id> --monthly <USD cents>` |
+| **API / Terraform** | TiDB Cloud API v1beta1 / `tidbcloud_serverless_cluster.spending_limit` — ops tooling, not our product |
 
-Stay on Resend free until platform-wide volume approaches **3,000 emails/month** (~15–20 dealers on moderate transactional mail).  
-- Watch Resend dashboard weekly during pilot.  
-- Alert threshold: **~2,400 (80%)** → upgrade to Pro before lead/booking mail fails.  
-- Included in the upgrade ladder (§5).
+**Still on free tier?** Free Starter instances get a **hard product quota** (typically ~5 GiB row storage + ~50M RUs/mo per free instance). Hitting the quota usually **throttles / denies new connections** — you do **not** get a surprise invoice while spend limit stays **$0** and you never add billable overage. A spending limit matters when you **leave free**, add a card, or raise quota above free.
+
+**Recommendation:**
+- **Pure free (pilot):** Stay at **R0** billed. Still open TiDB billing alerts if available; watch RU % in the console weekly.
+- **When leaving free / adding a card:** Set spend cap **immediately** — pilot max **USD $30–50 ≈ R550–R900** (at ~R18.50). Raise only after ~20 paying dealers.
+- Email alerts at **50% / 80% / 100%** of the limit.
+- Revisit after bulk imports (vehicle writes spike RUs).
+
+### 8.5 Upgrade ladder reminders — Kagiso ownership
+
+**Owner: Kagiso** surfaces upgrade milestones on `/admin/kagiso-roadmap` during the commercial audit when dealership count crosses triggers (see §5). Founder must still click the vendor dashboards — Kagiso cannot change Resend/TiDB/Railway/OpenAI billing.
+
+| Trigger | Reminder Kagiso raises |
+| ------- | ---------------------- |
+| **~15–20 dealers** or **~2,400 emails** (80% of 3k) | Resend Free → Pro |
+| **~20 dealers** / RU pressure / leaving free | TiDB spend limit + paid path |
+| **~20–25 dealers** / traffic | Railway RAM/replicas |
+| **~20 dealers** WhatsApp-active | OpenAI budget / auto top-up floor |
+| **~60 dealers** | Larger infra (TiDB dedicated, Railway pro, reserved OpenAI, CDN) |
+
+Until dealer count is high enough, founder checklist: Resend dashboard weekly; TiDB RU % weekly; OpenAI usage monthly.
 
 ### 8.6 Skip SMS on Starter
 
 **Agreed and documented.** Showroom (`smsEnabled: false`) — Twilio is R30–80/dealer fast. SMS only Growth+.
 
-### 8.7 Photo mirroring optional — why it’s good
+### 8.7 Photo mirroring — “R3 not much, massive upgrade?”
 
-Import can keep **external image URLs** instead of downloading every photo into S3.  
-**Why good:** mirrored photos cost storage + egress every month; optional mirroring means light dealers cost you almost nothing in storage while listings still show images from the source. Turn mirroring on only when you need durable CDN control or the source URLs are unreliable.
+**~R3/dealer/mo** (≈ light mirrored storage) is small for moderate yards. That is **not** a massive product upgrade — optional mirroring is **cost-control hygiene** (keep external URLs; mirror when you need durable CDN or unreliable source hosts).
+
+**When it gets “massive”:** hundreds of cars × many photos × many dealers → storage + egress scales hard.
+
+| Scale | Rough storage cost |
+| ----- | ------------------ |
+| 60 dealers × ~R3 | **~R180/mo** — still fine |
+| Heavy yard: 500 cars × 8 photos mirrored | **R400–800/mo alone** for that dealer |
+| Platform-wide forced mirroring | Cost control choice, **not** a feature leap |
+
+Keep import mirroring **optional** by default.
 
 ### 8.8 OpenAI auto top-up
 
@@ -286,13 +317,57 @@ Import can keep **external image URLs** instead of downloading every photo into 
 
 ---
 
-## 10. Align product UI
+## 10. Align product UI (source of truth)
 
-- `shared/subscriptionTiers.ts` — single source of truth (Showroom / Growth / Multi-site; `TIER_USAGE_CAPS` for enforcement)
-- `server/_core/usageCaps.ts` — soft-block AI sessions + WhatsApp before heavy paths
-- `UpgradeModal.tsx` — dark theme, pilot messaging, caps in comparison table, no public prices while `PILOT_PRICING_HIDDEN`
-- Public `/pricing` route redirects home — no price anchoring during pilot
-- Chat LLM: **OpenAI only → templates** (no Forge chat fallback)
+| Area | Status |
+| ---- | ------ |
+| `shared/subscriptionTiers.ts` | Showroom / Growth / Multi-site; `TIER_LIMITS` + `TIER_USAGE_CAPS` |
+| `shared/llmModelTiers.ts` | Showroom+Growth → `gpt-4o-mini`; Multi-site → `gpt-4o` (not GPT-5 default) |
+| `server/_core/usageCaps.ts` | Soft-block AI + WhatsApp |
+| `UpgradeModal.tsx` | Caps from `TIER_LIMITS`; pilot prices hidden |
+| Public `/pricing` | Redirects home during pilot |
+| Chat LLM | **OpenAI only → templates** (no Forge chat fallback) |
+| Kagiso commercial audit | Infra upgrade milestones (§8.5) on roadmap |
+| Older P&L docs | `OPERATIONAL_COST_ANALYSIS.md` + `PRICING_AND_PLnL_ANALYSIS.md` superseded |
+
+---
+
+## 11. How many dealerships to make a “mil”?
+
+SA founders often mean **R1M/year**; investors sometimes mean **R1M/month**. Both below. FX/tax ignored; use contribution margins from §4 and OPEX from §2–§3 / scenarios §7.
+
+**Assumptions:** blended ARPU **~R6,500**; Growth list **R7,999**; blended CM **~R5,500**; Growth CM **~R7,487**; variable+Stripe ≈ **~15% of MRR** at scale; solo founder salary **R25k or R40k**.
+
+### A) R1,000,000 **MRR** (top-line subscription)
+
+| Mix | Dealers for R1M MRR |
+| --- | ------------------- |
+| Blended ARPU ~R6,500 | **~154 dealers** |
+| All Growth @ R7,999 | **~125 dealers** |
+| All Showroom @ R3,999 | **~250 dealers** |
+| All Multi-site @ R11,999 | **~83 dealers** |
+
+### B) R1,000,000 **per month net** (after variable + Stripe + OPEX + founder salary)
+
+Rough scale from §7 scenario 3 (~60 dealers → ~R246k/mo net after R40k salary ≈ **~63% net / MRR**):
+
+| Target | Approx MRR needed | Dealers @ R6,500 ARPU | Dealers @ R7,999 Growth |
+| ------ | ----------------- | --------------------- | ----------------------- |
+| **R1M/mo net** (salary R40k) | ~R1.55–1.65M | **~240–250** | **~195–205** |
+| **R1M/mo net** (salary R25k) | ~R1.50–1.60M | **~230–245** | **~190–200** |
+
+This is a stretch goal — requires scaled infra ladder (§5) and is not pilot maths.
+
+### C) R1,000,000 **per year net** (≈ R83k/mo net) — usual SA “make a mil”
+
+| Burn / mix | Dealers (approx) |
+| ---------- | ---------------- |
+| §7 Scenario 2 — 25 dealers, salary R40k | **~R94k/mo net ≈ R1.1M/year** |
+| Platform + R40k salary, mostly Growth CM | **~18–22 Growth** |
+| Blended ARPU / CM ~R5,500, salary R40k + scaled light OPEX | **~22–28** |
+| Platform + R25k salary, mostly Growth | **~15–18 Growth** |
+
+**Rule of thumb:** **~20–25 paying dealers** (Growth-heavy) gets you near **R1M/year net** as a solo founder; **R1M/month net** needs **~200+ dealers**; **R1M MRR** needs **~125 Growth or ~154 blended**.
 
 ---
 

@@ -63,7 +63,7 @@ GrayArx commits to the following security measures on behalf of dealerships:
 - No dealer inventory, lead, or customer data is used to train third-party AI
   models or shared with competitors.
 - WhatsApp messages processed via Meta's Cloud API under Meta's DPA.
-- AI responses generated via OpenAI GPT / Google Gemini (Manus Forge).
+- AI responses generated via OpenAI (template fallback when unavailable).
 - Conversation logs stored encrypted, accessible only to the relevant dealership.
 
 ─────────────────────────────────────────────────────────────────────────────

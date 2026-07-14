@@ -18,6 +18,8 @@ const emptySnap: KagisoSnapshot = {
   preApprovalsPending: 0,
   fallbackUnresolved: 0,
   brandKitIncomplete: 0,
+  agentActivityCount: 0,
+  circuitBreakerState: {},
 };
 
 const busySnap: KagisoSnapshot = {
@@ -31,13 +33,20 @@ const busySnap: KagisoSnapshot = {
   preApprovalsPending: 5,
   fallbackUnresolved: 7,
   brandKitIncomplete: 2,
+  agentActivityCount: 100,
+  circuitBreakerState: {},
+};
+
+const scaleSnap: KagisoSnapshot = {
+  ...busySnap,
+  dealerships: 22,
 };
 
 describe("Kagiso full audit", () => {
-  it("walks all 10 audit sections in order", () => {
+  it("walks all audit sections in order", () => {
     const result = runKagisoFullAudit(emptySnap);
     expect(result.sectionsWalked).toEqual(AUDIT_SECTIONS);
-    expect(result.sectionsWalked).toHaveLength(10);
+    expect(result.sectionsWalked.length).toBeGreaterThanOrEqual(10);
   });
 
   it("flags 'no dealerships' as high severity on an empty platform", () => {
@@ -117,6 +126,18 @@ describe("Kagiso full audit", () => {
       // Pricing/billing decisions must always be human-confirmed
       expect(f.humanRequired).toBe(true);
     }
+  });
+
+  it("surfaces infra upgrade milestones when dealer count crosses triggers", () => {
+    const result = runKagisoFullAudit(scaleSnap);
+    const titles = result.findings
+      .filter((f) => f.auditSection === "commercial")
+      .map((f) => f.title);
+    expect(titles.some((t) => /Resend/i.test(t))).toBe(true);
+    expect(titles.some((t) => /TiDB/i.test(t))).toBe(true);
+    expect(titles.some((t) => /Railway/i.test(t))).toBe(true);
+    expect(titles.some((t) => /OpenAI/i.test(t))).toBe(true);
+    expect(titles.some((t) => /60/i.test(t))).toBe(false);
   });
 
   it("language coverage section records the v23 11/11 milestone as info-level", () => {
