@@ -331,9 +331,9 @@ export function registerWebhookRoutes(app: Express): void {
           webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET
             ? "configured"
             : process.env.NODE_ENV === "production"
-              ? "required_missing"
+              ? "missing — set RESEND_INBOUND_WEBHOOK_SECRET"
               : "optional_dev",
-          note: "Receives privacy@ / legal@ via Resend inbound — alerts founder Gmail",
+          note: "Receives privacy@ / legal@ via Resend inbound — alerts founder Gmail. Signing secret comes from Resend → Webhooks → your endpoint.",
         },
       },
     });
