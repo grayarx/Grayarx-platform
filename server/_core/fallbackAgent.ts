@@ -112,9 +112,11 @@ export function isAfterHoursSAST(
   const hourFloat = sast.getUTCHours() + sast.getUTCMinutes() / 60;
   const key = WEEKDAY_BY_INDEX[day];
 
-  const schedule =
+  // Merge per-dealership override onto defaults so a partial JSON
+  // (e.g. only mon–fri set) does not treat missing days as "closed forever".
+  const schedule: BusinessHoursOverride =
     override && typeof override === "object"
-      ? (override as BusinessHoursOverride)
+      ? { ...DEFAULT_BUSINESS_HOURS, ...(override as BusinessHoursOverride) }
       : DEFAULT_BUSINESS_HOURS;
 
   const today = schedule[key];

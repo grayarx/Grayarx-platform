@@ -7,7 +7,11 @@ export function registerSecurityHeaders(app: Express): void {
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (process.env.NODE_ENV === "production") {
       res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      // Allow dealer websites to iframe /embed/* drop-ins; keep SAMEORIGIN elsewhere.
+      const path = (req.path || "").toLowerCase();
+      if (!path.startsWith("/embed/") && path !== "/embed") {
+        res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      }
       res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
       res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
       res.setHeader(

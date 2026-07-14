@@ -5,7 +5,8 @@ import { isFounderEmail } from '@shared/founderAccess';
 import { isFounderOrAdmin as roleIsFounderOrAdmin } from '@shared/userRoles';
 
 const DISMISSED_KEY = 'popia_dismissed_until';
-const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Remind-me-later snooze — short so unsigned dealers see the modal again soon. */
+const DISMISS_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
 function isDismissed(): boolean {
   try {
@@ -14,7 +15,7 @@ function isDismissed(): boolean {
   } catch { return false; }
 }
 
-function setDismissedFor7Days() {
+function setDismissedForTtl() {
   try { localStorage.setItem(DISMISSED_KEY, String(Date.now() + DISMISS_TTL_MS)); } catch { /* ignore */ }
 }
 
@@ -87,7 +88,7 @@ export function usePopiaConsent() {
 
       if (status === 'not_signed') {
         setIsUnsigned(true);
-        // Only pop the modal if the dealer hasn't dismissed it in the last 7 days.
+        // Only pop the modal if the dealer hasn't dismissed it recently (3-day snooze).
         if (!isDismissed()) {
           setShowModal(true);
         }
@@ -97,9 +98,9 @@ export function usePopiaConsent() {
     }
   }, [checkStatusQuery.data, checkStatusQuery.error, isFounderOrAdmin]);
 
-  // Called when the user clicks "Remind me later" — hides modal for 7 days.
+  // Called when the user clicks "Remind me later" — hides modal for 3 days.
   const handleDismiss = () => {
-    setDismissedFor7Days();
+    setDismissedForTtl();
     setDismissed(true);
     setShowModal(false);
   };

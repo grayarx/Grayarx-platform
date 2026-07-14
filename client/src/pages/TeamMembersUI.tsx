@@ -32,7 +32,10 @@ interface TeamMember {
 
 export function TeamMembersUI() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [lastTempPassword, setLastTempPassword] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   const inviteTeamMember = trpc.teamMembers.inviteTeamMember.useMutation();
   const listTeamMembers = trpc.teamMembers.listTeamMembers.useQuery();
@@ -69,10 +72,19 @@ export function TeamMembersUI() {
 
       if (result.success) {
         const pwd =
-          "temporaryPassword" in result && result.temporaryPassword
-            ? ` Temporary password: ${result.temporaryPassword}`
-            : "";
-        toast.success(`User ready for ${data.email}.${pwd}`);
+          "temporaryPassword" in result ? result.temporaryPassword : null;
+        if (pwd) {
+          setLastTempPassword({ email: data.email, password: pwd });
+          try {
+            await navigator.clipboard.writeText(pwd);
+            toast.success(`User ready — temporary password copied for ${data.email}`);
+          } catch {
+            toast.success(`User ready for ${data.email} — copy password below`);
+          }
+        } else {
+          setLastTempPassword(null);
+          toast.success(result.message || `User linked for ${data.email}`);
+        }
         form.reset();
         await listTeamMembers.refetch();
       }
@@ -114,15 +126,27 @@ export function TeamMembersUI() {
     }
   };
 
-  const handleResendInvitation = async (memberId: string) => {
+  const handleResendInvitation = async (memberId: string, email: string) => {
     try {
       const result = await resendInvitation.mutateAsync({ memberId });
 
       if (result.success) {
-        toast.success("Invitation resent");
+        const pwd =
+          "temporaryPassword" in result ? result.temporaryPassword : null;
+        if (pwd) {
+          setLastTempPassword({ email, password: pwd });
+          try {
+            await navigator.clipboard.writeText(pwd);
+            toast.success(`New temporary password copied for ${email}`);
+          } catch {
+            toast.success(`Password reset — copy it below for ${email}`);
+          }
+        } else {
+          toast.success("Password reset");
+        }
       }
     } catch (error) {
-      toast.error("Failed to resend invitation");
+      toast.error("Failed to reset invitation password");
     }
   };
 
@@ -139,6 +163,45 @@ export function TeamMembersUI() {
 
   return (
     <div className="space-y-6">
+      {lastTempPassword && (
+        <Card className="bg-amber-950/40 border-amber-600/40 p-4">
+          <p className="text-amber-100 text-sm font-medium mb-1">
+            Temporary password for {lastTempPassword.email}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="text-lg text-white bg-black/40 px-3 py-1.5 rounded font-mono tracking-wide">
+              {lastTempPassword.password}
+            </code>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-amber-500/50 text-amber-100"
+              onClick={() => {
+                navigator.clipboard
+                  .writeText(lastTempPassword.password)
+                  .then(() => toast.success("Copied"))
+                  .catch(() => toast.error("Could not copy"));
+              }}
+            >
+              Copy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-slate-400"
+              onClick={() => setLastTempPassword(null)}
+            >
+              Dismiss
+            </Button>
+          </div>
+          <p className="text-amber-200/70 text-xs mt-2">
+            Share this securely — it is only shown here (email may also have it if Resend is configured).
+          </p>
+        </Card>
+      )}
+
       {/* Invite Form */}
       <Card className="bg-slate-800 border-slate-700 p-6">
         <h2 className="text-xl font-bold text-white mb-4">Invite Team Member</h2>
@@ -254,17 +317,17 @@ export function TeamMembersUI() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        {member.status === "pending" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleResendInvitation(member.id)}
-                            className="text-blue-400 hover:text-blue-300"
-                            title="Resend invitation"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            handleResendInvitation(member.id, member.email)
+                          }
+                          className="text-blue-400 hover:text-blue-300"
+                          title="Reset temporary password"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

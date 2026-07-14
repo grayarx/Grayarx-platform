@@ -1,8 +1,8 @@
 /** Persist trade-in estimate for cross-page upgrade journey */
 const KEY = "grayarx_trade_in_session";
 
-/** Drop stale estimates so upgrade CTAs don't use week-old numbers. */
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Drop stale estimates so upgrade CTAs don't use multi-day-old numbers. */
+const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type TradeInSession = {
   quoteId: number;

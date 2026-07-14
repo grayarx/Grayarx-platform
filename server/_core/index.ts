@@ -12,6 +12,7 @@ import { attachAutonomousAuditMiddleware } from "./autonomousAudit";
 import { attachMarketGuideRefreshMiddleware } from "./marketGuideScheduler";
 import { registerSitemapRoutes } from "./sitemap";
 import { registerWebhookRoutes } from "./webhookRoutes";
+import { registerEmbedRoutes } from "./embedRoutes";
 import { registerSecurityHeaders, registerCanonicalRedirect } from "./securityHeaders";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -90,6 +91,8 @@ async function startServer() {
   });
   // Webhook routes for WhatsApp and other integrations
   registerWebhookRoutes(app);
+  // Dealer website drop-in: /embed/:shortcode (+ .js bootstrap)
+  registerEmbedRoutes(app);
   // Health check endpoint
   app.use("/api", healthRouter);
   // tRPC API — must be registered BEFORE apiRouter because apiRouter's
@@ -166,6 +169,19 @@ async function startServer() {
       await healDemoInventoryMetadata();
     } catch (e) {
       console.warn("[Startup] demo inventory heal skipped:", (e as Error).message);
+    }
+  })();
+
+  // ── Heal missing publicShortcode on any dealership (book/apply/embed URLs) ──
+  (async () => {
+    try {
+      const { ensureAllDealershipShortcodes } = await import("../db");
+      const healed = await ensureAllDealershipShortcodes();
+      if (healed > 0) {
+        console.log(`[Startup] Assigned publicShortcode to ${healed} dealership(s)`);
+      }
+    } catch (e) {
+      console.warn("[Startup] shortcode heal skipped:", (e as Error).message);
     }
   })();
 

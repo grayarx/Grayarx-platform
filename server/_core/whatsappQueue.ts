@@ -10,6 +10,7 @@ import {
   getWhatsappConversation,
 } from "../db";
 import { sendWhatsAppMessage } from "./whatsappService";
+import { notifyOwner } from "./notification";
 
 interface QueueProcessResult {
   processed: number;
@@ -17,6 +18,38 @@ interface QueueProcessResult {
   failed: number;
   deadLettered: number;
   errors: string[];
+}
+
+function maskPhone(phone: string | null | undefined): string {
+  const p = (phone ?? "").replace(/\D/g, "");
+  if (p.length < 4) return "****";
+  return `…${p.slice(-4)}`;
+}
+
+/** Page the founder when a WhatsApp outbound message exhausts retries. */
+async function alertDeadLetter(opts: {
+  queueId: number;
+  conversationId: number;
+  phone?: string | null;
+  dealershipId?: number | null;
+  reason: string;
+}): Promise<void> {
+  try {
+    await notifyOwner({
+      title: "WhatsApp dead-letter — outbound failed",
+      content:
+        `Queue #${opts.queueId} moved to dead_letter after max retries.\n` +
+        `Dealership: ${opts.dealershipId ?? "unknown"} · Conversation: ${opts.conversationId}\n` +
+        `To: ${maskPhone(opts.phone)}\n` +
+        `Reason: ${opts.reason.slice(0, 400)}`,
+      actionUrl: "/admin/fallback",
+    });
+  } catch (err) {
+    console.warn(
+      "[WhatsAppQueue] dead-letter notifyOwner failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 /**
@@ -92,15 +125,19 @@ export async function processWhatsAppQueue(): Promise<QueueProcessResult> {
             );
           } else {
             // Max retries exceeded, move to dead-letter queue
-            await updateWhatsappQueueStatus(
-              queueItem.id,
-              "dead_letter",
-              `Failed after ${queueItem.maxRetries} retries: ${sendResult.error}`
-            );
+            const reason = `Failed after ${queueItem.maxRetries} retries: ${sendResult.error}`;
+            await updateWhatsappQueueStatus(queueItem.id, "dead_letter", reason);
             result.deadLettered++;
             console.error(
               `[WhatsAppQueue] Message ${queueItem.id} moved to dead-letter queue: ${sendResult.error}`
             );
+            await alertDeadLetter({
+              queueId: queueItem.id,
+              conversationId: queueItem.conversationId,
+              phone: queueItem.phoneNumber,
+              dealershipId: conversation.dealershipId,
+              reason,
+            });
           }
         }
       } catch (error) {
@@ -113,12 +150,23 @@ export async function processWhatsAppQueue(): Promise<QueueProcessResult> {
           await incrementWhatsappQueueRetry(queueItem.id, nextRetryTime);
           result.failed++;
         } else {
-          await updateWhatsappQueueStatus(
-            queueItem.id,
-            "dead_letter",
-            `Error: ${errorMsg}`
-          );
+          const reason = `Error: ${errorMsg}`;
+          await updateWhatsappQueueStatus(queueItem.id, "dead_letter", reason);
           result.deadLettered++;
+          let dealershipId: number | null = null;
+          try {
+            const conv = await getWhatsappConversation(queueItem.conversationId);
+            dealershipId = conv?.dealershipId ?? null;
+          } catch {
+            /* ignore */
+          }
+          await alertDeadLetter({
+            queueId: queueItem.id,
+            conversationId: queueItem.conversationId,
+            phone: queueItem.phoneNumber,
+            dealershipId,
+            reason,
+          });
         }
 
         result.errors.push(`Message ${queueItem.id}: ${errorMsg}`);

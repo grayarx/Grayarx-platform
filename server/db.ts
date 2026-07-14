@@ -2022,6 +2022,22 @@ export async function ensureDealershipShortcode(id: number): Promise<string | nu
   return shortcode;
 }
 
+/** Heal every dealership missing a publicShortcode (startup / ops). */
+export async function ensureAllDealershipShortcodes(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({ id: dealerships.id, publicShortcode: dealerships.publicShortcode })
+    .from(dealerships);
+  let healed = 0;
+  for (const row of rows) {
+    if (row.publicShortcode?.trim()) continue;
+    const code = await ensureDealershipShortcode(row.id);
+    if (code) healed++;
+  }
+  return healed;
+}
+
 export async function updateDealershipBrand(
   id: number,
   patch: {
