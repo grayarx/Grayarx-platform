@@ -88,6 +88,7 @@ import TradeInStatus from "./pages/TradeInStatus";
 import Compare from "./pages/Compare";
 import FinanceCalculator from "./pages/FinanceCalculator";
 import AdminInvoices from "./pages/admin/AdminInvoices";
+import InvoicePrint from "./pages/admin/InvoicePrint";
 import AdminBrandKit from "./pages/admin/AdminBrandKit";
 import AdminPreApprovals from "./pages/admin/AdminPreApprovals";
 import AdminEmailPreview from "./pages/AdminEmailPreview";
@@ -276,6 +277,9 @@ function Router() {
       </Route>
       <Route path="/admin/inventory-import">
         <AdminRouteGuard><AdminInventoryImport /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/invoices/:id/print">
+        <AdminRouteGuard><InvoicePrint /></AdminRouteGuard>
       </Route>
       <Route path="/admin/invoices">
         <AdminRouteGuard><AdminInvoices /></AdminRouteGuard>

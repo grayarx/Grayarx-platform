@@ -253,6 +253,8 @@ import {
   listInvoices,
   getInvoice,
   updateInvoiceStatus,
+  setInvoicePdfUrl,
+  getLeadById,
   createPayment,
   listPayments,
   createVatReconciliation,
@@ -4525,8 +4527,38 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
         const invoice = await getInvoice(input.invoiceId);
-        const payments = invoice ? await listPayments(invoice.id) : [];
-        return { invoice, payments };
+        if (!invoice) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+        }
+        const payments = await listPayments(invoice.id);
+        const dealership = await getDealershipById(invoice.dealershipId);
+        const lead =
+          invoice.leadId > 0 ? await getLeadById(invoice.leadId) : null;
+        const vehicle =
+          invoice.vehicleId > 0 ? await getVehicle(invoice.vehicleId) : null;
+
+        const { buildInvoiceDocumentView } = await import(
+          "../shared/invoiceDocument"
+        );
+        const document = buildInvoiceDocumentView({
+          invoice: {
+            invoiceNumber: invoice.invoiceNumber,
+            status: invoice.status,
+            invoiceDate: invoice.invoiceDate,
+            dueDate: invoice.dueDate,
+            leadId: Number(invoice.leadId) || 0,
+            vehicleId: Number(invoice.vehicleId) || 0,
+            subtotal: invoice.subtotal,
+            vatAmount: invoice.vatAmount,
+            totalAmount: invoice.totalAmount,
+          },
+          dealership,
+          lead,
+          vehicle,
+          payments,
+        });
+
+        return { invoice, payments, dealership, lead, vehicle, document };
       }),
 
     generateInvoice: protectedProcedure
@@ -4560,16 +4592,21 @@ export const appRouter = router({
           totalAmount,
         });
 
+        const pdfUrl = `/admin/invoices/${invoiceId}/print`;
+        if (invoiceId) {
+          await setInvoicePdfUrl(invoiceId, pdfUrl);
+        }
+
         await logAgentActivity({
           agentId: "accountant",
           action: "invoice_created",
           subjectType: "invoice",
           subjectId: invoiceId,
           summary: `Drafted invoice ${invoiceNumber} for R ${totalAmount.toFixed(2)} (incl VAT)`,
-          payload: { invoiceId, dealershipId: input.dealershipId, totalAmount },
+          payload: { invoiceId, dealershipId: input.dealershipId, totalAmount, pdfUrl },
         });
 
-        return { invoiceId, invoiceNumber, totalAmount, vatAmount, dueDate };
+        return { invoiceId, invoiceNumber, totalAmount, vatAmount, dueDate, pdfUrl };
       }),
 
     updateStatus: protectedProcedure

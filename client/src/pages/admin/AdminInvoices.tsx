@@ -37,8 +37,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Receipt, FileText, AlertCircle } from "lucide-react";
+import { Plus, Receipt, FileText, AlertCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "wouter";
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-slate-500/10 text-slate-300 border-slate-500/30",
@@ -135,7 +136,7 @@ export default function AdminInvoices() {
   return (
     <AdminShell
       title="Invoices · Thandi"
-      subtitle="Thandi drafts and reconciles invoices across every dealership. POPIA-aware: customer-facing PDFs mask ID and bank-account numbers to last 4 digits."
+      subtitle="Thandi drafts and reconciles invoices across every dealership. Open Download / Print for a GrayArx-branded PDF (POPIA: IDs, bank refs and VINs masked to last 4 digits)."
       actions={
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
@@ -313,12 +314,13 @@ export default function AdminInvoices() {
                   <TableHead>Total</TableHead>
                   <TableHead>Due</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">PDF</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoicesQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                       Loading invoices…
                     </TableCell>
                   </TableRow>
@@ -326,7 +328,7 @@ export default function AdminInvoices() {
                 {!invoicesQuery.isLoading &&
                   (!invoicesQuery.data || invoicesQuery.data.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
                         No invoices yet for this dealership. Draft the first one.
                       </TableCell>
                     </TableRow>
@@ -400,6 +402,19 @@ export default function AdminInvoices() {
                           </div>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                      >
+                        <Link href={`/admin/invoices/${inv.id}/print`}>
+                          <Printer className="h-3.5 w-3.5 mr-1.5" />
+                          Download / Print
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

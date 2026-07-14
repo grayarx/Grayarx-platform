@@ -192,6 +192,13 @@ export async function listLeads(limit = 100) {
   return db.select().from(leads).orderBy(desc(leads.createdAt)).limit(limit);
 }
 
+export async function getLeadById(id: number) {
+  const db = await getDb();
+  if (!db || !id) return null;
+  const [row] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+  return row ?? null;
+}
+
 export async function updateLeadStatus(
   id: number,
   status: "new" | "contacted" | "qualified" | "converted" | "lost",
@@ -1304,6 +1311,12 @@ export async function updateInvoiceStatus(invoiceId: number, status: string): Pr
   if (!db) return;
 
   await db.update(invoices).set({ status: status as any }).where(eq(invoices.id, invoiceId));
+}
+
+export async function setInvoicePdfUrl(invoiceId: number, pdfUrl: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(invoices).set({ pdfUrl }).where(eq(invoices.id, invoiceId));
 }
 
 export async function createPayment(data: {

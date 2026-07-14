@@ -202,11 +202,20 @@ export const billingRouter = router({
         vatAmount: vatAmount.toString() as any,
         totalAmount: totalAmount.toString() as any,
         status: "sent",
-        pdfUrl: null, // Will be generated later
+        pdfUrl: null,
       });
 
+      const invoiceId = Number((result as any)?.[0]?.insertId ?? result?.[0]?.insertId ?? 0);
+      const pdfUrl = invoiceId ? `/admin/invoices/${invoiceId}/print` : null;
+      if (invoiceId && pdfUrl) {
+        await db
+          .update(invoices)
+          .set({ pdfUrl })
+          .where(eq(invoices.id, invoiceId));
+      }
+
       return {
-        id: result[0],
+        id: invoiceId,
         invoiceNumber,
         dealershipName: dealership[0].name,
         subtotal,
@@ -214,6 +223,7 @@ export const billingRouter = router({
         totalAmount: subtotal,
         dueDate,
         status: "sent",
+        pdfUrl,
       };
     }),
 
