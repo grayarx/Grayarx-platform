@@ -54,7 +54,7 @@ const FAQS = [
   },
   {
     q: "How does the WhatsApp AI agent handle customer data?",
-    a: "WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. AI responses are generated using industry-standard LLMs (OpenAI GPT / Google Gemini via Manus Forge). Conversation logs are stored encrypted and accessible only to your dealership. Customers should always be informed — either at the start of the conversation or via a disclosure — that they may be interacting with an AI assistant.",
+    a: "WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. AI responses are generated using OpenAI (with template fallbacks if the API is unavailable). Conversation logs are stored encrypted and accessible only to your dealership. Customers should always be informed — either at the start of the conversation or via a disclosure — that they may be interacting with an AI assistant.",
   },
   {
     q: "Where are the legal documents and agreements?",

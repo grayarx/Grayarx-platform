@@ -5,15 +5,17 @@ export const ENV = {
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
-  // Prefer OpenAI when set — survives deleting Manus. Forge is optional legacy.
+  // Chat/LLM: OpenAI only. Forge keys are storage/notification legacy — not for chat.
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  /** @deprecated LLM — do not use for chat. Kept for photo storage / push if still configured. */
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+  /** @deprecated LLM — do not use for chat. Kept for photo storage / push if still configured. */
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  /** Resolved chat API key: OpenAI first, then Manus Forge. */
+  /** Chat API key — OpenAI only (templates if missing/failing). */
   get llmApiKey() {
-    return this.openaiApiKey || this.forgeApiKey;
+    return this.openaiApiKey;
   },
-  /** true when using OpenAI directly (not Manus Forge). */
+  /** true when OpenAI is configured for chat. */
   get usesOpenAI() {
     return Boolean(this.openaiApiKey);
   },

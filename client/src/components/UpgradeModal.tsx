@@ -40,20 +40,20 @@ export interface UpgradeModalProps {
 const TIER_HIGHLIGHTS: Record<SubscriptionTierId, string[]> = {
   starter: [
     "150 vehicles · 3 users",
-    "Web chat Nala (400/mo)",
-    "CSV import + R1 price fix",
-    "Leads + test-drive bookings",
+    "Web chat Nala — 400 AI sessions/mo",
+    "Click-to-chat WhatsApp (no Cloud API bot)",
+    "300 emails/mo · no SMS",
   ],
   professional: [
     "500 vehicles · 10 users",
-    "WhatsApp Nala Cloud API",
-    "8-angle photos + deal scores",
-    "Trade-in dealer network",
+    "1,200 AI sessions · 2,000 WhatsApp msgs/mo",
+    "WhatsApp Nala Cloud API + deal scores",
+    "1,500 emails/mo · SMS allowed",
   ],
   enterprise: [
     "Unlimited vehicles* · unlimited users",
-    "3,500 AI sessions · 8k WhatsApp",
-    "Dedicated onboarding",
+    "3,500 AI sessions · 8,000 WhatsApp msgs/mo",
+    "5,000 emails/mo · dedicated onboarding",
     "Phone + named contact",
   ],
 };
@@ -256,6 +256,30 @@ export function UpgradeModal({
                     {TIER_ORDER.map((tierId) => (
                       <td key={tierId} className="text-center py-2 px-2 text-xs text-muted-foreground">
                         {TIER_LIMITS[tierId].vehicles}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-primary/5">
+                    <td className="py-2 px-2 font-medium">AI sessions / mo</td>
+                    {TIER_ORDER.map((tierId) => (
+                      <td key={tierId} className="text-center py-2 px-2 text-xs text-muted-foreground">
+                        {TIER_LIMITS[tierId].aiSessions}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-primary/5">
+                    <td className="py-2 px-2 font-medium">WhatsApp</td>
+                    {TIER_ORDER.map((tierId) => (
+                      <td key={tierId} className="text-center py-2 px-2 text-xs text-muted-foreground">
+                        {TIER_LIMITS[tierId].whatsapp}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-primary/5">
+                    <td className="py-2 px-2 font-medium">Emails / mo</td>
+                    {TIER_ORDER.map((tierId) => (
+                      <td key={tierId} className="text-center py-2 px-2 text-xs text-muted-foreground">
+                        {TIER_LIMITS[tierId].emails}
                       </td>
                     ))}
                   </tr>

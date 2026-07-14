@@ -12,9 +12,10 @@ export type PlatformHealth = {
 };
 
 async function checkOpenAI(): Promise<ServiceHealth> {
+  // OpenAI-only for chat — no Manus Forge LLM fallback. Templates if this fails.
   const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
   if (!apiKey) {
-    return { ok: false, detail: "OPENAI_API_KEY not set — Nala uses templates only" };
+    return { ok: false, detail: "OPENAI_API_KEY not set — Nala uses templates only (no Forge LLM)" };
   }
   try {
     const res = await fetch("https://api.openai.com/v1/models", {

@@ -16,6 +16,7 @@ import { addWhatsAppAIDisclosure } from "./agentPrompts";
 import type { LanguageCode } from "../../shared/languages";
 import { detectsBookingIntent } from "../../shared/agentIntentRouting";
 import { isQuotaError } from "./agentResilience";
+import { checkAiSessionCap } from "./usageCaps";
 
 export function stripMarkdownForWhatsApp(text: string): string {
   return text
@@ -709,6 +710,15 @@ export async function resolveNalaReply(input: {
       ? addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(text), lang, agentName)
       : text;
 
+  // Soft-block OpenAI when monthly AI session cap is hit (templates still OK).
+  const aiCap = await checkAiSessionCap(input.dealershipId);
+  const skipLlm = aiCap.blocked;
+  if (skipLlm) {
+    console.warn(
+      `[nalaReplyOrchestrator] AI session cap hit dealership=${input.dealershipId} used=${aiCap.snapshot.aiSessionsUsed}/${aiCap.snapshot.caps.aiSessionsPerMonth}`,
+    );
+  }
+
   if (!input.vehicle?.title) {
     const templateFallback = buildNoVehicleWhatsAppReply(
       input.message,
@@ -720,30 +730,43 @@ export async function resolveNalaReply(input: {
       agentName,
     );
 
-    // LLM polish for WhatsApp + web (template fallback if OpenAI/Forge unavailable)
-    try {
-      const llm = await generateNalaGeneralWhatsAppReply({
-        language: lang,
-        customerMessage: input.message,
-        dealershipName: input.dealershipName,
-        templateReply: templateFallback,
-        inventoryHints: input.inventoryHints,
-        dealershipId: input.dealershipId,
-        agentDisplayName: agentName,
-      });
-      const reply = disclose((llm.reply.trim() || templateFallback).trim());
+    if (skipLlm && aiCap.message && input.channel === "web") {
       return {
-        reply,
+        reply: disclose(aiCap.message),
         language: lang,
-        intent: "general",
-        answered: Boolean(llm.reply.trim()),
-        source: llm.reply.trim() ? "llm" : "template",
+        intent: "usage_cap",
+        answered: false,
+        source: "template",
         isBookingIntent,
       };
-    } catch (e) {
-      console.warn("[nalaReplyOrchestrator] General LLM failed — using template", e instanceof Error ? e.message : String(e));
-      if (isQuotaError(e)) {
-        console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
+    }
+
+    // LLM polish for WhatsApp + web (template fallback if OpenAI unavailable)
+    if (!skipLlm) {
+      try {
+        const llm = await generateNalaGeneralWhatsAppReply({
+          language: lang,
+          customerMessage: input.message,
+          dealershipName: input.dealershipName,
+          templateReply: templateFallback,
+          inventoryHints: input.inventoryHints,
+          dealershipId: input.dealershipId,
+          agentDisplayName: agentName,
+        });
+        const reply = disclose((llm.reply.trim() || templateFallback).trim());
+        return {
+          reply,
+          language: lang,
+          intent: "general",
+          answered: Boolean(llm.reply.trim()),
+          source: llm.reply.trim() ? "llm" : "template",
+          isBookingIntent,
+        };
+      } catch (e) {
+        console.warn("[nalaReplyOrchestrator] General LLM failed — using template", e instanceof Error ? e.message : String(e));
+        if (isQuotaError(e)) {
+          console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
+        }
       }
     }
 
@@ -803,6 +826,9 @@ export async function resolveNalaReply(input: {
   };
 
   // Web + WhatsApp: try LLM polish when available; keep template fallback.
+  if (skipLlm) {
+    return finalizeTemplate();
+  }
   try {
     const llm = await generateNalaShowroomReply({
       language: lang,

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TIER_PRICES_ZAR,
   TIER_DISPLAY_NAMES,
+  TIER_USAGE_CAPS,
   tierAtLeast,
   contributionMargin,
   PILOT_PARTNER,
@@ -42,5 +43,17 @@ describe("subscriptionTiers", () => {
     for (const tier of ["starter", "professional", "enterprise"] as const) {
       expect(contributionMargin(tier, true)).toBeGreaterThan(3000);
     }
+  });
+
+  it("enforces Showroom without Cloud WhatsApp / SMS and numeric AI caps", () => {
+    expect(TIER_USAGE_CAPS.starter.cloudWhatsApp).toBe(false);
+    expect(TIER_USAGE_CAPS.starter.smsEnabled).toBe(false);
+    expect(TIER_USAGE_CAPS.starter.aiSessionsPerMonth).toBe(400);
+    expect(TIER_USAGE_CAPS.starter.whatsappMessagesPerMonth).toBe(0);
+    expect(TIER_USAGE_CAPS.professional.cloudWhatsApp).toBe(true);
+    expect(TIER_USAGE_CAPS.professional.aiSessionsPerMonth).toBe(1200);
+    expect(TIER_USAGE_CAPS.professional.whatsappMessagesPerMonth).toBe(2000);
+    expect(TIER_USAGE_CAPS.enterprise.aiSessionsPerMonth).toBe(3500);
+    expect(TIER_USAGE_CAPS.enterprise.whatsappMessagesPerMonth).toBe(8000);
   });
 });

@@ -54,6 +54,7 @@ export async function storagePut(
     return { key, url };
 
   } else if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+    // Legacy Forge storage fallback only (not used for LLM/chat). Prefer S3_* env when set.
     // 1. Get presigned PUT URL from Forge
     const forgeUrl = ENV.forgeApiUrl.replace(/\/+$/, "");
     const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");

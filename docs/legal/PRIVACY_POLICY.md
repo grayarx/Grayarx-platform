@@ -146,7 +146,7 @@ We share personal information with third-party service providers who assist us i
 | Twilio | SMS delivery | Phone numbers, message content |
 | Google Analytics | Analytics | Anonymized usage data |
 | SendGrid | Email delivery | Email addresses, message content |
-| Manus Forge API | AI/LLM services | Communications (for agent training) |
+| OpenAI | AI/LLM chat polish | Conversation content for replies (not used to train GrayArx models) |
 
 All service providers are bound by confidentiality agreements and process data only as instructed.
 

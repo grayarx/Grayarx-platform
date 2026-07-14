@@ -85,6 +85,51 @@ export const TIER_LIMITS: Record<
   },
 };
 
+/**
+ * Numeric caps enforced in server/_core/usageCaps.ts before OpenAI / WhatsApp.
+ * Display strings in TIER_LIMITS stay human-readable for UI.
+ */
+export type TierUsageCaps = {
+  vehicles: number | null; // null = unlimited
+  aiSessionsPerMonth: number;
+  /** 0 = no Cloud API WhatsApp bot (Showroom click-to-chat only) */
+  whatsappMessagesPerMonth: number;
+  emailsPerMonth: number;
+  users: number | null;
+  cloudWhatsApp: boolean;
+  smsEnabled: boolean;
+};
+
+export const TIER_USAGE_CAPS: Record<SubscriptionTierId, TierUsageCaps> = {
+  starter: {
+    vehicles: 150,
+    aiSessionsPerMonth: 400,
+    whatsappMessagesPerMonth: 0,
+    emailsPerMonth: 300,
+    users: 3,
+    cloudWhatsApp: false,
+    smsEnabled: false,
+  },
+  professional: {
+    vehicles: 500,
+    aiSessionsPerMonth: 1200,
+    whatsappMessagesPerMonth: 2000,
+    emailsPerMonth: 1500,
+    users: 10,
+    cloudWhatsApp: true,
+    smsEnabled: true,
+  },
+  enterprise: {
+    vehicles: null,
+    aiSessionsPerMonth: 3500,
+    whatsappMessagesPerMonth: 8000,
+    emailsPerMonth: 5000,
+    users: null,
+    cloudWhatsApp: true,
+    smsEnabled: true,
+  },
+};
+
 export const TIER_MARKETING_BLURBS: Record<SubscriptionTierId, string> = {
   starter: "Single-location independent — own your showroom and leads.",
   professional: "Full dealer OS — stock, AI, WhatsApp, and trade-ins.",

@@ -51,6 +51,20 @@ describe("LLM model tiers", () => {
     if (prev !== undefined) process.env.OPENAI_MODEL = prev;
   });
 
+  it("defaults Growth to gpt-4o-mini (not GPT-4o for all)", () => {
+    const prev = process.env.OPENAI_MODEL_GROWTH;
+    delete process.env.OPENAI_MODEL_GROWTH;
+    expect(resolveOpenAIModelForDealership({ plan: "professional" })).toBe("gpt-4o-mini");
+    if (prev !== undefined) process.env.OPENAI_MODEL_GROWTH = prev;
+  });
+
+  it("defaults Multi-site to gpt-4o", () => {
+    const prev = process.env.OPENAI_MODEL_PREMIUM;
+    delete process.env.OPENAI_MODEL_PREMIUM;
+    expect(resolveOpenAIModelForDealership({ plan: "enterprise" })).toBe("gpt-4o");
+    if (prev !== undefined) process.env.OPENAI_MODEL_PREMIUM = prev;
+  });
+
   it("honours llmModel override", () => {
     expect(
       resolveOpenAIModelForDealership({ plan: "starter", llmModel: "gpt-4o" }),

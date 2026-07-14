@@ -116,7 +116,7 @@ GrayArx engages the following sub-processors to process personal information:
 | Twilio | SMS delivery | US | Yes |
 | SendGrid | Email delivery | US | Yes |
 | Google Analytics | Analytics | US | Yes |
-| Manus Forge API | AI/LLM services | SA, US | Yes |
+| OpenAI | AI/LLM chat polish | US | Yes |
 
 ### 6.2 Sub-Processor Changes
 GrayArx may engage new sub-processors or replace existing ones. The Customer will be notified at least 30 days in advance. The Customer may object to new sub-processors by written notice within 15 days. If the Customer objects, GrayArx will either:

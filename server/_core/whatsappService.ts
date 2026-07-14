@@ -471,7 +471,7 @@ export async function handleIncomingWhatsAppMessage(
       formattedPhone,
     );
 
-    // ── STOP / START opt-out (polite, non-spammy) ───────────────────────────
+    // ── STOP / START opt-out (always allowed — before usage soft-block) ─────
     if (isWhatsAppOptOutMessage(message)) {
       await setWhatsappConversationOptedOut(conversation.id, true);
       const reply = addWhatsAppAIDisclosure(
@@ -513,6 +513,27 @@ export async function handleIncomingWhatsAppMessage(
         phoneNumberId: replyPhoneId,
       });
       return { success: true, response: reply };
+    }
+
+    // Enforce tier caps (Starter: no Cloud API bot; Growth+: monthly msg soft-block)
+    const { checkWhatsAppUsageCap } = await import("./usageCaps");
+    const usage = await checkWhatsAppUsageCap(dealershipIdNum);
+    if (usage.blocked && usage.message) {
+      try {
+        await sendWhatsAppMessage({
+          phone: formattedPhone,
+          message: usage.message,
+          type: "automated_reply",
+          dealershipId: String(dealershipId),
+          phoneNumberId: replyPhoneId,
+        });
+      } catch (sendErr) {
+        console.warn(
+          "[WhatsApp] usage-cap soft-block send failed:",
+          sendErr instanceof Error ? sendErr.message : String(sendErr),
+        );
+      }
+      return { success: true, response: usage.message, error: usage.kind };
     }
 
     // Opted-out buyers still get help when they message first (transactional),

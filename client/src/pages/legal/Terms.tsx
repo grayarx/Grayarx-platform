@@ -85,7 +85,7 @@ export default function Terms() {
       <h2>11. WhatsApp and AI communications</h2>
       <ul>
         <li>WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms.</li>
-        <li>AI-generated responses use industry-standard large language models (OpenAI GPT / Google Gemini via Manus Forge). Conversation data is not used to train foundation models.</li>
+        <li>AI-generated responses use OpenAI large language models (with template fallbacks if unavailable). Conversation data is not used to train foundation models.</li>
         <li>Conversation logs are stored encrypted and are accessible only to the relevant dealership.</li>
         <li>You are responsible for ensuring that customers are informed — before or at the start of an AI conversation — that they may be interacting with an AI assistant.</li>
       </ul>

@@ -145,7 +145,7 @@ PROSPECT
 
 ### How notifications reach you
 
-Every human-interaction event sends a push notification through Manus Forge to your phone. The notification contains:
+Every human-interaction event can send a push notification (legacy Manus Forge path if configured; otherwise email). Chat/LLM uses OpenAI only. The notification contains:
 - A clear title with `⚠️` prefix so you know it needs action
 - The key details (customer name, contact, reference number)
 - A URL at the bottom: `→ https://grayarx.com/admin/pre-approvals` (or the relevant page)
@@ -160,7 +160,7 @@ GrayArx uses four parallel channels, from most immediate to most reliable:
 
 | Channel | Tool | When it triggers | How to set up |
 |---|---|---|---|
-| **Push (primary)** | Manus Forge | Every human-interaction event | Set `BUILT_IN_FORGE_API_URL` + `BUILT_IN_FORGE_API_KEY` in `.env` |
+| **Push (optional legacy)** | Manus Forge | Human-interaction events if still configured | Storage/notify only — not used for chat LLM |
 | **Email alert** | Resend | WhatsApp webhook failures, critical ops | Set `RESEND_API_KEY` + `FOUNDER_ALERT_EMAIL` in `.env` |
 | **Transactional email** | Resend | New leads, bookings, trade-ins | Same `RESEND_API_KEY` |
 | **WhatsApp to dealer** | Meta Cloud API | New lead arrives for dealer | Configured automatically via `WHATSAPP_ACCESS_TOKEN` |

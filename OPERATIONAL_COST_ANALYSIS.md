@@ -6,11 +6,13 @@
 **Currency:** South African Rand (ZAR)  
 **Author:** Manus AI
 
+> **Superseded for pilot (July 2026):** Use [`docs/PRICING_WITH_COST_MODEL_2026.md`](docs/PRICING_WITH_COST_MODEL_2026.md) as the live OPEX model. That doc assumes **founder only (no contractors)**, **OpenAI + S3 (no Forge LLM)**, salary **or** dividend draw, usage caps, and an infra upgrade ladder. Numbers below assumed a full contractor team + Manus platform fees and overstate pilot burn.
+
 ---
 
 ## Executive Summary
 
-**Realistic Monthly Operating Cost: R 45,000 - R 65,000 (Year 1)**
+**Realistic Monthly Operating Cost: R 45,000 - R 65,000 (Year 1)** *(historical full-team model — see supersession note above)*
 
 This analysis accounts for all actual costs including Manus platform fees, email/SMS services, cloud hosting, and team costs. The previous financial model underestimated operational expenses by 30-40%.
 

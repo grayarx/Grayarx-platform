@@ -100,17 +100,29 @@ export const FEATURE_DEFINITIONS: Record<string, FeatureDefinition> = {
     category: "support",
   },
 
-  // Communication Features
+  // Communication Features — Cloud API WhatsApp bot is Growth+ (Showroom = click-to-chat only)
   whatsapp_chatbot: {
     id: "whatsapp_chatbot",
-    name: "WhatsApp Chatbot",
-    tiers: ["starter", "professional", "enterprise"],
+    name: "WhatsApp Chatbot (Cloud API)",
+    tiers: ["professional", "enterprise"],
+    category: "communication",
+  },
+  whatsapp_api: {
+    id: "whatsapp_api",
+    name: "WhatsApp Nala (Cloud API)",
+    tiers: ["professional", "enterprise"],
     category: "communication",
   },
   email_notifications: {
     id: "email_notifications",
     name: "Email Notifications",
     tiers: ["starter", "professional", "enterprise"],
+    category: "communication",
+  },
+  sms_alerts: {
+    id: "sms_alerts",
+    name: "SMS Alerts (Twilio)",
+    tiers: ["professional", "enterprise"],
     category: "communication",
   },
 };
