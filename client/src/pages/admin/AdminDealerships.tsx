@@ -63,11 +63,44 @@ export default function AdminDealerships() {
         </div>
       }
     >
-      <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
-        Multi-branch: one dealership per branch, same <code className="text-primary">groupKey</code>{" "}
-        (e.g. <code className="text-primary">acme</code>). Each branch keeps its own stock, WhatsApp
-        phone_number_id, and shortcode. Dealers with siblings see a Branch switcher in the console.
-      </p>
+      <div className="mb-6 max-w-3xl rounded-xl border border-primary/20 bg-muted/20 p-4 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Multi-branch: one dealership per branch, same <code className="text-primary">groupKey</code>{" "}
+          (e.g. <code className="text-primary">acme</code>). Each branch keeps its own stock, WhatsApp
+          phone_number_id, and shortcode. Dealers with siblings see a Branch switcher in the console.
+        </p>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Founder ops — 5 clicks to live
+          </p>
+          <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+            <li>
+              <strong className="text-foreground">Create group</strong> — slug (e.g. acme) via the
+              button above.
+            </li>
+            <li>
+              <strong className="text-foreground">Create / open each branch</strong> — one dealership
+              row per yard.
+            </li>
+            <li>
+              <strong className="text-foreground">Assign groupKey</strong> — same key on every branch
+              (Group key dialog).
+            </li>
+            <li>
+              <strong className="text-foreground">WhatsApp + shortcode</strong> — set each branch’s
+              Meta phone_number_id (WhatsApp/LLM) and confirm publicShortcode.
+            </li>
+            <li>
+              <strong className="text-foreground">Smoke-test</strong> — dealer logs in → Branch
+              switcher → inventory/leads change per branch.
+            </li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-2">
+            Requires migration <code className="text-primary">0069_dealer_groups</code> on Railway
+            (in apply-pending). Import stock per branch — never mix yards in one CSV.
+          </p>
+        </div>
+      </div>
 
       {groupKeys.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">

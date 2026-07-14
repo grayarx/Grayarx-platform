@@ -1081,6 +1081,7 @@ export const appRouter = router({
         dealershipName: dealership.name ?? "Your dealership",
         agentDisplayName: dealership.agentDisplayName ?? null,
         publicShortcode: dealership.publicShortcode ?? null,
+        whatsappPhoneNumberId: dealership.whatsappPhoneNumberId ?? null,
       };
     }),
 

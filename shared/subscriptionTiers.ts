@@ -13,7 +13,8 @@ export const TIER_ORDER: SubscriptionTierId[] = ["starter", "professional", "ent
 export const TIER_DISPLAY_NAMES: Record<SubscriptionTierId, string> = {
   starter: "Showroom",
   professional: "Growth",
-  enterprise: "Group",
+  /** Multi-branch / multi-site independents. A separate "Group" SKU stays future (needs enum migration). */
+  enterprise: "Multi-site",
 };
 
 /** Monthly list price in ZAR (cents not used — whole rand for billing). */
@@ -87,7 +88,7 @@ export const TIER_LIMITS: Record<
 export const TIER_MARKETING_BLURBS: Record<SubscriptionTierId, string> = {
   starter: "Single-location independent — own your showroom and leads.",
   professional: "Full dealer OS — stock, AI, WhatsApp, and trade-ins.",
-  enterprise: "Volume + hand-holding for groups and high-volume dealers.",
+  enterprise: "Multi-branch yards — groupKey, branch switcher, volume WhatsApp.",
 };
 
 export function tierIndex(tier: SubscriptionTierId): number {

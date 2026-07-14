@@ -67,9 +67,9 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### Q6. “Do we need Meta / WhatsApp Business?”
 
-**Say this:** For WhatsApp AI you need a Meta Business WhatsApp number. We auto-link Meta’s `phone_number_id` when the display number matches onboarding or an unbound dealership — less copy-paste for you.
+**Say this:** No Cloud API chatbot without a WhatsApp Business number on Meta. If they have no WA Business number yet: they can still use webchat + public showroom + wa.me click-to-human. Path: get WhatsApp Business → we link `phone_number_id` → AI on. We auto-link when the display number matches onboarding or an unbound dealership.
 
-**Note:** Number must be verified and webhooks subscribed; until then webchat + showroom still work.
+**Note:** Number must be verified and webhooks subscribed; until then webchat + showroom still work. Dealer Settings shows a WhatsApp AI setup checklist (linked / not linked).
 
 ---
 
@@ -83,7 +83,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### Q8. “What does it cost?”
 
-**Say this:** Pilot is Growth-level features at a founder-friendly monthly rate discussed on the call — not a per-user CRM tax. List tiers after pilot: Showroom / Growth / Group.
+**Say this:** Pilot is Growth-level features at a founder-friendly monthly rate discussed on the call — not a per-user CRM tax. List tiers after pilot: Showroom / Growth / Multi-site (future Group SKU above that).
 
 **Note:** Do not invent a public ZAR figure if the pricing page is still soft; confirm current pilot floor with founder before the call.
 
@@ -91,9 +91,9 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### Q9. “We already have Cars.co.za / Facebook ads.”
 
-**Say this:** Keep them. GrayArx is the always-on reply layer for people who already messaged or landed on your showroom — not a replacement for classifieds.
+**Say this:** Keep them. GrayArx is the always-on reply layer for people who already messaged or landed on your showroom — not a replacement for classifieds or an ad-buy agency.
 
-**Note:** We convert inbound attention; we are not an ad-buy agency.
+**Note:** “We convert inbound attention; we are not an ad-buy agency” is **not bad** — it sets scope and avoids competing with their media buyer. Softer alternative if they prefer: “We make sure the buyers your ads already send you get a fast, accurate answer — we don’t buy the clicks.”
 
 ---
 
@@ -107,17 +107,19 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### Q11. “Can it go on our own website?”
 
-**Say this:** Yes — drop `/embed/{your-shortcode}` (iframe or script) on any page for booking. Same shortcode drives book and apply URLs.
+**Say this:** Yes — open Dealer → Settings → Website embed. Copy-paste the iframe or script snippet (one click). Your shortcode is already generated; same code drives book and apply URLs.
 
-**Note:** WordPress needs a one-line shortcode plugin if they want `[grayarx_book code="…"]`.
+**Note:** WordPress needs a one-line shortcode plugin only if they want `[grayarx_book code="…"]`; plain iframe/script needs no plugin.
 
 ---
 
 ### Q12. “We have three branches.”
 
-**Say this:** Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by the same `groupKey`. Staff with sibling branches get a Branch switcher in the console.
+**Say this:** Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by the same `groupKey`. Staff with sibling branches get a Branch switcher in the console. Founder ops: Admin → Dealerships → 5-click checklist (create group → assign key → WA id + shortcode → smoke-test switcher).
 
-**Note:** Shipped on `main` (`239af44`). Confirm migration `0069` has run on Railway before promising a go-live date for that dealer group.
+**Note:** Shipped on `main`. Confirm migration `0069` has run on Railway before promising a go-live date for that dealer group.
+
+**Tier packaging (SA):** Recommend **Showroom → Growth → Multi-site → Group**. Today’s DB enum is still three IDs (`starter` / `professional` / `enterprise`); display names are Showroom / Growth / **Multi-site**. A fourth **Group** SKU (holding-company packaging above Multi-site) needs a clean enum migration later — do not promise a separate Group plan until that ships.
 
 ---
 
@@ -154,7 +156,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 | Source of truth | Answers search your DB for that dealership — not a generic car brochure. | Sold units should be marked sold so they drop out. |
 | CSV import | Import CSV; we heal shortcodes and warn on bad rows rather than silently skipping stock. | R1 placeholders need a quick price fix before go-live. |
 | Photos | Showroom credibility = photos + price + km. | Weak photos = weak WhatsApp trust. |
-| Scale (5 000 cars) | Architecture is per-dealership DB search with limits — fine for large yards with fair-use caps on chat volume. | Group tier / fair-use for mega fleets; don’t promise free unlimited AI on 5k active chats. |
+| Scale (5 000 cars) | Architecture is per-dealership DB search with limits — fine for large yards with fair-use caps on chat volume. | Multi-site / future Group tier + fair-use for mega fleets; don’t promise free unlimited AI on 5k active chats. |
 
 ### Meta / WhatsApp
 
@@ -214,14 +216,16 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ## 4. Tier cheat-sheet — what “AI 24/7” means
 
-| | **Showroom** (starter) | **Growth** (professional) | **Group** (enterprise) |
-|--|------------------------|---------------------------|-------------------------|
+| | **Showroom** (starter) | **Growth** (professional) | **Multi-site** (enterprise) |
+|--|------------------------|---------------------------|------------------------------|
 | **Internal id** | `starter` | `professional` | `enterprise` |
 | **AI 24/7 means** | Webchat / showroom assistant answering stock & bookings around the clock within plan caps | Same + WhatsApp volume for a busy independent | Same + multi-branch / high volume + stronger model tier |
-| **Channels** | Web-first | Web + WhatsApp | Web + WhatsApp (group scale) |
+| **Channels** | Web-first | Web + WhatsApp | Web + WhatsApp (multi-branch) |
 | **LLM tier** | Efficient model | Stronger (Growth) | Premium model |
 | **Stock ballpark** | ~150 vehicles included | ~500 | Fair-use unlimited\* |
-| **Pilot today** | - | **This is what pilots get** | Group plan + multi-branch after migrate `0069` | **This is what pilots get** | For groups when multi-branch is live |
+| **Pilot today** | - | **This is what pilots get** | Multi-branch after migrate `0069`; future **Group** SKU (4th tier) deferred |
+
+**Recommended packaging (when enum can grow):** Showroom → Growth → Multi-site → **Group** (holding / multi-brand last).
 
 \*Contract fair-use — say “large yards welcome; we set sensible AI caps.”
 
@@ -237,15 +241,17 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 Each branch keeps its own stock, WhatsApp number, and shortcode. We link them with one `groupKey` so managers switch branches in the console without juggling logins. You still report and bill per branch cleanly.
 
-### Ops steps (founder / admin)
+### Ops steps (founder / admin) — also on Admin → Dealerships help card
 
-1. Create a group key (slug) in Admin → Dealerships / Groups.  
-2. Create **one dealership per branch**; set the **same `groupKey`** on each.  
-3. Assign each branch its own WhatsApp `phone_number_id` and `publicShortcode`.  
-4. Import stock **per branch** (never mix yards in one CSV).  
-5. Confirm Branch switcher appears for users who can see ≥2 siblings.  
-6. Smoke-test: switch branch → inventory and leads scope change.  
+1. **Create group** — slug in Admin → Dealerships → Create group.  
+2. **Create / open each branch** — one dealership row per yard.  
+3. **Assign the same `groupKey`** on each branch (Group key dialog).  
+4. **WhatsApp + shortcode** — each branch’s Meta `phone_number_id` + confirm `publicShortcode`.  
+5. **Smoke-test** — dealer login → Branch switcher → inventory/leads change.  
+6. Import stock **per branch** (never mix yards in one CSV).  
 7. Only then tell the dealer “multi-branch is live on your account.”
+
+APIs: `adminDealerships.createGroup`, `adminDealerships.setGroupKey`, `dealer.listBranches` / `switchBranch`. Migration `0069` is in `scripts/apply-pending-migrations.mjs`.
 
 **Note:** Do not say "already live for everyone on grayarx.com" — code is on `main`; each group goes live only after migrate `0069` and ops setup below.
 

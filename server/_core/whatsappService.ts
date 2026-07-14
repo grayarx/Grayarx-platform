@@ -466,7 +466,7 @@ export async function handleIncomingWhatsAppMessage(
     const dealership = await getDealershipById(dealershipIdNum);
     const dealerName = dealership?.name ?? "GrayArx Dealership";
     const agentName = resolveAgentDisplayName(dealership?.agentDisplayName);
-    const conversation = await getOrCreateWhatsappConversation(
+    let conversation = await getOrCreateWhatsappConversation(
       dealershipIdNum,
       formattedPhone,
     );
@@ -668,7 +668,7 @@ export async function handleIncomingWhatsAppMessage(
         });
         const budgetReply = `${header}\n\n${lines.join("\n")}\n\n${footer}`;
 
-        const conversation = await getOrCreateWhatsappConversation(dealershipIdNum, formattedPhone, undefined);
+        conversation = await getOrCreateWhatsappConversation(dealershipIdNum, formattedPhone, undefined);
         if (!options?.alreadyPersisted) {
           await createWhatsappMessage({ conversationId: conversation.id, direction: "inbound", messageType: "text", content: message, status: "delivered" });
         }
@@ -691,7 +691,7 @@ export async function handleIncomingWhatsAppMessage(
       const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
       const listReply = buildMultiVehicleReply(multiMatches, searchTerm, lang, dealerName);
 
-      const conversation = await getOrCreateWhatsappConversation(
+      conversation = await getOrCreateWhatsappConversation(
         dealershipIdNum,
         formattedPhone,
         undefined,
@@ -743,7 +743,7 @@ export async function handleIncomingWhatsAppMessage(
       alternatives = alternatives.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0)).slice(0, 5);
 
       const fallbackReply = buildNoMatchFallbackReply(searchTerm, alternatives, lang);
-      const conversation = await getOrCreateWhatsappConversation(
+      conversation = await getOrCreateWhatsappConversation(
         dealershipIdNum,
         formattedPhone,
         undefined,
@@ -798,7 +798,8 @@ export async function handleIncomingWhatsAppMessage(
       }
     }
 
-    const conversation = await getOrCreateWhatsappConversation(
+    // Refresh with vehicleId once resolved (same scope as opt-out conversation above)
+    conversation = await getOrCreateWhatsappConversation(
       dealershipIdNum,
       formattedPhone,
       vehicleId,

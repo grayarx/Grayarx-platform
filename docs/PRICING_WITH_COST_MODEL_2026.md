@@ -230,7 +230,7 @@ BluWave charges **R480–620/user/month**. A 5-person shop pays **R2,400–3,100
 
 ## 10. Align product UI
 
-- `shared/subscriptionTiers.ts` — single source of truth (Showroom / Growth / Group)
+- `shared/subscriptionTiers.ts` — single source of truth (Showroom / Growth / Multi-site; future Group SKU deferred)
 - `UpgradeModal.tsx` — dark theme, pilot messaging, no public prices while `PILOT_PRICING_HIDDEN`
 - Public `/pricing` route redirects home — no price anchoring during pilot
 

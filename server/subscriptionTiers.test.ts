@@ -19,7 +19,7 @@ describe("subscriptionTiers", () => {
   it("maps internal IDs to marketing names", () => {
     expect(TIER_DISPLAY_NAMES.starter).toBe("Showroom");
     expect(TIER_DISPLAY_NAMES.professional).toBe("Growth");
-    expect(TIER_DISPLAY_NAMES.enterprise).toBe("Group");
+    expect(TIER_DISPLAY_NAMES.enterprise).toBe("Multi-site");
   });
 
   it("orders tiers correctly", () => {
