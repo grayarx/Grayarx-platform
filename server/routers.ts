@@ -1,5 +1,23 @@
 import { COOKIE_NAME } from "@shared/const";
+import { validateVin } from "@shared/validateVin";
 import { z } from "zod";
+
+/** Optional VIN: empty OK; non-empty must pass ISO 3779; stores normalized form. */
+const optionalVinSchema = z
+  .string()
+  .max(32)
+  .optional()
+  .transform((val, ctx) => {
+    const result = validateVin(val ?? "");
+    if (!result.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: result.reason,
+      });
+      return z.NEVER;
+    }
+    return result.normalized || undefined;
+  });
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
@@ -1364,7 +1382,7 @@ export const appRouter = router({
           bodyType: z.string().max(32).optional(),
           color: z.string().max(48).optional(),
           condition: z.enum(["new", "used", "demo", "certified"]).default("used"),
-          vin: z.string().max(32).optional(),
+          vin: optionalVinSchema,
           engineCc: z.number().int().min(0).max(20000).optional(),
           doors: z.number().int().min(2).max(6).optional(),
           seats: z.number().int().min(1).max(20).optional(),
@@ -1422,7 +1440,7 @@ export const appRouter = router({
           bodyType: z.string().max(32).optional(),
           color: z.string().max(48).optional(),
           condition: z.enum(["new", "used", "demo", "certified"]).optional(),
-          vin: z.string().max(32).optional(),
+          vin: optionalVinSchema,
           engineCc: z.number().int().min(0).max(20000).optional(),
           doors: z.number().int().min(2).max(6).optional(),
           seats: z.number().int().min(1).max(20).optional(),
@@ -1447,6 +1465,9 @@ export const appRouter = router({
         }
         const patch: Record<string, unknown> = { ...rest };
         if (typeof rest.price === "number") patch.price = rest.price.toFixed(2);
+        // Empty VIN clears the field; omit key when undefined so unrelated updates keep existing VIN.
+        if (rest.vin === undefined) delete patch.vin;
+        else patch.vin = rest.vin;
         await updateVehicle(id, patch as never);
         return { success: true } as const;
       }),
@@ -2498,6 +2519,7 @@ export const appRouter = router({
               primaryPhotoUrl: primary,
               description: row.description,
               externalRef: row.externalRef,
+              vin: row.vin,
               ...(row.status ? { status: row.status as "available" | "sold" | "pending" | "reserved" } : {}),
             });
             const vehicleId = (result as { insertId?: number })?.insertId;

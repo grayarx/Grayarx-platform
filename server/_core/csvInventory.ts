@@ -10,6 +10,7 @@
 
 import { parseMultiPhotoField } from "../../shared/imagePipeline";
 import { validatePhotoSet } from "../../shared/photoStandards";
+import { validateVin } from "../../shared/validateVin";
 
 export type ParsedVehicleRow = {
   title: string;
@@ -28,6 +29,8 @@ export type ParsedVehicleRow = {
   description: string | null;
   /** Source registration / vin / stock number used for dedupe. */
   externalRef: string | null;
+  /** Normalized VIN when a VIN column is present and valid; null otherwise. */
+  vin: string | null;
   /** Vehicle status: available | sold | pending | reserved */
   status: string | null;
   photoScore: number;
@@ -91,7 +94,9 @@ const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record
     "photo 1", "photo 1 (front angle)", "front angle", "photo 1 front angle"],
   imageUrls: ["image urls", "photo urls", "photos urls", "gallery", "images"],
   description: ["description", "notes", "comments", "details"],
-  externalRef: ["stock", "stock id", "stock no", "stock number", "stock code", "stock_id", "vin", "vin number", "registration", "reg", "reg no", "ref", "reference", "listing id", "id"],
+  // Dedicated VIN column → vehicles.vin; also kept under externalRef aliases for dedupe when no stock#.
+  vin: ["vin", "vin number", "vin no", "vehicle identification number"],
+  externalRef: ["stock", "stock id", "stock no", "stock number", "stock code", "stock_id", "vin", "vin number", "vin no", "registration", "reg", "reg no", "ref", "reference", "listing id", "id"],
   status: ["status", "availability", "stock status", "listing status"],
   photoScore: ["photo score", "photography score"],
   photoWarnings: ["photo warnings", "photo issues"],
@@ -369,6 +374,24 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       seenRefs.add(refLower);
     }
 
+    // Populate vehicles.vin when a VIN column (or VIN-as-ref) is present and valid.
+    // Soft: invalid VIN still imports; warn so the dealer can fix in Inventory.
+    let vin: string | null = null;
+    const rawVin = get("vin")?.trim() || null;
+    const vinCandidate = rawVin || (externalRef && externalRef.length >= 11 ? externalRef : null);
+    if (vinCandidate) {
+      const vinResult = validateVin(vinCandidate);
+      if (vinResult.ok && vinResult.normalized) {
+        vin = vinResult.normalized;
+      } else if (rawVin || (externalRef && /^[A-HJ-NPR-Z0-9\s-]{15,20}$/i.test(externalRef))) {
+        dataWarnings.push(
+          !vinResult.ok
+            ? `VIN "${vinCandidate.slice(0, 24)}" is invalid — ${vinResult.reason} Fix in Inventory.`
+            : `VIN could not be normalised. Fix in Inventory.`,
+        );
+      }
+    }
+
     // Parse status — normalise DMS values to our enum
     const VALID_STATUSES = ["available", "sold", "pending", "reserved"];
     const rawStatus = get("status")?.trim().toLowerCase() || null;
@@ -401,6 +424,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       imageUrls,
       description: get("description")?.trim() || null,
       externalRef,
+      vin,
       status,
       photoScore: photoCheck.score,
       photoWarnings: [...photoCheck.warnings, ...photoValidationWarnings],

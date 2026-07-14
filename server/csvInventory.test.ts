@@ -25,7 +25,7 @@ describe("parseInventoryCsv", () => {
     expect(res.validRows[0].title).toBe("2022 Toyota Corolla");
   });
 
-  it("skips rows with missing, zero, POA, or R1 placeholder prices", () => {
+  it("imports rows with missing/POA/R1 prices but warns (soft pilot import)", () => {
     const csv = [
       "title,price",
       "Ford Fiesta,",
@@ -35,9 +35,10 @@ describe("parseInventoryCsv", () => {
       "BMW 320i,489000",
     ].join("\n");
     const res = parseInventoryCsv(csv);
-    expect(res.validRows).toHaveLength(1);
-    expect(res.validRows[0].title).toBe("BMW 320i");
-    expect(res.skippedRows.length).toBe(4);
+    expect(res.validRows).toHaveLength(5);
+    expect(res.validRows.find((r) => r.title === "BMW 320i")?.price).toBe(489000);
+    expect(res.validRows.filter((r) => r.price === null).length).toBe(4);
+    expect(res.warningRows).toBeGreaterThan(0);
   });
 
   it("deduplicates by stock/vin/registration number", () => {
@@ -101,5 +102,28 @@ describe("parseInventoryCsv", () => {
     const res = parseInventoryCsv(csv);
     expect(res.validRows[0].imageUrls).toHaveLength(3);
     expect(res.validRows[0].photoWarnings.length).toBeGreaterThan(0);
+  });
+
+  it("populates vin from a VIN column when the value is valid", () => {
+    const csv = [
+      "title,price,vin",
+      "BMW 320i,500000,WBA8E5G54JNU12345",
+    ].join("\n");
+    const res = parseInventoryCsv(csv);
+    expect(res.validRows).toHaveLength(1);
+    expect(res.validRows[0].vin).toBe("WBA8E5G54JNU12345");
+    expect(res.validRows[0].externalRef).toBe("WBA8E5G54JNU12345");
+  });
+
+  it("warns but still imports when VIN column is invalid", () => {
+    const csv = [
+      "title,price,stock,vin",
+      "BMW 320i,500000,STK-9,WBA8E5G55JNU12345",
+    ].join("\n");
+    const res = parseInventoryCsv(csv);
+    expect(res.validRows).toHaveLength(1);
+    expect(res.validRows[0].vin).toBeNull();
+    expect(res.validRows[0].externalRef).toBe("STK-9");
+    expect(res.validRows[0].dataWarnings.some((w) => /VIN/i.test(w))).toBe(true);
   });
 });

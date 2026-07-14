@@ -28,6 +28,7 @@ import {
   resolveMake,
   resolveModel,
 } from "@shared/vehicleCatalog";
+import { validateVin } from "@shared/validateVin";
 import { formatVehiclePrice, isSuspiciousPrice, parsePriceInput } from "@/lib/formatPrice";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -254,7 +255,10 @@ function buildPayload(form: FormState) {
     bodyType: form.bodyType || undefined,
     color: form.color || undefined,
     condition: form.condition,
-    vin: form.vin || undefined,
+    vin: (() => {
+      const result = validateVin(form.vin);
+      return result.ok && result.normalized ? result.normalized : form.vin.trim() || undefined;
+    })(),
     engineCc: parseOptionalInt(form.engineCc, { min: 0, max: 20000 }),
     doors: parseOptionalInt(form.doors, { min: 2, max: 6 }),
     seats: parseOptionalInt(form.seats, { min: 1, max: 20 }),
@@ -357,6 +361,11 @@ export default function Inventory() {
     }
     if (form.seats.trim() && (Number(form.seats) < 1 || Number(form.seats) > 20)) {
       toast.error("Seats must be between 1 and 20.");
+      return;
+    }
+    const vinCheck = validateVin(form.vin);
+    if (!vinCheck.ok) {
+      toast.error(vinCheck.reason ?? "VIN is invalid. Leave blank or enter a valid 17-character VIN.");
       return;
     }
     const payload = buildPayload(form);
@@ -611,11 +620,34 @@ export default function Inventory() {
                 <Label>VIN (private — masked publicly)</Label>
                 <Input
                   value={form.vin}
-                  onChange={(e) => setForm({ ...form, vin: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      vin: e.target.value.toUpperCase().replace(/[\s-]+/g, ""),
+                    })
+                  }
+                  onBlur={() => {
+                    const result = validateVin(form.vin);
+                    if (result.ok && result.normalized) {
+                      setForm((f) => (f.vin === result.normalized ? f : { ...f, vin: result.normalized }));
+                    }
+                  }}
                   className="mt-1 font-mono uppercase"
-                  placeholder="WBA8E5G50JNU12345"
-                  maxLength={32}
+                  placeholder="WBA8E5G54JNU12345"
+                  maxLength={17}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
+                {(() => {
+                  const vinCheck = validateVin(form.vin);
+                  if (vinCheck.ok || !form.vin.trim()) return null;
+                  return (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      {vinCheck.reason ?? "This VIN looks invalid."}
+                    </p>
+                  );
+                })()}
+                <p className="mt-1 text-xs text-muted-foreground">Optional. 17 characters; I, O, and Q not used.</p>
               </div>
 
               <div>

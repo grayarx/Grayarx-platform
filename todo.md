@@ -643,7 +643,7 @@ Note: "Sipho" is already the Prospector. The Booking persona Lerato (`lerato@gra
 - [x] Create missing field warnings (critical vs. optional)
 - [x] Build CSV import with validation
 - [x] Add photo upload and management
-- [x] Create VIN validation
+- [x] Create VIN validation (shared/validateVin.ts — ISO 3779; wired to create/update vehicle + Inventory UX)
 - [x] Build service history upload
 - [x] Add vehicle status tracking (Available, Sold, Reserved)
 - [x] Create inventory search and filtering
