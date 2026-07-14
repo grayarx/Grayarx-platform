@@ -294,6 +294,120 @@ export async function listVehicles(
   }));
 }
 
+/**
+ * DB-filtered inventory search for WhatsApp / showroom chat.
+ * Prefer this over loading the newest N vehicles into memory for large yards.
+ */
+export async function searchVehiclesForChat(opts: {
+  dealershipId: number;
+  make?: string | null;
+  bodyTypes?: string[] | null;
+  color?: string | null;
+  maxPrice?: number | null;
+  searchText?: string | null;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100);
+  const filters = [
+    eq(vehicles.dealershipId, opts.dealershipId),
+    or(isNull(vehicles.status), ne(vehicles.status, "sold")),
+  ];
+
+  if (opts.make) {
+    const make = opts.make.toLowerCase();
+    if (make === "volkswagen" || make === "vw") {
+      filters.push(
+        or(
+          sql`LOWER(${vehicles.make}) LIKE '%volkswagen%'`,
+          sql`LOWER(${vehicles.make}) LIKE '%vw%'`,
+          sql`LOWER(${vehicles.title}) LIKE '%volkswagen%'`,
+          sql`LOWER(${vehicles.title}) LIKE '% vw %'`,
+        )!,
+      );
+    } else if (make === "mercedes" || make.startsWith("mercedes")) {
+      filters.push(
+        or(
+          sql`LOWER(${vehicles.make}) LIKE '%mercedes%'`,
+          sql`LOWER(${vehicles.title}) LIKE '%mercedes%'`,
+        )!,
+      );
+    } else {
+      filters.push(
+        or(
+          sql`LOWER(${vehicles.make}) LIKE ${`%${make}%`}`,
+          sql`LOWER(${vehicles.title}) LIKE ${`%${make}%`}`,
+        )!,
+      );
+    }
+  }
+
+  if (opts.bodyTypes && opts.bodyTypes.length > 0) {
+    const bodyOr = opts.bodyTypes.map(
+      (bt) => sql`LOWER(COALESCE(${vehicles.bodyType}, '')) LIKE ${`%${bt.toLowerCase()}%`}`,
+    );
+    // Also match common bakkie model names in title/model when searching bakkies
+    if (opts.bodyTypes.some((bt) => /bakkie|pickup|cab/i.test(bt))) {
+      bodyOr.push(
+        sql`LOWER(CONCAT(COALESCE(${vehicles.model},''),' ',COALESCE(${vehicles.title},''))) REGEXP 'ranger|hilux|amarok|navara|d-max|triton|frontier'`,
+      );
+    }
+    filters.push(or(...bodyOr)!);
+  }
+
+  if (opts.color) {
+    const color = opts.color.toLowerCase();
+    filters.push(sql`LOWER(COALESCE(${vehicles.color}, '')) LIKE ${`%${color}%`}`);
+  }
+
+  if (opts.maxPrice != null && opts.maxPrice > 0) {
+    filters.push(sql`CAST(${vehicles.price} AS DECIMAL(12,2)) <= ${opts.maxPrice}`);
+  }
+
+  if (opts.searchText && opts.searchText.trim().length >= 2) {
+    const q = `%${opts.searchText.trim().toLowerCase()}%`;
+    filters.push(
+      or(
+        sql`LOWER(${vehicles.title}) LIKE ${q}`,
+        sql`LOWER(COALESCE(${vehicles.make}, '')) LIKE ${q}`,
+        sql`LOWER(COALESCE(${vehicles.model}, '')) LIKE ${q}`,
+      )!,
+    );
+  }
+
+  const rows = await db
+    .select()
+    .from(vehicles)
+    .where(and(...filters))
+    .orderBy(vehicles.price)
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+
+  const vehicleIds = rows.map((r) => r.id);
+  const photos = await db
+    .select()
+    .from(vehiclePhotos)
+    .where(inArray(vehiclePhotos.vehicleId, vehicleIds))
+    .orderBy(vehiclePhotos.position);
+
+  const photosByVehicle = photos.reduce(
+    (acc, p) => {
+      if (!acc[p.vehicleId]) acc[p.vehicleId] = [];
+      acc[p.vehicleId].push(p.url);
+      return acc;
+    },
+    {} as Record<number, string[]>,
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    images: photosByVehicle[r.id] || [],
+  }));
+}
+
 export async function getVehicle(id: number) {
   const db = await getDb();
   if (!db) return null;
@@ -1387,10 +1501,11 @@ export async function provisionOnboardingSubmission(
 
   console.log(
     `[Onboarding] Provisioned dealership ${created.id} from submission ${id}` +
-      (waId ? ` (whatsappPhoneNumberId=${waId})` : " (no Meta phone_number_id yet — webhook may auto-bind via contactPhone)"),
+      (waId ? ` (whatsappPhoneNumberId=${waId})` : " (no Meta phone_number_id yet — webhook may auto-bind via contactPhone)") +
+      (` shortcode=${created.publicShortcode}`),
   );
 
-  return { dealershipId: created.id, created: true };
+  return { dealershipId: created.id, created: true, publicShortcode: created.publicShortcode };
 }
 
 // Approval queue
@@ -1806,10 +1921,32 @@ export async function createDealership(input: {
   plan?: "starter" | "professional" | "enterprise";
   whatsappPhoneNumberId?: string | null;
   status?: "onboarding" | "active" | "paused" | "suspended";
-}): Promise<{ id: number }> {
+  publicShortcode?: string | null;
+  agentDisplayName?: string | null;
+  groupKey?: string | null;
+}): Promise<{ id: number; publicShortcode: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const waId = input.whatsappPhoneNumberId?.trim() || null;
+  const { slugifyPublicShortcode, withShortcodeSuffix } = await import(
+    "../shared/agentIdentity"
+  );
+
+  let shortcode =
+    input.publicShortcode?.trim().toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) ||
+    slugifyPublicShortcode(input.name);
+
+  // Ensure uniqueness (retry with suffix a few times)
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const [existing] = await db
+      .select({ id: dealerships.id })
+      .from(dealerships)
+      .where(eq(dealerships.publicShortcode, shortcode))
+      .limit(1);
+    if (!existing) break;
+    shortcode = withShortcodeSuffix(slugifyPublicShortcode(input.name));
+  }
+
   const result: any = await db.insert(dealerships).values({
     name: input.name,
     contactEmail: input.contactEmail ?? null,
@@ -1821,8 +1958,11 @@ export async function createDealership(input: {
     plan: input.plan ?? "starter",
     status: input.status ?? "onboarding",
     whatsappPhoneNumberId: waId,
+    publicShortcode: shortcode,
+    agentDisplayName: input.agentDisplayName?.trim() || null,
+    groupKey: input.groupKey?.trim() || null,
   });
-  return { id: result[0]?.insertId ?? 0 };
+  return { id: result[0]?.insertId ?? 0, publicShortcode: shortcode };
 }
 
 export async function getDealershipById(id: number) {
@@ -1857,6 +1997,31 @@ export async function setDealershipShortcode(id: number, shortcode: string) {
     .where(eq(dealerships.id, id));
 }
 
+/** Auto-assign a publicShortcode when missing (e.g. older rows). */
+export async function ensureDealershipShortcode(id: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const row = await getDealershipById(id);
+  if (!row) return null;
+  if (row.publicShortcode) return row.publicShortcode;
+
+  const { slugifyPublicShortcode, withShortcodeSuffix } = await import(
+    "../shared/agentIdentity"
+  );
+  let shortcode = slugifyPublicShortcode(row.name);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const [existing] = await db
+      .select({ id: dealerships.id })
+      .from(dealerships)
+      .where(eq(dealerships.publicShortcode, shortcode))
+      .limit(1);
+    if (!existing) break;
+    shortcode = withShortcodeSuffix(slugifyPublicShortcode(row.name));
+  }
+  await setDealershipShortcode(id, shortcode);
+  return shortcode;
+}
+
 export async function updateDealershipBrand(
   id: number,
   patch: {
@@ -1867,6 +2032,8 @@ export async function updateDealershipBrand(
     bankDetails?: string | null;
     businessHoursJson?: unknown | null;
     showroomTheme?: string | null;
+    agentDisplayName?: string | null;
+    groupKey?: string | null;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -1883,6 +2050,13 @@ export async function updateDealershipBrand(
   }
   if (Object.prototype.hasOwnProperty.call(patch, "showroomTheme")) {
     set.showroomTheme = patch.showroomTheme ?? "futuristic";
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "agentDisplayName")) {
+    const v = patch.agentDisplayName?.trim() || null;
+    set.agentDisplayName = v;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "groupKey")) {
+    set.groupKey = patch.groupKey?.trim() || null;
   }
   await db.update(dealerships).set(set).where(eq(dealerships.id, id));
 }
@@ -2949,6 +3123,21 @@ export async function getOrCreateWhatsappConversation(
 
   if (existing.length > 0) return existing[0];
   return createWhatsappConversation(dealershipId, phoneNumber, leadId, vehicleId);
+}
+
+export async function setWhatsappConversationOptedOut(
+  conversationId: number,
+  optedOut: boolean,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(whatsappConversations)
+    .set({
+      optedOutAt: optedOut ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(whatsappConversations.id, conversationId));
 }
 
 export async function closeWhatsappConversation(conversationId: number): Promise<void> {

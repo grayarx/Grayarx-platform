@@ -35,11 +35,13 @@ export default function DealerSettings() {
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [showroomTheme, setShowroomTheme] = useState<ShowroomThemeId>("classic");
   const [brandAccentColor, setBrandAccentColor] = useState("#d4af37");
+  const [agentDisplayName, setAgentDisplayName] = useState("");
 
   useEffect(() => {
     if (appearance) {
       setShowroomTheme(appearance.theme);
       setBrandAccentColor(appearance.brandAccentColor ?? "#d4af37");
+      setAgentDisplayName(appearance.agentDisplayName ?? "");
     }
   }, [appearance]);
 
@@ -138,6 +140,21 @@ export default function DealerSettings() {
                     />
                   </div>
                 </div>
+              </div>
+              <div className="max-w-md space-y-2">
+                <Label htmlFor="agent-display-name">Assistant display name</Label>
+                <Input
+                  id="agent-display-name"
+                  value={agentDisplayName}
+                  onChange={(e) => setAgentDisplayName(e.target.value)}
+                  placeholder="Nala"
+                  maxLength={40}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in WhatsApp greetings and the AI disclosure line. Leave blank for Nala.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
                 <Button
                   className="btn-gold shrink-0"
                   disabled={saveAppearanceMutation.isPending}
@@ -145,6 +162,7 @@ export default function DealerSettings() {
                     saveAppearanceMutation.mutate({
                       theme: showroomTheme,
                       brandAccentColor: brandAccentColor.trim() || null,
+                      agentDisplayName: agentDisplayName.trim() || null,
                     })
                   }
                 >

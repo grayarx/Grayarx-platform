@@ -93,6 +93,7 @@ export default function AdminBrandKit() {
     brandSignature: "",
     vatNumber: "",
     bankDetails: "",
+    agentDisplayName: "",
   });
   const [hours, setHours] = useState<HoursWeek>(() => normaliseHours(null));
   const [hoursOverrideEnabled, setHoursOverrideEnabled] = useState(false);
@@ -105,6 +106,7 @@ export default function AdminBrandKit() {
       brandSignature: brand.raw.brandSignature ?? "",
       vatNumber: brand.raw.vatNumber ?? "",
       bankDetails: brand.raw.bankDetails ?? "",
+      agentDisplayName: (brand.raw as { agentDisplayName?: string | null }).agentDisplayName ?? "",
     });
     const rawHours = (brand.raw as { businessHoursJson?: Record<string, unknown> | null }).businessHoursJson ?? null;
     setHours(normaliseHours(rawHours));
@@ -235,6 +237,21 @@ export default function AdminBrandKit() {
                     }
                     placeholder="Karoo Motors · Family-owned since 1972"
                   />
+                </div>
+                <div>
+                  <Label>Assistant display name</Label>
+                  <Input
+                    className="mt-1"
+                    value={form.agentDisplayName}
+                    onChange={(e) =>
+                      setForm({ ...form, agentDisplayName: e.target.value })
+                    }
+                    placeholder="Nala"
+                    maxLength={40}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    WhatsApp greetings &amp; AI disclosure. Blank = Nala.
+                  </p>
                 </div>
                 <div>
                   <Label>Bank details (free-form, masked to customers)</Label>
@@ -369,6 +386,9 @@ export default function AdminBrandKit() {
                     brandSignature: brand?.raw.brandSignature ?? "",
                     vatNumber: brand?.raw.vatNumber ?? "",
                     bankDetails: brand?.raw.bankDetails ?? "",
+                    agentDisplayName:
+                      (brand?.raw as { agentDisplayName?: string | null })
+                        ?.agentDisplayName ?? "",
                   })
                 }
                 disabled={brandLoading}
@@ -386,6 +406,7 @@ export default function AdminBrandKit() {
                     brandSignature: form.brandSignature || null,
                     vatNumber: form.vatNumber || null,
                     bankDetails: form.bankDetails || null,
+                    agentDisplayName: form.agentDisplayName.trim() || null,
                     businessHoursJson: hoursOverrideEnabled
                       ? hoursWeekToPayload(hours)
                       : null,

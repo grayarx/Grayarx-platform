@@ -428,8 +428,15 @@ export async function handleIncomingWhatsAppMessage(
     const replyPhoneId = options?.phoneNumberId;
     const dealershipIdNum = Number(dealershipId);
 
-    const { listVehicles, getVehicle } = await import("../db");
-    const { getDealershipById } = await import("../db");
+    const {
+      listVehicles,
+      getVehicle,
+      getDealershipById,
+      getOrCreateWhatsappConversation,
+      setWhatsappConversationOptedOut,
+      searchVehiclesForChat,
+      createWhatsappMessage,
+    } = await import("../db");
     const {
       parseVehicleTitleFromMessage,
       findVehicleFromMessage,
@@ -438,6 +445,7 @@ export async function handleIncomingWhatsAppMessage(
       buildNoMatchFallbackReply,
       detectMakeFromMessage,
       detectBodyTypesFromMessage,
+      detectColorFromMessage,
       buildSearchTerm,
       vehicleRowToContext,
       getConvState,
@@ -447,14 +455,110 @@ export async function handleIncomingWhatsAppMessage(
     const { scoreListingDeal } = await import("../../shared/priceIntelligence");
     const { detectLanguage } = await import("../../shared/languages");
     const { addWhatsAppAIDisclosure } = await import("./agentPrompts");
+    const {
+      isWhatsAppOptOutMessage,
+      isWhatsAppOptInMessage,
+      whatsappOptOutConfirmation,
+      whatsappOptInConfirmation,
+      resolveAgentDisplayName,
+    } = await import("../../shared/agentIdentity");
 
     const dealership = await getDealershipById(dealershipIdNum);
     const dealerName = dealership?.name ?? "GrayArx Dealership";
+    const agentName = resolveAgentDisplayName(dealership?.agentDisplayName);
+    const conversation = await getOrCreateWhatsappConversation(
+      dealershipIdNum,
+      formattedPhone,
+    );
 
-    const allVehicles = await listVehicles(200, {
-      dealershipId: dealershipIdNum,
-      excludeSold: true,
-    });
+    // ── STOP / START opt-out (polite, non-spammy) ───────────────────────────
+    if (isWhatsAppOptOutMessage(message)) {
+      await setWhatsappConversationOptedOut(conversation.id, true);
+      const reply = addWhatsAppAIDisclosure(
+        whatsappOptOutConfirmation(agentName),
+        "en",
+        agentName,
+      );
+      if (!options?.alreadyPersisted) {
+        await createWhatsappMessage({
+          conversationId: conversation.id,
+          direction: "inbound",
+          messageType: "text",
+          content: message,
+          status: "delivered",
+        });
+      }
+      await sendWhatsAppMessage({
+        phone: formattedPhone,
+        message: reply,
+        type: "automated_reply",
+        dealershipId: String(dealershipId),
+        phoneNumberId: replyPhoneId,
+      });
+      return { success: true, response: reply };
+    }
+
+    if (isWhatsAppOptInMessage(message) && conversation.optedOutAt) {
+      await setWhatsappConversationOptedOut(conversation.id, false);
+      const reply = addWhatsAppAIDisclosure(
+        whatsappOptInConfirmation(agentName),
+        "en",
+        agentName,
+      );
+      await sendWhatsAppMessage({
+        phone: formattedPhone,
+        message: reply,
+        type: "automated_reply",
+        dealershipId: String(dealershipId),
+        phoneNumberId: replyPhoneId,
+      });
+      return { success: true, response: reply };
+    }
+
+    // Opted-out buyers still get help when they message first (transactional),
+    // but we skip proactive marketing-style drip. Stock Q&A / booking continue.
+
+    // Prefer DB-filtered search for make/body/budget/colour; keep a small
+    // newest-stock window only for "top deals" hints.
+    const detectedMakeEarly = detectMakeFromMessage(message);
+    const detectedBodyTypesEarly = detectBodyTypesFromMessage(message);
+    const detectedColor = detectColorFromMessage(message);
+    const budgetMatch = message.match(
+      /(?:under|below|less than|max|budget|goedkoper as|onder)\s*r?\s*(\d[\d\s,]*)\s*(k\b)?/i,
+    );
+    let maxPrice: number | null = null;
+    if (budgetMatch) {
+      const raw = budgetMatch[1].replace(/[\s,]/g, "");
+      const num = parseInt(raw, 10);
+      if (!isNaN(num) && num >= 10) {
+        maxPrice = (budgetMatch[2] ?? "").toLowerCase() === "k" ? num * 1000 : num;
+      }
+    }
+
+    const needsFilteredSearch =
+      Boolean(detectedMakeEarly) ||
+      Boolean(detectedBodyTypesEarly) ||
+      Boolean(detectedColor) ||
+      maxPrice != null;
+
+    const filteredVehicles = needsFilteredSearch
+      ? await searchVehiclesForChat({
+          dealershipId: dealershipIdNum,
+          make: detectedMakeEarly,
+          bodyTypes: detectedBodyTypesEarly,
+          color: detectedColor,
+          maxPrice,
+          limit: 40,
+        })
+      : [];
+
+    const allVehicles =
+      filteredVehicles.length > 0
+        ? filteredVehicles
+        : await listVehicles(80, {
+            dealershipId: dealershipIdNum,
+            excludeSold: true,
+          });
 
     // ── Determine & LOCK language for this phone (must happen before any path diverges) ──
     const convState = getConvState(formattedPhone);
@@ -508,7 +612,7 @@ export async function handleIncomingWhatsAppMessage(
         return num * multiplier;
       };
 
-      const budgetCeiling = parseBudgetFromMessage(message);
+      const budgetCeiling = parseBudgetFromMessage(message) ?? maxPrice;
       const availableVehicles = allVehicles.filter((v) => v.status === "available" || v.status == null);
       const lang = earlyLang;
 
@@ -529,10 +633,23 @@ export async function handleIncomingWhatsAppMessage(
 
       // No budget given or no matches → show 3 cheapest
       if (affordableVehicles.length === 0) {
-        affordableVehicles = availableVehicles
-          .filter((v) => Number(v.price ?? 0) > 1)
-          .sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
-          .slice(0, 3);
+        // Re-query DB by budget if in-memory window was too small
+        if (budgetCeiling) {
+          affordableVehicles = await searchVehiclesForChat({
+            dealershipId: dealershipIdNum,
+            maxPrice: budgetCeiling * 1.1,
+            make: detectedMakeEarly,
+            bodyTypes: detectedBodyTypesEarly,
+            color: detectedColor,
+            limit: 8,
+          });
+        }
+        if (affordableVehicles.length === 0) {
+          affordableVehicles = availableVehicles
+            .filter((v) => Number(v.price ?? 0) > 1)
+            .sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
+            .slice(0, 3);
+        }
       } else {
         affordableVehicles = affordableVehicles
           .sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
@@ -555,7 +672,7 @@ export async function handleIncomingWhatsAppMessage(
         if (!options?.alreadyPersisted) {
           await createWhatsappMessage({ conversationId: conversation.id, direction: "inbound", messageType: "text", content: message, status: "delivered" });
         }
-        const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(budgetReply), lang);
+        const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(budgetReply), lang, agentName);
         await sendWhatsAppMessage({ phone: formattedPhone, message: finalReply, type: "automated_reply", dealershipId, phoneNumberId: replyPhoneId });
         console.log(`[WhatsApp budget] +${formattedPhone} lang=${lang} ceiling=${budgetCeiling} matches=${affordableVehicles.length}`);
         return { success: true, response: finalReply };
@@ -564,8 +681,8 @@ export async function handleIncomingWhatsAppMessage(
 
     // ── Multi-vehicle search: check if the buyer is asking about a make/body type ──
     const multiMatches = findVehiclesFromMessage(message, allVehicles);
-    const detectedMake = detectMakeFromMessage(message);
-    const detectedBodyTypes = detectBodyTypesFromMessage(message);
+    const detectedMake = detectedMakeEarly;
+    const detectedBodyTypes = detectedBodyTypesEarly;
     const isInventorySearch = detectedMake !== null || detectedBodyTypes !== null;
 
     if (multiMatches.length >= 2) {
@@ -589,7 +706,7 @@ export async function handleIncomingWhatsAppMessage(
         });
       }
 
-      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(listReply), lang);
+      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(listReply), lang, agentName);
       await sendWhatsAppMessage({
         phone: formattedPhone,
         message: finalReply,
@@ -641,7 +758,7 @@ export async function handleIncomingWhatsAppMessage(
         });
       }
 
-      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(fallbackReply), lang);
+      const finalReply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(fallbackReply), lang, agentName);
       await sendWhatsAppMessage({
         phone: formattedPhone,
         message: finalReply,
@@ -752,6 +869,7 @@ export async function handleIncomingWhatsAppMessage(
       channel: "whatsapp",
       includeDealScore: true,
       inventoryHints: topDealHints,
+      agentDisplayName: agentName,
     });
 
     console.log(

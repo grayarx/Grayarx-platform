@@ -252,20 +252,22 @@ export async function generateWhatsAppReply(input: {
 export function addWhatsAppAIDisclosure(
   draft: string,
   lang: LanguageCode,
+  agentDisplayName = "Nala",
 ): string {
+  const name = (agentDisplayName || "Nala").trim() || "Nala";
   const tag: Record<LanguageCode, string> = {
-    en: "⚡ AI assistant · Nala (GrayArx)",
-    af: "⚡ KI-assistent · Nala (GrayArx)",
-    zu: "⚡ Umsizi we-AI · Nala (GrayArx)",
-    xh: "⚡ Umncedi we-AI · Nala (GrayArx)",
-    st: "⚡ Mothusi wa AI · Nala (GrayArx)",
-    nso: "⚡ Mothuši wa AI · Nala (GrayArx)",
-    tn: "⚡ Mothusi wa AI · Nala (GrayArx)",
-    ts: "⚡ Mupfuni wa AI · Nala (GrayArx)",
-    ss: "⚡ Umsiti we-AI · Nala (GrayArx)",
-    ve: "⚡ Muthusi wa AI · Nala (GrayArx)",
-    nr: "⚡ Umsizi we-AI · Nala (GrayArx)",
-    pt: "⚡ Assistente de IA · Nala (GrayArx)",
+    en: `⚡ AI assistant · ${name} (GrayArx)`,
+    af: `⚡ KI-assistent · ${name} (GrayArx)`,
+    zu: `⚡ Umsizi we-AI · ${name} (GrayArx)`,
+    xh: `⚡ Umncedi we-AI · ${name} (GrayArx)`,
+    st: `⚡ Mothusi wa AI · ${name} (GrayArx)`,
+    nso: `⚡ Mothuši wa AI · ${name} (GrayArx)`,
+    tn: `⚡ Mothusi wa AI · ${name} (GrayArx)`,
+    ts: `⚡ Mupfuni wa AI · ${name} (GrayArx)`,
+    ss: `⚡ Umsiti we-AI · ${name} (GrayArx)`,
+    ve: `⚡ Muthusi wa AI · ${name} (GrayArx)`,
+    nr: `⚡ Umsizi we-AI · ${name} (GrayArx)`,
+    pt: `⚡ Assistente de IA · ${name} (GrayArx)`,
   };
   const prefix = tag[lang] ?? tag.en;
   // Don't double-prefix if the LLM already added one.

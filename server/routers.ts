@@ -813,18 +813,32 @@ export const appRouter = router({
           : detectLanguage(input.message);
 
         const dealerName = input.dealershipName ?? dealership?.name ?? "GrayArx Dealership";
+        const { resolveAgentDisplayName } = await import("../shared/agentIdentity");
+        const agentName = resolveAgentDisplayName(dealership?.agentDisplayName);
         const vehicleCtx = vehicleRowToContext(row);
 
-        // ── Multi-vehicle search: check if the user is asking about a make/body type ──
-        const { listVehicles: listAllVehicles } = await import("./db");
-        const allVehicles = await listAllVehicles(200, {
-          dealershipId,
-          excludeSold: true,
-        });
-        const multiMatches = findVehiclesFromMessage(input.message, allVehicles);
+        // ── Multi-vehicle search: DB-filtered when make/body/colour/budget detected ──
+        const { listVehicles: listAllVehicles, searchVehiclesForChat } = await import("./db");
         const detectedMake = detectMakeFromMessage(input.message);
         const detectedBodyTypes = detectBodyTypesFromMessage(input.message);
-        const isInventorySearch = detectedMake !== null || detectedBodyTypes !== null;
+        const { detectColorFromMessage } = await import("./_core/nalaReplyOrchestrator");
+        const detectedColor = detectColorFromMessage(input.message);
+        const isInventorySearch =
+          detectedMake !== null || detectedBodyTypes !== null || detectedColor !== null;
+
+        const allVehicles = isInventorySearch
+          ? await searchVehiclesForChat({
+              dealershipId,
+              make: detectedMake,
+              bodyTypes: detectedBodyTypes,
+              color: detectedColor,
+              limit: 40,
+            })
+          : await listAllVehicles(80, {
+              dealershipId,
+              excludeSold: true,
+            });
+        const multiMatches = findVehiclesFromMessage(input.message, allVehicles);
 
         if (multiMatches.length >= 2) {
           const searchTerm = buildSearchTerm(detectedMake, detectedBodyTypes);
@@ -876,6 +890,7 @@ export const appRouter = router({
             language: lang,
             channel: "web",
             includeDealScore: true,
+            agentDisplayName: agentName,
           });
         } catch (routeErr) {
           console.warn("[showroom.chat] route failed, using template fallback", routeErr);
@@ -964,6 +979,8 @@ export const appRouter = router({
         brandAccentColor: dealership.brandAccentColor ?? null,
         brandLogoUrl: dealership.brandLogoUrl ?? null,
         dealershipName: dealership.name ?? "Your dealership",
+        agentDisplayName: dealership.agentDisplayName ?? null,
+        publicShortcode: dealership.publicShortcode ?? null,
       };
     }),
 
@@ -972,6 +989,7 @@ export const appRouter = router({
         z.object({
           theme: z.enum(["futuristic", "classic", "minimal", "bold"]),
           brandAccentColor: z.string().max(16).nullable().optional(),
+          agentDisplayName: z.string().max(40).nullable().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -989,6 +1007,9 @@ export const appRouter = router({
           showroomTheme: input.theme,
           ...(Object.prototype.hasOwnProperty.call(input, "brandAccentColor")
             ? { brandAccentColor: accent ?? null }
+            : {}),
+          ...(Object.prototype.hasOwnProperty.call(input, "agentDisplayName")
+            ? { agentDisplayName: input.agentDisplayName?.trim() || null }
             : {}),
         });
         return { success: true, theme: input.theme };
@@ -3849,6 +3870,9 @@ export const appRouter = router({
             vatNumber: dealership.vatNumber ?? null,
             bankDetails: dealership.bankDetails ?? null,
             businessHoursJson: (dealership.businessHoursJson as Record<string, unknown> | null) ?? null,
+            agentDisplayName: dealership.agentDisplayName ?? null,
+            groupKey: dealership.groupKey ?? null,
+            publicShortcode: dealership.publicShortcode ?? null,
           },
           resolved: resolveBrandKit(dealership),
         };
@@ -3864,6 +3888,8 @@ export const appRouter = router({
           brandSignature: z.string().max(500).nullable().optional(),
           vatNumber: z.string().max(32).nullable().optional(),
           bankDetails: z.string().max(500).nullable().optional(),
+          agentDisplayName: z.string().max(40).nullable().optional(),
+          groupKey: z.string().max(64).nullable().optional(),
           businessHoursJson: z
             .record(
               z.enum(["sun", "mon", "tue", "wed", "thu", "fri", "sat"]),
@@ -3899,6 +3925,12 @@ export const appRouter = router({
         };
         if (Object.prototype.hasOwnProperty.call(input, "businessHoursJson")) {
           patch.businessHoursJson = input.businessHoursJson ?? null;
+        }
+        if (Object.prototype.hasOwnProperty.call(input, "agentDisplayName")) {
+          patch.agentDisplayName = input.agentDisplayName?.trim() || null;
+        }
+        if (Object.prototype.hasOwnProperty.call(input, "groupKey")) {
+          patch.groupKey = input.groupKey?.trim() || null;
         }
         await updateDealershipBrand(input.dealershipId, patch);
         return { ok: true };

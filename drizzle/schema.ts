@@ -413,6 +413,16 @@ export const dealerships = mysqlTable("dealerships", {
    * When null, derived from `plan` via shared/llmModelTiers.ts.
    */
   llmModel: varchar("llmModel", { length: 64 }),
+  /**
+   * Customer-facing AI assistant name (WhatsApp disclosure + greetings).
+   * Null → "Nala".
+   */
+  agentDisplayName: varchar("agentDisplayName", { length: 64 }),
+  /**
+   * Optional multi-branch group key. Branches remain separate dealership rows;
+   * same groupKey lets founder/admin group them later without a full hierarchy UI.
+   */
+  groupKey: varchar("groupKey", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -1410,6 +1420,8 @@ export const whatsappConversations = mysqlTable("whatsapp_conversations", {
   status: mysqlEnum("status", ["open", "closed", "archived"]).default("open").notNull(),
   leadId: int("leadId"), // Link to lead if applicable
   vehicleId: int("vehicleId"), // Link to vehicle if applicable
+  /** Set when buyer replies STOP / unsubscribe — suppress proactive follow-ups. */
+  optedOutAt: timestamp("optedOutAt"),
   lastMessageAt: timestamp("lastMessageAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

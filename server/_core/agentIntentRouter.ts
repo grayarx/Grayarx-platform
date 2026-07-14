@@ -52,6 +52,8 @@ export type ResolveRoutedReplyInput = {
   inventoryHints?: Array<{ title: string; price?: number | string | null }>;
   includeDealScore?: boolean;
   language?: LanguageCode;
+  /** Per-dealership assistant name; defaults to Nala. */
+  agentDisplayName?: string;
 };
 
 function siteUrl(): string {
@@ -114,7 +116,7 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
   if (!contact || !name || name.length < 2) {
     let reply = leratoAskNameReply(lang, input.dealershipName, input.vehicle ?? undefined);
     if (input.channel === "whatsapp") {
-      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
+      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang, input.agentDisplayName);
     }
     return {
       agent: "lerato",
@@ -173,7 +175,7 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
 
     let reply = drafted.outboundReply;
     if (input.channel === "whatsapp") {
-      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
+      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang, input.agentDisplayName);
     }
 
     return {
@@ -205,7 +207,7 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
     );
     return {
       agent: "lerato",
-      reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang) : reply,
+      reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang, input.agentDisplayName) : reply,
       language,
       intent: "test_drive",
       answered: true,
@@ -218,7 +220,7 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
 async function handleTumiRoute(input: ResolveRoutedReplyInput, lang: LanguageCode): Promise<RoutedReplyResult> {
   let reply = tumiTradeInReply(lang, input.dealershipName, input.vehicle ?? undefined);
   if (input.channel === "whatsapp") {
-    reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
+    reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang, input.agentDisplayName);
   }
   return {
     agent: "tumi",
@@ -264,7 +266,11 @@ async function handleBongiRoute(input: ResolveRoutedReplyInput, lang: LanguageCo
 
   let reply = drafted.outboundReply;
   if (input.channel === "whatsapp") {
-    reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
+    reply = addWhatsAppAIDisclosure(
+      stripMarkdownForWhatsApp(reply),
+      lang,
+      input.agentDisplayName,
+    );
   }
 
   return {
@@ -307,6 +313,7 @@ export async function resolveRoutedReply(
         includeDealScore: input.includeDealScore,
         inventoryHints: input.inventoryHints,
         phone: input.customerPhone,
+        agentDisplayName: input.agentDisplayName,
       });
       return {
         agent: "nala",

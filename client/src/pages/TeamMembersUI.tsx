@@ -40,6 +40,19 @@ export function TeamMembersUI() {
   const updateRole = trpc.teamMembers.updateRole.useMutation();
   const resendInvitation = trpc.teamMembers.resendInvitation.useMutation();
 
+  const membersFromServer = listTeamMembers.data ?? [];
+  const displayMembers =
+    membersFromServer.length > 0
+      ? membersFromServer.map((m) => ({
+          id: m.id,
+          email: m.email,
+          role: (m.role === "dealer_owner" ? "admin" : "salesperson") as TeamMember["role"],
+          status: m.status,
+          invitedAt: new Date(m.invitedAt),
+          acceptedAt: m.acceptedAt ? new Date(m.acceptedAt) : undefined,
+        }))
+      : teamMembers;
+
   const form = useForm<TeamMemberForm>({
     resolver: zodResolver(teamMemberSchema),
     defaultValues: {
@@ -49,26 +62,22 @@ export function TeamMembersUI() {
 
   const handleInviteTeamMember = async (data: TeamMemberForm) => {
     try {
-      const result = await inviteTeamMember.mutateAsync(data);
+      const result = await inviteTeamMember.mutateAsync({
+        ...data,
+        role: data.role,
+      });
 
       if (result.success) {
-        toast.success(`Invitation sent to ${data.email}`);
+        const pwd =
+          "temporaryPassword" in result && result.temporaryPassword
+            ? ` Temporary password: ${result.temporaryPassword}`
+            : "";
+        toast.success(`User ready for ${data.email}.${pwd}`);
         form.reset();
-
-        // Add to local list
-        setTeamMembers([
-          ...teamMembers,
-          {
-            id: `member-${Date.now()}`,
-            email: data.email,
-            role: data.role,
-            status: "pending",
-            invitedAt: new Date(),
-          },
-        ]);
+        await listTeamMembers.refetch();
       }
     } catch (error) {
-      toast.error("Failed to send invitation");
+      toast.error(error instanceof Error ? error.message : "Failed to invite");
     }
   };
 
@@ -186,10 +195,10 @@ export function TeamMembersUI() {
       </Card>
 
       {/* Team Members Table */}
-      {teamMembers.length > 0 && (
+      {displayMembers.length > 0 && (
         <Card className="bg-slate-800 border-slate-700 p-6">
           <h3 className="text-lg font-bold text-white mb-4">
-            Team Members ({teamMembers.length})
+            Team Members ({displayMembers.length})
           </h3>
 
           <div className="overflow-x-auto">
@@ -204,7 +213,7 @@ export function TeamMembersUI() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teamMembers.map((member) => (
+                {displayMembers.map((member) => (
                   <TableRow key={member.id} className="border-slate-700">
                     <TableCell className="text-white">{member.email}</TableCell>
                     <TableCell>
@@ -276,7 +285,7 @@ export function TeamMembersUI() {
       )}
 
       {/* Empty State */}
-      {teamMembers.length === 0 && (
+      {displayMembers.length === 0 && (
         <Card className="bg-slate-800 border-slate-700 p-12 text-center">
           <Mail className="w-12 h-12 text-slate-600 mx-auto mb-4" />
           <p className="text-slate-400">No team members invited yet</p>

@@ -247,12 +247,18 @@ export function greetingForVehicle(
   vehicle: VehicleChatContext,
   dealershipName: string,
   lang: LanguageCode = "en",
+  agentDisplayName = "Nala",
 ): string {
   const name = formatVehicleDisplayName(vehicle.year, vehicle.title);
   const price = fmtPrice(vehicle.price);
   const km = vehicle.km != null ? `${(vehicle.km / 1000).toFixed(0)}k km` : "—";
   const specs = `${km}, ${vehicle.fuel ?? "—"}, ${vehicle.transmission ?? "—"}`;
-  return polishedNalaText(lang, GREETING, { dealership: dealershipName, name, price, specs });
+  const base = polishedNalaText(lang, GREETING, { dealership: dealershipName, name, price, specs });
+  const popia =
+    lang === "af"
+      ? `\n\n_Deur te gesels stem jy in dat ons jou boodskappe verwerk om hierdie navraag te help (POPIA). ${agentDisplayName} is 'n KI-assistent._`
+      : `\n\n_By chatting you agree we may process your messages to help with this enquiry (POPIA). ${agentDisplayName} is an AI assistant._`;
+  return `${base}${popia}`;
 }
 
 export { replyNeedsNameCapture };

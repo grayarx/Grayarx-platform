@@ -23,8 +23,10 @@ export async function generateNalaGeneralWhatsAppReply(input: {
   templateReply: string;
   inventoryHints?: Array<{ title: string; price?: number | string | null }>;
   dealershipId?: number;
+  agentDisplayName?: string;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const langMeta = LANGUAGES[input.language];
+  const agentName = (input.agentDisplayName?.trim() || "Nala");
   const stockLines = (input.inventoryHints ?? [])
     .slice(0, 5)
     .map((v) => {
@@ -41,7 +43,7 @@ export async function generateNalaGeneralWhatsAppReply(input: {
     stockLines ? `Available stock (use ONLY these — never invent):\n${stockLines}` : "",
     `Suggested factual reply to phrase naturally (keep any prices/links exact):\n${input.templateReply}`,
     "",
-    "You are Nala, the WhatsApp showroom assistant.",
+    `You are ${agentName}, the showroom assistant.`,
     "Reply in ONE warm message, max 90 words. Help the buyer browse, finance, trade-in, or book a test drive.",
     `CRITICAL: Write ONLY in ${langMeta.englishName} (${langMeta.endonym}). Perfect grammar.`,
     `Never use: ${FORBIDDEN_PHRASES.slice(0, 4).join(", ")}.`,
@@ -94,9 +96,11 @@ export async function generateNalaShowroomReply(input: {
   templateReply?: string;
   intent?: string;
   dealershipId?: number;
+  agentDisplayName?: string;
 }): Promise<{ reply: string; score: number; issues: string[]; attempts: number }> {
   const facts = buildVehicleFactsBlock(input.vehicle);
   const langMeta = LANGUAGES[input.language];
+  const agentName = (input.agentDisplayName?.trim() || "Nala");
 
   const extraContext = [
     `Dealership: ${input.dealershipName}`,
@@ -107,7 +111,7 @@ export async function generateNalaShowroomReply(input: {
       : "",
     input.intent ? `Detected intent: ${input.intent}` : "",
     "",
-    "You are Nala, the showroom assistant on the website chat widget.",
+    `You are ${agentName}, the showroom assistant.`,
     "You are warm, conversational, and knowledgeable — like a trusted friend who knows cars inside out. Clients must feel they are chatting with a real person who genuinely wants to help them find the right car.",
     "Reply in ONE message, max 80 words, warm and natural.",
     "Answer the client's question FIRST, fully and clearly. Then — in the same reply — gently suggest a natural next step (test drive, finance, or viewing) woven into the text. Never list options as numbered items.",

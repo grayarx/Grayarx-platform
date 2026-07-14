@@ -48,6 +48,7 @@ const DEALER_LINKS = [
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
   { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save external listing images, photo health" },
   { href: "/dealer/settings", label: "Settings", icon: Settings2, tip: "Showroom icons, WhatsApp, branding" },
+  { href: "/dealer/team", label: "Team", icon: Users, tip: "Invite staff to this dealership" },
   { href: "/dealer/legal", label: "Legal", icon: Scale, tip: "Policies, dealer agreement, POPIA forms" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
   { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Partner dealerships and referrals" },

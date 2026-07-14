@@ -155,6 +155,29 @@ export function buildSearchTerm(
   return parts.join(" ") || "vehicle";
 }
 
+/** Detect colour keyword in a buyer message. */
+export function detectColorFromMessage(message: string): string | null {
+  const lower = message.toLowerCase();
+  const colours = [
+    "white", "black", "silver", "grey", "gray", "blue", "red", "green",
+    "brown", "beige", "gold", "orange", "yellow", "purple", "maroon",
+    "wit", "swart", "silwer", "grys", "blou", "rooi",
+  ];
+  for (const c of colours) {
+    if (new RegExp(`\\b${c}\\b`, "i").test(lower)) {
+      if (c === "wit") return "white";
+      if (c === "swart") return "black";
+      if (c === "silwer") return "silver";
+      if (c === "grys") return "grey";
+      if (c === "blou") return "blue";
+      if (c === "rooi") return "red";
+      if (c === "gray") return "grey";
+      return c;
+    }
+  }
+  return null;
+}
+
 /**
  * Find ALL available vehicles matching a make, model, year and/or body type mentioned in the message.
  * Tries to narrow by specific model/year first; falls back to broader make/bodytype search.
@@ -408,6 +431,7 @@ export function buildNoVehicleWhatsAppReply(
   topMatches: Array<{ title: string; price?: number | string | null }> = [],
   dealershipName = "GrayArx",
   phone?: string,
+  agentDisplayName = "Nala",
 ): string {
   const state = phone ? getConvState(phone) : undefined;
   const effectiveLang = state?.lang ?? lang;
@@ -415,7 +439,7 @@ export function buildNoVehicleWhatsAppReply(
   // ── Back to menu ────────────────────────────────────────────────────────
   if (MENU_RE.test(message.trim())) {
     if (phone) updateConvState(phone, { stage: "browsing", lang: effectiveLang });
-    return buildMenuReply(effectiveLang, dealershipName, topMatches);
+    return buildMenuReply(effectiveLang, dealershipName, topMatches, agentDisplayName);
   }
 
   // ── Number/keyword CTA routing ──────────────────────────────────────────
@@ -482,7 +506,7 @@ export function buildNoVehicleWhatsAppReply(
   // ── First contact / greeting ─────────────────────────────────────────────
   if (!state || GREETING_RE.test(message.trim())) {
     if (phone) updateConvState(phone, { stage: "browsing", lang: effectiveLang });
-    return buildMenuReply(effectiveLang, dealershipName, topMatches);
+    return buildMenuReply(effectiveLang, dealershipName, topMatches, agentDisplayName);
   }
 
   // ── Income / salary declaration → treat as finance intent ───────────────
@@ -515,18 +539,18 @@ export function buildNoVehicleWhatsAppReply(
 }
 
 const GREETING_INTRO: Record<LanguageCode, string> = {
-  en: "Hi there! 👋 Welcome to {dealership} — I'm Nala, and I'm here to help you find your perfect car.\n\nAre you looking for something specific, or would you like me to show you some of our best deals? I can also help with trade-ins or arranging finance — just let me know what's on your mind!",
-  af: "Hallo! 👋 Welkom by {dealership} — ek is Nala, en ek is hier om jou te help om jou perfekte motor te vind.\n\nSoek jy iets spesifieks, of wil jy hê ek wys jou van ons beste aanbiedings? Ek kan ook help met ruiltransaksies of finansiering — laat my net weet wat op jou gedagtes is!",
-  zu: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-Nala, futhi ngilapha ukukusiza ukuthola imoto yakho ephelele.\n\nUfuna into ethile, noma ungathanda ukubona izivumelwano zethu ezihamba phambili? Ngingasiza futhi nge-trade-in noma imali — ngitshele nje ukuthi kukhona ini engqondweni yakho!",
-  xh: "Molo! 👋 Siyakwamkela e-{dealership} — ndingu-Nala, kwaye ndilapha ukukunceda ukufumana imoto yakho epheleleyo.\n\nUfuna into ethile, okanye ungathanda ukubona iindawo zethu ezihamba phambili? Ndinakho ukukunceda ngokutshintsha okanye imali — nditshele nje ukuba kukho ntoni engqondweni yakho!",
-  st: "Dumela! 👋 Re a o amohela ho {dealership} — ke Nala, mme ke here ho o thusa ho fumana koloi ya hao e kantle.\n\nO batla se seng se ikgethang, kapa o batla nna ke o bontše dithekiso tsa rona tse ntle? Ke ka o thusa le ka ho rekiša koloi ya hao kapa lichelete — mpolele feela se o nahanang ka sona!",
-  nso: "Dumela! 👋 Re a go amogela go {dealership} — ke Nala, ke gona go go thuša go hwetša koloi ya gago ye ntle.\n\nO nyaka se sengwe se ikgethago, goba o nyaka ke go bontšhe dithekišo tša rena tše kaone? Ke ka go thuša le ka go rekiša koloi ya gago goba matlotlo — mpolele fela se o naganago ka sona!",
-  tn: "Dumela! 👋 Re a go amogela kwa {dealership} — ke Nala, mme ke fa go go thusa go bona koloi ya gago e siameng.\n\nO batla se sengwe se ikgethang, kgotsa o batla ke go bontsha dithekiso tsa rona tse di molemo? Ke ka go thusa le ka go rekisa koloi ya gago kgotsa madi — mpolele fela se o nalanang le sona!",
-  ts: "Xewani! 👋 Hi ku amukela eka {dealership} — ndzi Nala, mme ndzi fana ku ku pfuna ku kuma xitirho xa wena lexikatsongo.\n\nU lava xin'wana lexinene, kumbe u lava ndzi ku kombele switirhisiwa swa hina leswi a swi nene? Ndzi nga ku pfuna na ka ku hoxisa xitirho ku sungula kumbe timali — ndzi hlamusela fela leswi u nakanaka ha swona!",
-  ss: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-Nala, futhi ngilapha ukukusita utfole imoto yakho lepheleleko.\n\nUfuna into leyithile, noma ungathanda ukubona tivumelwano letinhle ta lethu? Ngingasita futhi ngekulungisa imoto yakho ngemali — ngikhulumele nje kutsi kukhona ini engqondweni yakho!",
-  ve: "Vhutshilo! 👋 Ri a u taka vhukuma kha {dealership} — ndi Nala, mme ndi hone u u thusa u wana khathini ya hawe yone.\n\nU toda zwiṅwe zwi re hone, kana u tenda ndi u sumbedze zwine zwa vha zwi nnzhi? Ndi nga u thusa na nga u shandukisa khathini ya hawe kana tshelede — mbolele fhedzi zwine wa humbula nga zwone!",
-  nr: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-Nala, futhi ngilapha ukukusiza ukuthola imoto yakho ephelele.\n\nUfuna into ethile, noma ungathanda ukubona izivumelwano zethu ezihamba phambili? Ngingasiza futhi nge-trade-in noma imali — ngitshele nje ukuthi kukhona ini engqondweni yakho!",
-  pt: "Olá! 👋 Bem-vindo à {dealership} — sou a Nala, e estou aqui para ajudá-lo a encontrar o seu carro perfeito.\n\nEstá à procura de algo específico, ou gostaria que eu mostrasse algumas das nossas melhores ofertas? Também posso ajudar com troca ou financiamento — é só me dizer o que tem em mente!",
+  en: "Hi there! 👋 Welcome to {dealership} — I'm {agent}, and I'm here to help you find your perfect car.\n\nAre you looking for something specific, or would you like me to show you some of our best deals? I can also help with trade-ins or arranging finance — just let me know what's on your mind!\n\n_We process your messages to help with this enquiry (POPIA). Reply STOP anytime to opt out of automated follow-ups._",
+  af: "Hallo! 👋 Welkom by {dealership} — ek is {agent}, en ek is hier om jou te help om jou perfekte motor te vind.\n\nSoek jy iets spesifieks, of wil jy hê ek wys jou van ons beste aanbiedings? Ek kan ook help met ruiltransaksies of finansiering — laat my net weet wat op jou gedagtes is!\n\n_Ons verwerk jou boodskappe om hierdie navraag te help (POPIA). Antwoord STOP om uit te teken._",
+  zu: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-{agent}, futhi ngilapha ukukusiza ukuthola imoto yakho ephelele.\n\nUfuna into ethile, noma ungathanda ukubona izivumelwano zethu ezihamba phambili? Ngingasiza futhi nge-trade-in noma imali — ngitshele nje ukuthi kukhona ini engqondweni yakho!",
+  xh: "Molo! 👋 Siyakwamkela e-{dealership} — ndingu-{agent}, kwaye ndilapha ukukunceda ukufumana imoto yakho epheleleyo.\n\nUfuna into ethile, okanye ungathanda ukubona iindawo zethu ezihamba phambili? Ndinakho ukukunceda ngokutshintsha okanye imali — nditshele nje ukuba kukho ntoni engqondweni yakho!",
+  st: "Dumela! 👋 Re a o amohela ho {dealership} — ke {agent}, mme ke here ho o thusa ho fumana koloi ya hao e kantle.\n\nO batla se seng se ikgethang, kapa o batla nna ke o bontše dithekiso tsa rona tse ntle? Ke ka o thusa le ka ho rekiša koloi ya hao kapa lichelete — mpolele feela se o nahanang ka sona!",
+  nso: "Dumela! 👋 Re a go amogela go {dealership} — ke {agent}, ke gona go go thuša go hwetša koloi ya gago ye ntle.\n\nO nyaka se sengwe se ikgethago, goba o nyaka ke go bontšhe dithekišo tša rena tše kaone? Ke ka go thuša le ka go rekiša koloi ya gago goba matlotlo — mpolele fela se o naganago ka sona!",
+  tn: "Dumela! 👋 Re a go amogela kwa {dealership} — ke {agent}, mme ke fa go go thusa go bona koloi ya gago e siameng.\n\nO batla se sengwe se ikgethang, kgotsa o batla ke go bontsha dithekiso tsa rona tse di molemo? Ke ka go thusa le ka go rekisa koloi ya gago kgotsa madi — mpolele fela se o nalanang le sona!",
+  ts: "Xewani! 👋 Hi ku amukela eka {dealership} — ndzi {agent}, mme ndzi fana ku ku pfuna ku kuma xitirho xa wena lexikatsongo.\n\nU lava xin'wana lexinene, kumbe u lava ndzi ku kombele switirhisiwa swa hina leswi a swi nene? Ndzi nga ku pfuna na ka ku hoxisa xitirho ku sungula kumbe timali — ndzi hlamusela fela leswi u nakanaka ha swona!",
+  ss: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-{agent}, futhi ngilapha ukukusita utfole imoto yakho lepheleleko.\n\nUfuna into leyithile, noma ungathanda ukubona tivumelwano letinhle ta lethu? Ngingasita futhi ngekulungisa imoto yakho ngemali — ngikhulumele nje kutsi kukhona ini engqondweni yakho!",
+  ve: "Vhutshilo! 👋 Ri a u taka vhukuma kha {dealership} — ndi {agent}, mme ndi hone u u thusa u wana khathini ya hawe yone.\n\nU toda zwiṅwe zwi re hone, kana u tenda ndi u sumbedze zwine zwa vha zwi nnzhi? Ndi nga u thusa na nga u shandukisa khathini ya hawe kana tshelede — mbolele fhedzi zwine wa humbula nga zwone!",
+  nr: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-{agent}, futhi ngilapha ukukusiza ukuthola imoto yakho ephelele.\n\nUfuna into ethile, noma ungathanda ukubona izivumelwano zethu ezihamba phambili? Ngingasiza futhi nge-trade-in noma imali — ngitshele nje ukuthi kukhona ini engqondweni yakho!",
+  pt: "Olá! 👋 Bem-vindo à {dealership} — sou a {agent}, e estou aqui para ajudá-lo a encontrar o seu carro perfeito.\n\nEstá à procura de algo específico, ou gostaria que eu mostrasse algumas das nossas melhores ofertas? Também posso ajudar com troca ou financiamento — é só me dizer o que tem em mente!\n\n_Processamos as suas mensagens para ajudar neste pedido (POPIA). Responda STOP para cancelar follow-ups._",
 };
 
 const DEALS_LABEL: Record<LanguageCode, string> = {
@@ -548,9 +572,12 @@ function buildMenuReply(
   lang: LanguageCode,
   dealershipName: string,
   topMatches: Array<{ title: string; price?: number | string | null }>,
+  agentDisplayName = "Nala",
 ): string {
   const template = GREETING_INTRO[lang] ?? GREETING_INTRO.en;
-  let reply = template.replace("{dealership}", dealershipName);
+  let reply = template
+    .replace(/\{dealership\}/g, dealershipName)
+    .replace(/\{agent\}/g, agentDisplayName);
 
   if (topMatches.length > 0) {
     const lines = topMatches.slice(0, 3).map((v) => {
@@ -652,6 +679,8 @@ export async function resolveNalaReply(input: {
   includeDealScore?: boolean;
   inventoryHints?: Array<{ title: string; price?: number | string | null }>;
   phone?: string;
+  /** Per-dealership assistant name; defaults to Nala. */
+  agentDisplayName?: string;
 }): Promise<{
   reply: string;
   language: LanguageCode;
@@ -662,6 +691,7 @@ export async function resolveNalaReply(input: {
 }> {
   const phone = input.phone;
   const state = phone ? getConvState(phone) : undefined;
+  const agentName = (input.agentDisplayName?.trim() || "Nala");
 
   // Lock language to first detection — don't re-detect on every message
   let lang: LanguageCode;
@@ -674,6 +704,10 @@ export async function resolveNalaReply(input: {
 
   const isBookingIntent = detectsBookingIntent(input.message);
   const siteUrl = (process.env.APP_URL || "https://www.grayarx.com").replace(/\/+$/, "");
+  const disclose = (text: string) =>
+    input.channel === "whatsapp"
+      ? addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(text), lang, agentName)
+      : text;
 
   if (!input.vehicle?.title) {
     const templateFallback = buildNoVehicleWhatsAppReply(
@@ -683,41 +717,38 @@ export async function resolveNalaReply(input: {
       input.inventoryHints ?? [],
       input.dealershipName,
       phone,
+      agentName,
     );
 
-    // WhatsApp: LLM-polished Nala reply 24/7 (falls back to template if OpenAI unavailable)
-    if (input.channel === "whatsapp") {
-      try {
-        const llm = await generateNalaGeneralWhatsAppReply({
-          language: lang,
-          customerMessage: input.message,
-          dealershipName: input.dealershipName,
-          templateReply: templateFallback,
-          inventoryHints: input.inventoryHints,
-          dealershipId: input.dealershipId,
-        });
-        const reply = addWhatsAppAIDisclosure(
-          stripMarkdownForWhatsApp((llm.reply.trim() || templateFallback).trim()),
-          lang,
-        );
-        return {
-          reply,
-          language: lang,
-          intent: "general",
-          answered: Boolean(llm.reply.trim()),
-          source: llm.reply.trim() ? "llm" : "template",
-          isBookingIntent,
-        };
-      } catch (e) {
-        console.warn("[nalaReplyOrchestrator] General WhatsApp LLM failed — using template", e instanceof Error ? e.message : String(e));
-        if (isQuotaError(e)) {
-          console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
-        }
+    // LLM polish for WhatsApp + web (template fallback if OpenAI/Forge unavailable)
+    try {
+      const llm = await generateNalaGeneralWhatsAppReply({
+        language: lang,
+        customerMessage: input.message,
+        dealershipName: input.dealershipName,
+        templateReply: templateFallback,
+        inventoryHints: input.inventoryHints,
+        dealershipId: input.dealershipId,
+        agentDisplayName: agentName,
+      });
+      const reply = disclose((llm.reply.trim() || templateFallback).trim());
+      return {
+        reply,
+        language: lang,
+        intent: "general",
+        answered: Boolean(llm.reply.trim()),
+        source: llm.reply.trim() ? "llm" : "template",
+        isBookingIntent,
+      };
+    } catch (e) {
+      console.warn("[nalaReplyOrchestrator] General LLM failed — using template", e instanceof Error ? e.message : String(e));
+      if (isQuotaError(e)) {
+        console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
       }
     }
 
     return {
-      reply: input.channel === "whatsapp" ? addWhatsAppAIDisclosure(templateFallback, lang) : templateFallback,
+      reply: disclose(templateFallback),
       language: lang,
       intent: "general",
       answered: false,
@@ -733,15 +764,34 @@ export async function resolveNalaReply(input: {
 
   const heuristic = answerShowroomQuestion(input.vehicle, input.message, lang);
 
-  // Web chat: native templates only — LLM rewrites caused cross-language grammar errors
-  // when OpenAI quota was limited. WhatsApp still uses LLM polish path below.
-  if (input.channel === "web") {
-    let reply = composeShowroomBotReply(heuristic.reply, lang, {
-      appendFollowUp: heuristic.answered && !replyNeedsNameCapture(heuristic.reply),
-    });
-    if (input.includeDealScore !== false && (heuristic.intent === "price" || heuristic.intent === "availability")) {
-      reply = appendDealScoreToReply(reply, input.vehicle, lang);
+  const appendVehicleCTA = (text: string): string => {
+    if (input.channel !== "whatsapp") return text;
+    const cta = VEHICLE_CTA[lang] ?? VEHICLE_CTA.en;
+    return `${text}\n\n─────────────\n${cta}`;
+  };
+
+  const finalizeTemplate = (): {
+    reply: string;
+    language: LanguageCode;
+    intent: string;
+    answered: boolean;
+    source: "template" | "llm";
+    isBookingIntent: boolean;
+  } => {
+    let reply =
+      input.channel === "web"
+        ? composeShowroomBotReply(heuristic.reply, lang, {
+            appendFollowUp: heuristic.answered && !replyNeedsNameCapture(heuristic.reply),
+          })
+        : polishNalaReply(heuristic.reply, lang);
+    if (
+      input.includeDealScore !== false &&
+      (heuristic.intent === "price" || heuristic.intent === "availability")
+    ) {
+      reply = appendDealScoreToReply(reply, input.vehicle!, lang);
     }
+    reply = disclose(reply);
+    reply = appendVehicleCTA(reply);
     return {
       reply,
       language: lang,
@@ -750,14 +800,9 @@ export async function resolveNalaReply(input: {
       source: "template",
       isBookingIntent,
     };
-  }
-
-  const appendVehicleCTA = (text: string): string => {
-    if (input.channel !== "whatsapp") return text;
-    const cta = VEHICLE_CTA[lang] ?? VEHICLE_CTA.en;
-    return `${text}\n\n─────────────\n${cta}`;
   };
 
+  // Web + WhatsApp: try LLM polish when available; keep template fallback.
   try {
     const llm = await generateNalaShowroomReply({
       language: lang,
@@ -767,15 +812,22 @@ export async function resolveNalaReply(input: {
       templateReply: heuristic.reply,
       intent: heuristic.intent,
       dealershipId: input.dealershipId,
+      agentDisplayName: agentName,
     });
     let reply = (llm.reply.trim() || heuristic.reply).trim();
     reply = polishNalaReply(reply, lang);
-    if (input.includeDealScore !== false && (heuristic.intent === "price" || heuristic.intent === "availability")) {
+    if (input.channel === "web") {
+      reply = composeShowroomBotReply(reply, lang, {
+        appendFollowUp: heuristic.answered && !replyNeedsNameCapture(reply),
+      });
+    }
+    if (
+      input.includeDealScore !== false &&
+      (heuristic.intent === "price" || heuristic.intent === "availability")
+    ) {
       reply = appendDealScoreToReply(reply, input.vehicle, lang);
     }
-    if (input.channel === "whatsapp") {
-      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
-    }
+    reply = disclose(reply);
     reply = appendVehicleCTA(reply);
     return {
       reply,
@@ -791,22 +843,7 @@ export async function resolveNalaReply(input: {
     if (isQuotaError(e)) {
       console.error("[Nala] OpenAI quota exhausted — all replies in template mode until billing is topped up");
     }
-    let reply = polishNalaReply(heuristic.reply, lang);
-    if (input.includeDealScore !== false && heuristic.intent === "price") {
-      reply = appendDealScoreToReply(reply, input.vehicle, lang);
-    }
-    if (input.channel === "whatsapp") {
-      reply = addWhatsAppAIDisclosure(stripMarkdownForWhatsApp(reply), lang);
-    }
-    reply = appendVehicleCTA(reply);
-    return {
-      reply,
-      language: lang,
-      intent: heuristic.intent,
-      answered: heuristic.answered,
-      source: "template",
-      isBookingIntent,
-    };
+    return finalizeTemplate();
   }
 }
 

@@ -21,10 +21,10 @@ describe("agentIntentRouting", () => {
     expect(detectsTradeInIntent("Do you take part exchange?")).toBe(true);
   });
 
-  it("routes after-hours general chat to Bongi", () => {
+  it("keeps after-hours general chat on Nala (24/7 stock Q&A)", () => {
     expect(
       classifyAgentRoute({ message: "Hello, are you there?", afterHours: true }).agent,
-    ).toBe("bongi");
+    ).toBe("nala");
   });
 
   it("keeps booking on Lerato even after hours", () => {
