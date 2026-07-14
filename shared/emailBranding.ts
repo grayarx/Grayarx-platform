@@ -31,7 +31,7 @@ export function grayArxAppUrl(): string {
  * Full lockup at 44px looks “zoomed in” / unreadable next to the HTML wordmark.
  */
 export function grayArxLogoIconUrl(): string {
-  return `${grayArxAppUrl()}/logo-crest.png?v=10`;
+  return `${grayArxAppUrl()}/logo-crest.png?v=11`;
 }
 
 export const GRAYARX_EMAIL_LOGO_CID = "grayarx-logo-icon";

@@ -12,9 +12,9 @@ interface LogoProps {
 }
 
 /** Full circular crest (gold ring + GA + car) — not a tight letter crop */
-export const LOGO_ICON_URL = "/logo-crest.png?v=10";
-export const LOGO_NAV_URL = "/logo-crest.png?v=10";
-export const LOGO_FULL_URL = "/grayarx-logo-full.png?v=10";
+export const LOGO_ICON_URL = "/logo-crest.png?v=11";
+export const LOGO_NAV_URL = "/logo-crest.png?v=11";
+export const LOGO_FULL_URL = "/grayarx-logo-full.png?v=11";
 /** Legacy alias used by LogoEmblem and emailBranding */
 export const LOGO_URL = LOGO_ICON_URL;
 

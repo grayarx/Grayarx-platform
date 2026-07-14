@@ -16,7 +16,7 @@ describe("pilot email campaign", () => {
   it("logo URL is the circular GA crest PNG", () => {
     const url = grayArxLogoUrl();
     expect(url).toContain("/logo-crest.png");
-    expect(url).toContain("v=10");
+    expect(url).toContain("v=11");
     expect(url).not.toContain(".svg");
     expect(url).not.toContain("logo-icon-132");
   });
