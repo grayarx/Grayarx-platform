@@ -4,16 +4,18 @@
  * /robots.txt        — minimal allow-all + sitemap pointer
  * /sitemap.xml       — static marketing routes + every public showroom vehicle
  *
- * Both routes are intentionally cheap: they hit the DB at most once per call,
- * cap at 5 000 vehicles (Google's per-sitemap limit is 50 000 but we don't
- * need to flirt with it), and respond as `text/plain` / `application/xml`.
+ * Both routes are intentionally cheap: lean id/updatedAt query only (no photos),
+ * cap at 5 000 vehicles, and respond as text/plain / application/xml.
  *
- * Origin discovery: derives the canonical site URL from the inbound request
- * (X-Forwarded-Host / Host), so the same code works for the dev sandbox,
- * staging, and grayarx.com without env coupling.
+ * Origin: prefers APP_URL, then inbound Host headers, then https://www.grayarx.com
+ * so production always emits a stable canonical host even behind proxies.
  */
-import type { Express, Request } from "express";
-import { listVehicles } from "../db";
+import type { Express, Request, Response } from "express";
+import { desc, eq } from "drizzle-orm";
+import { vehicles } from "../../drizzle/schema";
+import { getDb } from "../db";
+
+const CANONICAL_ORIGIN = "https://www.grayarx.com";
 
 const STATIC_ROUTES: Array<{ path: string; changefreq: string; priority: string }> = [
   { path: "/", changefreq: "weekly", priority: "1.0" },
@@ -24,16 +26,34 @@ const STATIC_ROUTES: Array<{ path: string; changefreq: string; priority: string 
   { path: "/help", changefreq: "monthly", priority: "0.5" },
 ];
 
+function firstHeaderValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  if (typeof value !== "string") return undefined;
+  // Proxies may send "https,http" — take the first token.
+  return value.split(",")[0]?.trim() || undefined;
+}
+
 function originFromRequest(req: Request): string {
-  const protoHeader = req.headers["x-forwarded-proto"];
-  const proto = Array.isArray(protoHeader)
-    ? protoHeader[0]
-    : (protoHeader as string | undefined) ?? (req.secure ? "https" : "http");
-  const hostHeader =
-    (req.headers["x-forwarded-host"] as string | undefined) ??
-    (req.headers.host as string | undefined) ??
-    "grayarx.com";
-  return `${proto}://${hostHeader}`.replace(/\/+$/, "");
+  const fromEnv = (process.env.APP_URL || "").replace(/\/+$/, "");
+  if (fromEnv) {
+    try {
+      return new URL(fromEnv).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const proto =
+    firstHeaderValue(req.headers["x-forwarded-proto"]) ??
+    (req.secure ? "https" : "http");
+  const host =
+    firstHeaderValue(req.headers["x-forwarded-host"]) ??
+    firstHeaderValue(req.headers.host);
+
+  if (host) {
+    return `${proto}://${host}`.replace(/\/+$/, "");
+  }
+  return CANONICAL_ORIGIN;
 }
 
 function escapeXml(s: string): string {
@@ -45,13 +65,24 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
+function safeLastmod(value: Date | string | null | undefined, fallback: string): string {
+  if (value == null || value === "") return fallback;
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return fallback;
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return fallback;
+  }
+}
+
 /**
  * Build the sitemap XML body. Pure function — accepts the data it needs so
  * it stays unit-testable.
  */
 export function buildSitemapXml(
   origin: string,
-  vehicles: Array<{ id: number; updatedAt: Date | string | null }>,
+  vehicleRows: Array<{ id: number; updatedAt: Date | string | null }>,
   now: Date = new Date(),
 ): string {
   const today = now.toISOString().slice(0, 10);
@@ -67,19 +98,49 @@ export function buildSitemapXml(
     lines.push(`    <priority>${r.priority}</priority>`);
     lines.push("  </url>");
   }
-  for (const v of vehicles.slice(0, 5000)) {
-    const updated = v.updatedAt
-      ? new Date(v.updatedAt).toISOString().slice(0, 10)
-      : today;
+  for (const v of vehicleRows.slice(0, 5000)) {
     lines.push("  <url>");
     lines.push(`    <loc>${escapeXml(`${origin}/showroom/${v.id}`)}</loc>`);
-    lines.push(`    <lastmod>${updated}</lastmod>`);
+    lines.push(`    <lastmod>${safeLastmod(v.updatedAt, today)}</lastmod>`);
     lines.push("    <changefreq>weekly</changefreq>");
     lines.push("    <priority>0.6</priority>");
     lines.push("  </url>");
   }
   lines.push("</urlset>");
   return lines.join("\n");
+}
+
+/** Static-only sitemap that never depends on request/DB — last-resort 200 body. */
+function staticFallbackXml(origin: string = CANONICAL_ORIGIN): string {
+  return buildSitemapXml(origin, []);
+}
+
+/**
+ * Lean inventory listing for SEO — id + updatedAt only, no photo joins.
+ * Avoids the heavy listVehicles() path that was timing out / OOMing in prod.
+ */
+async function listAvailableVehiclesForSitemap(
+  limit = 5000,
+): Promise<Array<{ id: number; updatedAt: Date | string | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: vehicles.id,
+      updatedAt: vehicles.updatedAt,
+    })
+    .from(vehicles)
+    .where(eq(vehicles.status, "available"))
+    .orderBy(desc(vehicles.updatedAt))
+    .limit(limit);
+}
+
+function sendXml(res: Response, xml: string): void {
+  if (res.headersSent) return;
+  res.status(200);
+  res.setHeader("Content-Type", "application/xml; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=900");
+  res.send(xml);
 }
 
 export function registerSitemapRoutes(app: Express): void {
@@ -101,20 +162,28 @@ export function registerSitemapRoutes(app: Express): void {
 
   app.get("/sitemap.xml", async (req, res) => {
     try {
-      const all = await listVehicles(5000);
-      // Only expose available, public vehicles — sold/reserved/draft are excluded.
-      const vehicles = all.filter((v) => v.status === "available");
-      const xml = buildSitemapXml(originFromRequest(req), vehicles);
-      res.setHeader("Content-Type", "application/xml; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=900"); // 15 minutes
-      res.send(xml);
+      const origin = originFromRequest(req);
+      const vehicleRows = await listAvailableVehiclesForSitemap(5000);
+      const xml = buildSitemapXml(origin, vehicleRows);
+      sendXml(res, xml);
     } catch (err) {
       console.error("[Sitemap] Failed to build sitemap.xml", err);
-      // Still return a valid sitemap with just the static routes so search
-      // engines don't see a 500 (which damages crawl budget).
-      const xml = buildSitemapXml(originFromRequest(req), []);
-      res.setHeader("Content-Type", "application/xml; charset=utf-8");
-      res.send(xml);
+      // Nested try/catch: never let a secondary failure become a 500 —
+      // search engines treat sitemap 500s as crawl-budget damage.
+      try {
+        const origin = originFromRequest(req);
+        sendXml(res, staticFallbackXml(origin));
+      } catch (fallbackErr) {
+        console.error("[Sitemap] Fallback also failed", fallbackErr);
+        try {
+          sendXml(res, staticFallbackXml(CANONICAL_ORIGIN));
+        } catch (lastErr) {
+          console.error("[Sitemap] Hardcoded fallback failed", lastErr);
+          if (!res.headersSent) {
+            res.status(200).type("application/xml").send(staticFallbackXml());
+          }
+        }
+      }
     }
   });
 }
