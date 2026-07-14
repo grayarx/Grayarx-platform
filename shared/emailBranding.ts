@@ -26,25 +26,31 @@ export function grayArxAppUrl(): string {
   return url;
 }
 
+/**
+ * Circular GA crest only (not the full lockup with GRAYARX wordmark).
+ * Full lockup at 44px looks “zoomed in” / unreadable next to the HTML wordmark.
+ */
 export function grayArxLogoIconUrl(): string {
-  // Emblem PNG — sharp at 44px in Gmail/Outlook; avoids the 32px logo.svg upscale.
-  return `${grayArxAppUrl()}/grayarx-logo-emblem.png?v=8`;
+  return `${grayArxAppUrl()}/logo-icon-132.png?v=9`;
 }
 
 export const GRAYARX_EMAIL_LOGO_CID = "grayarx-logo-icon";
 
 /**
- * Logo src for email HTML.
- * Default is the hosted HTTPS emblem so browser previews and inbox clients both work.
- * Set EMAIL_LOGO_USE_CID=true to force cid: + inline PNG attachment (legacy).
+ * Logo src for email HTML — always HTTPS so browser previews work.
+ * cid: is broken in iframes/srcDoc; only use it when EMAIL_LOGO_USE_CID=true
+ * AND the caller is building a real send (opts.forPreview !== true).
  */
 export function grayArxEmailLogoSrc(opts?: { forPreview?: boolean }): string {
-  if (typeof process !== "undefined" && process.env?.EMAIL_LOGO_ICON_URL) {
-    return process.env.EMAIL_LOGO_ICON_URL;
+  const envUrl =
+    typeof process !== "undefined" ? process.env?.EMAIL_LOGO_ICON_URL?.trim() : undefined;
+  // Only honour env override when it is a real http(s) URL — never cid: from env.
+  if (envUrl && /^https?:\/\//i.test(envUrl)) {
+    return envUrl;
   }
   const forceCid =
     typeof process !== "undefined" && process.env?.EMAIL_LOGO_USE_CID === "true";
-  if (forceCid && !opts?.forPreview) {
+  if (forceCid && opts?.forPreview !== true) {
     return `cid:${GRAYARX_EMAIL_LOGO_CID}`;
   }
   return grayArxLogoIconUrl();
@@ -69,8 +75,11 @@ const FONT = "Arial,Helvetica,sans-serif";
 const SERIF = "Georgia,'Times New Roman',Times,serif";
 
 /** Dark header bar — icon + GrayArx / subtitle (matches site nav) */
-export function grayArxEmailHeader(subtitle = "AI Platform"): string {
-  const icon = grayArxEmailLogoSrc();
+export function grayArxEmailHeader(
+  subtitle = "AI Platform",
+  opts?: { forPreview?: boolean },
+): string {
+  const icon = grayArxEmailLogoSrc({ forPreview: opts?.forPreview });
   return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background-color:#0a0a0c;">
   <tr>
@@ -157,7 +166,7 @@ export function grayArxEmailBullet(text: string): string {
 export function grayArxEmailLayout(
   bodyHtml: string,
   headerSubtitle = "AI Platform",
-  opts?: { marketingUnsubscribe?: boolean },
+  opts?: { marketingUnsubscribe?: boolean; forPreview?: boolean },
 ): string {
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -173,7 +182,7 @@ export function grayArxEmailLayout(
       <td align="center" style="padding:24px 12px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;max-width:600px;width:100%;background-color:#ffffff;">
           <tr>
-            <td style="padding:0;">${grayArxEmailHeader(headerSubtitle)}</td>
+            <td style="padding:0;">${grayArxEmailHeader(headerSubtitle, { forPreview: opts?.forPreview })}</td>
           </tr>
           <tr>
             <td style="padding:36px 32px 32px;font-family:${FONT};">${bodyHtml}</td>

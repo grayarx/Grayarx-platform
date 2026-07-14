@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 
-/** Sharp emblem — never /logo.svg (32px upscaled = blurry/zoomed). */
-const LOGO_URL = "https://www.grayarx.com/grayarx-logo-emblem.png?v=8";
+/** Circular GA crest only — never full lockup (looks zoomed at small sizes). */
+const LOGO_URL = "https://www.grayarx.com/logo-icon-132.png?v=9";
 
 const emailTemplates = {
   welcome: {
@@ -225,7 +225,7 @@ export default function AdminEmailPreview() {
 
             <div className="space-y-2">
               <p className="text-sm font-semibold">Logo Animation:</p>
-              <p className="text-sm text-muted-foreground">✓ Pulsing animation (2s cycle)</p>
+              <p className="text-sm text-muted-foreground">✓ Sharp GA crest (hosted PNG)</p>
             </div>
           </CardContent>
         </Card>
@@ -262,9 +262,9 @@ export default function AdminEmailPreview() {
           <CardTitle className="text-sm">Email logo</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Welcome / Follow-up / Pilot previews use the hosted GrayArx emblem
-          (`grayarx-logo-emblem.png` at 44–56px). Real sends use the same HTTPS
-          image so Gmail and browser previews both show a sharp logo.
+          Welcome / Follow-up / Pilot use the circular GA crest
+          (`logo-icon-132.png` at 44–56px) over HTTPS — not the full lockup and
+          not cid: attachments (those break in browser preview).
         </CardContent>
       </Card>
     </div>

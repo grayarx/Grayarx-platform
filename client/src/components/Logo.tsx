@@ -11,9 +11,9 @@ interface LogoProps {
   variant?: "icon" | "nav" | "full";
 }
 
-export const LOGO_ICON_URL = "/grayarx-logo-emblem.png?v=7";
-export const LOGO_NAV_URL = "/grayarx-logo-emblem.png?v=7";
-export const LOGO_FULL_URL = "/grayarx-logo-full.png?v=7";
+export const LOGO_ICON_URL = "/logo-icon-132.png?v=9";
+export const LOGO_NAV_URL = "/logo-icon-132.png?v=9";
+export const LOGO_FULL_URL = "/grayarx-logo-full.png?v=9";
 /** Legacy alias used by LogoEmblem and emailBranding */
 export const LOGO_URL = LOGO_ICON_URL;
 

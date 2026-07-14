@@ -21,6 +21,7 @@ import {
   recordPilotEmailSend,
   refreshPilotEmailSendMap,
 } from "./pilotEmailSendLog";
+import { grayArxLogoIconUrl } from "../../shared/emailBranding";
 
 const SEND_DELAY_MS = 600;
 
@@ -195,6 +196,18 @@ export async function previewPilotCampaign() {
     const remaining = prospects.filter((p) => !p.alreadyEmailed).length;
     const sample = mailable[0] ?? groups[segment][0];
 
+    // Preview always uses hosted HTTPS logo (cid: breaks in browser iframes).
+    const rawHtml = generateSegmentPilotEmailHTML({
+      dealershipName: sample?.dealershipName ?? "Your Dealership",
+      contactName: sample?.contactName ?? "there",
+      city: sample?.city,
+      segment,
+    });
+    const hosted = grayArxLogoIconUrl();
+    const sampleHtml = rawHtml
+      .replace(/src="cid:[^"]+"/gi, `src="${hosted}"`)
+      .replace(/src='cid:[^']+'/gi, `src='${hosted}'`);
+
     return {
       segment,
       label: subjectForSegment(segment),
@@ -206,12 +219,7 @@ export async function previewPilotCampaign() {
       /** UI list: verified emails only */
       total: mailable.length,
       prospects,
-      sampleHtml: generateSegmentPilotEmailHTML({
-        dealershipName: sample?.dealershipName ?? "Your Dealership",
-        contactName: sample?.contactName ?? "there",
-        city: sample?.city,
-        segment,
-      }),
+      sampleHtml,
     };
   });
 }
