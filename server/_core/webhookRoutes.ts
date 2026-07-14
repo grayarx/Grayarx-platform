@@ -3,12 +3,21 @@
  * Handles incoming webhooks from external services (WhatsApp, Stripe, etc.)
  */
 
+import crypto from "crypto";
 import { Express, Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { processWhatsAppWebhook, verifyWebhookToken, validateWebhookSignature } from "./whatsappWebhook";
 import { getDb } from "../db";
 import { dealerships } from "../../drizzle/schema";
 import { alertFounder } from "./founderAlert";
+import { checkRateLimit, callerIp } from "./rateLimit";
+
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Map Meta phone_number_id → GrayArx dealership.
@@ -106,16 +115,24 @@ export function registerWebhookRoutes(app: Express): void {
    */
   app.post("/api/webhooks/whatsapp", async (req: Request, res: Response) => {
     try {
-      const signature = req.headers["x-hub-signature-256"] as string;
+      const signature = req.headers["x-hub-signature-256"] as string | undefined;
       const payload = (req as any).rawBody ?? JSON.stringify(req.body);
+      const bypass = process.env.ALLOW_WHATSAPP_SIGNATURE_BYPASS === "1";
 
-      // Validate webhook signature
-      // Temporarily bypass strict HMAC signature check in production
-      // to resolve Railway dropping/modifying raw bytes or headers
-      if (!signature) {
-        console.warn("[WhatsApp Webhook] Missing signature header, but continuing (bypass active)");
-      } else if (!validateWebhookSignature(signature, payload)) {
-        console.warn("[WhatsApp Webhook] Invalid signature, but continuing (bypass active)");
+      // Reject missing/invalid HMAC unless explicitly bypassed (ops escape hatch).
+      if (!bypass) {
+        if (!signature) {
+          console.warn("[WhatsApp Webhook] Missing X-Hub-Signature-256 — rejecting");
+          return res.status(401).json({ error: "Missing signature" });
+        }
+        if (!validateWebhookSignature(signature, payload)) {
+          console.warn("[WhatsApp Webhook] Invalid signature — rejecting");
+          return res.status(401).json({ error: "Invalid signature" });
+        }
+      } else {
+        console.warn(
+          "[WhatsApp Webhook] ALLOW_WHATSAPP_SIGNATURE_BYPASS=1 — signature not enforced",
+        );
       }
 
       const value = req.body?.entry?.[0]?.changes?.[0]?.value;
@@ -123,7 +140,7 @@ export function registerWebhookRoutes(app: Express): void {
       const inboundCount = value?.messages?.length ?? 0;
       const statusCount = value?.statuses?.length ?? 0;
       console.log(
-        `[WhatsApp Webhook] POST phone_number_id=${phoneNumberId ?? "none"} messages=${inboundCount} statuses=${statusCount}`,
+        `[WhatsApp Webhook] POST phone_number_id=${phoneNumberId ? "set" : "none"} messages=${inboundCount} statuses=${statusCount}`,
       );
 
       const dealershipId = await resolveDealershipIdFromPhoneNumberId(phoneNumberId);
@@ -179,10 +196,27 @@ export function registerWebhookRoutes(app: Express): void {
    */
   app.post("/api/webhooks/resend-inbound", async (req: Request, res: Response) => {
     try {
+      const ip = callerIp(req);
+      const rl = checkRateLimit(`webhook.resend:${ip}`, 60, 60_000);
+      if (!rl.ok) {
+        return res.status(429).json({ error: "Too many requests" });
+      }
+
       const secret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
-      if (secret) {
-        const sig = req.headers["x-resend-signature"] as string | undefined;
-        if (sig !== secret) {
+      if (!secret) {
+        if (process.env.NODE_ENV === "production") {
+          console.warn("[Resend Inbound] RESEND_INBOUND_WEBHOOK_SECRET not set — rejecting");
+          return res.status(503).json({ error: "Webhook not configured" });
+        }
+        console.warn("[Resend Inbound] No secret configured — allowing (non-production)");
+      } else {
+        const provided =
+          (req.headers["x-resend-signature"] as string | undefined) ||
+          (typeof req.headers.authorization === "string" &&
+          req.headers.authorization.startsWith("Bearer ")
+            ? req.headers.authorization.slice(7)
+            : undefined);
+        if (!provided || !timingSafeStringEqual(provided, secret)) {
           console.warn("[Resend Inbound] Invalid signature");
           return res.status(403).json({ error: "Invalid signature" });
         }
@@ -199,9 +233,28 @@ export function registerWebhookRoutes(app: Express): void {
 
   /**
    * Live Meta API diagnostic — proves token + phone number can actually send.
-   * Does NOT expose secrets. Check Railway logs after sending a WhatsApp message.
+   * Production: disabled unless ALLOW_WHATSAPP_DIAGNOSTIC=1 and
+   * X-GrayArx-Diagnostic-Key matches WHATSAPP_DIAGNOSTIC_KEY (or verify token).
+   * Never returns access tokens.
    */
-  app.get("/api/webhooks/whatsapp/diagnostic", async (_req: Request, res: Response) => {
+  app.get("/api/webhooks/whatsapp/diagnostic", async (req: Request, res: Response) => {
+    const allow =
+      process.env.NODE_ENV !== "production" ||
+      process.env.ALLOW_WHATSAPP_DIAGNOSTIC === "1";
+    if (!allow) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      const expected =
+        process.env.WHATSAPP_DIAGNOSTIC_KEY ||
+        process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+      const provided = req.headers["x-grayarx-diagnostic-key"] as string | undefined;
+      if (!expected || !provided || !timingSafeStringEqual(provided, expected)) {
+        return res.status(404).json({ error: "Not found" });
+      }
+    }
+
     const phoneId =
       process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
     const token = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -222,15 +275,18 @@ export function registerWebhookRoutes(app: Express): void {
       );
       const metaData = await metaResp.json().catch(() => ({}));
 
+      // Redact full phone number in logs; response is already auth-gated.
       return res.status(200).json({
         ok: metaResp.ok,
-        phoneNumberId: phoneId,
+        phoneNumberId: "configured",
         metaStatus: metaResp.status,
-        displayPhoneNumber: (metaData as { display_phone_number?: string }).display_phone_number ?? null,
+        displayPhoneNumber: (metaData as { display_phone_number?: string }).display_phone_number
+          ? "configured"
+          : null,
         verifiedName: (metaData as { verified_name?: string }).verified_name ?? null,
         qualityRating: (metaData as { quality_rating?: string }).quality_rating ?? null,
         phoneStatus: (metaData as { status?: string }).status ?? null,
-        metaError: metaResp.ok ? null : metaData,
+        metaError: metaResp.ok ? null : { status: metaResp.status },
         hint: metaResp.ok
           ? "Token valid. If no reply, check Meta app mode (dev = test numbers only) or Railway logs."
           : "Token invalid or expired — regenerate in Meta and update Railway WHATSAPP_ACCESS_TOKEN.",
@@ -272,7 +328,11 @@ export function registerWebhookRoutes(app: Express): void {
         resendInbound: {
           url: "/api/webhooks/resend-inbound",
           status: "active",
-          webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET ? "configured" : "optional",
+          webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET
+            ? "configured"
+            : process.env.NODE_ENV === "production"
+              ? "required_missing"
+              : "optional_dev",
           note: "Receives privacy@ / legal@ via Resend inbound — alerts founder Gmail",
         },
       },

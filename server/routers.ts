@@ -2272,7 +2272,22 @@ export const appRouter = router({
   inventoryImport: router({
     preview: protectedProcedure
       .input(z.object({ csv: z.string().min(1).max(2_000_000) }))
-      .mutation(async ({ input }) => parseInventoryCsv(input.csv)),
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const ip = callerIp(ctx.req);
+        const rl = checkRateLimit(
+          `inventoryImport.preview:${ip}`,
+          RATE_LIMITS.INVENTORY_CSV.max,
+          RATE_LIMITS.INVENTORY_CSV.windowMs,
+        );
+        if (!rl.ok) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many CSV imports. Please try again later.",
+          });
+        }
+        return parseInventoryCsv(input.csv);
+      }),
 
     commit: protectedProcedure
       .input(
@@ -2283,6 +2298,19 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const ip = callerIp(ctx.req);
+        const rl = checkRateLimit(
+          `inventoryImport.commit:${ip}`,
+          RATE_LIMITS.INVENTORY_CSV.max,
+          RATE_LIMITS.INVENTORY_CSV.windowMs,
+        );
+        if (!rl.ok) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many CSV imports. Please try again later.",
+          });
+        }
         const preview = parseInventoryCsv(input.csv);
         let created = 0;
         let updated = 0;
@@ -2403,7 +2431,8 @@ export const appRouter = router({
     /** Fix vehicles stuck at R1 by re-matching rows from the original CSV. */
     repairPrices: protectedProcedure
       .input(z.object({ csv: z.string().min(1).max(2_000_000) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
         const preview = parseInventoryCsv(input.csv);
         const { updated, notFound, alreadyCorrect } = await repairPricesFromRows(
           preview.validRows,
@@ -3156,7 +3185,20 @@ export const appRouter = router({
           language: z.string().max(8).optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const ip = callerIp(ctx.req);
+        const rl = checkRateLimit(
+          `publicFallback.inbound:${ip}`,
+          RATE_LIMITS.PUBLIC_FALLBACK_INBOUND.max,
+          RATE_LIMITS.PUBLIC_FALLBACK_INBOUND.windowMs,
+        );
+        if (!rl.ok) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many messages. Please try again shortly.",
+          });
+        }
+
         const dealership = await getDealershipByShortcode(input.shortcode);
         if (!dealership) {
           // Don't reveal whether the shortcode exists — just refuse cleanly.
@@ -3272,7 +3314,20 @@ export const appRouter = router({
           language: z.string().max(8).optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const ip = callerIp(ctx.req);
+        const rl = checkRateLimit(
+          `preApprovals.submit:${ip}`,
+          RATE_LIMITS.PREAPPROVAL_SUBMIT.max,
+          RATE_LIMITS.PREAPPROVAL_SUBMIT.windowMs,
+        );
+        if (!rl.ok) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many applications from your network. Please try again later.",
+          });
+        }
+
         const dealership = await getDealershipByShortcode(input.shortcode);
         if (!dealership) {
           throw new TRPCError({
@@ -3382,7 +3437,20 @@ export const appRouter = router({
           language: z.string().max(8).optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const ip = callerIp(ctx.req);
+        const rl = checkRateLimit(
+          `bookings.submit:${ip}`,
+          RATE_LIMITS.BOOKING_SUBMIT.max,
+          RATE_LIMITS.BOOKING_SUBMIT.windowMs,
+        );
+        if (!rl.ok) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many booking requests. Please try again later.",
+          });
+        }
+
         const dealership = await getDealershipByShortcode(input.shortcode);
         if (!dealership) {
           throw new TRPCError({
@@ -4988,6 +5056,13 @@ export const appRouter = router({
 
 function isFounderOrAdmin(user: any): boolean {
   return user && (user.role === "founder" || user.role === "admin");
+}
+
+function assertDealerOrAdmin(user: any): void {
+  if (isFounderOrAdmin(user)) return;
+  const dealerRoles = ["dealer_owner", "dealer_consultant"];
+  if (user && dealerRoles.includes(user.role)) return;
+  throw new TRPCError({ code: "FORBIDDEN", message: "Dealer or admin access required" });
 }
 
 export type AppRouter = typeof appRouter;

@@ -3,6 +3,7 @@
  * Receives and processes incoming messages from Meta WhatsApp Cloud API
  */
 
+import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import {
   getOrCreateWhatsappConversation,
@@ -295,8 +296,24 @@ async function getMediaUrl(mediaId: string, phoneNumberId: string): Promise<stri
  * Verify webhook token (for Meta webhook setup)
  */
 export function verifyWebhookToken(token: string): boolean {
-  const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "grayarx_whatsapp_webhook_verify";
-  return token === expectedToken;
+  const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+  if (!expectedToken) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn("[WhatsAppWebhook] WHATSAPP_WEBHOOK_VERIFY_TOKEN not set — rejecting verify");
+      return false;
+    }
+    // Dev-only fallback so local Meta setup can still work.
+    const devFallback = "grayarx_whatsapp_webhook_verify";
+    return token === devFallback;
+  }
+  try {
+    const a = Buffer.from(token);
+    const b = Buffer.from(expectedToken);
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 /**

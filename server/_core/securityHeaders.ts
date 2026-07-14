@@ -14,6 +14,8 @@ export function registerSecurityHeaders(app: Express): void {
         "Strict-Transport-Security",
         "max-age=31536000; includeSubDomains",
       );
+      res.setHeader("X-DNS-Prefetch-Control", "off");
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
     }
     next();
   });

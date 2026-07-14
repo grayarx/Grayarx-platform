@@ -61,6 +61,10 @@ export function checkRateLimit(
 export const RATE_LIMITS = Object.freeze({
   LEAD_CREATE: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 leads/hr/IP
   CHAT_MESSAGE: { max: 30, windowMs: 60 * 1000 }, // 30 chats/min/IP
+  PUBLIC_FALLBACK_INBOUND: { max: 20, windowMs: 60 * 1000 }, // shortcode spam
+  PREAPPROVAL_SUBMIT: { max: 5, windowMs: 60 * 60 * 1000 }, // POPIA-heavy
+  BOOKING_SUBMIT: { max: 10, windowMs: 60 * 60 * 1000 },
+  INVENTORY_CSV: { max: 10, windowMs: 60 * 60 * 1000 },
 });
 
 /**
