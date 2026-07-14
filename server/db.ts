@@ -1284,9 +1284,12 @@ export async function createOnboardingSubmission(input: {
   vehicleTypes?: string[] | null;
   csvUrl?: string | null;
   notes?: string | null;
+  /** Optional Meta WhatsApp phone_number_id from the public form. */
+  whatsappPhoneNumberId?: string | null;
 }): Promise<{ id: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const waId = input.whatsappPhoneNumberId?.trim() || null;
   const result: any = await db.insert(onboardingSubmissions).values({
     dealershipName: input.dealershipName,
     ownerName: input.ownerName,
@@ -1298,6 +1301,7 @@ export async function createOnboardingSubmission(input: {
     vehicleTypes: input.vehicleTypes ?? null,
     csvUrl: input.csvUrl ?? null,
     notes: input.notes ?? null,
+    whatsappPhoneNumberId: waId,
     status: "new",
   });
   return { id: result[0]?.insertId ?? 0 };
@@ -1320,6 +1324,73 @@ export async function updateOnboardingStatus(
     .update(onboardingSubmissions)
     .set({ status, reviewedBy: reviewerId ?? null, reviewedAt: new Date() })
     .where(eq(onboardingSubmissions.id, id));
+}
+
+/**
+ * Approve + provision: create the dealership (with contactPhone + optional
+ * whatsappPhoneNumberId) and mark the submission provisioned.
+ * Idempotent if already provisioned.
+ */
+export async function provisionOnboardingSubmission(
+  id: number,
+  reviewerId?: number,
+): Promise<{ dealershipId: number; created: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const [sub] = await db
+    .select()
+    .from(onboardingSubmissions)
+    .where(eq(onboardingSubmissions.id, id))
+    .limit(1);
+  if (!sub) throw new Error(`Onboarding submission ${id} not found`);
+
+  if (sub.provisionedDealershipId) {
+    await db
+      .update(onboardingSubmissions)
+      .set({
+        status: "provisioned",
+        reviewedBy: reviewerId ?? sub.reviewedBy ?? null,
+        reviewedAt: new Date(),
+      })
+      .where(eq(onboardingSubmissions.id, id));
+    return { dealershipId: sub.provisionedDealershipId, created: false };
+  }
+
+  const { resolveOnboardingWhatsappPhoneNumberId } = await import(
+    "../shared/whatsappPhoneLink"
+  );
+  const waId = resolveOnboardingWhatsappPhoneNumberId(sub);
+
+  const created = await createDealership({
+    name: sub.dealershipName,
+    contactEmail: sub.ownerEmail,
+    contactPhone: sub.ownerPhone,
+    region: sub.region,
+    monthlyVolume: sub.monthlyVolume,
+    languages: (sub.languages as string[] | null) ?? null,
+    vehicleTypes: (sub.vehicleTypes as string[] | null) ?? null,
+    whatsappPhoneNumberId: waId,
+    status: "active",
+  });
+
+  await db
+    .update(onboardingSubmissions)
+    .set({
+      status: "provisioned",
+      provisionedDealershipId: created.id,
+      whatsappPhoneNumberId: waId,
+      reviewedBy: reviewerId ?? null,
+      reviewedAt: new Date(),
+    })
+    .where(eq(onboardingSubmissions.id, id));
+
+  console.log(
+    `[Onboarding] Provisioned dealership ${created.id} from submission ${id}` +
+      (waId ? ` (whatsappPhoneNumberId=${waId})` : " (no Meta phone_number_id yet — webhook may auto-bind via contactPhone)"),
+  );
+
+  return { dealershipId: created.id, created: true };
 }
 
 // Approval queue
@@ -1733,9 +1804,12 @@ export async function createDealership(input: {
   languages?: string[] | null;
   vehicleTypes?: string[] | null;
   plan?: "starter" | "professional" | "enterprise";
+  whatsappPhoneNumberId?: string | null;
+  status?: "onboarding" | "active" | "paused" | "suspended";
 }): Promise<{ id: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const waId = input.whatsappPhoneNumberId?.trim() || null;
   const result: any = await db.insert(dealerships).values({
     name: input.name,
     contactEmail: input.contactEmail ?? null,
@@ -1745,7 +1819,8 @@ export async function createDealership(input: {
     languages: input.languages ?? null,
     vehicleTypes: input.vehicleTypes ?? null,
     plan: input.plan ?? "starter",
-    status: "onboarding",
+    status: input.status ?? "onboarding",
+    whatsappPhoneNumberId: waId,
   });
   return { id: result[0]?.insertId ?? 0 };
 }

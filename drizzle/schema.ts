@@ -434,6 +434,12 @@ export const onboardingSubmissions = mysqlTable("onboarding_submissions", {
   languages: json("languages"),
   csvUrl: varchar("csvUrl", { length: 500 }), // uploaded stock CSV
   notes: text("notes"),
+  /**
+   * Optional Meta WhatsApp Business phone_number_id captured at apply-time
+   * or auto-stashed when an inbound webhook matches ownerPhone before provision.
+   * Copied onto dealerships.whatsappPhoneNumberId when the submission is provisioned.
+   */
+  whatsappPhoneNumberId: varchar("whatsappPhoneNumberId", { length: 64 }),
   status: mysqlEnum("status", ["new", "reviewing", "approved", "rejected", "provisioned"]).default("new").notNull(),
   provisionedDealershipId: int("provisionedDealershipId"),
   reviewedBy: int("reviewedBy"),

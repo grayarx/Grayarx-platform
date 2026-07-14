@@ -53,6 +53,7 @@ export default function Onboarding() {
     brandsCarried: "",
     csvUrl: "",
     notes: "",
+    whatsappPhoneNumberId: "",
   });
 
   if (submitted) {
@@ -187,6 +188,9 @@ export default function Onboarding() {
                     placeholder="+27 82 123 4567"
                     className="mt-1"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Prefer your WhatsApp Business number — we use it to auto-link Meta routing.
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="monthlyVolume">Monthly vehicle sales</Label>
@@ -242,6 +246,28 @@ export default function Onboarding() {
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Paste a public link to your DMS or stock export CSV. We'll import it automatically.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="whatsappPhoneNumberId">Meta Phone Number ID (optional)</Label>
+                <Input
+                  id="whatsappPhoneNumberId"
+                  value={form.whatsappPhoneNumberId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      whatsappPhoneNumberId: e.target.value.replace(/\D/g, "").slice(0, 64),
+                    })
+                  }
+                  placeholder="e.g. 1245737138612982"
+                  className="mt-1 font-mono"
+                  inputMode="numeric"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  From Meta Developer → WhatsApp → API Setup. Leave blank if you don’t have it yet —
+                  we’ll link it automatically when the first WhatsApp message arrives on your business number
+                  (must match the phone above).
                 </p>
               </div>
 

@@ -21,16 +21,22 @@ export default function AdminOnboarding() {
     trpc.adminOnboarding.list.useQuery();
 
   const decide = trpc.adminOnboarding.decide.useMutation({
-    onSuccess: (_data, vars) => {
-      toast.success(
-        vars.decision === "approved"
-          ? "Submission approved"
-          : vars.decision === "rejected"
-            ? "Submission rejected"
-            : "Marked as reviewing",
-      );
+    onSuccess: (data, vars) => {
+      if (vars.decision === "approved") {
+        const dealershipId = (data as { dealershipId?: number })?.dealershipId;
+        toast.success(
+          dealershipId
+            ? `Dealership #${dealershipId} provisioned — WhatsApp will auto-link when Meta phone matches contact phone`
+            : "Submission approved",
+        );
+      } else if (vars.decision === "rejected") {
+        toast.success("Submission rejected");
+      } else {
+        toast.success("Marked as reviewing");
+      }
       utils.adminOnboarding.list.invalidate();
       utils.admin.overview.invalidate();
+      utils.adminDealerships.list.invalidate();
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
@@ -73,6 +79,16 @@ export default function AdminOnboarding() {
                 {s.region && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" /> {s.region}
+                  </div>
+                )}
+                {s.whatsappPhoneNumberId && (
+                  <div className="flex items-center gap-2 text-muted-foreground font-mono text-xs">
+                    Meta WA ID: {s.whatsappPhoneNumberId}
+                  </div>
+                )}
+                {s.provisionedDealershipId && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    Dealership #{s.provisionedDealershipId}
                   </div>
                 )}
                 {s.monthlyVolume && (

@@ -8,85 +8,15 @@ import { Express, Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { processWhatsAppWebhook, verifyWebhookToken, validateWebhookSignature } from "./whatsappWebhook";
 import { getDb } from "../db";
-import { dealerships } from "../../drizzle/schema";
 import { alertFounder } from "./founderAlert";
 import { checkRateLimit, callerIp } from "./rateLimit";
+import { resolveDealershipIdFromPhoneNumberId } from "./whatsappDealershipLink";
 
 function timingSafeStringEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;
   return crypto.timingSafeEqual(bufA, bufB);
-}
-
-/**
- * Map Meta phone_number_id → GrayArx dealership.
- *
- * Resolution order:
- *  1. DB lookup: find a dealership whose whatsappPhoneNumberId matches.
- *  2. Auto-sync: if inbound phone_number_id is unknown, fill it only when
- *     WHATSAPP_DEALERSHIP_ID dealer's field is empty (never overwrite).
- *  3. Env-var fallback: WHATSAPP_DEALERSHIP_ID (single-dealer / dev mode).
- *  4. Default to dealership 1 if nothing matches.
- */
-async function resolveDealershipIdFromPhoneNumberId(phoneNumberId: string | null): Promise<number> {
-  const configuredDealerId = Number(process.env.WHATSAPP_DEALERSHIP_ID || "1");
-  const fallbackDealerId =
-    Number.isFinite(configuredDealerId) && configuredDealerId > 0 ? configuredDealerId : 1;
-
-  if (phoneNumberId) {
-    try {
-      const db = await getDb();
-      if (db) {
-        const [row] = await db
-          .select({ id: dealerships.id })
-          .from(dealerships)
-          .where(eq(dealerships.whatsappPhoneNumberId, phoneNumberId))
-          .limit(1);
-        if (row) {
-          console.log(`[WhatsApp Webhook] Resolved phone_number_id ${phoneNumberId} → dealership ${row.id}`);
-          return row.id;
-        }
-
-        // Auto-sync: fill empty field on the env fallback dealer only — never overwrite.
-        const [fallback] = await db
-          .select({
-            id: dealerships.id,
-            whatsappPhoneNumberId: dealerships.whatsappPhoneNumberId,
-          })
-          .from(dealerships)
-          .where(eq(dealerships.id, fallbackDealerId))
-          .limit(1);
-
-        if (fallback && !fallback.whatsappPhoneNumberId?.trim()) {
-          await db
-            .update(dealerships)
-            .set({ whatsappPhoneNumberId: phoneNumberId })
-            .where(eq(dealerships.id, fallbackDealerId));
-          console.log(
-            `[WhatsApp Webhook] Auto-synced phone_number_id ${phoneNumberId} → dealership ${fallbackDealerId} (was empty)`,
-          );
-          return fallbackDealerId;
-        }
-
-        if (fallback?.whatsappPhoneNumberId?.trim()) {
-          console.warn(
-            `[WhatsApp Webhook] phone_number_id ${phoneNumberId} unmatched; dealership ${fallbackDealerId} already has ${fallback.whatsappPhoneNumberId} — not overwriting`,
-          );
-        }
-      }
-    } catch (err) {
-      console.warn("[WhatsApp Webhook] DB lookup failed, falling back to env var:", err);
-    }
-  }
-
-  if (phoneNumberId) {
-    console.warn(
-      `[WhatsApp Webhook] No DB match for phone_number_id ${phoneNumberId}; using env fallback → dealership ${fallbackDealerId}`,
-    );
-  }
-
-  return fallbackDealerId;
 }
 
 /**
@@ -149,13 +79,17 @@ export function registerWebhookRoutes(app: Express): void {
 
       const value = req.body?.entry?.[0]?.changes?.[0]?.value;
       const phoneNumberId = value?.metadata?.phone_number_id ?? null;
+      const displayPhoneNumber = value?.metadata?.display_phone_number ?? null;
       const inboundCount = value?.messages?.length ?? 0;
       const statusCount = value?.statuses?.length ?? 0;
       console.log(
-        `[WhatsApp Webhook] POST phone_number_id=${phoneNumberId ? "set" : "none"} messages=${inboundCount} statuses=${statusCount}`,
+        `[WhatsApp Webhook] POST phone_number_id=${phoneNumberId ? "set" : "none"} display_phone=${displayPhoneNumber ? "set" : "none"} messages=${inboundCount} statuses=${statusCount}`,
       );
 
-      const dealershipId = await resolveDealershipIdFromPhoneNumberId(phoneNumberId);
+      const dealershipId = await resolveDealershipIdFromPhoneNumberId(
+        phoneNumberId,
+        displayPhoneNumber,
+      );
 
       // Process the webhook
       const result = await processWhatsAppWebhook(req.body, dealershipId);

@@ -149,8 +149,10 @@ function IntegrationsDialog({
             WhatsApp & LLM · {data?.dealershipName ?? "…"}
           </DialogTitle>
           <DialogDescription>
-            Meta phone_number_id routes inbound WhatsApp to this dealer. LLM follows
-            plan (starter→mini, Growth→gpt-4o, enterprise→premium) unless overridden.
+            Meta phone_number_id routes inbound WhatsApp to this dealer. Usually auto-bound from
+            onboarding or the first webhook that matches contact phone — use this dialog only to
+            override. LLM follows plan (starter→mini, Growth→gpt-4o, enterprise→premium) unless
+            overridden.
           </DialogDescription>
         </DialogHeader>
         {isLoading && <p className="text-muted-foreground py-4">Loading…</p>}

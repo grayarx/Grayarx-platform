@@ -205,6 +205,7 @@ import {
   createOnboardingSubmission,
   listOnboardingSubmissions,
   updateOnboardingStatus,
+  provisionOnboardingSubmission,
   createApproval,
   listPendingApprovals,
   decideApproval,
@@ -2626,6 +2627,12 @@ export const appRouter = router({
           brandsCarried: z.string().optional(),
           csvUrl: z.string().optional(),
           notes: z.string().optional(),
+          /** Optional Meta WhatsApp Business phone_number_id (from Meta API Setup). */
+          whatsappPhoneNumberId: z
+            .string()
+            .max(64)
+            .regex(/^\d*$/, "Meta Phone Number ID must be digits only")
+            .optional(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -2641,6 +2648,7 @@ export const appRouter = router({
         const vehicleTypes = input.brandsCarried
           ? input.brandsCarried.split(",").map((b) => b.trim()).filter(Boolean)
           : null;
+        const waId = input.whatsappPhoneNumberId?.trim() || null;
         await createOnboardingSubmission({
           dealershipName: input.dealershipName,
           ownerName: input.ownerName,
@@ -2652,6 +2660,7 @@ export const appRouter = router({
           vehicleTypes,
           csvUrl: input.csvUrl ?? null,
           notes: input.notes ? `${input.notes}\n[ref: ${reference}]` : `[ref: ${reference}]`,
+          whatsappPhoneNumberId: waId,
         });
         try {
           await alertFounder({
@@ -2742,6 +2751,10 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        if (input.decision === "approved") {
+          const result = await provisionOnboardingSubmission(input.id, ctx.user.id as any);
+          return { ok: true, dealershipId: result.dealershipId, created: result.created };
         }
         await updateOnboardingStatus(input.id, input.decision, ctx.user.id as any);
         return { ok: true };
