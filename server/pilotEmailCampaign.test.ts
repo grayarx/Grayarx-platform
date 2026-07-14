@@ -93,11 +93,15 @@ describe("pilot email campaign", () => {
     expect(basic?.mailable).toBeGreaterThanOrEqual(3);
     expect(basic?.sampleHtml).toContain("<img");
     // UI list is verified emails only — never "no verified email" rows
+    const allEmails: string[] = [];
     for (const row of preview) {
+      expect(row.mailable).toBe(3);
       for (const p of row.prospects) {
         expect(p.emailVerified).toBe(true);
         expect(p.email).toBeTruthy();
+        allEmails.push(p.email!.toLowerCase());
       }
     }
+    expect(new Set(allEmails).size).toBe(allEmails.length);
   });
 });

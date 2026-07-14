@@ -9,8 +9,11 @@ export function isFounderEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
   if (FOUNDER_EMAILS.includes(normalized as (typeof FOUNDER_EMAILS)[number])) return true;
-  const extra = (process.env.FOUNDER_ALERT_EMAIL ?? process.env.OWNER_EMAIL ?? "")
-    .trim()
-    .toLowerCase();
+  // process.env is server-side; on the browser this block is a no-op.
+  const env =
+    typeof process !== "undefined" && process.env
+      ? process.env
+      : ({} as NodeJS.ProcessEnv);
+  const extra = (env.FOUNDER_ALERT_EMAIL ?? env.OWNER_EMAIL ?? "").trim().toLowerCase();
   return extra.length > 0 && normalized === extra;
 }

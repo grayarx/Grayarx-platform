@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isFounderEmail } from '@shared/founderAccess';
+import { isFounderOrAdmin as roleIsFounderOrAdmin } from '@shared/userRoles';
 
 const DISMISSED_KEY = 'popia_dismissed_until';
 const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -27,9 +29,10 @@ export function usePopiaConsent() {
   const [isUnsigned, setIsUnsigned] = useState(false);
   const [dismissed, setDismissed] = useState(() => isDismissed());
 
-  // Founders and admins are the platform owner — they set the POPIA requirements.
-  // Never show the POPIA consent modal to them.
-  const isFounderOrAdmin = user?.role === 'founder' || user?.role === 'admin';
+  // Platform owners set POPIA requirements — never trap them behind the dealer modal.
+  // Also respect founder emails even if role has not been promoted yet in this session.
+  const isFounderOrAdmin =
+    roleIsFounderOrAdmin(user) || isFounderEmail(user?.email);
 
   const checkStatusQuery = trpc.popia.checkStatus.useQuery(
     user && user.dealershipId
@@ -41,6 +44,14 @@ export function usePopiaConsent() {
       retry: false,
     }
   );
+
+  // If we discover we are a founder mid-session, force-hide any stuck modal.
+  useEffect(() => {
+    if (isFounderOrAdmin) {
+      setShowModal(false);
+      setIsUnsigned(false);
+    }
+  }, [isFounderOrAdmin]);
 
   const signMutation = trpc.popia.sign.useMutation({
     onSuccess: () => {

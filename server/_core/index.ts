@@ -155,6 +155,16 @@ async function startServer() {
     }
   })();
 
+  // ── Demo showroom: fill missing year/fuel/km/transmission for pitch demos ──
+  (async () => {
+    try {
+      const { healDemoInventoryMetadata } = await import("./demoInventoryHeal");
+      await healDemoInventoryMetadata();
+    } catch (e) {
+      console.warn("[Startup] demo inventory heal skipped:", (e as Error).message);
+    }
+  })();
+
   // ── Auto-seed: create demo dealership + dealer user + vehicles if DB is empty ──
   (async () => {
     try {

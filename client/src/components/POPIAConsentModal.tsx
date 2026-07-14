@@ -150,63 +150,71 @@ export function POPIAConsentModal({
   const isValid = signedName.trim().length >= 2 && agreed;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Only dismiss when the dialog is closing (X / overlay). Opening is controlled by parent.
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col gap-3 bg-[#0c0c10] border-primary/25 text-foreground">
         <DialogHeader>
-          <DialogTitle>POPIA Consent & Acknowledgment</DialogTitle>
-          <DialogDescription>
-            Please read and agree to the POPIA Consent Form before proceeding
+          <DialogTitle className="text-foreground">POPIA Consent & Acknowledgment</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Scroll the form, then sign below — required before dealers operate on GrayArx.
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-900">
+        <Alert className="border-amber-500/40 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-400" />
+          <AlertDescription className="text-amber-100">
             Please complete your POPIA acknowledgment. Required for dealers operating on the platform.
           </AlertDescription>
         </Alert>
 
-        <ScrollArea className="flex-1 border rounded-md p-4 bg-slate-50">
-          <div className="pr-4 text-sm whitespace-pre-wrap text-slate-700 leading-relaxed">
+        <ScrollArea className="min-h-[180px] max-h-[38vh] border border-white/10 rounded-md p-4 bg-black/40">
+          <div className="pr-4 text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">
             {POPIA_FORM_TEXT}
           </div>
         </ScrollArea>
 
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <Input
-              placeholder="Enter your full name (e-signature)"
-              value={signedName}
-              onChange={(e) => setSignedName(e.target.value)}
-              disabled={submitting || isLoading}
-              className="flex-1"
-            />
-          </div>
+        <div className="space-y-3 shrink-0 border-t border-white/10 pt-3">
+          <Input
+            placeholder="Enter your full name (e-signature)"
+            value={signedName}
+            onChange={(e) => setSignedName(e.target.value)}
+            disabled={submitting || isLoading}
+            className="bg-black/40 border-white/15"
+            autoComplete="name"
+          />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             <Checkbox
               id="agree"
               checked={agreed}
               onCheckedChange={(checked) => setAgreed(checked as boolean)}
               disabled={submitting || isLoading}
+              className="mt-0.5"
             />
-            <label htmlFor="agree" className="text-sm text-slate-700 cursor-pointer">
-              I have read and agree to the POPIA Consent & Acknowledgment Form. I understand my obligations under POPIA and commit to complying with all POPIA requirements.
+            <label htmlFor="agree" className="text-sm text-muted-foreground cursor-pointer leading-snug">
+              I have read and agree to the POPIA Consent & Acknowledgment Form and understand my
+              obligations under POPIA.
             </label>
           </div>
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={submitting || isLoading}
+              className="border-white/20"
             >
               Remind me later
             </Button>
             <Button
               onClick={handleSign}
               disabled={!isValid || submitting || isLoading}
-              className="bg-gold hover:bg-gold/90"
+              className="btn-gold"
             >
               {submitting || isLoading ? 'Signing...' : 'Sign & Agree'}
             </Button>
