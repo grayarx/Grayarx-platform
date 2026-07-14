@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 
 /** Circular GA crest only — never full lockup (looks zoomed at small sizes). */
-const LOGO_URL = "https://www.grayarx.com/logo-icon-132.png?v=9";
+const LOGO_URL = "https://www.grayarx.com/logo-crest.png?v=10";
 
 const emailTemplates = {
   welcome: {
@@ -263,7 +263,7 @@ export default function AdminEmailPreview() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           Welcome / Follow-up / Pilot use the circular GA crest
-          (`logo-icon-132.png` at 44–56px) over HTTPS — not the full lockup and
+          (`logo-crest.png` at 44–56px) over HTTPS — not the full lockup and
           not cid: attachments (those break in browser preview).
         </CardContent>
       </Card>

@@ -15,15 +15,16 @@ import { previewPilotCampaign } from "./_core/pilotEmailCampaignService";
 describe("pilot email campaign", () => {
   it("logo URL is the circular GA crest PNG", () => {
     const url = grayArxLogoUrl();
-    expect(url).toContain("/logo-icon-132.png");
+    expect(url).toContain("/logo-crest.png");
+    expect(url).toContain("v=10");
     expect(url).not.toContain(".svg");
-    expect(url).not.toContain("grayarx-logo-emblem");
+    expect(url).not.toContain("logo-icon-132");
   });
 
   it("email header matches site layout (icon + wordmark)", () => {
     const header = grayArxEmailHeader();
     expect(header).toContain('role="presentation"');
-    expect(header).toContain("logo-icon-132.png");
+    expect(header).toContain("logo-crest.png");
     expect(header).not.toContain("cid:grayarx-logo-icon");
     expect(header).toContain("GrayArx");
     expect(header).toContain("AI Platform");
@@ -55,7 +56,7 @@ describe("pilot email campaign", () => {
       segment: sample.segment,
     });
     expect(html).toContain("Jubilee Motors");
-    expect(html).toContain("logo-icon-132.png");
+    expect(html).toContain("logo-crest.png");
     expect(html).not.toContain("cid:grayarx-logo-icon");
     expect(html).toContain("Apply for pilot access");
     expect(html).not.toContain("Segment:");

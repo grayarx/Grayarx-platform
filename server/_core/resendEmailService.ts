@@ -37,8 +37,8 @@ function loadInlineLogoAttachment():
   if (!shouldAttachInlineEmailLogo()) return null;
 
   const candidates = [
-    join(process.cwd(), "client/public/logo-icon-132.png"),
-    join(process.cwd(), "dist/public/logo-icon-132.png"),
+    join(process.cwd(), "client/public/logo-crest.png"),
+    join(process.cwd(), "dist/public/logo-crest.png"),
     join(process.cwd(), "client/public/logo-icon.png"),
     join(process.cwd(), "dist/public/logo-icon.png"),
   ];
@@ -47,7 +47,7 @@ function loadInlineLogoAttachment():
     try {
       const content = readFileSync(path).toString("base64");
       return {
-        filename: "logo-icon.png",
+        filename: "logo-crest.png",
         content,
         content_id: GRAYARX_EMAIL_LOGO_CID,
         content_type: "image/png",

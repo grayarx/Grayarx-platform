@@ -39,30 +39,47 @@ function runPowerShell(script: string) {
   });
 }
 
-/** Square GA emblem — calibrated against the 1248×1248 master logo.png */
+/** Square GA emblem — calibrated so the FULL gold ring + car are visible (not a letter zoom) */
 async function cropEmblemFromMaster() {
   if (!existsSync(masterPath)) {
     console.warn("Skip emblem crop — logo.png master not found");
     return;
   }
+  const crestPath = join(publicDir, "logo-crest.png");
   const ps = `
 Add-Type -AssemblyName System.Drawing
 $src = "${masterPath.replace(/\\/g, "\\\\")}"
 $out = "${emblemPath.replace(/\\/g, "\\\\")}"
+$crest = "${crestPath.replace(/\\/g, "\\\\")}"
 $img = [System.Drawing.Image]::FromFile($src)
 $w = $img.Width; $h = $img.Height
-$size = [int]([Math]::Min($w, $h) * 0.545)
+# Wider crop + destination padding — avoids the logo-icon-132 "zoomed letters" bug
+$size = [int]([Math]::Min($w, $h) * 0.64)
 $x = [int](($w - $size) / 2)
-$y = [int]($h * 0.024)
-$bmp = New-Object System.Drawing.Bitmap $size, $size
+$y = [int]($h * 0.01)
+$pad = 0.18
+$outPx = 1024
+$inner = [int]($outPx * (1 - 2 * $pad))
+$offset = [int](($outPx - $inner) / 2)
+$bmp = New-Object System.Drawing.Bitmap $outPx, $outPx
 $g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::FromArgb(6, 6, 8))
 $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
 $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-$g.DrawImage($img, (New-Object System.Drawing.Rectangle 0, 0, $size, $size), (New-Object System.Drawing.Rectangle $x, $y, $size, $size), [System.Drawing.GraphicsUnit]::Pixel)
+$g.DrawImage($img, (New-Object System.Drawing.Rectangle $offset, $offset, $inner, $inner), (New-Object System.Drawing.Rectangle $x, $y, $size, $size), [System.Drawing.GraphicsUnit]::Pixel)
 $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
-$g.Dispose(); $bmp.Dispose(); $img.Dispose()
-Write-Output "grayarx-logo-emblem.png"
+$bmp.Save($crest, [System.Drawing.Imaging.ImageFormat]::Png)
+$icon132 = New-Object System.Drawing.Bitmap 132, 132
+$g132 = [System.Drawing.Graphics]::FromImage($icon132)
+$g132.Clear([System.Drawing.Color]::FromArgb(6, 6, 8))
+$g132.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$inner132 = [int](132 * (1 - 2 * $pad))
+$off132 = [int]((132 - $inner132) / 2)
+$g132.DrawImage($bmp, $off132, $off132, $inner132, $inner132)
+$icon132.Save("${join(publicDir, "logo-icon-132.png").replace(/\\/g, "\\\\")}", [System.Drawing.Imaging.ImageFormat]::Png)
+$g132.Dispose(); $icon132.Dispose(); $g.Dispose(); $bmp.Dispose(); $img.Dispose()
+Write-Output "grayarx-logo-emblem.png + logo-crest.png"
 `;
   runPowerShell(ps);
   copyFileSync(emblemPath, iconSourcePath);
@@ -200,7 +217,7 @@ async function main() {
   console.log("\nDone.");
   console.log("- grayarx-logo-nav.png = header/footer wordmark");
   console.log("- grayarx-logo-full.png = auth + onboarding");
-  console.log("- grayarx-logo-emblem.png = favicons + compact slots");
+  console.log("- logo-crest.png / grayarx-logo-emblem.png = favicons + nav crest (padded full ring)");
 }
 
 main().catch((e) => {
