@@ -247,13 +247,18 @@ export function registerWebhookRoutes(app: Express): void {
   /**
    * Health check endpoint for webhooks
    */
-  app.get("/api/webhooks/health", (req: Request, res: Response) => {
+  app.get("/api/webhooks/health", async (_req: Request, res: Response) => {
     const phoneIdConfigured = !!(
       process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID
     );
     const tokenConfigured = !!process.env.WHATSAPP_ACCESS_TOKEN;
+    const { getPlatformHealth } = await import("./platformHealth");
+    const { getResilienceStatus } = await import("./agentResilience");
+    const platform = await getPlatformHealth();
     res.status(200).json({
       status: "ok",
+      openai: platform.openai,
+      resilience: getResilienceStatus(),
       webhooks: {
         whatsapp: {
           url: "/api/webhooks/whatsapp",
