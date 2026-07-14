@@ -451,7 +451,10 @@ export async function handleIncomingWhatsAppMessage(
     const dealership = await getDealershipById(dealershipIdNum);
     const dealerName = dealership?.name ?? "GrayArx Dealership";
 
-    const allVehicles = await listVehicles(200, { excludeSold: true });
+    const allVehicles = await listVehicles(200, {
+      dealershipId: dealershipIdNum,
+      excludeSold: true,
+    });
 
     // ── Determine & LOCK language for this phone (must happen before any path diverges) ──
     const convState = getConvState(formattedPhone);

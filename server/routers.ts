@@ -816,7 +816,10 @@ export const appRouter = router({
 
         // ── Multi-vehicle search: check if the user is asking about a make/body type ──
         const { listVehicles: listAllVehicles } = await import("./db");
-        const allVehicles = await listAllVehicles(200, { excludeSold: true });
+        const allVehicles = await listAllVehicles(200, {
+          dealershipId,
+          excludeSold: true,
+        });
         const multiMatches = findVehiclesFromMessage(input.message, allVehicles);
         const detectedMake = detectMakeFromMessage(input.message);
         const detectedBodyTypes = detectBodyTypesFromMessage(input.message);
