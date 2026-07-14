@@ -17,6 +17,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { apiRouter, healthRouter } from "../api";
 import { serveStatic, setupVite } from "./vite";
+import { registerVehicleOgMiddleware } from "./vehicleOgHtml";
 // import { websocketServerManager } from "./websocketServer";
 // import { incidentEscalationEngine } from "./incidentEscalation";
 
@@ -103,6 +104,9 @@ async function startServer() {
   );
   // REST API endpoints (leads, inventory, bookings, stats)
   app.use("/api", apiRouter);
+  // Crawler OG for /showroom/:id — MUST run before SPA catch-all (Vite/static).
+  // Express `app.use("*")` sets req.path to `/`, so OG must not rely on that alone.
+  registerVehicleOgMiddleware(app);
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

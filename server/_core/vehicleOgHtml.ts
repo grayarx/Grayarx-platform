@@ -4,6 +4,9 @@
  * receive vehicle-specific meta in the initial HTML, not the SPA shell.
  */
 
+import type { Express, Request, Response, NextFunction } from "express";
+import fs from "fs";
+import path from "path";
 import { getVehicle } from "../db";
 
 const DEFAULT_OG_IMAGE = "https://www.grayarx.com/hero-car.jpg";
@@ -17,6 +20,20 @@ const CRAWLER_UA =
 export function isSocialCrawler(userAgent: string | undefined): boolean {
   if (!userAgent) return false;
   return CRAWLER_UA.test(userAgent);
+}
+
+/**
+ * Pathname for SPA / OG routing.
+ * Under Express `app.use("*", …)` mounts, `req.path` is always `/` — the real
+ * URL lives on `req.originalUrl`. Always prefer this helper over `req.path`.
+ */
+export function requestPathname(req: {
+  originalUrl?: string;
+  url?: string;
+  path?: string;
+}): string {
+  const raw = req.originalUrl || req.url || req.path || "/";
+  return raw.split("?")[0] || "/";
 }
 
 /** Match /showroom/:id (optional trailing slash or query). */
@@ -164,4 +181,44 @@ export async function maybeServeVehicleOg(
     );
     return null;
   }
+}
+
+function resolveSpaIndexPath(): string {
+  if (process.env.NODE_ENV === "development") {
+    return path.resolve(import.meta.dirname, "../..", "client", "index.html");
+  }
+  return path.resolve(process.cwd(), "dist", "public", "index.html");
+}
+
+/**
+ * Dedicated GET /showroom/:id handler registered BEFORE the SPA `*` catch-all.
+ * Crawlers get vehicle OG HTML; browsers fall through to Vite/static SPA.
+ */
+export function registerVehicleOgMiddleware(app: Express): void {
+  app.get("/showroom/:id", async (req: Request, res: Response, next: NextFunction) => {
+    const ua = req.get("user-agent") ?? undefined;
+    if (!isSocialCrawler(ua)) return next();
+
+    const vehicleId = Number(req.params.id);
+    if (!Number.isFinite(vehicleId) || vehicleId <= 0) return next();
+
+    try {
+      const indexPath = resolveSpaIndexPath();
+      const baseHtml = await fs.promises.readFile(indexPath, "utf-8");
+      const ogHtml = await injectVehicleOgHtml(baseHtml, vehicleId);
+      if (!ogHtml) return next();
+      res.setHeader("Vary", "User-Agent");
+      res.setHeader("Cache-Control", "public, max-age=120");
+      return res
+        .status(200)
+        .set({ "Content-Type": "text/html; charset=utf-8" })
+        .send(ogHtml);
+    } catch (err) {
+      console.warn(
+        "[vehicleOg] middleware failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return next();
+    }
+  });
 }

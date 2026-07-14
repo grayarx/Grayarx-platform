@@ -2,7 +2,11 @@
  * Quick checks for vehicle OG helpers (no DB).
  */
 import { describe, expect, it } from "vitest";
-import { isSocialCrawler, parseShowroomVehicleId } from "../server/_core/vehicleOgHtml";
+import {
+  isSocialCrawler,
+  parseShowroomVehicleId,
+  requestPathname,
+} from "../server/_core/vehicleOgHtml";
 import { resolveOpenAIModelForDealership } from "../shared/llmModelTiers";
 
 describe("vehicle OG helpers", () => {
@@ -19,6 +23,23 @@ describe("vehicle OG helpers", () => {
     expect(parseShowroomVehicleId("/showroom/42?x=1")).toBe(42);
     expect(parseShowroomVehicleId("/showroom")).toBeNull();
     expect(parseShowroomVehicleId("/dealer/1")).toBeNull();
+    expect(parseShowroomVehicleId("/")).toBeNull();
+  });
+
+  it("uses originalUrl under Express * mounts (req.path is /)", () => {
+    expect(
+      requestPathname({
+        path: "/",
+        url: "/",
+        originalUrl: "/showroom/150001",
+      }),
+    ).toBe("/showroom/150001");
+    expect(
+      requestPathname({
+        path: "/",
+        originalUrl: "/showroom/150001?utm=1",
+      }),
+    ).toBe("/showroom/150001");
   });
 });
 
