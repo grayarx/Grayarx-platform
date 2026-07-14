@@ -7,7 +7,7 @@
 
 **Verified product status (git `main` @ `dd3d669`, Jul 2026):**
 - Shipped: custom assistant name, STOP opt-out, DB inventory search, `/embed/:shortcode`, branded invoices + FNB EFT env, auto WhatsApp `phone_number_id` link, shortcodes, 24/7 Nala (web + WhatsApp).
-- Multi-branch (`groupKey` + Branch switcher): **built in working tree, not yet committed to `main`.** Pitch as tomorrow-ready ops — do not claim live on production until committed and migrated.
+- Multi-branch (`groupKey` + Branch switcher): **shipped on `main` (`239af44`).** Includes groupKey, Branch switcher, Admin create group, `/admin/groups/:groupKey`. Migration `0069` must run on Railway deploy before production go-live for a dealer group.
 
 ---
 
@@ -117,7 +117,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 **Say this:** Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by the same `groupKey`. Staff with sibling branches get a Branch switcher in the console.
 
-**Note:** Multi-branch switcher is built and ready to ship; confirm production migrate before promising a go-live date. Until then, run each branch as a separate dealer account.
+**Note:** Shipped on `main` (`239af44`). Confirm migration `0069` has run on Railway before promising a go-live date for that dealer group.
 
 ---
 
@@ -206,7 +206,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 | Topic | Say this | Note |
 |-------|----------|------|
-| Multi-yard | One group key, many dealership rows, branch switcher when live. | Until migrate: separate accounts per branch. |
+| Multi-yard | One group key, many dealership rows, Branch switcher. | After migrate `0069` on Railway: wire groupKey; until then separate accounts. |
 | LLM down | Templates + disclosure still reply; polish resumes when quota is up. | Don’t demo “perfect prose” as a hard dependency. |
 | Wrong answer | Correct the stock row; AI follows the DB next time. | Human override always available. |
 
@@ -221,7 +221,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 | **Channels** | Web-first | Web + WhatsApp | Web + WhatsApp (group scale) |
 | **LLM tier** | Efficient model | Stronger (Growth) | Premium model |
 | **Stock ballpark** | ~150 vehicles included | ~500 | Fair-use unlimited\* |
-| **Pilot today** | — | **This is what pilots get** | For groups when multi-branch is live |
+| **Pilot today** | - | **This is what pilots get** | Group plan + multi-branch after migrate `0069` | **This is what pilots get** | For groups when multi-branch is live |
 
 \*Contract fair-use — say “large yards welcome; we set sensible AI caps.”
 
@@ -229,9 +229,9 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ---
 
-## 5. Multi-branch pitch (tomorrow-ready ops)
+## 5. Multi-branch pitch (shipped on main)
 
-**Status:** Implementation present locally (`groupKey`, Branch switcher, admin group overview, migration `0069_dealer_groups`) — **not on committed `main` yet.** Sell the model; schedule go-live after commit + migrate.
+**Status:** Shipped on `main` (`239af44`): `groupKey`, Branch switcher, Admin create group, `/admin/groups/:groupKey`, migration `0069_dealer_groups`. **Migration `0069` must run on Railway deploy** before a dealer group is live in production.
 
 ### Pitch (Say this)
 
@@ -247,7 +247,7 @@ Each branch keeps its own stock, WhatsApp number, and shortcode. We link them wi
 6. Smoke-test: switch branch → inventory and leads scope change.  
 7. Only then tell the dealer “multi-branch is live on your account.”
 
-**Note:** Do not say “already live for everyone on grayarx.com” until this lands on `main` and production migration has run.
+**Note:** Do not say "already live for everyone on grayarx.com" — code is on `main`; each group goes live only after migrate `0069` and ops setup below.
 
 ---
 
@@ -258,7 +258,7 @@ Each branch keeps its own stock, WhatsApp number, and shortcode. We link them wi
 - “It replaces your sales team / you can fire people.”  
 - “100% accurate every time” / “never hallucinates.”  
 - “Live on Meta tonight” when their number is unverified or webhooks off.  
-- “Multi-branch is in production for all dealers” (not committed on `main` as of this playbook).  
+- "Multi-branch is in production for all dealers" (on `main` at `239af44`, but each group needs migrate `0069` + ops setup).  
 - Exact public ZAR prices if the pricing page is still pilot-soft — unless founder confirmed today’s number.  
 - “We store / paste your FNB account in WhatsApp” — EFT details come from secure env on invoices only.  
 - “Unlimited free AI on 5 000 cars with unlimited chats.”  
@@ -289,7 +289,7 @@ Each branch keeps its own stock, WhatsApp number, and shortcode. We link them wi
 | WhatsApp auto-link | “We match your Business number to Meta’s id when we can.” |
 | Shortcodes | “Your public ID for showroom and links.” |
 | 24/7 Nala | “WhatsApp + webchat, day and night.” |
-| Multi-branch | “Same groupKey + branch switcher — shipping next; model ready.” |
+| Multi-branch | "Shipped on main (`239af44`): groupKey, Branch switcher, Admin create group, `/admin/groups/:groupKey` — migrate `0069` on Railway first." |
 
 ---
 
