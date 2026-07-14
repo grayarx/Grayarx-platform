@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Phone, Globe, Sparkles, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
 
 const SEGMENT_LABELS: Record<string, string> = {
   no_website_social_only: "No website — social only",
@@ -22,8 +21,13 @@ export default function AdminProspector() {
   const [segments, setSegments] = useState<Record<number, string>>({});
 
   const { data, isLoading } = trpc.prospects.list.useQuery();
+  const { data: recentSends } = trpc.pilotEmail.recentSends.useQuery({ limit: 100 });
   const [poolRemaining, setPoolRemaining] = useState<number | null>(null);
   const [poolExhausted, setPoolExhausted] = useState(false);
+
+  const emailedByAddress = new Map(
+    (recentSends ?? []).map((s) => [s.email.trim().toLowerCase(), s] as const),
+  );
 
   const scout = trpc.prospects.scout.useMutation({
     onSuccess: (result) => {
@@ -48,8 +52,15 @@ export default function AdminProspector() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
-  async function handleSendEmail(p: any) {
-    const email = p.contactEmail || p.email;
+  async function handleSendEmail(p: {
+    id: number;
+    email?: string | null;
+    dealershipName: string;
+    city?: string | null;
+    brandsCarried?: string | null;
+    estimatedMonthlyVolume?: number | null;
+  }) {
+    const email = p.email?.trim();
     if (!email) {
       toast.error("No email address for this prospect");
       return;
@@ -58,17 +69,22 @@ export default function AdminProspector() {
     try {
       const result = await sendEmail.mutateAsync({
         email,
-        dealershipName: p.businessName || p.dealershipName,
+        dealershipName: p.dealershipName,
         contactName: "there",
         city: p.city ?? undefined,
         brands: p.brandsCarried ?? undefined,
         estimatedVolume: p.estimatedMonthlyVolume ?? undefined,
-        segment: (segments[p.id] ?? "basic_website_no_showroom") as any,
+        segment: (segments[p.id] ?? "basic_website_no_showroom") as
+          | "no_website_social_only"
+          | "basic_website_no_showroom"
+          | "after_hours_leak"
+          | "whatsapp_manual",
       });
       if (result.success) {
-        toast.success(`Pilot email sent to ${email}`);
+        toast.success(`Pilot email sent to ${email}${result.messageId ? ` (${result.messageId})` : ""}`);
+        void utils.pilotEmail.recentSends.invalidate();
       } else {
-        toast.error(`Failed to send: ${(result as any).error ?? "unknown error"}`);
+        toast.error(`Failed to send: ${result.error ?? "unknown error"}`);
       }
     } finally {
       setSendingId(null);
@@ -113,91 +129,121 @@ export default function AdminProspector() {
           <span className="font-medium text-foreground">{poolRemaining}</span> dealership{poolRemaining === 1 ? "" : "s"} remaining in the local prospect pool
         </div>
       )}
+      {(recentSends?.length ?? 0) > 0 && (
+        <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-sm mb-4">
+          <p className="font-medium text-foreground mb-1">
+            {recentSends!.length} pilot email{recentSends!.length === 1 ? "" : "s"} logged
+          </p>
+          <p className="text-xs text-muted-foreground">
+            &ldquo;Sent&rdquo; means Resend accepted the message (has a message id). Opens/bounces are in the{" "}
+            <a
+              href="https://resend.com/emails"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline underline-offset-2"
+            >
+              Resend dashboard
+            </a>
+            , not here.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data?.map((p: any) => (
-          <Card key={p.id} className="card-premium">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-display text-lg font-semibold leading-tight truncate">
-                  {p.dealershipName}
-                </h3>
-                <Badge variant="outline" className="text-xs shrink-0">
-                  Score {p.score ?? "—"}
-                </Badge>
-              </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                {p.region && <div>{p.region}</div>}
-                {p.website && (
-                  <a
-                    href={p.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-primary hover:underline truncate"
-                  >
-                    <Globe className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{p.website}</span>
-                  </a>
+        {data?.map((p) => {
+          const email = p.email?.trim().toLowerCase() ?? "";
+          const prior = email ? emailedByAddress.get(email) : undefined;
+          return (
+            <Card key={p.id} className="card-premium">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-display text-lg font-semibold leading-tight truncate">
+                    {p.dealershipName}
+                  </h3>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Badge variant="outline" className="text-xs">
+                      Score {p.score ?? "—"}
+                    </Badge>
+                    {prior ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px]">
+                        Emailed {new Date(prior.sentAt).toLocaleDateString()}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  {p.region && <div>{p.region}</div>}
+                  {p.website && (
+                    <a
+                      href={p.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-primary hover:underline truncate"
+                    >
+                      <Globe className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{p.website}</span>
+                    </a>
+                  )}
+                  {p.email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3" /> {p.email}
+                    </div>
+                  )}
+                  {p.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="h-3 w-3" /> {p.phone}
+                    </div>
+                  )}
+                </div>
+                {p.brandsCarried && (
+                  <div className="flex flex-wrap gap-1">
+                    {p.brandsCarried.split(",").slice(0, 4).map((b: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">
+                        {b.trim()}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {p.estimatedMonthlyVolume && (
+                  <p className="text-xs text-muted-foreground">
+                    ~{p.estimatedMonthlyVolume} vehicles/month
+                  </p>
                 )}
                 {p.email && (
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="h-3 w-3" /> {p.email}
+                  <div className="pt-2 border-t border-primary/10 space-y-2">
+                    <Select
+                      value={segments[p.id] ?? "basic_website_no_showroom"}
+                      onValueChange={(v) => setSegments((prev) => ({ ...prev, [p.id]: v }))}
+                    >
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(SEGMENT_LABELS).map(([val, label]) => (
+                          <SelectItem key={val} value={val} className="text-xs">
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      className="w-full h-7 text-xs btn-gold"
+                      disabled={sendingId === p.id}
+                      onClick={() => handleSendEmail(p)}
+                    >
+                      {sendingId === p.id ? (
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3 w-3 mr-1.5" />
+                      )}
+                      {prior ? "Resend pilot email" : "Send pilot email"}
+                    </Button>
                   </div>
                 )}
-                {p.phone && (
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="h-3 w-3" /> {p.phone}
-                  </div>
-                )}
-              </div>
-              {p.brandsCarried && (
-                <div className="flex flex-wrap gap-1">
-                  {p.brandsCarried.split(",").slice(0, 4).map((b: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-[10px]">
-                      {b.trim()}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {p.estimatedMonthlyVolume && (
-                <p className="text-xs text-muted-foreground">
-                  ~{p.estimatedMonthlyVolume} vehicles/month
-                </p>
-              )}
-              {(p.contactEmail || p.email) && (
-                <div className="pt-2 border-t border-primary/10 space-y-2">
-                  <Select
-                    value={segments[p.id] ?? "basic_website_no_showroom"}
-                    onValueChange={(v) => setSegments((prev) => ({ ...prev, [p.id]: v }))}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(SEGMENT_LABELS).map(([val, label]) => (
-                        <SelectItem key={val} value={val} className="text-xs">
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    className="w-full h-7 text-xs btn-gold"
-                    disabled={sendingId === p.id}
-                    onClick={() => handleSendEmail(p)}
-                  >
-                    {sendingId === p.id ? (
-                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3 mr-1.5" />
-                    )}
-                    Send pilot email
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </AdminShell>
   );

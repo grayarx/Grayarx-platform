@@ -56,7 +56,7 @@ export function grayArxEmailLogoSrc(opts?: { forPreview?: boolean }): string {
   return grayArxLogoIconUrl();
 }
 
-/** Attach inline PNG when the header uses cid: (default) */
+/** Attach inline PNG only when EMAIL_LOGO_USE_CID=true (legacy). */
 export function shouldAttachInlineEmailLogo(): boolean {
   return grayArxEmailLogoSrc().startsWith("cid:");
 }

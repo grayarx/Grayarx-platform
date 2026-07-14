@@ -14,7 +14,7 @@ import {
   generateSegmentPilotEmailText,
   subjectForSegment,
 } from "../_core/pilotEmailTemplate";
-import { recordPilotEmailSend } from "../_core/pilotEmailSendLog";
+import { listPilotEmailSends, recordPilotEmailSend } from "../_core/pilotEmailSendLog";
 
 const segmentSchema = z.enum([
   "no_website_social_only",
@@ -26,6 +26,11 @@ const segmentSchema = z.enum([
 export const pilotEmailRouter = router({
   /** Campaign overview — segments, counts, sample HTML */
   preview: adminProcedure.query(async () => previewPilotCampaign()),
+
+  /** Recent pilot sends (DB + file log) — delivery log for Prospector / Campaigns */
+  recentSends: adminProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }).optional())
+    .query(async ({ input }) => listPilotEmailSends(input?.limit ?? 50)),
 
   /** Logo + Resend config check */
   brandingCheck: adminProcedure.query(() => ({

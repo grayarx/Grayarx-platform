@@ -54,9 +54,11 @@ export default function CampaignDashboard() {
   const utils = trpc.useUtils();
   const { data: preview, isLoading } = trpc.pilotEmail.preview.useQuery();
   const { data: branding } = trpc.pilotEmail.brandingCheck.useQuery();
+  const { data: recentSends } = trpc.pilotEmail.recentSends.useQuery({ limit: 20 });
 
   const refreshPreview = () => {
     void utils.pilotEmail.preview.invalidate();
+    void utils.pilotEmail.recentSends.invalidate();
   };
 
   const sendTest = trpc.pilotEmail.sendTest.useMutation({
@@ -169,10 +171,45 @@ export default function CampaignDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-xs font-mono break-all">{branding?.bodyLogoUrl ?? "—"}</p>
-              <p className="text-xs text-muted-foreground mt-2">Inline CID attachment in Resend sends</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Circular crest over HTTPS (not cid:, not full lockup)
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {(recentSends?.length ?? 0) > 0 && (
+          <Card className="glass-gold border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Recent sends (accepted by Resend)</CardTitle>
+              <CardDescription>
+                Logged when Resend returns a message id — not opens or bounces. Full detail:{" "}
+                <a
+                  href="https://resend.com/emails"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  resend.com/emails
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm space-y-1.5 max-h-48 overflow-y-auto">
+                {recentSends!.map((s) => (
+                  <li key={`${s.email}-${s.sentAt}`} className="flex flex-wrap gap-x-2 gap-y-0.5 text-muted-foreground">
+                    <span className="text-foreground font-medium">{s.dealershipName}</span>
+                    <span>{s.email}</span>
+                    <span>{new Date(s.sentAt).toLocaleString()}</span>
+                    {s.resendId ? (
+                      <span className="font-mono text-[11px] text-emerald-400/90">{s.resendId}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Send test */}
         <Card className="glass-gold border-primary/20">

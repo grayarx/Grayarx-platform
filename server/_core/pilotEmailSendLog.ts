@@ -146,3 +146,11 @@ export function recordPilotEmailSend(input: {
   void writeDbRecord(record);
   return record;
 }
+
+/** Newest-first send history for admin/prospector UI. */
+export async function listPilotEmailSends(limit = 50): Promise<PilotEmailSendRecord[]> {
+  const map = await refreshPilotEmailSendMap();
+  return [...map.values()]
+    .sort((a, b) => (a.sentAt < b.sentAt ? 1 : a.sentAt > b.sentAt ? -1 : 0))
+    .slice(0, Math.max(1, Math.min(limit, 200)));
+}
