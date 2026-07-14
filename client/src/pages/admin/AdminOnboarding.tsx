@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Mail, Phone, MapPin, FileText, Car } from "lucide-react";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-blue-500/10 text-blue-500 border-blue-500/30",
@@ -42,11 +44,13 @@ export default function AdminOnboarding() {
   });
 
   const [busyId, setBusyId] = useState<number | null>(null);
+  /** Optional multi-branch groupKey per submission (same slug on sibling branches). */
+  const [groupKeys, setGroupKeys] = useState<Record<number, string>>({});
 
   return (
     <AdminShell
       title="Onboarding queue"
-      subtitle="New dealership applications from the public /onboarding form. Approve to auto-provision their dealership, agents, and stock."
+      subtitle="New dealership applications from the public /onboarding form. Approve to auto-provision their dealership, agents, and stock. Multi-branch: one dealership per branch, same groupKey."
     >
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
       {!isLoading && (!submissions || submissions.length === 0) && (
@@ -113,33 +117,54 @@ export default function AdminOnboarding() {
               )}
 
               {s.status === "new" || s.status === "reviewing" ? (
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    className="btn-gold flex-1"
-                    disabled={busyId === s.id}
-                    onClick={() => {
-                      setBusyId(s.id);
-                      decide.mutate(
-                        { id: s.id, decision: "approved" },
-                        { onSettled: () => setBusyId(null) },
-                      );
-                    }}
-                  >
-                    {busyId === s.id ? "Provisioning…" : "Approve & provision"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={busyId === s.id}
-                    onClick={() => {
-                      setBusyId(s.id);
-                      decide.mutate(
-                        { id: s.id, decision: "rejected" },
-                        { onSettled: () => setBusyId(null) },
-                      );
-                    }}
-                  >
-                    Reject
-                  </Button>
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <Label htmlFor={`gk-${s.id}`} className="text-xs text-muted-foreground">
+                      Group key (optional) — multi-branch: same slug on each branch
+                    </Label>
+                    <Input
+                      id={`gk-${s.id}`}
+                      className="font-mono mt-1 h-9"
+                      value={groupKeys[s.id] ?? ""}
+                      onChange={(e) =>
+                        setGroupKeys((prev) => ({ ...prev, [s.id]: e.target.value }))
+                      }
+                      placeholder="e.g. acme"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="btn-gold flex-1"
+                      disabled={busyId === s.id}
+                      onClick={() => {
+                        setBusyId(s.id);
+                        const gk = (groupKeys[s.id] ?? "").trim();
+                        decide.mutate(
+                          {
+                            id: s.id,
+                            decision: "approved",
+                            groupKey: gk || null,
+                          },
+                          { onSettled: () => setBusyId(null) },
+                        );
+                      }}
+                    >
+                      {busyId === s.id ? "Provisioning…" : "Approve & provision"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={busyId === s.id}
+                      onClick={() => {
+                        setBusyId(s.id);
+                        decide.mutate(
+                          { id: s.id, decision: "rejected" },
+                          { onSettled: () => setBusyId(null) },
+                        );
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">

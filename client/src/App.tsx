@@ -75,6 +75,7 @@ import AdminApprovals from "./pages/admin/AdminApprovals";
 import AdminKagisoRoadmap from "./pages/admin/AdminKagisoRoadmap";
 import AdminFallback from "./pages/admin/AdminFallback";
 import AdminDealerships from "./pages/admin/AdminDealerships";
+import AdminGroupOverview from "./pages/admin/AdminGroupOverview";
 import AdminAgents from "./pages/admin/AdminAgents";
 import AdminBilling from "./pages/admin/AdminBilling";
 import AdminInventoryImport from "./pages/admin/AdminInventoryImport";
@@ -268,6 +269,9 @@ function Router() {
       </Route>
       <Route path="/admin/dealerships">
         <AdminRouteGuard><AdminDealerships /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/groups/:groupKey">
+        <AdminRouteGuard><AdminGroupOverview /></AdminRouteGuard>
       </Route>
       <Route path="/admin/agents">
         <AdminRouteGuard><AdminAgents /></AdminRouteGuard>

@@ -19,6 +19,7 @@ const MIGRATIONS = [
   "0066_dealership_llm_model.sql",
   "0067_onboarding_whatsapp_phone_number_id.sql",
   "0068_agent_display_name_optout_group.sql",
+  "0069_dealer_groups.sql",
 ];
 
 async function main() {
@@ -54,7 +55,11 @@ async function main() {
       console.log(`[migrate] ✓ ${file}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Duplicate column") || msg.includes("already exists")) {
+      if (
+        msg.includes("Duplicate column") ||
+        msg.includes("Duplicate key") ||
+        msg.includes("already exists")
+      ) {
         console.log(`[migrate] ~ ${file} (already applied)`);
       } else {
         throw err;

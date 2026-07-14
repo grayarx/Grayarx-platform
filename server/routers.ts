@@ -248,6 +248,13 @@ import {
   updateDealershipBrand,
   updateDealershipIntegrations,
   updateDealershipModules,
+  createDealerGroup,
+  listDealerGroups,
+  listDealershipsByGroupKey,
+  setDealershipGroupKey,
+  getDealerGroupOverview,
+  updateUserDealershipId,
+  normalizeGroupKey,
   getAdminOverview,
   createInvoice,
   listInvoices,
@@ -967,6 +974,97 @@ export const appRouter = router({
     stats: protectedProcedure.query(async () => getDashboardStats()),
     activity: protectedProcedure.query(async () => getRecentActivity(10)),
     leadsTrend: protectedProcedure.query(async () => getLeadsTrend(14)),
+
+    /**
+     * Sibling branches for the user's current dealership group.
+     * Empty when dealership has no groupKey (single-dealer — no switcher).
+     */
+    listBranches: protectedProcedure.query(async ({ ctx }) => {
+      assertDealerOrAdmin(ctx.user);
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) {
+        return { groupKey: null as string | null, branches: [] as Array<{
+          id: number;
+          name: string;
+          region: string | null;
+          publicShortcode: string | null;
+        }>, activeDealershipId: null as number | null };
+      }
+      const home = await getDealershipById(dealershipId);
+      if (!home?.groupKey) {
+        return {
+          groupKey: null as string | null,
+          branches: [],
+          activeDealershipId: dealershipId,
+        };
+      }
+      const siblings = await listDealershipsByGroupKey(home.groupKey);
+      return {
+        groupKey: home.groupKey,
+        activeDealershipId: dealershipId,
+        branches: siblings.map((b) => ({
+          id: b.id,
+          name: b.name,
+          region: b.region ?? null,
+          publicShortcode: b.publicShortcode ?? null,
+        })),
+      };
+    }),
+
+    /**
+     * Switch active branch: updates users.dealershipId so dashboard queries
+     * scope to the selected branch. Allowed when target shares groupKey with
+     * the user's current dealership (or founder/admin).
+     */
+    switchBranch: protectedProcedure
+      .input(z.object({ dealershipId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        assertDealerOrAdmin(ctx.user);
+        const target = await getDealershipById(input.dealershipId);
+        if (!target) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Dealership not found" });
+        }
+
+        if (isFounderOrAdmin(ctx.user)) {
+          await updateUserDealershipId(ctx.user.id, input.dealershipId);
+          return {
+            ok: true as const,
+            dealershipId: target.id,
+            name: target.name,
+            groupKey: target.groupKey ?? null,
+          };
+        }
+
+        const currentId = ctx.user.dealershipId;
+        if (!currentId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Your account is not linked to a dealership.",
+          });
+        }
+        if (currentId === input.dealershipId) {
+          return {
+            ok: true as const,
+            dealershipId: target.id,
+            name: target.name,
+            groupKey: target.groupKey ?? null,
+          };
+        }
+        const current = await getDealershipById(currentId);
+        if (!current?.groupKey || !target.groupKey || current.groupKey !== target.groupKey) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only switch to branches in your dealer group.",
+          });
+        }
+        await updateUserDealershipId(ctx.user.id, input.dealershipId);
+        return {
+          ok: true as const,
+          dealershipId: target.id,
+          name: target.name,
+          groupKey: target.groupKey ?? null,
+        };
+      }),
 
     /** Dealer-controlled showroom appearance (template + accent). */
     getAppearance: protectedProcedure.query(async ({ ctx }) => {
@@ -2769,6 +2867,8 @@ export const appRouter = router({
         z.object({
           id: z.number().int(),
           decision: z.enum(["approved", "rejected", "reviewing"]),
+          /** Optional multi-branch group key (same slug on each branch). */
+          groupKey: z.string().max(64).nullable().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -2776,7 +2876,9 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
         if (input.decision === "approved") {
-          const result = await provisionOnboardingSubmission(input.id, ctx.user.id as any);
+          const result = await provisionOnboardingSubmission(input.id, ctx.user.id as any, {
+            groupKey: input.groupKey,
+          });
           return { ok: true, dealershipId: result.dealershipId, created: result.created };
         }
         await updateOnboardingStatus(input.id, input.decision, ctx.user.id as any);
@@ -3853,6 +3955,113 @@ export const appRouter = router({
       return listAllDealerships();
     }),
 
+    /**
+     * Create a dealership (founder ops). Optional groupKey assigns the branch
+     * to a multi-branch group — one dealership per branch, same groupKey.
+     */
+    create: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().min(2).max(255),
+          contactEmail: z.string().email().max(320).optional().nullable(),
+          contactPhone: z.string().max(32).optional().nullable(),
+          region: z.string().max(64).optional().nullable(),
+          plan: z.enum(["starter", "professional", "enterprise"]).optional(),
+          groupKey: z.string().max(64).optional().nullable(),
+          whatsappPhoneNumberId: z.string().max(64).optional().nullable(),
+          status: z.enum(["onboarding", "active", "paused", "suspended"]).optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const created = await createDealership({
+          name: input.name,
+          contactEmail: input.contactEmail,
+          contactPhone: input.contactPhone,
+          region: input.region,
+          plan: input.plan,
+          groupKey: input.groupKey,
+          whatsappPhoneNumberId: input.whatsappPhoneNumberId,
+          status: input.status ?? "active",
+        });
+        return { ok: true as const, ...created };
+      }),
+
+    /** Create a dealer_groups row (or return existing by key). */
+    createGroup: protectedProcedure
+      .input(
+        z.object({
+          key: z.string().min(2).max(64),
+          name: z.string().min(1).max(255).optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        try {
+          return await createDealerGroup({
+            key: input.key,
+            name: input.name?.trim() || input.key,
+            ownerUserId: ctx.user.id,
+          });
+        } catch (e) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e instanceof Error ? e.message : "Invalid group key",
+          });
+        }
+      }),
+
+    listGroups: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return listDealerGroups();
+    }),
+
+    /** Assign / clear groupKey on a dealership (ensures dealer_groups row). */
+    setGroupKey: protectedProcedure
+      .input(
+        z.object({
+          dealershipId: z.number().int().positive(),
+          groupKey: z.string().max(64).nullable(),
+          groupName: z.string().max(255).optional().nullable(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        try {
+          return await setDealershipGroupKey(input.dealershipId, input.groupKey, {
+            groupName: input.groupName,
+            ownerUserId: ctx.user.id,
+          });
+        } catch (e) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e instanceof Error ? e.message : "Failed to set groupKey",
+          });
+        }
+      }),
+
+    /** Minimal group overview — branches + stock/leads counts. */
+    groupOverview: protectedProcedure
+      .input(z.object({ groupKey: z.string().min(1).max(64) }))
+      .query(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const overview = await getDealerGroupOverview(input.groupKey);
+        if (!overview) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Group not found" });
+        }
+        return overview;
+      }),
+
     /** Read a single dealership's resolved brand kit (with defaults applied). */
     getBrandKit: protectedProcedure
       .input(z.object({ dealershipId: z.number().int() }))
@@ -3932,7 +4141,9 @@ export const appRouter = router({
           patch.agentDisplayName = input.agentDisplayName?.trim() || null;
         }
         if (Object.prototype.hasOwnProperty.call(input, "groupKey")) {
-          patch.groupKey = input.groupKey?.trim() || null;
+          patch.groupKey = input.groupKey
+            ? normalizeGroupKey(input.groupKey) || null
+            : null;
         }
         await updateDealershipBrand(input.dealershipId, patch);
         return { ok: true };

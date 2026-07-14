@@ -15,6 +15,7 @@ import {
   payments,
   vatReconciliation,
   dealerships,
+  dealerGroups,
   onboardingSubmissions,
   upgradeRoadmap,
   fallbackMessages,
@@ -143,6 +144,13 @@ export async function updateUserLastSignedIn(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
+}
+
+/** Switch the user's active dealership context (multi-branch). */
+export async function updateUserDealershipId(userId: number, dealershipId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ dealershipId }).where(eq(users.id, userId));
 }
 
 /** Promote founder emails to platform founder role (idempotent). */
@@ -1461,7 +1469,8 @@ export async function updateOnboardingStatus(
 export async function provisionOnboardingSubmission(
   id: number,
   reviewerId?: number,
-): Promise<{ dealershipId: number; created: boolean }> {
+  opts?: { groupKey?: string | null },
+): Promise<{ dealershipId: number; created: boolean; publicShortcode?: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
@@ -1481,6 +1490,10 @@ export async function provisionOnboardingSubmission(
         reviewedAt: new Date(),
       })
       .where(eq(onboardingSubmissions.id, id));
+    // Allow founder to assign groupKey on re-approve of already-provisioned row.
+    if (opts?.groupKey != null) {
+      await setDealershipGroupKey(sub.provisionedDealershipId, opts.groupKey);
+    }
     return { dealershipId: sub.provisionedDealershipId, created: false };
   }
 
@@ -1499,6 +1512,7 @@ export async function provisionOnboardingSubmission(
     vehicleTypes: (sub.vehicleTypes as string[] | null) ?? null,
     whatsappPhoneNumberId: waId,
     status: "active",
+    groupKey: opts?.groupKey ?? null,
   });
 
   await db
@@ -1919,8 +1933,181 @@ export async function listAllDealerships() {
   const db = await getDb();
   if (!db) return [];
   const rows = await db.select().from(dealerships).orderBy(desc(dealerships.createdAt));
-  // Per-dealership counts deferred until leads/vehicles get a dealershipId column
-  return rows.map((d) => ({ ...d, leadsCount: 0, vehiclesCount: 0 }));
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((d) => d.id);
+  const [vehicleRows, leadRows] = await Promise.all([
+    db
+      .select({ dealershipId: vehicles.dealershipId, c: count() })
+      .from(vehicles)
+      .where(inArray(vehicles.dealershipId, ids))
+      .groupBy(vehicles.dealershipId),
+    db
+      .select({ dealershipId: leads.dealershipId, c: count() })
+      .from(leads)
+      .where(inArray(leads.dealershipId, ids))
+      .groupBy(leads.dealershipId),
+  ]);
+  const vehicleMap = new Map(vehicleRows.map((r) => [r.dealershipId, Number(r.c)]));
+  const leadMap = new Map(leadRows.map((r) => [r.dealershipId, Number(r.c)]));
+
+  return rows.map((d) => ({
+    ...d,
+    leadsCount: leadMap.get(d.id) ?? 0,
+    vehiclesCount: vehicleMap.get(d.id) ?? 0,
+  }));
+}
+
+/** Normalize a multi-branch group key slug (lowercase alphanumeric + hyphen). */
+export function normalizeGroupKey(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
+/** Create or return an existing dealer group by key. */
+export async function createDealerGroup(input: {
+  key: string;
+  name: string;
+  ownerUserId?: number | null;
+}): Promise<{ id: number; key: string; name: string; created: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const key = normalizeGroupKey(input.key);
+  if (!key || key.length < 2) {
+    throw new Error("groupKey must be at least 2 characters (a-z, 0-9, hyphen)");
+  }
+  const name = input.name.trim() || key;
+  const [existing] = await db
+    .select()
+    .from(dealerGroups)
+    .where(eq(dealerGroups.key, key))
+    .limit(1);
+  if (existing) {
+    return { id: existing.id, key: existing.key, name: existing.name, created: false };
+  }
+  const result: any = await db.insert(dealerGroups).values({
+    key,
+    name,
+    ownerUserId: input.ownerUserId ?? null,
+  });
+  return { id: result[0]?.insertId ?? 0, key, name, created: true };
+}
+
+export async function getDealerGroupByKey(key: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalized = normalizeGroupKey(key);
+  if (!normalized) return null;
+  const [row] = await db
+    .select()
+    .from(dealerGroups)
+    .where(eq(dealerGroups.key, normalized))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listDealerGroups() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dealerGroups).orderBy(desc(dealerGroups.createdAt));
+}
+
+/** All dealerships sharing a groupKey (sibling branches). */
+export async function listDealershipsByGroupKey(groupKey: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const key = normalizeGroupKey(groupKey);
+  if (!key) return [];
+  return db
+    .select()
+    .from(dealerships)
+    .where(eq(dealerships.groupKey, key))
+    .orderBy(dealerships.name);
+}
+
+/**
+ * Set a dealership's groupKey and ensure the dealer_groups row exists.
+ * Pass null/empty to clear (single-dealer again).
+ */
+export async function setDealershipGroupKey(
+  dealershipId: number,
+  groupKey: string | null,
+  opts?: { groupName?: string | null; ownerUserId?: number | null },
+): Promise<{ groupKey: string | null }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const raw = groupKey?.trim() || null;
+  if (!raw) {
+    await db
+      .update(dealerships)
+      .set({ groupKey: null })
+      .where(eq(dealerships.id, dealershipId));
+    return { groupKey: null };
+  }
+  const key = normalizeGroupKey(raw);
+  if (!key || key.length < 2) {
+    throw new Error("groupKey must be at least 2 characters (a-z, 0-9, hyphen)");
+  }
+  const dealership = await getDealershipById(dealershipId);
+  if (!dealership) throw new Error(`Dealership ${dealershipId} not found`);
+  await createDealerGroup({
+    key,
+    name: opts?.groupName?.trim() || key,
+    ownerUserId: opts?.ownerUserId ?? null,
+  });
+  await db
+    .update(dealerships)
+    .set({ groupKey: key })
+    .where(eq(dealerships.id, dealershipId));
+  return { groupKey: key };
+}
+
+/** Group overview: branches + vehicle/lead counts for a groupKey. */
+export async function getDealerGroupOverview(groupKey: string) {
+  const key = normalizeGroupKey(groupKey);
+  if (!key) return null;
+  const group = await getDealerGroupByKey(key);
+  const branches = await listDealershipsByGroupKey(key);
+  if (branches.length === 0 && !group) return null;
+
+  const db = await getDb();
+  const ids = branches.map((b) => b.id);
+  let vehicleMap = new Map<number | null, number>();
+  let leadMap = new Map<number | null, number>();
+  if (db && ids.length > 0) {
+    const [vehicleRows, leadRows] = await Promise.all([
+      db
+        .select({ dealershipId: vehicles.dealershipId, c: count() })
+        .from(vehicles)
+        .where(inArray(vehicles.dealershipId, ids))
+        .groupBy(vehicles.dealershipId),
+      db
+        .select({ dealershipId: leads.dealershipId, c: count() })
+        .from(leads)
+        .where(inArray(leads.dealershipId, ids))
+        .groupBy(leads.dealershipId),
+    ]);
+    vehicleMap = new Map(vehicleRows.map((r) => [r.dealershipId, Number(r.c)]));
+    leadMap = new Map(leadRows.map((r) => [r.dealershipId, Number(r.c)]));
+  }
+
+  return {
+    group: group ?? { id: 0, key, name: key, ownerUserId: null, createdAt: new Date() },
+    branches: branches.map((b) => ({
+      id: b.id,
+      name: b.name,
+      region: b.region,
+      status: b.status,
+      publicShortcode: b.publicShortcode,
+      whatsappPhoneNumberId: b.whatsappPhoneNumberId,
+      vehiclesCount: vehicleMap.get(b.id) ?? 0,
+      leadsCount: leadMap.get(b.id) ?? 0,
+    })),
+  };
 }
 
 export async function createDealership(input: {
@@ -1960,6 +2147,12 @@ export async function createDealership(input: {
     shortcode = withShortcodeSuffix(slugifyPublicShortcode(input.name));
   }
 
+  const rawGroup = input.groupKey?.trim() || null;
+  const groupKey = rawGroup ? normalizeGroupKey(rawGroup) : null;
+  if (groupKey) {
+    await createDealerGroup({ key: groupKey, name: groupKey });
+  }
+
   const result: any = await db.insert(dealerships).values({
     name: input.name,
     contactEmail: input.contactEmail ?? null,
@@ -1973,7 +2166,7 @@ export async function createDealership(input: {
     whatsappPhoneNumberId: waId,
     publicShortcode: shortcode,
     agentDisplayName: input.agentDisplayName?.trim() || null,
-    groupKey: input.groupKey?.trim() || null,
+    groupKey: groupKey || null,
   });
   return { id: result[0]?.insertId ?? 0, publicShortcode: shortcode };
 }
@@ -2085,7 +2278,12 @@ export async function updateDealershipBrand(
     set.agentDisplayName = v;
   }
   if (Object.prototype.hasOwnProperty.call(patch, "groupKey")) {
-    set.groupKey = patch.groupKey?.trim() || null;
+    const raw = patch.groupKey?.trim() || null;
+    const key = raw ? normalizeGroupKey(raw) : null;
+    if (key) {
+      await createDealerGroup({ key, name: key });
+    }
+    set.groupKey = key;
   }
   await db.update(dealerships).set(set).where(eq(dealerships.id, id));
 }

@@ -364,6 +364,22 @@ export type InsertVatReconciliation = typeof vatReconciliation.$inferInsert;
 // ---- Phase 17 — Founder-operated restructure ----
 
 /**
+ * Dealer groups — multi-branch umbrella (e.g. key `acme`).
+ * Each branch is still a separate dealerships row; dealerships.groupKey
+ * matches dealer_groups.key. Single-dealer shops leave groupKey null.
+ */
+export const dealerGroups = mysqlTable("dealer_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Unique slug, e.g. "acme". Stored lowercase. */
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  ownerUserId: int("ownerUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DealerGroup = typeof dealerGroups.$inferSelect;
+export type InsertDealerGroup = typeof dealerGroups.$inferInsert;
+
+/**
  * Dealerships — each tenant on the platform.
  */
 export const dealerships = mysqlTable("dealerships", {

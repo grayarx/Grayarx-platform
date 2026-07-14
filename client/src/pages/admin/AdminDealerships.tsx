@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Settings2, Plug } from "lucide-react";
+import { Building2, Settings2, Plug, Network, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { Link } from "wouter";
 import {
   DEALERSHIP_MODULES,
   type DealershipModuleId,
@@ -33,12 +34,56 @@ export default function AdminDealerships() {
   const { data, isLoading } = trpc.adminDealerships.list.useQuery();
   const [modulesDealershipId, setModulesDealershipId] = useState<number | null>(null);
   const [integrationsDealershipId, setIntegrationsDealershipId] = useState<number | null>(null);
+  const [groupDealershipId, setGroupDealershipId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+
+  const groupKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const d of data ?? []) {
+      if (d.groupKey) keys.add(d.groupKey);
+    }
+    return Array.from(keys).sort();
+  }, [data]);
 
   return (
     <AdminShell
       title="Dealerships"
-      subtitle="Every dealership currently on GrayArx. Manage modules, WhatsApp phone_number_id, and LLM tier."
+      subtitle="Every dealership currently on GrayArx. Manage modules, WhatsApp phone_number_id, LLM tier, and multi-branch groups."
+      actions={
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCreateGroupOpen(true)}>
+            <Network className="h-3.5 w-3.5 mr-2" />
+            Create group
+          </Button>
+          <Button className="btn-gold" size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-2" />
+            New dealership
+          </Button>
+        </div>
+      }
     >
+      <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
+        Multi-branch: one dealership per branch, same <code className="text-primary">groupKey</code>{" "}
+        (e.g. <code className="text-primary">acme</code>). Each branch keeps its own stock, WhatsApp
+        phone_number_id, and shortcode. Dealers with siblings see a Branch switcher in the console.
+      </p>
+
+      {groupKeys.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {groupKeys.map((key) => (
+            <Link key={key} href={`/admin/groups/${encodeURIComponent(key)}`}>
+              <Badge
+                variant="outline"
+                className="cursor-pointer hover:border-primary hover:text-primary"
+              >
+                Group · {key}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
       {!isLoading && (!data || data.length === 0) && (
         <div className="text-center py-16">
@@ -54,6 +99,15 @@ export default function AdminDealerships() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display text-lg font-semibold truncate">{d.name}</h3>
                   <p className="text-sm text-muted-foreground">{d.region}</p>
+                  {d.groupKey ? (
+                    <Link href={`/admin/groups/${encodeURIComponent(d.groupKey)}`}>
+                      <p className="text-xs text-primary mt-1 font-mono hover:underline">
+                        group · {d.groupKey}
+                      </p>
+                    </Link>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">No group (single branch)</p>
+                  )}
                 </div>
                 <Badge className={`text-xs ${STATUS_COLORS[d.status] ?? ""}`}>
                   {d.status}
@@ -73,7 +127,7 @@ export default function AdminDealerships() {
                   <div className="text-[10px] uppercase text-muted-foreground">Plan</div>
                 </div>
               </div>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -91,6 +145,15 @@ export default function AdminDealerships() {
                 >
                   <Plug className="h-3.5 w-3.5 mr-2" />
                   WhatsApp / LLM
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setGroupDealershipId(d.id)}
+                >
+                  <Network className="h-3.5 w-3.5 mr-2" />
+                  Group key
                 </Button>
               </div>
             </CardContent>
@@ -110,7 +173,279 @@ export default function AdminDealerships() {
           onClose={() => setIntegrationsDealershipId(null)}
         />
       )}
+      {groupDealershipId !== null && (
+        <GroupKeyDialog
+          dealershipId={groupDealershipId}
+          currentKey={data?.find((d: any) => d.id === groupDealershipId)?.groupKey ?? null}
+          dealershipName={data?.find((d: any) => d.id === groupDealershipId)?.name ?? ""}
+          onClose={() => setGroupDealershipId(null)}
+        />
+      )}
+      {createOpen && <CreateDealershipDialog onClose={() => setCreateOpen(false)} />}
+      {createGroupOpen && <CreateGroupDialog onClose={() => setCreateGroupOpen(false)} />}
     </AdminShell>
+  );
+}
+
+function CreateGroupDialog({ onClose }: { onClose: () => void }) {
+  const utils = trpc.useUtils();
+  const [key, setKey] = useState("");
+  const [name, setName] = useState("");
+  const create = trpc.adminDealerships.createGroup.useMutation({
+    onSuccess: (res) => {
+      toast.success(
+        res.created
+          ? `Group “${res.key}” created — assign it on each branch`
+          : `Group “${res.key}” already exists`,
+      );
+      utils.adminDealerships.listGroups.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Create dealer group</DialogTitle>
+          <DialogDescription>
+            Multi-branch: one dealership per branch, same groupKey. Create the group first, then
+            assign the key on each branch (or pass it when creating/approving a dealership).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <Label htmlFor="group-key">Group key (slug)</Label>
+            <Input
+              id="group-key"
+              className="font-mono mt-1"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="acme"
+            />
+          </div>
+          <div>
+            <Label htmlFor="group-name">Display name (optional)</Label>
+            <Input
+              id="group-name"
+              className="mt-1"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Acme Motors Group"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="btn-gold"
+            disabled={key.trim().length < 2 || create.isPending}
+            onClick={() =>
+              create.mutate({ key: key.trim(), name: name.trim() || undefined })
+            }
+          >
+            {create.isPending ? "Creating…" : "Create group"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CreateDealershipDialog({ onClose }: { onClose: () => void }) {
+  const utils = trpc.useUtils();
+  const [name, setName] = useState("");
+  const [region, setRegion] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [groupKey, setGroupKey] = useState("");
+  const [waId, setWaId] = useState("");
+
+  const create = trpc.adminDealerships.create.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Dealership #${res.id} created · shortcode ${res.publicShortcode}`);
+      utils.adminDealerships.list.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">New dealership</DialogTitle>
+          <DialogDescription>
+            Optional groupKey links this branch into a multi-branch group. Leave blank for a
+            single-dealer shop.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <Label htmlFor="d-name">Name</Label>
+            <Input
+              id="d-name"
+              className="mt-1"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Acme Motors Sandton"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="d-region">Region</Label>
+              <Input
+                id="d-region"
+                className="mt-1"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                placeholder="Gauteng"
+              />
+            </div>
+            <div>
+              <Label htmlFor="d-group">Group key (optional)</Label>
+              <Input
+                id="d-group"
+                className="font-mono mt-1"
+                value={groupKey}
+                onChange={(e) => setGroupKey(e.target.value)}
+                placeholder="acme"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="d-email">Contact email</Label>
+            <Input
+              id="d-email"
+              className="mt-1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="owner@acme.co.za"
+            />
+          </div>
+          <div>
+            <Label htmlFor="d-phone">Contact phone</Label>
+            <Input
+              id="d-phone"
+              className="mt-1"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+27…"
+            />
+          </div>
+          <div>
+            <Label htmlFor="d-wa">WhatsApp phone_number_id (optional)</Label>
+            <Input
+              id="d-wa"
+              className="font-mono mt-1"
+              value={waId}
+              onChange={(e) => setWaId(e.target.value)}
+              placeholder="Meta phone_number_id"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="btn-gold"
+            disabled={name.trim().length < 2 || create.isPending}
+            onClick={() =>
+              create.mutate({
+                name: name.trim(),
+                region: region.trim() || null,
+                contactEmail: email.trim() || null,
+                contactPhone: phone.trim() || null,
+                groupKey: groupKey.trim() || null,
+                whatsappPhoneNumberId: waId.trim() || null,
+                status: "active",
+              })
+            }
+          >
+            {create.isPending ? "Creating…" : "Create"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GroupKeyDialog({
+  dealershipId,
+  currentKey,
+  dealershipName,
+  onClose,
+}: {
+  dealershipId: number;
+  currentKey: string | null;
+  dealershipName: string;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const [groupKey, setGroupKey] = useState(currentKey ?? "");
+
+  useEffect(() => {
+    setGroupKey(currentKey ?? "");
+  }, [currentKey]);
+
+  const save = trpc.adminDealerships.setGroupKey.useMutation({
+    onSuccess: (res) => {
+      toast.success(
+        res.groupKey
+          ? `Assigned to group “${res.groupKey}”`
+          : "Cleared group key (single-dealer)",
+      );
+      utils.adminDealerships.list.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">
+            Group key · {dealershipName}
+          </DialogTitle>
+          <DialogDescription>
+            Multi-branch: one dealership per branch, same groupKey. Clear the field to leave this
+            dealership as a single-branch shop.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          <Label htmlFor="gk">groupKey</Label>
+          <Input
+            id="gk"
+            className="font-mono mt-1"
+            value={groupKey}
+            onChange={(e) => setGroupKey(e.target.value)}
+            placeholder="acme"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="btn-gold"
+            disabled={save.isPending}
+            onClick={() =>
+              save.mutate({
+                dealershipId,
+                groupKey: groupKey.trim() || null,
+              })
+            }
+          >
+            {save.isPending ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

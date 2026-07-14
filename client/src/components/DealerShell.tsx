@@ -26,6 +26,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { PhotoGuideHint, PhotoGuideRestoreLink } from "@/components/PhotoGuide";
 import DashboardChatAgent from "@/components/DashboardChatAgent";
+import BranchSwitcher from "@/components/BranchSwitcher";
 
 const PHOTO_HINT_ROUTES = [
   "/dealer/inventory",
@@ -145,11 +146,14 @@ export default function DealerShell({
                 <p className="text-muted-foreground mt-2 max-w-2xl">{subtitle}</p>
               )}
             </div>
-            {actions && (
-              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
-                {actions}
-              </div>
-            )}
+            <div className="flex items-center gap-3 shrink-0 flex-wrap">
+              <BranchSwitcher />
+              {actions && (
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  {actions}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Tabs (sticky on scroll for quick navigation) */}
