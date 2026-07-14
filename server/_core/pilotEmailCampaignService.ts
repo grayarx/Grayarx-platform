@@ -17,6 +17,10 @@ import {
   grayArxPilotFromEmail,
   subjectForSegment,
 } from "./pilotEmailTemplate";
+import {
+  recordPilotEmailSend,
+  refreshPilotEmailSendMap,
+} from "./pilotEmailSendLog";
 
 const SEND_DELAY_MS = 600;
 
@@ -99,14 +103,30 @@ export async function sendPilotSegmentBatch(input: {
   segment: PilotOutreachSegment;
   dryRun?: boolean;
   prospects?: PilotProspect[];
+  /** When false (default), skip addresses already recorded as emailed. */
+  includeAlreadySent?: boolean;
 }): Promise<SegmentSendResult> {
-  const list = mailableProspects(input.prospects ?? PILOT_PROSPECTS, input.segment);
+  const sentMap = await refreshPilotEmailSendMap();
+  const list = mailableProspects(input.prospects ?? PILOT_PROSPECTS, input.segment).filter(
+    (p) =>
+      input.includeAlreadySent ||
+      !sentMap.has(p.email!.trim().toLowerCase()),
+  );
   const dryRun = input.dryRun ?? false;
   const results: SegmentSendResult["results"] = [];
 
   for (const prospect of list) {
     const row = await sendToProspect(prospect, dryRun);
     results.push(row);
+    if (!dryRun && row.success) {
+      recordPilotEmailSend({
+        email: row.email,
+        prospectId: prospect.id,
+        dealershipName: prospect.dealershipName,
+        segment: input.segment,
+        resendId: row.resendId,
+      });
+    }
     if (!dryRun) await sleep(SEND_DELAY_MS);
   }
 
@@ -153,28 +173,47 @@ export async function sendPilotBulkCampaign(input?: {
   };
 }
 
-export function previewPilotCampaign() {
+export async function previewPilotCampaign() {
+  const sentMap = await refreshPilotEmailSendMap();
   const groups = groupProspectsBySegment();
-  return (Object.keys(groups) as PilotOutreachSegment[]).map((segment) => ({
-    segment,
-    label: subjectForSegment(segment),
-    mailable: mailableProspects(PILOT_PROSPECTS, segment).length,
-    total: groups[segment].length,
-    prospects: groups[segment].map((p) => ({
-      id: p.id,
-      name: p.dealershipName,
-      city: p.city,
-      email: p.email,
-      emailVerified: p.emailVerified,
-      phone: p.phone,
-    })),
-    sampleHtml: generateSegmentPilotEmailHTML({
-      dealershipName: groups[segment][0]?.dealershipName ?? "Your Dealership",
-      contactName: groups[segment][0]?.contactName ?? "there",
-      city: groups[segment][0]?.city,
+  return (Object.keys(groups) as PilotOutreachSegment[]).map((segment) => {
+    const mailable = mailableProspects(PILOT_PROSPECTS, segment);
+    const prospects = mailable.map((p) => {
+      const prior = sentMap.get(p.email!.trim().toLowerCase());
+      return {
+        id: p.id,
+        name: p.dealershipName,
+        city: p.city,
+        email: p.email,
+        emailVerified: true as const,
+        phone: p.phone,
+        alreadyEmailed: Boolean(prior),
+        lastEmailedAt: prior?.sentAt ?? null,
+      };
+    });
+    const alreadyEmailed = prospects.filter((p) => p.alreadyEmailed).length;
+    const remaining = prospects.filter((p) => !p.alreadyEmailed).length;
+    const sample = mailable[0] ?? groups[segment][0];
+
+    return {
       segment,
-    }),
-  }));
+      label: subjectForSegment(segment),
+      mailable: mailable.length,
+      remaining,
+      alreadyEmailed,
+      /** Research total (includes unverified) — for internal stats only */
+      totalResearched: groups[segment].length,
+      /** UI list: verified emails only */
+      total: mailable.length,
+      prospects,
+      sampleHtml: generateSegmentPilotEmailHTML({
+        dealershipName: sample?.dealershipName ?? "Your Dealership",
+        contactName: sample?.contactName ?? "there",
+        city: sample?.city,
+        segment,
+      }),
+    };
+  });
 }
 
 export async function sendPilotTestEmail(

@@ -1,14 +1,26 @@
+import { useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, Globe, Sparkles, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mail, Phone, Globe, Sparkles, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
+const SEGMENT_LABELS: Record<string, string> = {
+  no_website_social_only: "No website — social only",
+  basic_website_no_showroom: "Basic website — no showroom",
+  after_hours_leak: "After-hours lead leak",
+  whatsapp_manual: "WhatsApp — manual replies",
+};
+
 export default function AdminProspector() {
   const utils = trpc.useUtils();
+  const [sendingId, setSendingId] = useState<number | null>(null);
+  const [segments, setSegments] = useState<Record<number, string>>({});
+
   const { data, isLoading } = trpc.prospects.list.useQuery();
   const [poolRemaining, setPoolRemaining] = useState<number | null>(null);
   const [poolExhausted, setPoolExhausted] = useState(false);
@@ -32,6 +44,36 @@ export default function AdminProspector() {
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+  const sendEmail = trpc.pilotEmail.sendToDbProspect.useMutation({
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  async function handleSendEmail(p: any) {
+    const email = p.contactEmail || p.email;
+    if (!email) {
+      toast.error("No email address for this prospect");
+      return;
+    }
+    setSendingId(p.id);
+    try {
+      const result = await sendEmail.mutateAsync({
+        email,
+        dealershipName: p.businessName || p.dealershipName,
+        contactName: "there",
+        city: p.city ?? undefined,
+        brands: p.brandsCarried ?? undefined,
+        estimatedVolume: p.estimatedMonthlyVolume ?? undefined,
+        segment: (segments[p.id] ?? "basic_website_no_showroom") as any,
+      });
+      if (result.success) {
+        toast.success(`Pilot email sent to ${email}`);
+      } else {
+        toast.error(`Failed to send: ${(result as any).error ?? "unknown error"}`);
+      }
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   return (
     <AdminShell
@@ -114,6 +156,43 @@ export default function AdminProspector() {
                       {b.trim()}
                     </Badge>
                   ))}
+                </div>
+              )}
+              {p.estimatedMonthlyVolume && (
+                <p className="text-xs text-muted-foreground">
+                  ~{p.estimatedMonthlyVolume} vehicles/month
+                </p>
+              )}
+              {(p.contactEmail || p.email) && (
+                <div className="pt-2 border-t border-primary/10 space-y-2">
+                  <Select
+                    value={segments[p.id] ?? "basic_website_no_showroom"}
+                    onValueChange={(v) => setSegments((prev) => ({ ...prev, [p.id]: v }))}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SEGMENT_LABELS).map(([val, label]) => (
+                        <SelectItem key={val} value={val} className="text-xs">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    className="w-full h-7 text-xs btn-gold"
+                    disabled={sendingId === p.id}
+                    onClick={() => handleSendEmail(p)}
+                  >
+                    {sendingId === p.id ? (
+                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3 w-3 mr-1.5" />
+                    )}
+                    Send pilot email
+                  </Button>
                 </div>
               )}
             </CardContent>

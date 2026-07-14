@@ -6,6 +6,8 @@ import {
   markComplianceInquiryRead,
   recordComplianceInquiry,
   countUnreadComplianceInquiries,
+  deleteComplianceInquiry,
+  markComplianceInquiryFollowUp,
 } from "../_core/complianceMailbox";
 import { checkRateLimit, callerIp, RATE_LIMITS } from "../_core/rateLimit";
 
@@ -72,6 +74,26 @@ export const complianceMailboxRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       await markComplianceInquiryRead(input.id);
+      return { success: true as const };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      await deleteComplianceInquiry(input.id);
+      return { success: true as const };
+    }),
+
+  markFollowUp: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      await markComplianceInquiryFollowUp(input.id);
       return { success: true as const };
     }),
 });

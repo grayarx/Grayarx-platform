@@ -21,6 +21,8 @@ type TemplateVars = {
   contactName: string;
   city?: string;
   segment: PilotOutreachSegment;
+  brands?: string;
+  estimatedVolume?: number;
 };
 
 function escapeHtml(s: string): string {
@@ -87,10 +89,22 @@ export function generateSegmentPilotEmailHTML(vars: TemplateVars): string {
   const name = escapeHtml(vars.contactName);
   const dealer = escapeHtml(vars.dealershipName);
 
+  const volumeLine = vars.estimatedVolume
+    ? `We noticed <strong>${dealer}</strong>${cityBit} moves approximately <strong>${vars.estimatedVolume} vehicles a month</strong> — that's exactly the scale where GrayArx's AI agents make a measurable difference.`
+    : `We'd love to invite <strong>${dealer}</strong>${cityBit} to the GrayArx <strong style="color:#111827;">pilot programme</strong> — a free 7-day trial of our AI sales team for your showroom.`;
+
+  const brandsLine = vars.brands
+    ? `<p style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#6b7280;">Brands we've seen you carry: <strong style="color:#374151;">${escapeHtml(vars.brands)}</strong> — our AI agents are trained to answer stock, spec, and finance questions for each of these.</p>`
+    : "";
+
   const body = `
 <p style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111827;">Hi <strong>${name}</strong>,</p>
-<p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#4b5563;">
-  We're inviting a small group of dealerships${cityBit} to the GrayArx <strong style="color:#111827;">pilot programme</strong> — a free 7-day trial of our AI sales team for your showroom.
+<p style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#4b5563;">
+  ${volumeLine}
+</p>
+${brandsLine}
+<p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#4b5563;">
+  We're inviting a small group of dealerships${cityBit} to our <strong style="color:#111827;">pilot programme</strong> — a free 7-day trial of our AI sales team for your showroom.
 </p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background-color:#0a0a0c;margin-bottom:28px;">
   <tr>
@@ -133,9 +147,15 @@ export function generateSegmentPilotEmailText(vars: TemplateVars): string {
   const { headline, bullets, hook } = segmentBody(vars.segment);
   const appUrl = grayArxAppUrl();
   const cityBit = vars.city ? ` in ${vars.city}` : "";
+  const volumeLine = vars.estimatedVolume
+    ? `We noticed ${vars.dealershipName}${cityBit} moves approximately ${vars.estimatedVolume} vehicles a month — that's exactly the scale where GrayArx's AI agents make a measurable difference.`
+    : `We'd love to invite ${vars.dealershipName}${cityBit} to GrayArx's pilot programme.`;
+  const brandsLine = vars.brands ? `\nBrands: ${vars.brands}\n` : "";
   return `GrayArx Pilot Programme
 
 Hi ${vars.contactName},
+
+${volumeLine}${brandsLine}
 
 We're inviting ${vars.dealershipName}${cityBit} to GrayArx's pilot programme.
 

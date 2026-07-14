@@ -255,10 +255,9 @@ export default function Showroom() {
   // Fetch appearance first to obtain the dealership context (id, theme, branding).
   // The vehicle list is then scoped to that dealership — no cross-tenant leakage.
   const { data: appearance } = trpc.showroom.appearance.useQuery();
-  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery(
-    { dealershipId: appearance?.dealershipId ?? undefined },
-    { enabled: appearance?.dealershipId != null },
-  );
+  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery({
+    dealershipId: appearance?.dealershipId ?? undefined,
+  });
   const { data: contactOptions } = trpc.showroom.contactOptions.useQuery();
 
   const theme = appearance?.theme ?? "classic";

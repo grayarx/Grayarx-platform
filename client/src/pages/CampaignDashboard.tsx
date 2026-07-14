@@ -51,8 +51,13 @@ export default function CampaignDashboard() {
   const [testEmail, setTestEmail] = useState("grayarx@gmail.com");
   const [testSegment, setTestSegment] = useState<PilotOutreachSegment>("basic_website_no_showroom");
 
+  const utils = trpc.useUtils();
   const { data: preview, isLoading } = trpc.pilotEmail.preview.useQuery();
   const { data: branding } = trpc.pilotEmail.brandingCheck.useQuery();
+
+  const refreshPreview = () => {
+    void utils.pilotEmail.preview.invalidate();
+  };
 
   const sendTest = trpc.pilotEmail.sendTest.useMutation({
     onSuccess: (r) => {
@@ -65,6 +70,7 @@ export default function CampaignDashboard() {
   const sendSegment = trpc.pilotEmail.sendSegment.useMutation({
     onSuccess: (r) => {
       toast.success(`Segment ${PILOT_SEGMENT_LABELS[r.segment]}: ${r.sent}/${r.attempted} ok`);
+      refreshPreview();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -76,11 +82,13 @@ export default function CampaignDashboard() {
           ? `Dry run complete — ${r.totalSent}/${r.totalAttempted} mailable`
           : `Bulk send — ${r.totalSent} sent, ${r.totalFailed} failed`,
       );
+      refreshPreview();
     },
     onError: (e) => toast.error(e.message),
   });
 
   const totalMailable = preview?.reduce((s, p) => s + p.mailable, 0) ?? 0;
+  const totalRemaining = preview?.reduce((s, p) => s + (p.remaining ?? p.mailable), 0) ?? 0;
 
   return (
     <AdminShell
@@ -131,8 +139,10 @@ export default function CampaignDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{totalMailable}</div>
-              <p className="text-xs text-muted-foreground mt-1">Verified public emails only</p>
+              <div className="text-3xl font-bold">{totalRemaining}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalMailable} verified · {totalMailable - totalRemaining} already emailed
+              </p>
             </CardContent>
           </Card>
           <Card className="glass-gold border-primary/20">
@@ -241,20 +251,35 @@ export default function CampaignDashboard() {
                     <div className="flex flex-wrap gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge variant="outline" className="cursor-help">{row.mailable} mailable</Badge>
+                          <Badge variant="outline" className="cursor-help">
+                            {row.remaining ?? row.mailable} ready to send
+                          </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Prospects with a verified email — these are the only ones that will
-                          receive emails in a live send.
+                          Verified emails not yet contacted — live send only hits these.
                         </TooltipContent>
                       </Tooltip>
+                      {(row.alreadyEmailed ?? 0) > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 cursor-help">
+                              {row.alreadyEmailed} emailed
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Already received a pilot email — skipped on the next live send.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge variant="secondary" className="cursor-help">{row.total} researched</Badge>
+                          <Badge variant="secondary" className="cursor-help">
+                            {row.totalResearched ?? row.total} researched
+                          </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Total prospects researched for this segment, including those without
-                          a verified email (WhatsApp/Facebook follow-up candidates).
+                          Total researched for this segment. Only verified emails appear in the
+                          list below — no-email dealers stay in research docs for WhatsApp/Facebook.
                         </TooltipContent>
                       </Tooltip>
                       <Dialog>
@@ -282,7 +307,9 @@ export default function CampaignDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={sendSegment.isPending || row.mailable === 0}
+                            disabled={
+                              sendSegment.isPending || (row.remaining ?? row.mailable) === 0
+                            }
                             onClick={() =>
                               sendSegment.mutate({ segment: row.segment, dryRun: true })
                             }
@@ -300,11 +327,14 @@ export default function CampaignDashboard() {
                           <Button
                             size="sm"
                             className="btn-gold"
-                            disabled={sendSegment.isPending || row.mailable === 0}
+                            disabled={
+                              sendSegment.isPending || (row.remaining ?? row.mailable) === 0
+                            }
                             onClick={() => {
+                              const n = row.remaining ?? row.mailable;
                               if (
                                 !window.confirm(
-                                  `Send ${row.mailable} emails for segment "${PILOT_SEGMENT_LABELS[row.segment]}"?`,
+                                  `Send ${n} emails for segment "${PILOT_SEGMENT_LABELS[row.segment]}"? Already-emailed dealers will be skipped.`,
                                 )
                               ) {
                                 return;
@@ -316,30 +346,44 @@ export default function CampaignDashboard() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs text-left">
-                          LIVE send — delivers real emails via Resend to all{" "}
-                          {row.mailable} verified addresses in this segment.
-                          Always dry-run first.
+                          LIVE send — delivers via Resend to{" "}
+                          {row.remaining ?? row.mailable} remaining verified addresses.
+                          Already-emailed rows are skipped. Always dry-run first.
                         </TooltipContent>
                       </Tooltip>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {row.prospects.slice(0, 5).map((p) => (
-                      <li key={p.id}>
-                        {p.name} — {p.city}
-                        {p.emailVerified && p.email ? (
-                          <span className="text-emerald-400/80"> · {p.email}</span>
-                        ) : (
-                          <span className="text-amber-400/80"> · no verified email</span>
-                        )}
-                      </li>
-                    ))}
-                    {row.prospects.length > 5 && (
-                      <li className="text-xs">+{row.prospects.length - 5} more in research list</li>
-                    )}
-                  </ul>
+                  {row.prospects.length === 0 ? (
+                    <p className="text-sm text-amber-400/90">
+                      No verified emails in this segment — research-only dealers (WhatsApp/Facebook)
+                      are hidden from outreach.
+                    </p>
+                  ) : (
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {row.prospects.map((p) => (
+                        <li key={p.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span>
+                            {p.name} — {p.city}
+                            <span className="text-emerald-400/80"> · {p.email}</span>
+                          </span>
+                          {p.alreadyEmailed ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] h-5">
+                              Emailed
+                              {p.lastEmailedAt
+                                ? ` ${new Date(p.lastEmailedAt).toLocaleDateString()}`
+                                : ""}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] h-5">
+                              Not sent
+                            </Badge>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             ))

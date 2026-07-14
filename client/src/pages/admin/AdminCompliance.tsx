@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Shield, Scale, Inbox } from "lucide-react";
+import { Mail, Shield, Scale, Inbox, Trash2, UserCheck } from "lucide-react";
 import { GRAYARX_LEGAL } from "@shared/companyLegal";
 
 const MAILBOX_ICONS = {
@@ -19,6 +19,12 @@ export default function AdminCompliance() {
     refetchInterval: 30_000,
   });
   const markRead = trpc.complianceMailbox.markRead.useMutation({
+    onSuccess: () => utils.complianceMailbox.list.invalidate(),
+  });
+  const deleteRecord = trpc.complianceMailbox.delete.useMutation({
+    onSuccess: () => utils.complianceMailbox.list.invalidate(),
+  });
+  const markFollowUp = trpc.complianceMailbox.markFollowUp.useMutation({
     onSuccess: () => utils.complianceMailbox.list.invalidate(),
   });
 
@@ -91,17 +97,46 @@ export default function AdminCompliance() {
                 <p className="text-sm whitespace-pre-wrap leading-relaxed border-t border-primary/10 pt-3">
                   {item.message}
                 </p>
-                {item.status === "new" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-4"
-                    disabled={markRead.isPending}
-                    onClick={() => markRead.mutate({ id: item.id })}
-                  >
-                    Mark read
-                  </Button>
-                )}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {item.status === "new" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={markRead.isPending}
+                      onClick={() => markRead.mutate({ id: item.id })}
+                    >
+                      Mark read
+                    </Button>
+                  )}
+                  {(item.status === "new" || item.status === "read") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                      disabled={markFollowUp.isPending}
+                      onClick={() => markFollowUp.mutate({ id: item.id })}
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Assign to human
+                    </Button>
+                  )}
+                  {(item.status === "read" || item.status === "replied" || item.status === "archived") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-red-500/40 text-red-600 hover:bg-red-50"
+                      disabled={deleteRecord.isPending}
+                      onClick={() => {
+                        if (confirm(`Delete compliance record #${item.id}? This cannot be undone.`)) {
+                          deleteRecord.mutate({ id: item.id });
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );

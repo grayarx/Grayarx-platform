@@ -28,7 +28,7 @@ if (existsSync(faviconIco) && existsSync(favicon32)) {
   const png = readFileSync(favicon32).length;
   ok("favicon.ico matches 32px size", ico === png, `${ico} vs ${png}`);
 }
-ok("index.html references favicon.ico v=6", readFileSync(indexHtml, "utf8").includes("favicon.ico?v=6"));
+ok("index.html references favicon.ico v=7", readFileSync(indexHtml, "utf8").includes("favicon.ico?v=7"));
 ok("delete intent", classifyDashboardIntent("delete all my inventory") === "inventory_bulk_delete");
 ok("button label confirm", isInventoryBulkDeleteConfirm("Delete all 3 vehicles"));
 ok("confirmAction path intent", classifyDashboardIntent("confirm") !== "inventory_bulk_delete_confirm");

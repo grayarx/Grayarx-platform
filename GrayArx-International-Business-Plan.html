@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrayArx — International Business Plan 2026–2029</title>
+  <style>
+    /* ── Fonts ──────────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
+
+    /* ── CSS Variables ──────────────────────────────────────── */
+    :root {
+      --bg:        #0a0e27;
+      --bg2:       #0f1535;
+      --bg3:       #131a3e;
+      --border:    #1e2a5a;
+      --gold:      #d4af37;
+      --gold-lt:   #f0d060;
+      --gold-dk:   #a88a20;
+      --text:      #e8eaf0;
+      --text-muted:#8b93b8;
+      --white:     #ffffff;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+    }
+
+    /* ── Reset & Base ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 15px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.7;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+    }
+
+    /* ── Cover / Header ─────────────────────────────────────── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 80px 40px;
+      background: linear-gradient(135deg, #0a0e27 0%, #0d1540 60%, #101830 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cover::after {
+      content: '';
+      position: absolute;
+      bottom: -100px; left: -100px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo-mark {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 2.6rem;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .logo-sub {
+      font-size: 0.72rem;
+      letter-spacing: 0.35em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 60px;
+    }
+
+    .cover-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+      border-left: 3px solid var(--gold);
+      padding-left: 14px;
+    }
+
+    .cover-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.6rem;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--white);
+      margin-bottom: 24px;
+      max-width: 780px;
+    }
+
+    .cover-title span { color: var(--gold); }
+
+    .cover-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin-bottom: 50px;
+      line-height: 1.8;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .cover-meta-item label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .cover-meta-item span {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .cover-divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold) 0%, transparent 60%);
+      margin: 50px 0 0;
+    }
+
+    /* ── Section page break wrapper ────────────────────────── */
+    .section {
+      padding: 72px 0 48px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child { border-bottom: none; }
+
+    /* ── Section Headers ────────────────────────────────────── */
+    .section-num {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 32px;
+      line-height: 1.2;
+    }
+
+    h2 .accent { color: var(--gold); }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--gold-lt);
+      margin: 36px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--white);
+      margin: 20px 0 8px;
+    }
+
+    p {
+      color: var(--text);
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 14px;
+    }
+
+    li {
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    li strong { color: var(--white); }
+
+    /* ── Callout boxes ──────────────────────────────────────── */
+    .callout {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 22px 26px;
+      margin: 24px 0;
+    }
+
+    .callout.blue  { border-left-color: var(--blue); }
+    .callout.green { border-left-color: var(--green); }
+
+    .callout p { margin-bottom: 0; }
+
+    /* ── Stat cards ─────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin: 28px 0;
+    }
+
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--gold);
+      display: block;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Tables ─────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 28px 0;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead {
+      background: var(--bg3);
+    }
+
+    thead th {
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+    tbody td {
+      padding: 12px 18px;
+      color: var(--text);
+      vertical-align: top;
+    }
+
+    td strong { color: var(--white); }
+    td.gold    { color: var(--gold); font-weight: 600; }
+    td.green   { color: var(--green); font-weight: 600; }
+    td.muted   { color: var(--text-muted); font-size: 0.82rem; }
+
+    /* ── Tier badges ─────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .badge-gold   { background: rgba(212,175,55,0.15); color: var(--gold); border: 1px solid rgba(212,175,55,0.35); }
+    .badge-blue   { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .badge-green  { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .badge-muted  { background: rgba(139,147,184,0.1); color: var(--text-muted); border: 1px solid rgba(139,147,184,0.2); }
+
+    /* ── Timeline ───────────────────────────────────────────── */
+    .timeline {
+      position: relative;
+      padding-left: 32px;
+      margin: 28px 0;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px; top: 8px; bottom: 8px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--gold) 0%, var(--border) 100%);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 30px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -28px; top: 6px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 2px solid var(--bg);
+    }
+
+    .timeline-item .tl-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .timeline-item h4 { margin: 0 0 6px; }
+
+    /* ── Agent roster ───────────────────────────────────────── */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .agent-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .agent-card .agent-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .agent-card .agent-role {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .agent-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* ── Pricing cards ──────────────────────────────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+      margin: 28px 0;
+    }
+
+    .pricing-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(212,175,55,0.06) 0%, var(--bg2) 60%);
+    }
+
+    .pricing-card .pc-tier {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .pricing-card .pc-price-za {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .pricing-card .pc-price-usd {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .pricing-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .pricing-card ul li {
+      font-size: 0.88rem;
+      color: var(--text);
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .pricing-card ul li::before {
+      content: '✓';
+      color: var(--gold);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Two-column layout ─────────────────────────────────── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin: 24px 0;
+    }
+
+    @media (max-width: 700px) {
+      .two-col { grid-template-columns: 1fr; }
+      .cover-title { font-size: 2.4rem; }
+    }
+
+    /* ── Competitor comparison ──────────────────────────────── */
+    td.check  { color: var(--green); font-size: 1.1rem; }
+    td.cross  { color: var(--red);   font-size: 1.1rem; }
+
+    /* ── Financial highlight row ────────────────────────────── */
+    tr.highlight td { color: var(--gold); font-weight: 700; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .doc-footer {
+      margin-top: 60px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .doc-footer .logo-small {
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+    }
+
+    .doc-footer p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* ── Table of Contents ──────────────────────────────────── */
+    .toc {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 36px;
+      margin: 48px 0;
+    }
+
+    .toc h3 { margin-top: 0; }
+
+    .toc ol {
+      padding-left: 0;
+      list-style: none;
+      columns: 2;
+      gap: 24px;
+    }
+
+    .toc ol li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      break-inside: avoid;
+    }
+
+    .toc ol li .toc-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--gold);
+      min-width: 24px;
+    }
+
+    .toc ol li .toc-title {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       PRINT STYLES
+    ══════════════════════════════════════════════════════════ */
+    @media print {
+      @page {
+        size: A4;
+        margin: 18mm 18mm 22mm 18mm;
+      }
+
+      body {
+        background: #0a0e27 !important;
+        color: #e8eaf0 !important;
+        font-size: 11pt;
+      }
+
+      .cover {
+        min-height: auto;
+        padding: 60px 0 48px;
+        page-break-after: always;
+      }
+
+      .section {
+        page-break-before: always;
+        padding: 40px 0 32px;
+        border-bottom: 1px solid #1e2a5a;
+      }
+
+      .section:first-of-type { page-break-before: auto; }
+
+      .toc { page-break-after: always; }
+
+      .no-break { page-break-inside: avoid; }
+
+      .stat-grid { page-break-inside: avoid; }
+
+      .pricing-grid { page-break-inside: avoid; }
+
+      .table-wrap { page-break-inside: avoid; }
+
+      h2 { page-break-after: avoid; }
+      h3 { page-break-after: avoid; }
+
+      a { text-decoration: none; color: inherit; }
+
+      .doc-footer { page-break-before: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     COVER PAGE
+════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div style="max-width:1100px; margin:0 auto; width:100%; padding:0 40px; position:relative; z-index:1;">
+    <div class="logo-mark">GRAYARX</div>
+    <div class="logo-sub">South Africa's Dealership OS</div>
+
+    <div class="cover-eyebrow">International Business Plan · Confidential</div>
+
+    <h1 class="cover-title">
+      The <span>AI-Powered</span><br />
+      Dealership Operating<br />
+      System for Emerging Markets
+    </h1>
+
+    <p class="cover-subtitle">
+      A strategic plan for scaling GrayArx from South Africa's leading dealership AI platform
+      to the dominant dealership operating system across Sub-Saharan Africa, MENA,
+      Southeast Asia, and Latin America — capturing a &gt;$2 billion addressable market.
+    </p>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <label>Document Version</label>
+        <span>1.0 — July 2026</span>
+      </div>
+      <div class="cover-meta-item">
+        <label>Classification</label>
+        <span>Confidential</span>
+      </div>
+      <div class="cover-meta-item">
+        <label>Stage</label>
+        <span>Pilot / Pre-Seed</span>
+      </div>
+      <div class="cover-meta-item">
+        <label>Headquarters</label>
+        <span>South Africa</span>
+      </div>
+    </div>
+
+    <div class="cover-divider"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="toc">
+    <h3 style="margin-top:0; margin-bottom:20px;">Table of Contents</h3>
+    <ol>
+      <li><span class="toc-num">01</span><span class="toc-title">Executive Summary</span></li>
+      <li><span class="toc-num">02</span><span class="toc-title">Market Opportunity</span></li>
+      <li><span class="toc-num">03</span><span class="toc-title">International Expansion Strategy</span></li>
+      <li><span class="toc-num">04</span><span class="toc-title">Go-to-Market Strategy</span></li>
+      <li><span class="toc-num">05</span><span class="toc-title">Revenue Model &amp; Pricing</span></li>
+      <li><span class="toc-num">06</span><span class="toc-title">Competitive Landscape</span></li>
+      <li><span class="toc-num">07</span><span class="toc-title">Technology &amp; AI Roadmap</span></li>
+      <li><span class="toc-num">08</span><span class="toc-title">Financial Projections</span></li>
+      <li><span class="toc-num">09</span><span class="toc-title">Team &amp; Execution</span></li>
+      <li><span class="toc-num">10</span><span class="toc-title">Funding &amp; Use of Capital</span></li>
+    </ol>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     01  EXECUTIVE SUMMARY
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s1">
+    <div class="section-num">Section 01</div>
+    <h2>Executive <span class="accent">Summary</span></h2>
+
+    <div class="callout">
+      <p><strong>GrayArx</strong> is South Africa's first AI-powered Dealership Operating System — a single platform that replaces the fragmented stack of CRMs, call centres, and manual follow-up processes that cost dealerships millions in lost leads every year. Seven specialised AI agents handle sales, prospecting, email, WhatsApp, invoicing, auditing, and follow-up — around the clock, 365 days a year.</p>
+    </div>
+
+    <h3>The Problem</h3>
+    <p>South African car dealerships lose an estimated <strong>60–70% of inbound leads</strong> that arrive outside business hours. A prospect who messages a dealership at 9 PM on a Sunday receives silence — and buys from a competitor by Monday morning. This is not a people problem; it is a structural one. Dealerships simply cannot afford to staff 24/7 sales coverage.</p>
+    <p>The same dynamic plays out in every emerging market from Lagos to Jakarta: WhatsApp is the primary business channel, digital infrastructure lags behind consumer demand, and dealerships have no scalable way to capture and nurture leads at the speed customers expect.</p>
+
+    <h3>The Solution</h3>
+    <p>GrayArx deploys a fleet of AI agents that respond instantly, qualify leads, book test drives, send pre-approval links, and follow up persistently — all through WhatsApp, webchat, and email simultaneously. A dealership using GrayArx never loses a lead to after-hours silence again.</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-value">7</span>
+        <span class="stat-label">AI Agents deployed</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">24/7</span>
+        <span class="stat-label">Lead response coverage</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">60–70%</span>
+        <span class="stat-label">Leads lost after hours (industry)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">R400bn+</span>
+        <span class="stat-label">SA automotive industry</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">11,000+</span>
+        <span class="stat-label">Registered SA dealerships</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">7-Day</span>
+        <span class="stat-label">Free pilot, no credit card</span>
+      </div>
+    </div>
+
+    <h3>Current Traction</h3>
+    <p>GrayArx is currently in active pilot phase, onboarding its first cohort of South African dealerships via a zero-commitment 7-day free trial. The platform is live with WhatsApp integration (Meta Cloud API), webchat, email agents, vehicle inventory management, lead tracking, and booking functionality. All data handling is POPIA-compliant.</p>
+
+    <h3>The Vision</h3>
+    <p>South Africa is the proving ground. The real opportunity is the 50,000+ car dealerships across Sub-Saharan Africa, MENA, Southeast Asia, and Latin America — all operating in WhatsApp-first economies, all underserved by legacy US-built CRM tools, and all facing the same after-hours lead crisis. GrayArx will become the <strong>global dealership OS for emerging markets</strong>, the same way Shopify became the commerce OS for SMEs worldwide.</p>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     02  MARKET OPPORTUNITY
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s2">
+    <div class="section-num">Section 02</div>
+    <h2>Market <span class="accent">Opportunity</span></h2>
+
+    <h3>South Africa — Home Market</h3>
+    <p>South Africa's automotive retail industry is one of the largest on the African continent, generating over <strong>R400 billion</strong> in annual turnover. There are more than <strong>11,000 registered dealerships</strong> across the country, ranging from large franchise groups (Motus, WeBuyCars, Unitrans) to independent township dealers.</p>
+    <p>GrayArx's initial target segment is the <strong>500 highest-density dealerships</strong> in Gauteng, the Western Cape, and KwaZulu-Natal — the three provinces that account for roughly 70% of new and used vehicle sales. These dealerships share a common pain: digital-savvy consumers who message via WhatsApp and expect instant responses, met by dealerships still relying on salespeople and voicemail.</p>
+
+    <div class="callout blue">
+      <p><strong>TAM (South Africa):</strong> 11,000 dealerships × avg R5,000/month = <strong>R660M ARR potential</strong> in South Africa alone.</p>
+    </div>
+
+    <h3>Phase 2 — Sub-Saharan Africa</h3>
+    <p>Beyond South Africa, Sub-Saharan Africa presents a compellingly underserved market. Nigeria alone has an estimated 4,000+ used-car dealers; Kenya's car market is growing at double digits annually; Ghana, Tanzania, and Zambia are emerging hubs. These markets share three key characteristics that make them ideal for GrayArx:</p>
+    <ul>
+      <li><strong>WhatsApp-first:</strong> WhatsApp is used for business transactions, customer service, and sales by default</li>
+      <li><strong>Minimal existing infrastructure:</strong> No dominant CRM or DMS has captured these markets</li>
+      <li><strong>Mobile-first consumers:</strong> Buyers expect instant mobile responses; gaps in service are commercially costly</li>
+    </ul>
+
+    <h3>Phase 3 — MENA, Southeast Asia &amp; Latin America</h3>
+    <p>The MENA automotive market exceeded $200 billion in 2025. Southeast Asia — Indonesia, Vietnam, Thailand — represents a further 500,000+ car transactions annually with WhatsApp as the dominant communication layer. Brazil and Mexico together account for over 4 million new vehicles sold per year, with WhatsApp the primary sales channel for used cars.</p>
+
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Region</th>
+            <th>Timeline</th>
+            <th>Est. Addressable Dealerships</th>
+            <th>WhatsApp Penetration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-gold">Phase 0</span></td>
+            <td><strong>South Africa</strong></td>
+            <td>2025–2026</td>
+            <td>11,000+</td>
+            <td class="gold">91%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gold">Phase 1</span></td>
+            <td><strong>Nigeria, Kenya, UAE</strong></td>
+            <td>2027</td>
+            <td>10,000+</td>
+            <td class="gold">85–95%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Phase 2</span></td>
+            <td><strong>Egypt, Morocco, Indonesia</strong></td>
+            <td>2028</td>
+            <td>25,000+</td>
+            <td class="gold">80–90%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-muted">Phase 3</span></td>
+            <td><strong>India, Brazil, Mexico</strong></td>
+            <td>2029</td>
+            <td>90,000+</td>
+            <td class="gold">75–92%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout green">
+      <p><strong>Global TAM (WhatsApp-first emerging markets):</strong> 136,000+ dealerships × avg $200/month USD = <strong>&gt;$326M ARR potential</strong> — and that's before enterprise and revenue-share models.</p>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     03  INTERNATIONAL EXPANSION STRATEGY
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s3">
+    <div class="section-num">Section 03</div>
+    <h2>International <span class="accent">Expansion Strategy</span></h2>
+
+    <p>GrayArx's international expansion follows a disciplined, evidence-based sequencing. South Africa is not just the home market — it is the <strong>proof-of-concept lab</strong>. Success metrics from SA pilots (lead-to-booking conversion lift, after-hours response rates, churn, NPS) become the credibility collateral that opens doors in every subsequent market.</p>
+
+    <h3>Tier 1 Targets — Year 1–2 (Post-SA Validation)</h3>
+
+    <div class="two-col">
+      <div class="callout">
+        <h4>🇳🇬 Nigeria</h4>
+        <ul>
+          <li>Largest car market in West Africa</li>
+          <li>4,000+ registered dealers, mostly independent</li>
+          <li>WhatsApp is the primary commercial channel</li>
+          <li>Minimal digital infrastructure = massive gap</li>
+          <li>Lagos + Abuja initial focus</li>
+          <li>Flutterwave/Paystack for payment processing</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h4>🇰🇪 Kenya</h4>
+        <ul>
+          <li>Most tech-forward economy in East Africa</li>
+          <li>Nairobi as Africa's premier tech hub</li>
+          <li>M-Pesa ecosystem — seamless payment rails</li>
+          <li>Growing middle class driving used-car demand</li>
+          <li>English-first market (minimal localisation cost)</li>
+          <li>Strong VC ecosystem for partnership</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout" style="border-left-color:#8b5cf6;">
+      <h4>🇦🇪 UAE / Dubai</h4>
+      <ul>
+        <li>Luxury car capital of MENA — highest per-capita car spend globally</li>
+        <li>Multicultural, English + Arabic business environment</li>
+        <li>High tech adoption among dealerships; appetite for AI tools</li>
+        <li>Gateway to broader GCC: Saudi Arabia, Qatar, Kuwait</li>
+        <li>USD-denominated market — strong revenue per seat</li>
+        <li>WhatsApp business adoption near-universal among dealers</li>
+      </ul>
+    </div>
+
+    <h3>Tier 2 Targets — Year 2–3</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Country</th>
+            <th>Key Rationale</th>
+            <th>Market Size</th>
+            <th>Localisation Priority</th>
+            <th>Payment Rail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>🇪🇬 Egypt</strong></td>
+            <td>100M population; fastest-growing MENA auto market</td>
+            <td>~8,000 dealers</td>
+            <td>Arabic agent language</td>
+            <td>Fawry, Vodafone Cash</td>
+          </tr>
+          <tr>
+            <td><strong>🇲🇦 Morocco</strong></td>
+            <td>Gateway to North + Francophone Africa; EU proximity</td>
+            <td>~3,500 dealers</td>
+            <td>French + Arabic agents</td>
+            <td>CIH Bank, Maroc Telecom</td>
+          </tr>
+          <tr>
+            <td><strong>🇮🇩 Indonesia</strong></td>
+            <td>270M people; WhatsApp-dominant; massive used-car market</td>
+            <td>~15,000 dealers</td>
+            <td>Bahasa Indonesia agents</td>
+            <td>GoPay, OVO, DANA</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Tier 3 Targets — Year 3–5 (Scale Markets)</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Country</th>
+            <th>Key Rationale</th>
+            <th>Market Size</th>
+            <th>Localisation Priority</th>
+            <th>Payment Rail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>🇮🇳 India</strong></td>
+            <td>20,000+ dealerships; digital-first post-COVID; massive scale</td>
+            <td>20,000+ dealers</td>
+            <td>Hindi + regional language agents</td>
+            <td>Razorpay, UPI</td>
+          </tr>
+          <tr>
+            <td><strong>🇧🇷 Brazil</strong></td>
+            <td>8th largest car market globally; WhatsApp-dominant economy</td>
+            <td>~30,000 dealers</td>
+            <td>Portuguese agents</td>
+            <td>PIX, PagSeguro</td>
+          </tr>
+          <tr>
+            <td><strong>🇲🇽 Mexico</strong></td>
+            <td>Proximity to US market; LATAM Spanish gateway</td>
+            <td>~12,000 dealers</td>
+            <td>Spanish agents (shared with LATAM)</td>
+            <td>OXXO Pay, Conekta</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Localisation Framework</h3>
+    <p>Each market entry follows a standardised localisation checklist, keeping marginal expansion cost low while ensuring cultural fit:</p>
+
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>SA (Baseline)</th>
+            <th>Nigeria / Kenya</th>
+            <th>UAE</th>
+            <th>Indonesia / Brazil</th>
+            <th>India</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Agent language</strong></td>
+            <td>EN / Zulu / Afrikaans</td>
+            <td>EN / Pidgin</td>
+            <td>EN / Arabic</td>
+            <td>Local language</td>
+            <td>EN / Hindi</td>
+          </tr>
+          <tr>
+            <td><strong>Currency</strong></td>
+            <td>ZAR (R)</td>
+            <td>NGN / KES</td>
+            <td>AED</td>
+            <td>IDR / BRL</td>
+            <td>INR</td>
+          </tr>
+          <tr>
+            <td><strong>Payment</strong></td>
+            <td>PayFast / Peach</td>
+            <td>Flutterwave / M-Pesa</td>
+            <td>Stripe / local</td>
+            <td>GoPay / PIX</td>
+            <td>Razorpay / UPI</td>
+          </tr>
+          <tr>
+            <td><strong>Data law</strong></td>
+            <td>POPIA</td>
+            <td>NDPA / DPA (KE)</td>
+            <td>PDPL (UAE)</td>
+            <td>PDPLaw / LGPD</td>
+            <td>DPDP Act</td>
+          </tr>
+          <tr>
+            <td><strong>WhatsApp API</strong></td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>Strategic advantage:</strong> Because GrayArx is built on Meta's Cloud API (WhatsApp Business Platform), the core communication infrastructure works identically in every country. Localisation is primarily language, currency, and payment rails — not infrastructure rebuilds. This makes each new market cheaper to enter than the last.</p>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     04  GO-TO-MARKET STRATEGY
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s4">
+    <div class="section-num">Section 04</div>
+    <h2>Go-to-Market <span class="accent">Strategy</span></h2>
+
+    <h3>The Pilot Flywheel</h3>
+    <p>GrayArx's primary acquisition engine is the <strong>7-day free pilot</strong>. A dealership onboards with zero friction, zero credit card, and zero technical setup. Within 48 hours they see AI agents responding to real leads. The emotional shift — watching a bot close a booking at 2 AM — is the most powerful sales tool in the arsenal.</p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="tl-label">Day 0</div>
+        <h4>Onboarding</h4>
+        <p>Dealer signs up, connects WhatsApp number, imports vehicle inventory via CSV. Setup takes under 30 minutes.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Day 1–3</div>
+        <h4>Live agents activated</h4>
+        <p>Nala (webchat), Bongi (WhatsApp), and Lerato (email) go live. Sipho begins outbound prospecting on the dealer's behalf. All interactions logged to the dashboard.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Day 4–6</div>
+        <h4>Proof accumulates</h4>
+        <p>Dealer receives weekly report: leads captured after hours, bookings made, messages handled. Kagiso (audit agent) surfaces insights and ROI estimates.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Day 7</div>
+        <h4>Conversion conversation</h4>
+        <p>Sales team contacts the dealer with personalised data. Pilot dealerships that saw at least one after-hours booking convert at high rates — the evidence does the selling.</p>
+      </div>
+    </div>
+
+    <h3>Acquisition Channels</h3>
+    <div class="two-col">
+      <div>
+        <h4>Direct Outreach (Primary)</h4>
+        <ul>
+          <li><strong>Sipho</strong> (GrayArx's own prospecting AI) runs outreach campaigns targeting dealership GMs and principals via WhatsApp and email</li>
+          <li>LinkedIn outreach to dealership groups and automotive associations</li>
+          <li>Cold WhatsApp campaigns (compliant, opt-in structured)</li>
+        </ul>
+
+        <h4>Partnership Channel</h4>
+        <ul>
+          <li><strong>Automotive groups:</strong> Motus, Unitrans, WeBuyCars — enterprise agreements unlock multi-branch rollouts</li>
+          <li><strong>DMS providers:</strong> Integration partnerships with DealerFloor, DMS Africa — GrayArx rides their install base</li>
+          <li><strong>Finance houses:</strong> WesBank, Standard Bank Vehicle Finance — referral pipeline from their dealer networks</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Content &amp; Social Proof</h4>
+        <ul>
+          <li>SA case studies published on LinkedIn and automotive forums</li>
+          <li>Video testimonials from pilot dealers ("we closed 3 deals on a Sunday")</li>
+          <li>WhatsApp demo bot — prospects can talk to Bongi before committing</li>
+        </ul>
+
+        <h4>International Expansion GTM</h4>
+        <ul>
+          <li>SA success data → international credibility deck</li>
+          <li>Country managers hired locally (cultural fluency critical)</li>
+          <li>Attend automotive expos: Automechanika (Dubai, Frankfurt), West Africa Automotive Show</li>
+          <li>Partner with local fintech/payment providers who have dealer relationships</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Key Metrics to Track</h3>
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Target (SA Pilot Phase)</th>
+            <th>Target (Scale Phase)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Pilot → Paid Conversion</td><td>&gt;40%</td><td>&gt;55%</td></tr>
+          <tr><td>Monthly Churn (paid)</td><td>&lt;6%</td><td>&lt;3%</td></tr>
+          <tr><td>CAC (direct outreach)</td><td>&lt;R8,000</td><td>&lt;R5,000</td></tr>
+          <tr><td>LTV (Growth tier avg)</td><td>R78,000 (12mo)</td><td>R156,000 (24mo)</td></tr>
+          <tr><td>LTV:CAC Ratio</td><td>&gt;9x</td><td>&gt;20x</td></tr>
+          <tr><td>After-hours lead capture lift</td><td>&gt;3x baseline</td><td>&gt;4x baseline</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     05  REVENUE MODEL & PRICING
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s5">
+    <div class="section-num">Section 05</div>
+    <h2>Revenue Model <span class="accent">&amp; Pricing</span></h2>
+
+    <p>GrayArx operates a SaaS subscription model with three tiers, priced in ZAR for South Africa and USD for international markets. A future revenue-share product on financed deals is planned for Year 3 once sufficient transaction volume exists.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pc-tier">Starter · Pilot</div>
+        <div class="pc-price-za">Free</div>
+        <div class="pc-price-usd">7-day trial, then R2,500/mo · $150/mo USD</div>
+        <ul>
+          <li>Up to 100 leads/month</li>
+          <li>Nala (webchat) + Bongi (WhatsApp)</li>
+          <li>Vehicle inventory (up to 50 units)</li>
+          <li>Lead dashboard &amp; bookings</li>
+          <li>Email support</li>
+        </ul>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pc-tier">Growth · Most Popular</div>
+        <div class="pc-price-za">R6,500<span style="font-size:1rem; font-weight:400;">/mo</span></div>
+        <div class="pc-price-usd">$350/mo USD</div>
+        <ul>
+          <li>Unlimited leads</li>
+          <li>All 7 AI agents active</li>
+          <li>Unlimited inventory</li>
+          <li>Pre-approvals + finance leads</li>
+          <li>Kagiso audit reports</li>
+          <li>Sipho outbound prospecting</li>
+          <li>Priority support + onboarding</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <div class="pc-tier">Enterprise</div>
+        <div class="pc-price-za">R15,000+<span style="font-size:1rem; font-weight:400;">/mo</span></div>
+        <div class="pc-price-usd">$800+/mo USD</div>
+        <ul>
+          <li>Multi-branch, multi-brand</li>
+          <li>Custom agent personas &amp; branding</li>
+          <li>DMS / ERP integration</li>
+          <li>Dedicated country/regional manager</li>
+          <li>SLA guarantee (99.9% uptime)</li>
+          <li>Bespoke AI training on inventory</li>
+          <li>Revenue share on financed deals</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Revenue Streams</h3>
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Stream</th>
+            <th>Description</th>
+            <th>Availability</th>
+            <th>Revenue Potential</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SaaS Subscriptions</strong></td>
+            <td>Monthly recurring per dealership</td>
+            <td class="green">Live</td>
+            <td>Primary revenue (80%+ of ARR)</td>
+          </tr>
+          <tr>
+            <td><strong>Onboarding Fees</strong></td>
+            <td>One-time setup for Enterprise</td>
+            <td class="green">Live</td>
+            <td>R5,000–R25,000 per deal</td>
+          </tr>
+          <tr>
+            <td><strong>Revenue Share (Finance)</strong></td>
+            <td>% of financed deal value referred via AI</td>
+            <td class="muted">Year 3</td>
+            <td>High-margin, high-value</td>
+          </tr>
+          <tr>
+            <td><strong>Inventory Marketplace</strong></td>
+            <td>Cross-border vehicle matching (future)</td>
+            <td class="muted">Year 4+</td>
+            <td>Transaction fee model</td>
+          </tr>
+          <tr>
+            <td><strong>Data &amp; Analytics</strong></td>
+            <td>Market insights sold to OEMs/finance houses</td>
+            <td class="muted">Year 3+</td>
+            <td>R500K–R5M annually per partner</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     06  COMPETITIVE LANDSCAPE
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s6">
+    <div class="section-num">Section 06</div>
+    <h2>Competitive <span class="accent">Landscape</span></h2>
+
+    <h3>Global Competitors</h3>
+    <p>The global automotive CRM space is dominated by US-built platforms designed for American dealerships on American infrastructure. None of them are WhatsApp-native. None of them are built for markets where electricity and data infrastructure are inconsistent. None of them cost less than $800/month before add-ons.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>GrayArx</th>
+            <th>Elead CRM</th>
+            <th>DealerSocket</th>
+            <th>VinSolutions</th>
+            <th>HubSpot CRM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>WhatsApp-native</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>AI agents (autonomous)</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>24/7 lead response</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Emerging market pricing</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>SA / Africa ready</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>POPIA / local compliance</strong></td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Vehicle inventory built-in</strong></td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Entry price (per dealer)</strong></td>
+            <td class="gold">R2,500/mo</td>
+            <td class="muted">~$500+/mo</td>
+            <td class="muted">~$600+/mo</td>
+            <td class="muted">~$700+/mo</td>
+            <td class="muted">$800+/mo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>South African Market</h3>
+    <p>There is currently <strong>no direct competitor</strong> in South Africa combining AI agents, WhatsApp integration, and inventory management in a single platform at an accessible price point. The closest alternatives are:</p>
+    <ul>
+      <li><strong>AutoTrader SA / Cars.co.za:</strong> Listing portals, not a dealership OS. They generate leads but do not manage them.</li>
+      <li><strong>Salesforce / HubSpot:</strong> Generic CRMs not configured for automotive. Expensive. No WhatsApp automation. Requires substantial implementation cost.</li>
+      <li><strong>Local DMS providers (DMS Africa, DealerFloor):</strong> Back-office systems focused on stock and accounting, not AI sales agents.</li>
+    </ul>
+
+    <div class="callout green">
+      <p><strong>First-mover advantage is real and time-limited.</strong> GrayArx has an 18–24 month window to establish network effects and customer lock-in before better-funded competitors discover this gap. Speed of execution is the moat.</p>
+    </div>
+
+    <h3>Defensible Moats</h3>
+    <div class="two-col">
+      <div>
+        <h4>Data Network Effects</h4>
+        <p>Every conversation, every lead, every booking trains GrayArx's models on African automotive buyer behaviour — data no US competitor can replicate.</p>
+      </div>
+      <div>
+        <h4>WhatsApp-Native Architecture</h4>
+        <p>Built from day one on Meta Cloud API. Retrofitting WhatsApp into legacy CRMs is painful; replicating a WhatsApp-first platform is a 12+ month engineering project.</p>
+      </div>
+      <div>
+        <h4>Multi-Agent Coordination</h4>
+        <p>Seven AI agents that hand off leads between each other (Bongi → Lerato → Mia → Thandi) create a workflow that single-agent systems cannot match.</p>
+      </div>
+      <div>
+        <h4>Local Relationships</h4>
+        <p>SA automotive is a relationship-driven industry. GrayArx's team understands the culture, speaks the language, and knows the gatekeepers at major dealer groups.</p>
+      </div>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     07  TECHNOLOGY & AI ROADMAP
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s7">
+    <div class="section-num">Section 07</div>
+    <h2>Technology <span class="accent">&amp; AI Roadmap</span></h2>
+
+    <h3>Current Platform (Live)</h3>
+    <p>GrayArx is a full-stack web application with the following live components:</p>
+
+    <div class="agent-grid">
+      <div class="agent-card">
+        <div class="agent-name">Nala</div>
+        <div class="agent-role">Webchat Sales Agent</div>
+        <p>Handles website visitor conversations, qualifies leads, books test drives, and captures contact details.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Bongi</div>
+        <div class="agent-role">WhatsApp Sales Agent</div>
+        <p>24/7 WhatsApp responder via Meta Cloud API. Handles enquiries, sends vehicle details and photos, books appointments.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Lerato</div>
+        <div class="agent-role">Email Agent</div>
+        <p>Manages inbound email leads, sends personalised vehicle proposals, follows up on enquiries automatically.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Kagiso</div>
+        <div class="agent-role">Audit &amp; Roadmap Agent</div>
+        <p>Analyses dealership performance, surfaces gaps, generates actionable improvement roadmaps for management.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Sipho</div>
+        <div class="agent-role">Prospecting Agent</div>
+        <p>Outbound prospector — identifies and contacts potential GrayArx dealership clients on behalf of the sales team.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Mia</div>
+        <div class="agent-role">Lead Follow-Up Agent</div>
+        <p>Re-engages cold or inactive leads with personalised follow-up sequences across WhatsApp and email.</p>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Thandi</div>
+        <div class="agent-role">Invoicing Agent</div>
+        <p>Generates and sends invoices, processes payment confirmations, manages financial document workflows.</p>
+      </div>
+    </div>
+
+    <h3>Product Roadmap</h3>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="tl-label">Q3 2026 — Now</div>
+        <h4>WhatsApp Production Webhook + Voice Agent (Themba)</h4>
+        <p>Replace Cloudflare tunnel with production HTTPS webhook on grayarx.com. Launch Themba, an AI voice agent for inbound calls — the last major channel for dealerships.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Q4 2026</div>
+        <h4>Deal Scoring &amp; Predictive Inventory</h4>
+        <p>ML model scoring each lead's purchase probability based on engagement, vehicle viewed, finance pre-approval status, and historical conversion data. Predictive restock recommendations.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Q1 2027</div>
+        <h4>International Multi-Language Agents</h4>
+        <p>Language packs for Yoruba/Pidgin (Nigeria), Swahili (Kenya), Arabic (UAE/Egypt), and Bahasa Indonesia. Agents switch language dynamically based on customer input.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">Q3 2027</div>
+        <h4>Computer Vision — Vehicle Condition AI</h4>
+        <p>Dealers upload vehicle photos; AI assesses condition, identifies damage, suggests reconditioning priority, and auto-populates condition reports for buyers.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="tl-label">2028</div>
+        <h4>Cross-Border Inventory Marketplace</h4>
+        <p>GrayArx-connected dealerships can list vehicles visible to buyers across markets. Transaction facilitation via integrated finance and logistics partners. Revenue-share model.</p>
+      </div>
+    </div>
+
+    <h3>Infrastructure &amp; Security</h3>
+    <div class="two-col">
+      <div>
+        <h4>Architecture</h4>
+        <ul>
+          <li>Node.js / TypeScript backend</li>
+          <li>React frontend (SPA)</li>
+          <li>PostgreSQL + Redis</li>
+          <li>Meta Cloud API (WhatsApp)</li>
+          <li>OpenAI API (LLM layer)</li>
+          <li>Resend (transactional email)</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Compliance &amp; Security</h4>
+        <ul>
+          <li>POPIA compliant (SA) — data residency in SA</li>
+          <li>End-to-end TLS for all webhook traffic</li>
+          <li>Webhook signature verification (Meta HMAC-SHA256)</li>
+          <li>Role-based access control per dealership</li>
+          <li>Audit logging for all AI agent actions</li>
+          <li>GDPR-ready architecture for EU market entry</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     08  FINANCIAL PROJECTIONS
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s8">
+    <div class="section-num">Section 08</div>
+    <h2>Financial <span class="accent">Projections</span></h2>
+
+    <p>The following projections are based on conservative assumptions: a 40% pilot-to-paid conversion rate, 4% monthly churn, and a blended average revenue per dealer of R6,250/month (SA) and $280/month USD (international). These figures assume no enterprise deals and no revenue-share income — both upside scenarios.</p>
+
+    <h3>3-Year ARR Summary</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>SA Dealerships</th>
+            <th>International Dealerships</th>
+            <th>Total Dealers</th>
+            <th>Avg Monthly Rev/Dealer</th>
+            <th>ARR</th>
+            <th>YoY Growth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Year 1 (2026)</strong></td>
+            <td>50</td>
+            <td>0</td>
+            <td>50</td>
+            <td>R6,250</td>
+            <td class="gold">R3.75M</td>
+            <td class="muted">—</td>
+          </tr>
+          <tr>
+            <td><strong>Year 2 (2027)</strong></td>
+            <td>200</td>
+            <td>30</td>
+            <td>230</td>
+            <td>R6,500 / $280</td>
+            <td class="gold">R18M</td>
+            <td class="green">+380%</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Year 3 (2028)</strong></td>
+            <td>500</td>
+            <td>150</td>
+            <td>650</td>
+            <td>R7,000 / $320</td>
+            <td class="gold">R65M</td>
+            <td class="green">+261%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Detailed Year-by-Year P&amp;L Estimate</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Line Item</th>
+            <th>Year 1 (2026)</th>
+            <th>Year 2 (2027)</th>
+            <th>Year 3 (2028)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SaaS Revenue</strong></td>
+            <td class="gold">R3,750,000</td>
+            <td class="gold">R17,200,000</td>
+            <td class="gold">R60,500,000</td>
+          </tr>
+          <tr>
+            <td><strong>Onboarding / Setup Fees</strong></td>
+            <td>R250,000</td>
+            <td>R800,000</td>
+            <td>R4,500,000</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Total Revenue</strong></td>
+            <td>R4,000,000</td>
+            <td>R18,000,000</td>
+            <td>R65,000,000</td>
+          </tr>
+          <tr>
+            <td>OpenAI / LLM API costs</td>
+            <td>(R400,000)</td>
+            <td>(R1,800,000)</td>
+            <td>(R5,200,000)</td>
+          </tr>
+          <tr>
+            <td>Infrastructure (hosting, DB, CDN)</td>
+            <td>(R180,000)</td>
+            <td>(R600,000)</td>
+            <td>(R1,500,000)</td>
+          </tr>
+          <tr>
+            <td>WhatsApp API &amp; messaging costs</td>
+            <td>(R120,000)</td>
+            <td>(R480,000)</td>
+            <td>(R1,200,000)</td>
+          </tr>
+          <tr>
+            <td>Personnel (engineering + CS)</td>
+            <td>(R1,800,000)</td>
+            <td>(R5,400,000)</td>
+            <td>(R14,000,000)</td>
+          </tr>
+          <tr>
+            <td>Sales &amp; marketing</td>
+            <td>(R600,000)</td>
+            <td>(R2,400,000)</td>
+            <td>(R7,000,000)</td>
+          </tr>
+          <tr>
+            <td>International expansion costs</td>
+            <td>(R0)</td>
+            <td>(R1,500,000)</td>
+            <td>(R5,000,000)</td>
+          </tr>
+          <tr>
+            <td>G&amp;A (legal, compliance, admin)</td>
+            <td>(R300,000)</td>
+            <td>(R700,000)</td>
+            <td>(R1,800,000)</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>EBITDA</strong></td>
+            <td><span style="color:#ef4444;">(R600,000)</span></td>
+            <td><span style="color:#f59e0b;">R5,120,000</span></td>
+            <td class="green">R29,300,000</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>EBITDA Margin</strong></td>
+            <td><span style="color:#ef4444;">-15%</span></td>
+            <td><span style="color:#f59e0b;">+28%</span></td>
+            <td class="green">+45%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>Key assumption:</strong> Year 1 is investment-heavy — the pilot fleet is being built, and marketing is front-loaded. Profitability is expected from Month 18 onwards. Year 3 EBITDA margin of 45% reflects the inherent leverage of a SaaS model at scale with AI replacing headcount that would otherwise be required for 24/7 coverage.</p>
+    </div>
+
+    <h3>Unit Economics at Scale</h3>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-value">R78K</span>
+        <span class="stat-label">LTV per Growth dealer (12mo)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">&lt;R8K</span>
+        <span class="stat-label">CAC via direct outreach</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">9.7x</span>
+        <span class="stat-label">LTV:CAC (Year 1)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">&lt;4%</span>
+        <span class="stat-label">Target monthly churn</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">30mo</span>
+        <span class="stat-label">Payback period improving</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">45%</span>
+        <span class="stat-label">Target EBITDA margin (Y3)</span>
+      </div>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     09  TEAM & EXECUTION
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s9">
+    <div class="section-num">Section 09</div>
+    <h2>Team <span class="accent">&amp; Execution</span></h2>
+
+    <h3>Current Team</h3>
+
+    <div class="callout">
+      <h4>Founder — Technology &amp; Product</h4>
+      <p>Built GrayArx end-to-end: full-stack architecture, AI agent design, WhatsApp integration, inventory system, and go-to-market strategy. Deep understanding of the South African automotive market and the technical complexity of building on emerging-market infrastructure. Currently leading product, engineering, and early sales.</p>
+    </div>
+
+    <h3>Immediate Hires (Seed Round)</h3>
+
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Priority</th>
+            <th>Mandate</th>
+            <th>Est. Cost (annual)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Head of Sales (SA)</strong></td>
+            <td><span class="badge badge-gold">Critical</span></td>
+            <td>Own pilot-to-paid pipeline; build and manage SDR team; target 50 paying dealers in 12 months</td>
+            <td>R600K–R900K + commission</td>
+          </tr>
+          <tr>
+            <td><strong>Customer Success Lead</strong></td>
+            <td><span class="badge badge-gold">Critical</span></td>
+            <td>Onboard pilot dealerships, reduce churn, gather case studies, drive expansion revenue</td>
+            <td>R480K–R720K</td>
+          </tr>
+          <tr>
+            <td><strong>Senior Full-Stack Engineer</strong></td>
+            <td><span class="badge badge-blue">High</span></td>
+            <td>Scale infrastructure, build voice agent (Themba), own international localisation sprints</td>
+            <td>R720K–R1.1M</td>
+          </tr>
+          <tr>
+            <td><strong>Country Manager — Nigeria</strong></td>
+            <td><span class="badge badge-muted">Year 2</span></td>
+            <td>Establish Lagos presence, sign first 10 Nigerian dealers, manage local partnerships</td>
+            <td>$36K–$54K USD</td>
+          </tr>
+          <tr>
+            <td><strong>Country Manager — UAE</strong></td>
+            <td><span class="badge badge-muted">Year 2</span></td>
+            <td>Dubai office establishment, enterprise dealer group relationships, GCC expansion</td>
+            <td>$60K–$90K USD</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Advisors Needed</h3>
+    <ul>
+      <li><strong>Automotive industry veteran</strong> — access to dealer group principals and OEM relationships</li>
+      <li><strong>Africa tech investor / operator</strong> — network in Lagos, Nairobi, Cairo ecosystems</li>
+      <li><strong>AI/ML technical advisor</strong> — guidance on model fine-tuning, cost optimisation, and multimodal roadmap</li>
+      <li><strong>Legal &amp; compliance (multi-jurisdiction)</strong> — POPIA, GDPR, NDPA, PDPL navigation</li>
+    </ul>
+
+    <h3>Execution Milestones</h3>
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Milestone</th>
+            <th>Target Date</th>
+            <th>Success Criteria</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>10 paying SA dealerships</strong></td><td>Q3 2026</td><td>Avg MRR ≥ R6,000; churn &lt; 10%</td></tr>
+          <tr><td><strong>Production webhook live</strong></td><td>Q3 2026</td><td>grayarx.com/api/webhooks — 99.9% uptime</td></tr>
+          <tr><td><strong>Voice agent (Themba) beta</strong></td><td>Q4 2026</td><td>5 dealers on voice; &gt;80% call resolution rate</td></tr>
+          <tr><td><strong>50 paying SA dealerships</strong></td><td>Q1 2027</td><td>R3.75M ARR run rate</td></tr>
+          <tr><td><strong>First Nigeria pilot</strong></td><td>Q2 2027</td><td>5 Lagos dealers in pilot</td></tr>
+          <tr><td><strong>First UAE enterprise deal</strong></td><td>Q3 2027</td><td>1 enterprise group, ≥5 branches</td></tr>
+          <tr><td><strong>200 paying dealers globally</strong></td><td>Q4 2027</td><td>R18M ARR; EBITDA positive</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     10  FUNDING & USE OF CAPITAL
+════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s10">
+    <div class="section-num">Section 10</div>
+    <h2>Funding <span class="accent">&amp; Use of Capital</span></h2>
+
+    <p>GrayArx is raising pre-seed/seed capital to fund the SA market capture phase and prepare the platform for international expansion. The company is not raising out of desperation — the product works, the market is validated, and the founding team can bootstrap further if needed. Capital is a growth accelerator, not a survival mechanism.</p>
+
+    <h3>Seed Round — R5 Million</h3>
+    <p><em>Purpose: 12-month runway for SA market capture and production infrastructure hardening.</em></p>
+
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Use of Funds</th>
+            <th>Allocation</th>
+            <th>Amount</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sales &amp; Marketing</strong></td>
+            <td>30%</td>
+            <td>R1,500,000</td>
+            <td>Sales hire, outbound campaigns, dealer events, content</td>
+          </tr>
+          <tr>
+            <td><strong>Engineering &amp; Product</strong></td>
+            <td>25%</td>
+            <td>R1,250,000</td>
+            <td>Senior engineer hire, voice agent, infrastructure upgrade</td>
+          </tr>
+          <tr>
+            <td><strong>Customer Success</strong></td>
+            <td>15%</td>
+            <td>R750,000</td>
+            <td>CS hire, onboarding tooling, churn reduction</td>
+          </tr>
+          <tr>
+            <td><strong>Operations &amp; Legal</strong></td>
+            <td>12%</td>
+            <td>R600,000</td>
+            <td>POPIA legal review, company structure, international trademark</td>
+          </tr>
+          <tr>
+            <td><strong>Infrastructure &amp; API costs</strong></td>
+            <td>10%</td>
+            <td>R500,000</td>
+            <td>12 months of cloud, OpenAI API, WhatsApp API at 50-dealer scale</td>
+          </tr>
+          <tr>
+            <td><strong>Founder runway &amp; reserves</strong></td>
+            <td>8%</td>
+            <td>R400,000</td>
+            <td>Working capital buffer</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Total Seed</strong></td>
+            <td><strong>100%</strong></td>
+            <td><strong>R5,000,000</strong></td>
+            <td>12-month runway to 50 paying dealers and Series A readiness</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Series A Round — R25 Million</h3>
+    <p><em>Purpose: International expansion into Nigeria, Kenya, and UAE, plus engineering scale for voice, vision, and predictive AI layers.</em></p>
+
+    <div class="table-wrap no-break">
+      <table>
+        <thead>
+          <tr>
+            <th>Use of Funds</th>
+            <th>Allocation</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>International market entry (3 countries)</strong></td>
+            <td>35%</td>
+            <td>R8,750,000</td>
+          </tr>
+          <tr>
+            <td><strong>Engineering (voice, vision, ML pipeline)</strong></td>
+            <td>25%</td>
+            <td>R6,250,000</td>
+          </tr>
+          <tr>
+            <td><strong>SA market acceleration (200 dealers)</strong></td>
+            <td>20%</td>
+            <td>R5,000,000</td>
+          </tr>
+          <tr>
+            <td><strong>Localisation &amp; compliance (3 new jurisdictions)</strong></td>
+            <td>10%</td>
+            <td>R2,500,000</td>
+          </tr>
+          <tr>
+            <td><strong>Reserves &amp; working capital</strong></td>
+            <td>10%</td>
+            <td>R2,500,000</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Total Series A</strong></td>
+            <td><strong>100%</strong></td>
+            <td><strong>R25,000,000</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Why Invest in GrayArx Now</h3>
+
+    <div class="two-col">
+      <div class="callout">
+        <h4>The timing is right</h4>
+        <p>AI agent costs have collapsed 10x in 18 months. WhatsApp Business API is mature, reliable, and global. The gap between what dealerships need and what exists has never been larger. GrayArx is the first mover to assemble these pieces in a coherent product.</p>
+      </div>
+      <div class="callout">
+        <h4>The model works</h4>
+        <p>The platform is live. Agents are responding. Leads are being captured. The unit economics are favourable before any optimisation. Revenue is contractually recurring. This is not a science project — it is a business in motion.</p>
+      </div>
+      <div class="callout">
+        <h4>Emerging markets first</h4>
+        <p>US CRM companies will not serve Nigeria or Indonesia well. Those markets require local knowledge, local language, local payment rails, and a local team. GrayArx is building that from South Africa outward, with Africa as the moat.</p>
+      </div>
+      <div class="callout">
+        <h4>Defensible at scale</h4>
+        <p>Every conversation makes the AI smarter. Every dealership that joins strengthens the network. Every country entered builds data no competitor can buy. The moat deepens with every month of operation.</p>
+      </div>
+    </div>
+
+    <div class="callout green" style="margin-top:40px;">
+      <p style="font-size:1.05rem; font-weight:600; color:var(--white);">GrayArx is not building a feature. It is building the operating system for car dealerships in the world's fastest-growing markets — powered by AI that never sleeps, speaks every language, and works on WhatsApp.</p>
+      <p style="margin-top:8px; margin-bottom:0; color:var(--text-muted);">For investment enquiries, partnerships, or pilot access — contact the founding team via the GrayArx platform at grayarx.com.</p>
+    </div>
+
+  </div>
+
+  <!-- ── Footer ──────────────────────────────────────────── -->
+  <div class="doc-footer">
+    <div>
+      <div class="logo-small">GRAYARX</div>
+      <p>South Africa's Dealership OS</p>
+    </div>
+    <p style="text-align:center; max-width:400px;">
+      This document is strictly confidential and intended solely for the named recipient.
+      It contains forward-looking statements based on current expectations and assumptions.
+      Actual results may differ materially.
+    </p>
+    <p style="text-align:right;">
+      Version 1.0 · July 2026<br />
+      POPIA Compliant · grayarx.com
+    </p>
+  </div>
+
+</div><!-- end .page-wrap -->
+
+</body>
+</html>

@@ -15,7 +15,7 @@ function formatKm(km: number | null | undefined): string | null {
 }
 
 export default function HomeFeaturedDeals() {
-  const { data: vehicles } = trpc.showroom.list.useQuery();
+  const { data: vehicles } = trpc.showroom.list.useQuery({});
 
   const topDeals = (vehicles ?? [])
     .filter((v) => v.status === "available" && v.price && Number(v.price) > 1)

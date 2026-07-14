@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
+import { GripVertical, ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -56,6 +56,8 @@ export default function VehiclePhotoUploader({
 }: VehiclePhotoUploaderProps) {
   const [slots, setSlots] = useState<PhotoSlot[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [draggingSlotIdx, setDraggingSlotIdx] = useState<number | null>(null);
+  const [dragOverSlotIdx, setDragOverSlotIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const onPrimaryRef = useRef(onPrimaryUrlChange);
   onPrimaryRef.current = onPrimaryUrlChange;
@@ -247,6 +249,28 @@ export default function VehiclePhotoUploader({
     }
   }, [vehicleId, deleteAllPhotos, refetch, notifyPending]);
 
+  const reorderSlots = useCallback(
+    async (fromIdx: number, toIdx: number) => {
+      if (fromIdx === toIdx) return;
+      setSlots((prev) => {
+        const next = [...prev];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        const primary = next.find((s): s is Extract<PhotoSlot, { state: "filled" }> => s.state === "filled");
+        if (primary) {
+          onPrimaryRef.current(primary.url);
+          if (vehicleId) {
+            attachUrl.mutateAsync({ vehicleId, url: primary.url, setPrimary: true }).catch(() => {});
+          } else {
+            notifyPending(next);
+          }
+        }
+        return next;
+      });
+    },
+    [vehicleId, attachUrl, notifyPending],
+  );
+
   // Build the 8-slot display grid: filled + uploading + empty up to MAX_PHOTOS
   const displaySlots: Array<
     | { kind: "filled"; url: string; photoId?: number; index: number }
@@ -345,10 +369,42 @@ export default function VehiclePhotoUploader({
         {displaySlots.map((slot, i) => (
           <div
             key={i}
+            draggable={slot.kind === "filled"}
+            onDragStart={(e) => {
+              if (slot.kind !== "filled") return;
+              setDraggingSlotIdx(slot.index);
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", String(slot.index));
+            }}
+            onDragEnd={() => {
+              setDraggingSlotIdx(null);
+              setDragOverSlotIdx(null);
+            }}
+            onDragOver={(e) => {
+              if (slot.kind !== "filled") return;
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = "move";
+              setDragOverSlotIdx(slot.index);
+            }}
+            onDragLeave={() => setDragOverSlotIdx(null)}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOverSlotIdx(null);
+              if (draggingSlotIdx !== null && slot.kind === "filled") {
+                void reorderSlots(draggingSlotIdx, slot.index);
+              }
+              setDraggingSlotIdx(null);
+            }}
             className={cn(
-              "relative rounded-lg border overflow-hidden aspect-[4/3] group",
+              "relative rounded-lg border overflow-hidden aspect-[4/3] group transition-opacity",
               slot.kind === "filled"
-                ? "border-primary/30 cursor-pointer"
+                ? cn(
+                    "border-primary/30 cursor-grab active:cursor-grabbing",
+                    draggingSlotIdx === slot.index && "opacity-40",
+                    dragOverSlotIdx === slot.index && draggingSlotIdx !== slot.index && "ring-2 ring-primary border-primary",
+                  )
                 : slot.kind === "uploading"
                   ? "border-dashed border-primary/40"
                   : "border-dashed border-muted-foreground/25 hover:border-primary/40 cursor-pointer",
@@ -372,11 +428,19 @@ export default function VehiclePhotoUploader({
                   hoverZoom={false}
                   className="rounded-none border-0"
                 />
+                {/* Drag handle */}
+                <span className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 bg-black/40 rounded text-white opacity-60 hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  <GripVertical className="h-3 w-3" />
+                </span>
                 {/* Hero badge on first photo */}
-                {i === 0 && (
+                {i === 0 ? (
                   <span className="absolute top-1 left-1 flex items-center gap-0.5 bg-primary/90 text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded text-primary-foreground font-bold pointer-events-none z-10">
                     <Star className="h-2.5 w-2.5" />
-                    Hero
+                    Hero · drag to reorder
+                  </span>
+                ) : (
+                  <span className="absolute top-1 left-1 flex items-center gap-0.5 bg-black/40 text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded text-white/80 pointer-events-none z-10">
+                    {i + 1}
                   </span>
                 )}
                 {/* Delete bar — always visible */}

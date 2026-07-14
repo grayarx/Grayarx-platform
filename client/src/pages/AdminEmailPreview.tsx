@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { trpc } from "@/lib/trpc";
 
 const LOGO_URL = "/logo.svg";
 
@@ -124,11 +125,15 @@ const emailTemplates = {
 };
 
 export default function AdminEmailPreview() {
-  const [selectedTemplate, setSelectedTemplate] = useState<"welcome" | "followup">("welcome");
+  const [selectedTemplate, setSelectedTemplate] = useState<"welcome" | "followup" | "pilot">("welcome");
   const [recipientEmail, setRecipientEmail] = useState("grayarx@gmail.com");
   const [sending, setSending] = useState(false);
+  const [pilotSegmentIdx, setPilotSegmentIdx] = useState(0);
 
-  const template = emailTemplates[selectedTemplate];
+  const { data: pilotPreview } = trpc.pilotEmail.preview.useQuery();
+
+  const template = selectedTemplate !== "pilot" ? emailTemplates[selectedTemplate] : null;
+  const currentPilotSegment = pilotPreview?.[pilotSegmentIdx];
 
   const handleSendTest = async () => {
     setSending(true);
@@ -164,13 +169,35 @@ export default function AdminEmailPreview() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Template</Label>
-              <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as "welcome" | "followup")}>
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as "welcome" | "followup" | "pilot")}>
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="welcome">Welcome</TabsTrigger>
                   <TabsTrigger value="followup">Follow-up</TabsTrigger>
+                  <TabsTrigger value="pilot">Pilot</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
+
+            {selectedTemplate === "pilot" && pilotPreview && (
+              <div className="space-y-2">
+                <Label>Segment</Label>
+                <Tabs value={String(pilotSegmentIdx)} onValueChange={(v) => setPilotSegmentIdx(Number(v))}>
+                  <TabsList className="flex flex-wrap gap-1 h-auto">
+                    {pilotPreview.map((seg, i) => (
+                      <TabsTrigger key={seg.segment} value={String(i)} className="text-[10px]">
+                        {seg.segment.replace(/_/g, " ")}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+                {currentPilotSegment && (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Subject:</strong> {currentPilotSegment.label}</p>
+                    <p><strong>Mailable:</strong> {currentPilotSegment.mailable} / {currentPilotSegment.total} prospects</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="recipient">Test Recipient Email</Label>
@@ -189,7 +216,11 @@ export default function AdminEmailPreview() {
 
             <div className="pt-4 border-t space-y-2">
               <p className="text-sm font-semibold">Subject:</p>
-              <p className="text-sm text-muted-foreground">{template.subject}</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedTemplate === "pilot"
+                  ? (currentPilotSegment?.label ?? "—")
+                  : template?.subject}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -208,7 +239,11 @@ export default function AdminEmailPreview() {
           <CardContent>
             <div className="border rounded-lg overflow-hidden bg-white">
               <iframe
-                srcDoc={template.html}
+                srcDoc={
+                  selectedTemplate === "pilot"
+                    ? (currentPilotSegment?.sampleHtml ?? "<p style='padding:24px;color:#6b7280'>Loading pilot preview…</p>")
+                    : template?.html
+                }
                 style={{
                   width: "100%",
                   height: "600px",

@@ -14,6 +14,7 @@ const MIGRATIONS = [
   "0062_trade_in_invites.sql",
   "0063_market_guide_live.sql",
   "0064_compliance_inquiries.sql",
+  "0065_pilot_email_sends.sql",
 ];
 
 async function main() {

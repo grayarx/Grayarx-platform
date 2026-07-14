@@ -86,11 +86,18 @@ describe("pilot email campaign", () => {
     expect(subjects.size).toBe(4);
   });
 
-  it("preview campaign reports mailable counts per segment", () => {
-    const preview = previewPilotCampaign();
+  it("preview campaign reports mailable counts per segment", async () => {
+    const preview = await previewPilotCampaign();
     expect(preview.length).toBe(4);
     const basic = preview.find((p) => p.segment === "basic_website_no_showroom");
     expect(basic?.mailable).toBeGreaterThanOrEqual(3);
     expect(basic?.sampleHtml).toContain("<img");
+    // UI list is verified emails only — never "no verified email" rows
+    for (const row of preview) {
+      for (const p of row.prospects) {
+        expect(p.emailVerified).toBe(true);
+        expect(p.email).toBeTruthy();
+      }
+    }
   });
 });

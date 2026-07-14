@@ -114,6 +114,36 @@ export async function markComplianceInquiryRead(id: number): Promise<void> {
     .where(eq(complianceInquiries.id, id));
 }
 
+export async function deleteComplianceInquiry(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(complianceInquiries).where(eq(complianceInquiries.id, id));
+}
+
+export async function markComplianceInquiryFollowUp(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select().from(complianceInquiries).where(eq(complianceInquiries.id, id)).limit(1);
+  const item = rows[0];
+  if (!item) return;
+  await alertFounder({
+    title: `[FOLLOW-UP NEEDED] Compliance #${id} — ${item.subject}`,
+    content: [
+      `Mailbox: ${item.mailbox}`,
+      `From: ${item.senderName ?? "—"} <${item.senderEmail}>`,
+      `Status: ${item.status}`,
+      "",
+      item.message.slice(0, 2000),
+    ].join("\n"),
+    category: "compliance",
+    actionUrl: "https://www.grayarx.com/admin/compliance",
+  });
+  await db
+    .update(complianceInquiries)
+    .set({ status: "replied" })
+    .where(eq(complianceInquiries.id, id));
+}
+
 export async function processResendInboundEmail(payload: {
   type?: string;
   data?: {

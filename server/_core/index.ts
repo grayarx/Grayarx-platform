@@ -83,6 +83,10 @@ async function startServer() {
   attachMarketGuideRefreshMiddleware(app);
   // Public SEO: /robots.txt + /sitemap.xml
   registerSitemapRoutes(app);
+  // Founder business plan — standalone HTML at repo root
+  app.get(["/business-plan", "/business-plan.html"], (_req, res) => {
+    res.sendFile(path.join(process.cwd(), "GrayArx-International-Business-Plan.html"));
+  });
   // Webhook routes for WhatsApp and other integrations
   registerWebhookRoutes(app);
   // Health check endpoint

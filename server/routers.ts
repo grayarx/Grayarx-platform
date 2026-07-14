@@ -626,16 +626,21 @@ export const appRouter = router({
 
   showroom: router({
     /**
-     * Tenant-scoped vehicle list.
-     * The caller MUST pass a dealershipId to scope results to a single tenant.
-     * Returns [] if no dealershipId is provided so the GrayArx marketing home
-     * page never leaks another dealership's stock to an unrelated visitor.
+     * Public showroom vehicle list.
+     * - With dealershipId: tenant-scoped stock for that dealer.
+     * - Without: platform marketing showroom (all available / unsold stock).
+     * Input may be omitted or null (tRPC batch clients send null).
      */
     list: publicProcedure
-      .input(z.object({ dealershipId: z.number().int().optional() }).optional())
+      .input(z.object({ dealershipId: z.number().int().optional() }).nullish())
       .query(async ({ input }) => {
-        if (!input?.dealershipId) return [];
-        return listVehicles(2000, { dealershipId: input.dealershipId, excludeSold: true });
+        if (input?.dealershipId != null) {
+          return listVehicles(2000, {
+            dealershipId: input.dealershipId,
+            excludeSold: true,
+          });
+        }
+        return listVehicles(2000, { excludeSold: true });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
@@ -698,7 +703,7 @@ export const appRouter = router({
     }),
     /** Public showroom look — driven by the primary dealership's chosen template. */
     appearance: publicProcedure
-      .input(z.object({ dealershipId: z.number().int().optional() }).optional())
+      .input(z.object({ dealershipId: z.number().int().optional() }).nullish())
       .query(async ({ input }) => {
         const all = await listAllDealerships();
         const candidate = input?.dealershipId
