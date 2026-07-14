@@ -6,7 +6,7 @@ interface LogoEmblemProps {
   className?: string;
 }
 
-/** Official GrayArx master logo — served from /logo.png */
+/** Official GrayArx circular crest — /logo-crest.png (from full lockup) */
 export default function LogoEmblem({ size = 40, className }: LogoEmblemProps) {
   return (
     <img

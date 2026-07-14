@@ -85,7 +85,7 @@ export default function Navigation() {
       <div className="container flex h-16 md:h-20 items-center justify-between">
         <Link href="/" className="flex items-center shrink-0 group" aria-label="GrayArx home">
           <Logo
-            size={48}
+            size={52}
             variant="nav"
             className="transition-opacity group-hover:opacity-95"
           />

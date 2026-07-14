@@ -87,7 +87,7 @@ export function serveStatic(app: Express) {
     if (pathname.startsWith("/api/")) {
       return res.status(404).json({ error: "API route not found", path: pathname });
     }
-    // Static assets with extensions must not fall through to SPA (logo-icon.png, etc.)
+    // Static assets with extensions must not fall through to SPA (logo-crest.png, etc.)
     if (/\.[a-z0-9]+$/i.test(pathname)) {
       return res.status(404).send("Not found");
     }

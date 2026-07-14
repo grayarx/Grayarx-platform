@@ -39,8 +39,6 @@ function loadInlineLogoAttachment():
   const candidates = [
     join(process.cwd(), "client/public/logo-crest.png"),
     join(process.cwd(), "dist/public/logo-crest.png"),
-    join(process.cwd(), "client/public/logo-icon.png"),
-    join(process.cwd(), "dist/public/logo-icon.png"),
   ];
   for (const path of candidates) {
     if (!existsSync(path)) continue;

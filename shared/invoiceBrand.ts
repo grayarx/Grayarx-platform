@@ -12,8 +12,8 @@ export const INVOICE_BRAND = {
   rule: "#E8E0D0",
   paper: "#FFFFFF",
   paperTint: "#FAF8F4",
-  logoIconPath: "/logo-crest.png?v=12",
-  logoFullPath: "/grayarx-logo-full.png?v=12",
+  logoIconPath: "/logo-crest.png?v=14",
+  logoFullPath: "/grayarx-logo-full.png?v=14",
   accentFallback: "#C9A24A",
 } as const;
 

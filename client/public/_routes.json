@@ -4,12 +4,9 @@
   "exclude": [
     "/api/*",
     "/assets/*",
-    "/grayarx-logo-emblem.png",
     "/grayarx-logo-full.png",
-    "/grayarx-logo-nav.png",
+    "/logo.png",
     "/logo-crest.png",
-    "/logo-icon.png",
-    "/logo-icon-132.png",
     "/favicon-16.png",
     "/favicon-32.png",
     "/favicon.ico",

@@ -1,5 +1,5 @@
-const CACHE_NAME = "grayarx-v12";
-const RUNTIME_CACHE = "grayarx-runtime-v12";
+const CACHE_NAME = "grayarx-v14";
+const RUNTIME_CACHE = "grayarx-runtime-v14";
 const STATIC_ASSETS = [
   "/manifest.json",
 ];
@@ -13,9 +13,8 @@ const BRAND_ICON_PATHS = new Set([
   "/icon-192x192.png",
   "/icon-512x512.png",
   "/logo-crest.png",
-  "/logo-icon.png",
-  "/logo-icon-132.png",
-  "/grayarx-logo-emblem.png",
+  "/grayarx-logo-full.png",
+  "/logo.png",
   "/logo.svg",
 ]);
 
