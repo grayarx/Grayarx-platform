@@ -15,6 +15,11 @@ import {
   grayArxRegisteredAddressSingleLine,
   grayArxTaxStatusLine,
 } from "./companyLegal";
+import {
+  buildEftPaymentInstructions,
+  type EftPaymentInstructions,
+  type GrayArxBankDetails,
+} from "./bankDetails";
 
 export type InvoiceLineItem = {
   description: string;
@@ -60,7 +65,15 @@ export type InvoiceDocumentView = {
     method: string;
     reference: string | null;
   }>;
+  /** @deprecated Prefer eftPayment for pay-to details (full account for EFT). */
   bankDetailsMasked: string | null;
+  /**
+   * Full platform EFT block for customers to pay GrayArx (subscription /
+   * platform letterhead). Null when BANK_ACCOUNT_NUMBER is not configured.
+   */
+  eftPayment: EftPaymentInstructions | null;
+  /** Dealership freeform bank note (vehicle invoices) when configured. */
+  dealershipBankNote: string | null;
   preparedBy: string;
   popiaFooter: string;
   platformCredit: string | null;
@@ -120,6 +133,8 @@ export function buildInvoiceDocumentView(input: {
     paymentMethod: string;
     reference?: string | null;
   }>;
+  /** Platform receiving account from env (server passes this). */
+  platformBank?: GrayArxBankDetails | null;
 }): InvoiceDocumentView {
   const letterheadMode = resolveLetterheadMode({
     leadId: Number(input.invoice.leadId) || 0,
@@ -246,6 +261,17 @@ export function buildInvoiceDocumentView(input: {
     bankDetailsMasked: input.dealership?.bankDetails
       ? maskLast4(input.dealership.bankDetails)
       : null,
+    eftPayment:
+      letterheadMode === "platform" && input.platformBank
+        ? buildEftPaymentInstructions(
+            input.platformBank,
+            input.invoice.invoiceNumber,
+          )
+        : null,
+    dealershipBankNote:
+      letterheadMode === "dealership" && input.dealership?.bankDetails
+        ? String(input.dealership.bankDetails).trim() || null
+        : null,
     preparedBy: "Thandi · GrayArx Accountant Agent",
     popiaFooter: invoicePopiaFooter(),
     platformCredit:

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildInvoiceDocumentView } from "../shared/invoiceDocument";
 import { maskEmail, maskLast4, resolveLetterheadMode } from "../shared/invoiceBrand";
+import {
+  resolveGrayArxBankDetails,
+  buildEftPaymentInstructions,
+  formatEftPaymentText,
+} from "../shared/bankDetails";
 
 describe("invoice brand helpers", () => {
   it("masks sensitive values to last 4", () => {
@@ -11,6 +16,21 @@ describe("invoice brand helpers", () => {
   it("uses platform letterhead for subscription invoices", () => {
     expect(resolveLetterheadMode({ leadId: 0, vehicleId: 0 })).toBe("platform");
     expect(resolveLetterheadMode({ leadId: 9, vehicleId: 3 })).toBe("dealership");
+  });
+
+  it("resolves bank details from env-shaped input without hardcoding", () => {
+    const bank = resolveGrayArxBankDetails({
+      BANK_NAME: "FNB",
+      BANK_ACCOUNT_NAME: "GrayArx (Pty) Ltd",
+      BANK_ACCOUNT_NUMBER: "00000000000",
+      BANK_BRANCH_CODE: "250655",
+    });
+    expect(bank.configured).toBe(true);
+    expect(bank.accountNumber).toBe("00000000000");
+    const eft = buildEftPaymentInstructions(bank, "GRAYARX-202607-TEST");
+    expect(eft?.paymentReference).toBe("GRAYARX-202607-TEST");
+    expect(formatEftPaymentText(eft!)).toContain("00000000000");
+    expect(formatEftPaymentText(eft!)).toContain("250655");
   });
 
   it("builds a customer-ready dealership invoice document", () => {
@@ -56,5 +76,42 @@ describe("invoice brand helpers", () => {
     expect(doc.lineItems[0].description).toContain("Toyota");
     expect(doc.lineItems[0].description).toContain("4567");
     expect(doc.popiaFooter).toContain("POPIA");
+    expect(doc.eftPayment).toBeNull();
+    expect(doc.dealershipBankNote).toContain("FNB");
+  });
+
+  it("includes full platform EFT block on subscription invoices", () => {
+    const bank = resolveGrayArxBankDetails({
+      BANK_NAME: "FNB",
+      BANK_ACCOUNT_NUMBER: "11112222333",
+      BANK_BRANCH_CODE: "250655",
+      BANK_ACCOUNT_NAME: "GrayArx (Pty) Ltd",
+    });
+    const doc = buildInvoiceDocumentView({
+      invoice: {
+        invoiceNumber: "GRAYARX-202607-ABC12",
+        status: "sent",
+        invoiceDate: "2026-07-14",
+        dueDate: "2026-08-13",
+        leadId: 0,
+        vehicleId: 0,
+        subtotal: 3999,
+        vatAmount: 0,
+        totalAmount: 3999,
+      },
+      dealership: {
+        name: "Pilot Motors",
+        contactEmail: "owner@pilot.test",
+      },
+      lead: null,
+      vehicle: null,
+      payments: [],
+      platformBank: bank,
+    });
+
+    expect(doc.letterheadMode).toBe("platform");
+    expect(doc.eftPayment?.accountNumber).toBe("11112222333");
+    expect(doc.eftPayment?.paymentReference).toBe("GRAYARX-202607-ABC12");
+    expect(doc.eftPayment?.bankName).toBe("FNB");
   });
 });

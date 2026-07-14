@@ -281,8 +281,74 @@ export default function InvoicePrint() {
           </section>
         )}
 
-        {/* Bank */}
-        {doc.bankDetailsMasked && (
+        {/* EFT / bank payment */}
+        {doc.eftPayment && (
+          <section
+            className="mt-8 rounded-sm border px-4 py-4 text-sm"
+            style={{ borderColor: accent, background: INVOICE_BRAND.paperTint }}
+          >
+            <div
+              className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: accent }}
+            >
+              Pay by EFT / bank transfer
+            </div>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide" style={{ color: INVOICE_BRAND.muted }}>
+                  Bank
+                </dt>
+                <dd className="font-semibold">{doc.eftPayment.bankName}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide" style={{ color: INVOICE_BRAND.muted }}>
+                  Account name
+                </dt>
+                <dd className="font-semibold">{doc.eftPayment.accountName}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide" style={{ color: INVOICE_BRAND.muted }}>
+                  Account number
+                </dt>
+                <dd className="font-mono font-semibold tracking-wide">
+                  {doc.eftPayment.accountNumber}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide" style={{ color: INVOICE_BRAND.muted }}>
+                  Branch code
+                </dt>
+                <dd className="font-mono font-semibold">{doc.eftPayment.branchCode}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] uppercase tracking-wide" style={{ color: INVOICE_BRAND.muted }}>
+                  Payment reference
+                </dt>
+                <dd className="font-mono font-semibold">{doc.eftPayment.paymentReference}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs" style={{ color: INVOICE_BRAND.muted }}>
+              Use the invoice number as your payment reference so we can allocate your payment.
+            </p>
+          </section>
+        )}
+
+        {doc.dealershipBankNote && !doc.eftPayment && (
+          <section
+            className="mt-8 rounded-sm border px-4 py-3 text-sm"
+            style={{ borderColor: INVOICE_BRAND.rule }}
+          >
+            <div
+              className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: accent }}
+            >
+              Dealership payment details
+            </div>
+            <div style={{ color: INVOICE_BRAND.muted }}>{doc.dealershipBankNote}</div>
+          </section>
+        )}
+
+        {!doc.eftPayment && !doc.dealershipBankNote && doc.bankDetailsMasked && (
           <section className="mt-8 rounded-sm border px-4 py-3 text-sm" style={{ borderColor: INVOICE_BRAND.rule }}>
             <div
               className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
@@ -293,6 +359,17 @@ export default function InvoicePrint() {
             <div style={{ color: INVOICE_BRAND.muted }}>
               Bank reference (masked): {doc.bankDetailsMasked}
             </div>
+          </section>
+        )}
+
+        {!doc.eftPayment && doc.letterheadMode === "platform" && (
+          <section
+            className="mt-8 rounded-sm border border-dashed px-4 py-3 text-sm"
+            style={{ borderColor: INVOICE_BRAND.rule, color: INVOICE_BRAND.muted }}
+          >
+            EFT bank details are not configured yet. Set{" "}
+            <span className="font-mono text-xs">BANK_ACCOUNT_NUMBER</span> (and related vars) on the
+            server to show payment instructions on this invoice.
           </section>
         )}
 

@@ -3,6 +3,12 @@
  * Used by WhatsApp (Lerato), email (Mia), and web chat interfaces.
  */
 
+import {
+  buildEftPaymentInstructions,
+  formatEftPaymentText,
+} from "../../shared/bankDetails";
+import { getGrayArxBankDetailsFromEnv } from "./grayArxBank";
+
 export interface FAQItem {
   id: string;
   category: "pricing" | "features" | "onboarding" | "billing" | "support" | "technical";
@@ -214,12 +220,12 @@ All included with your subscription. No extra charges.`,
 4. We confirm payment and activate your subscription
 
 **Bank Details:**
-Provided in your invoice and onboarding email.
+Shown on every GrayArx subscription invoice (PDF + email). Ask for your latest invoice or check Admin → Invoices → Download / Print.
 
 **Billing Cycle:**
 Monthly, starting on your approval date. Auto-renews unless cancelled.
 
-Questions? Contact grayarx@gmail.com`,
+Questions? Contact hello@grayarx.com`,
   },
 
   {
@@ -355,16 +361,34 @@ export function findFAQAnswer(userQuery: string): FAQItem | null {
     item.question.toLowerCase().includes(query) || query.includes(item.question.toLowerCase())
   );
 
-  if (exactMatch) return exactMatch;
+  if (exactMatch) return enrichBillingFaq(exactMatch);
 
   // Keyword match
   const keywordMatch = FAQ_DATABASE.find((item) =>
     item.keywords.some((keyword) => query.includes(keyword))
   );
 
-  if (keywordMatch) return keywordMatch;
+  if (keywordMatch) return enrichBillingFaq(keywordMatch);
 
   return null;
+}
+
+/** Append live EFT details from env when answering payment FAQs. */
+function enrichBillingFaq(item: FAQItem): FAQItem {
+  if (item.id !== "billing_payment" && item.id !== "billing_invoice") {
+    return item;
+  }
+  try {
+    const bank = getGrayArxBankDetailsFromEnv();
+    const eft = buildEftPaymentInstructions(bank, "GRAYARX-INVOICE");
+    if (!eft) return item;
+    return {
+      ...item,
+      answer: `${item.answer}\n\n${formatEftPaymentText(eft)}`,
+    };
+  } catch {
+    return item;
+  }
 }
 
 /**

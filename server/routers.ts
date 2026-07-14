@@ -4540,6 +4540,9 @@ export const appRouter = router({
         const { buildInvoiceDocumentView } = await import(
           "../shared/invoiceDocument"
         );
+        const { getGrayArxBankDetailsFromEnv } = await import(
+          "./_core/grayArxBank"
+        );
         const document = buildInvoiceDocumentView({
           invoice: {
             invoiceNumber: invoice.invoiceNumber,
@@ -4556,6 +4559,7 @@ export const appRouter = router({
           lead,
           vehicle,
           payments,
+          platformBank: getGrayArxBankDetailsFromEnv(),
         });
 
         return { invoice, payments, dealership, lead, vehicle, document };

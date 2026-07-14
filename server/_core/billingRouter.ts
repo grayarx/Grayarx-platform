@@ -351,6 +351,123 @@ export const billingRouter = router({
   }),
 
   /**
+   * Platform EFT details from env (for Thandi UI / founders).
+   * Account number is included — founders already have Railway access.
+   */
+  platformBankDetails: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "founder" && ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Founder/admin only" });
+    }
+    const { getGrayArxBankDetailsFromEnv } = await import("./grayArxBank");
+    return getGrayArxBankDetailsFromEnv();
+  }),
+
+  /**
+   * Email an invoice to the dealership contact with EFT payment instructions.
+   */
+  emailInvoicePaymentInstructions: protectedProcedure
+    .input(
+      z.object({
+        invoiceId: z.number().int(),
+        toEmail: z.string().email().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "founder" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder/admin only" });
+      }
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not initialized",
+        });
+      }
+
+      const invoiceRows = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.id, input.invoiceId))
+        .limit(1);
+      const invoice = invoiceRows[0];
+      if (!invoice) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      }
+
+      const dealerRows = await db
+        .select()
+        .from(dealerships)
+        .where(eq(dealerships.id, invoice.dealershipId))
+        .limit(1);
+      const dealership = dealerRows[0];
+      if (!dealership) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dealership not found" });
+      }
+
+      const to =
+        input.toEmail?.trim() ||
+        dealership.contactEmail?.trim() ||
+        null;
+      if (!to) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No dealership contact email — pass toEmail",
+        });
+      }
+
+      const { getGrayArxBankDetailsFromEnv } = await import("./grayArxBank");
+      const { buildInvoicePaymentEmail } = await import("./invoicePaymentEmail");
+      const { ENV } = await import("./env");
+      const bank = getGrayArxBankDetailsFromEnv();
+      if (!bank.configured) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "BANK_ACCOUNT_NUMBER not set — add platform EFT vars on Railway first",
+        });
+      }
+
+      const appUrl = (ENV.appUrl || "https://www.grayarx.com").replace(/\/+$/, "");
+      const printUrl = `${appUrl}/admin/invoices/${invoice.id}/print`;
+      const due =
+        invoice.dueDate instanceof Date
+          ? invoice.dueDate.toLocaleDateString("en-ZA")
+          : String(invoice.dueDate ?? "");
+
+      const email = buildInvoicePaymentEmail({
+        invoiceNumber: invoice.invoiceNumber,
+        totalAmount: invoice.totalAmount,
+        dueDate: due,
+        dealershipName: dealership.name,
+        platformBank: bank,
+        printUrl,
+      });
+      if (!email) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not build invoice email",
+        });
+      }
+
+      const { sendEmailViaResend } = await import("./resendEmailService");
+      const result = await sendEmailViaResend({
+        to,
+        subject: email.subject,
+        html: email.html,
+        replyTo: "hello@grayarx.com",
+      });
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error || "Failed to send invoice email",
+        });
+      }
+
+      return { ok: true as const, to, messageId: result.id };
+    }),
+
+  /**
    * Create a Stripe Checkout session for an existing invoice (ZAR).
    * Falls back gracefully when Stripe is not configured.
    */

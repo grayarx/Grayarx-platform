@@ -99,6 +99,7 @@ export default function AdminInvoices() {
   });
 
   const { data: stripeAvailable } = trpc.billing.stripeAvailable.useQuery();
+  const { data: platformBank } = trpc.billing.platformBankDetails.useQuery();
   const stripeCheckout = trpc.billing.createStripeCheckout.useMutation({
     onSuccess: (res) => {
       if (res.url) {
@@ -107,6 +108,11 @@ export default function AdminInvoices() {
         toast.error("No Checkout URL returned");
       }
     },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const emailInvoice = trpc.billing.emailInvoicePaymentInstructions.useMutation({
+    onSuccess: (res) => toast.success(`EFT invoice emailed to ${res.to}`),
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
@@ -136,7 +142,7 @@ export default function AdminInvoices() {
   return (
     <AdminShell
       title="Invoices · Thandi"
-      subtitle="Thandi drafts and reconciles invoices across every dealership. Open Download / Print for a GrayArx-branded PDF (POPIA: IDs, bank refs and VINs masked to last 4 digits)."
+      subtitle="Thandi drafts and reconciles invoices. Download / Print opens a GrayArx-branded PDF. Platform subscription invoices include FNB EFT details from Railway env."
       actions={
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
@@ -294,6 +300,44 @@ export default function AdminInvoices() {
         />
       </div>
 
+      {platformBank && (
+        <Card className="card-premium mb-6 border-primary/20">
+          <CardContent className="p-4 text-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary mb-2">
+              Platform EFT (subscription invoices)
+            </div>
+            {platformBank.configured ? (
+              <div className="grid gap-1 sm:grid-cols-2 text-muted-foreground">
+                <div>
+                  Bank: <span className="text-foreground font-medium">{platformBank.bankName}</span>
+                </div>
+                <div>
+                  Account name:{" "}
+                  <span className="text-foreground font-medium">{platformBank.accountName}</span>
+                </div>
+                <div>
+                  Account:{" "}
+                  <span className="text-foreground font-mono font-medium">
+                    {platformBank.accountNumber}
+                  </span>
+                </div>
+                <div>
+                  Branch:{" "}
+                  <span className="text-foreground font-mono font-medium">
+                    {platformBank.branchCode}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-amber-600 dark:text-amber-400">
+                Not configured — set <code className="text-xs">BANK_ACCOUNT_NUMBER</code> (and
+                BANK_NAME / BRANCH / ACCOUNT_NAME) on Railway so PDF + email show pay-to details.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {!effectiveDealershipId && (
         <div className="text-center py-12 text-muted-foreground">
           No dealership selected yet.
@@ -404,17 +448,34 @@ export default function AdminInvoices() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="h-8"
-                      >
-                        <Link href={`/admin/invoices/${inv.id}/print`}>
-                          <Printer className="h-3.5 w-3.5 mr-1.5" />
-                          Download / Print
-                        </Link>
-                      </Button>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                        >
+                          <Link href={`/admin/invoices/${inv.id}/print`}>
+                            <Printer className="h-3.5 w-3.5 mr-1.5" />
+                            Download / Print
+                          </Link>
+                        </Button>
+                        {(!inv.leadId || Number(inv.leadId) === 0) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-[10px]"
+                            disabled={
+                              emailInvoice.isPending || !platformBank?.configured
+                            }
+                            onClick={() =>
+                              emailInvoice.mutate({ invoiceId: inv.id })
+                            }
+                          >
+                            Email EFT
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

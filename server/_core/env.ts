@@ -35,4 +35,9 @@ export const ENV = {
     process.env.OWNER_EMAIL ||
     process.env.EMAIL_USER ||
     "grayarx@gmail.com",
+  /** Platform EFT — set on Railway; never commit real account numbers. */
+  bankName: process.env.BANK_NAME || "",
+  bankAccountNumber: process.env.BANK_ACCOUNT_NUMBER || "",
+  bankBranchCode: process.env.BANK_BRANCH_CODE || "",
+  bankAccountName: process.env.BANK_ACCOUNT_NAME || "",
 };

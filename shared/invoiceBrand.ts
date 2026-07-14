@@ -47,7 +47,8 @@ export function maskEmail(email: string | null | undefined): string | null {
 export function invoicePopiaFooter(): string {
   return (
     "POPIA: Personal information on this document is limited to what is needed for billing. " +
-    "ID numbers, bank accounts, and vehicle VINs are masked to the last 4 digits. " +
+    "Customer ID numbers, third-party bank refs, and vehicle VINs are masked to the last 4 digits. " +
+    "GrayArx receiving bank details are shown in full so you can complete EFT payment. " +
     "Questions: privacy@grayarx.com"
   );
 }
