@@ -39,10 +39,12 @@ function pilotTransporter() {
 
 function logoAttachment() {
   if (!shouldAttachInlineEmailLogo()) return undefined;
-  const path = join(process.cwd(), "client/public/logo-icon.png");
+  const emblem = join(process.cwd(), "client/public/grayarx-logo-emblem.png");
+  const fallback = join(process.cwd(), "client/public/logo-icon.png");
+  const path = existsSync(emblem) ? emblem : fallback;
   if (!existsSync(path)) return undefined;
   return {
-    filename: "logo-icon.png",
+    filename: "grayarx-logo-emblem.png",
     path,
     cid: GRAYARX_EMAIL_LOGO_CID,
     contentType: "image/png",

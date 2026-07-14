@@ -72,6 +72,13 @@ export class CircuitBreaker {
     this.state = "closed";
   }
 
+  /** Founder / Kagiso remediation — clear failures and close the breaker. */
+  reset(): void {
+    this.consecutiveFailures = 0;
+    this.lastFailureTs = null;
+    this.state = "closed";
+  }
+
   recordFailure(): void {
     this.consecutiveFailures++;
     this.lastFailureTs = Date.now();
@@ -215,4 +222,12 @@ export function getResilienceStatus(): Record<
     };
   }
   return out;
+}
+
+/** Reset a named circuit breaker (openai | whatsapp | resend). */
+export function resetCircuitBreaker(name: string): boolean {
+  const breaker = circuitBreakers.get(name);
+  if (!breaker) return false;
+  breaker.reset();
+  return true;
 }

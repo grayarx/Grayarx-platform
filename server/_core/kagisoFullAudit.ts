@@ -121,7 +121,8 @@ export function computeAutonomousRunCost(findings: Finding[]): {
   };
 }
 
-function stableHash(parts: (string | number)[]): string {
+/** Exported so patch recipes can key off the same finding hashes. */
+export function stableHash(parts: (string | number)[]): string {
   // Deterministic, short hash so a re-run of the same audit doesn't enqueue
   // duplicates. Doesn't need to be cryptographic — only collision-stable
   // enough across reruns of the same input.
@@ -398,6 +399,24 @@ function walkUiHealth(_snap: KagisoSnapshot): Finding[] {
       auditSection: "ui_health",
       hash: stableHash(["ui_health", "marketing_language_count_sweep_v2"]),
       evidenceJson: { saOfficial: 11, portuguese: true, source: "shared/languages.ts" },
+    },
+    {
+      title: "Email preview still claims pulsing logo animation",
+      description:
+        "Admin Email Preview sidebar shows 'Pulsing animation (2s cycle)' but production emails use a sharp static emblem (no CSS pulse). Misleading for founders testing pilot outreach.",
+      rationale:
+        "Safe single-string UI copy fix on AdminEmailPreview — founders should Approve the proposed patch so the test page matches real sends.",
+      category: "ui_ux",
+      priority: "medium",
+      severity: "medium",
+      creditCostEstimate: 2,
+      roiEstimateZar: null,
+      llmTokensEstimate: 80,
+      agentAutonomous: true,
+      humanRequired: false,
+      auditSection: "ui_health",
+      hash: stableHash(["ui_health", "email_preview_pulse_copy_v1"]),
+      evidenceJson: { file: "client/src/pages/AdminEmailPreview.tsx" },
     },
   ];
 }

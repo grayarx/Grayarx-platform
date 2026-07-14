@@ -88,16 +88,29 @@ export default function AdminKagisoRoadmap() {
   const fullAudit = trpc.adminKagiso.runFullAudit.useMutation({
     onSuccess: (r: any) => {
       toast.success(
-        `Audit complete · ${r.inserted} new findings · ${r.skipped} already on the board`,
+        `Audit complete · ${r.inserted} new · ${r.patchesProposed ?? 0} patch(es) to approve · ${r.autoResolved ?? 0} auto-cleared`,
       );
       utils.adminKagiso.listRoadmap.invalidate();
+      utils.adminKagiso.listProposedPatches.invalidate();
       utils.adminKagiso.auditCostPreview.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
 
   const decide = trpc.adminKagiso.decideRoadmap.useMutation({
-    onSuccess: () => utils.adminKagiso.listRoadmap.invalidate(),
+    onSuccess: (r: any) => {
+      if (r.action === "circuit_reset") {
+        toast.success("Fix applied — circuit breaker reset");
+      } else if (r.action === "patch_applied") {
+        toast.success("Fix applied — code patch written");
+      } else if (r.action === "dismissed") {
+        toast.success("Dismissed");
+      } else {
+        toast.success("Approved for build");
+      }
+      utils.adminKagiso.listRoadmap.invalidate();
+      utils.adminKagiso.listProposedPatches.invalidate();
+    },
     onError: (e) => toast.error(e.message),
   });
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -474,10 +487,10 @@ export default function AdminKagisoRoadmap() {
 
           {(!proposedPatches || proposedPatches.length === 0) && (
             <div className="text-sm text-muted-foreground border border-dashed border-primary/20 rounded-md p-6 text-center">
-              No patches proposed right now. Kagiso only drafts patches for
-              findings whose hash matches a hard-coded recipe — next
-              autonomous run will fill this if any safe-category finding is
-              detected.
+              No patches waiting. Click <strong>Run methodical audit</strong> —
+              Kagiso drafts safe code fixes here; use <strong>Apply</strong> (or
+              Approve on the finding) to ship them. OpenAI circuit findings
+              Approve resets the breaker immediately.
             </div>
           )}
 
@@ -651,7 +664,12 @@ export default function AdminKagisoRoadmap() {
                             );
                           }}
                         >
-                          <Play className="h-3.5 w-3.5 mr-1" /> Approve
+                          <Play className="h-3.5 w-3.5 mr-1" />{" "}
+                          {String(item.title ?? "").toLowerCase().includes("openai") ||
+                          String(item.title ?? "").toLowerCase().includes("circuit") ||
+                          item.auditSection === "agent_errors"
+                            ? "Apply fix"
+                            : "Approve fix"}
                         </Button>
                         <Button
                           size="sm"

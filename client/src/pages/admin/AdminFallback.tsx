@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mailbox, Clock, Phone, MessageSquare, Send } from "lucide-react";
+import { Plus, Mailbox, Clock, Phone, MessageSquare, Send, Trash2 } from "lucide-react";
 
 const CHANNEL_ICON: Record<string, typeof Mailbox> = {
   email: Mailbox,
@@ -41,6 +41,22 @@ export default function AdminFallback() {
     onSuccess: () => {
       utils.adminFallback.list.invalidate();
       toast.success("Marked resolved");
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const removeMsg = trpc.adminFallback.delete.useMutation({
+    onSuccess: () => {
+      utils.adminFallback.list.invalidate();
+      toast.success("Removed from inbox");
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const clearResolved = trpc.adminFallback.clearResolved.useMutation({
+    onSuccess: (r) => {
+      utils.adminFallback.list.invalidate();
+      toast.success(r.removed ? `Cleared ${r.removed} resolved message(s)` : "Nothing to clear");
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
@@ -107,6 +123,21 @@ export default function AdminFallback() {
       title="Fallback inbox · Bongi"
       subtitle="After-hours inbound messages where no human was available. Bongi drafts a professional reply with a reference number; you follow up the next business morning."
       actions={
+        <div className="flex flex-wrap gap-2">
+          {counts.resolved > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (confirm(`Permanently delete ${counts.resolved} resolved message(s)?`)) {
+                  clearResolved.mutate();
+                }
+              }}
+              disabled={clearResolved.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear resolved
+            </Button>
+          )}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="btn-gold">
@@ -244,6 +275,7 @@ export default function AdminFallback() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
@@ -334,9 +366,8 @@ export default function AdminFallback() {
                       {m.customerContact ? ` · ${m.customerContact}` : ""}
                     </p>
                   </div>
-                  {!resolved && (
-                    <div className="flex flex-col gap-2 shrink-0">
-                      {m.customerContact && (
+                  <div className="flex flex-col gap-2 shrink-0">
+                      {!resolved && m.customerContact && (
                         <Button
                           size="sm"
                           className="btn-gold"
@@ -354,16 +385,31 @@ export default function AdminFallback() {
                           Reply via WhatsApp
                         </Button>
                       )}
+                      {!resolved && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resolve.mutate({ messageId: m.id })}
+                          disabled={resolve.isPending}
+                        >
+                          Mark resolved
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => resolve.mutate({ messageId: m.id })}
-                        disabled={resolve.isPending}
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => {
+                          if (confirm("Permanently remove this message from the inbox?")) {
+                            removeMsg.mutate({ messageId: m.id });
+                          }
+                        }}
+                        disabled={removeMsg.isPending}
                       >
-                        Mark resolved
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove
                       </Button>
                     </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

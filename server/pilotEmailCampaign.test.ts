@@ -13,9 +13,9 @@ import {
 import { previewPilotCampaign } from "./_core/pilotEmailCampaignService";
 
 describe("pilot email campaign", () => {
-  it("logo URL is the square site icon PNG", () => {
+  it("logo URL is the hosted emblem PNG", () => {
     const url = grayArxLogoUrl();
-    expect(url).toContain("/logo-icon.png");
+    expect(url).toContain("/grayarx-logo-emblem.png");
     expect(url).not.toContain(".svg");
     expect(url).not.toContain("email-logo-grayarx");
   });
@@ -23,7 +23,8 @@ describe("pilot email campaign", () => {
   it("email header matches site layout (icon + wordmark)", () => {
     const header = grayArxEmailHeader();
     expect(header).toContain('role="presentation"');
-    expect(header).toContain("cid:grayarx-logo-icon");
+    expect(header).toContain("grayarx-logo-emblem.png");
+    expect(header).not.toContain("cid:grayarx-logo-icon");
     expect(header).toContain("GrayArx");
     expect(header).toContain("AI Platform");
     expect(header).not.toContain("<p ");
@@ -54,7 +55,8 @@ describe("pilot email campaign", () => {
       segment: sample.segment,
     });
     expect(html).toContain("Jubilee Motors");
-    expect(html).toContain("cid:grayarx-logo-icon");
+    expect(html).toContain("grayarx-logo-emblem.png");
+    expect(html).not.toContain("cid:grayarx-logo-icon");
     expect(html).toContain("Apply for pilot access");
     expect(html).not.toContain("Segment:");
     expect(html).not.toContain("manus.space");

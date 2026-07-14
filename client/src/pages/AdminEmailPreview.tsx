@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 
-const LOGO_URL = "/logo.svg";
+/** Sharp emblem — never /logo.svg (32px upscaled = blurry/zoomed). */
+const LOGO_URL = "https://www.grayarx.com/grayarx-logo-emblem.png?v=8";
 
 const emailTemplates = {
   welcome: {
@@ -21,8 +22,7 @@ const emailTemplates = {
         body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); color: #ffffff; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; background-color: #0a0e27; }
         .header { text-align: center; padding: 40px 20px; }
-        .logo { width: 150px; height: auto; margin-bottom: 20px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .logo { width: 56px; height: 56px; object-fit: contain; margin-bottom: 16px; border-radius: 12px; }
         .content { padding: 30px 20px; background-color: #1a1f3a; border-radius: 8px; margin: 20px; }
         .content h2 { color: #d4af37; margin-top: 0; }
         .content p { line-height: 1.6; color: #ffffff; }
@@ -35,7 +35,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="${LOGO_URL}" alt="GrayArx" class="logo" style="display: inline-block;">
+            <img src="${LOGO_URL}" alt="GrayArx" width="56" height="56" class="logo" style="display: inline-block; width:56px; height:56px; object-fit:contain;">
         </div>
         
         <div class="content">
@@ -87,7 +87,7 @@ const emailTemplates = {
         body { font-family: Arial, sans-serif; background: #0a0e27; color: #ffffff; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; background-color: #0a0e27; }
         .header { text-align: center; padding: 40px 20px; }
-        .logo { width: 150px; height: auto; margin-bottom: 20px; }
+        .logo { width: 56px; height: 56px; object-fit: contain; margin-bottom: 16px; border-radius: 12px; }
         .content { padding: 30px 20px; background-color: #1a1f3a; border-radius: 8px; margin: 20px; }
         .content h2 { color: #d4af37; margin-top: 0; }
         .content p { line-height: 1.6; color: #ffffff; }
@@ -98,7 +98,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="${LOGO_URL}" alt="GrayArx" class="logo" style="display: inline-block;">
+            <img src="${LOGO_URL}" alt="GrayArx" width="56" height="56" class="logo" style="display: inline-block; width:56px; height:56px; object-fit:contain;">
         </div>
         
         <div class="content">
@@ -257,17 +257,14 @@ export default function AdminEmailPreview() {
       </div>
 
       {/* Info Box */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="border-primary/20">
         <CardHeader>
-          <CardTitle className="text-blue-900">About Animated Logos</CardTitle>
+          <CardTitle className="text-sm">Email logo</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-blue-800">
-          <p>
-            The GrayArx logo in these emails uses CSS animation (pulsing effect). Most modern email clients support CSS animations, including Gmail, Outlook, and Apple Mail. The animation will display as a pulsing effect (opacity changing from 100% to 70% over 2 seconds).
-          </p>
-          <p className="mt-2">
-            <strong>Note:</strong> Some older email clients may not support animations and will show a static logo instead.
-          </p>
+        <CardContent className="text-sm text-muted-foreground">
+          Welcome / Follow-up / Pilot previews use the hosted GrayArx emblem
+          (`grayarx-logo-emblem.png` at 44–56px). Real sends use the same HTTPS
+          image so Gmail and browser previews both show a sharp logo.
         </CardContent>
       </Card>
     </div>

@@ -27,20 +27,27 @@ export function grayArxAppUrl(): string {
 }
 
 export function grayArxLogoIconUrl(): string {
-  return `${grayArxAppUrl()}/logo-icon.png`;
+  // Emblem PNG — sharp at 44px in Gmail/Outlook; avoids the 32px logo.svg upscale.
+  return `${grayArxAppUrl()}/grayarx-logo-emblem.png?v=8`;
 }
 
 export const GRAYARX_EMAIL_LOGO_CID = "grayarx-logo-icon";
 
-export function grayArxEmailLogoSrc(): string {
+/**
+ * Logo src for email HTML.
+ * Default is the hosted HTTPS emblem so browser previews and inbox clients both work.
+ * Set EMAIL_LOGO_USE_CID=true to force cid: + inline PNG attachment (legacy).
+ */
+export function grayArxEmailLogoSrc(opts?: { forPreview?: boolean }): string {
   if (typeof process !== "undefined" && process.env?.EMAIL_LOGO_ICON_URL) {
     return process.env.EMAIL_LOGO_ICON_URL;
   }
-  if (typeof process !== "undefined" && process.env?.EMAIL_LOGO_USE_HOSTED === "true") {
-    return grayArxLogoIconUrl();
+  const forceCid =
+    typeof process !== "undefined" && process.env?.EMAIL_LOGO_USE_CID === "true";
+  if (forceCid && !opts?.forPreview) {
+    return `cid:${GRAYARX_EMAIL_LOGO_CID}`;
   }
-  // Default: inline CID (reliable until prod static serving is redeployed)
-  return `cid:${GRAYARX_EMAIL_LOGO_CID}`;
+  return grayArxLogoIconUrl();
 }
 
 /** Attach inline PNG when the header uses cid: (default) */

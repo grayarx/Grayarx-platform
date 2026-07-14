@@ -22,7 +22,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Finding } from "./kagisoFullAudit";
+import { stableHash, type Finding } from "./kagisoFullAudit";
 import type { ProposedPatchCategory } from "../db";
 
 // ESM-safe __dirname equivalent (the dev server runs as ES modules under tsx).
@@ -133,6 +133,15 @@ export const SAFE_PATCH_RECIPES: Record<string, PatchRecipe> = {
     replaceText: "all 11 South African official languages",
     titleOverride: "Replace stale 'seven languages' phrasing on Home",
     rationaleOverride: "Same brand-trust rationale as the numeric variant.",
+  },
+  [stableHash(["ui_health", "email_preview_pulse_copy_v1"])]: {
+    category: "stale_copy",
+    filePath: "client/src/pages/AdminEmailPreview.tsx",
+    findText: "✓ Pulsing animation (2s cycle)",
+    replaceText: "✓ Sharp emblem logo (hosted PNG)",
+    titleOverride: "Fix email preview logo status copy",
+    rationaleOverride:
+      "Test page claimed a pulsing animation; real pilot/welcome emails use a sharp static emblem. Approve (Apply patch) to align the admin copy with production.",
   },
 };
 

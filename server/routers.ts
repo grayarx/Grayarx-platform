@@ -211,6 +211,8 @@ import {
   createFallbackMessage,
   listFallbackMessages,
   resolveFallbackMessage,
+  deleteFallbackMessage,
+  deleteResolvedFallbackMessages,
   insertPreApproval,
   listPreApprovals,
   getPreApproval,
@@ -235,6 +237,8 @@ import {
   markPatchRejected,
   markPatchFailed,
   countPendingProposedPatches,
+  createProposedPatch,
+  findProposedPatchByFingerprint,
   listAllDealerships,
   createDealership,
   getDealershipById,
@@ -2753,6 +2757,26 @@ export const appRouter = router({
         return { ok: true };
       }),
 
+    /** Permanently remove one inbox row (test/junk cleanup). */
+    delete: protectedProcedure
+      .input(z.object({ messageId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await deleteFallbackMessage(input.messageId);
+        return { ok: true };
+      }),
+
+    /** Clear all resolved fallback rows from the inbox. */
+    clearResolved: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const removed = await deleteResolvedFallbackMessages();
+      return { ok: true, removed };
+    }),
+
     /**
      * Founder-triggered fallback. Drafts the reply, persists the message
      * with a reference number, and logs the activity for Bongi.
@@ -3953,10 +3977,12 @@ export const appRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       const { runKagisoFullAudit } = await import("./_core/kagisoFullAudit");
+      const { proposePatchesForFindings } = await import("./_core/kagisoPatchGenerator");
       const snap = await getKagisoSnapshot();
       const result = runKagisoFullAudit(snap);
       let inserted = 0;
       let skipped = 0;
+      const currentHashes = new Set(result.findings.map((f) => f.hash));
       for (const f of result.findings) {
         const existing = await findRoadmapByHash(f.hash);
         if (existing) {
@@ -3983,9 +4009,47 @@ export const appRouter = router({
         });
         inserted += 1;
       }
+
+      // Draft allow-listed code patches for any finding that has a recipe
+      // (including ones already on the board from a prior run).
+      let patchesProposed = 0;
+      try {
+        const drafts = await proposePatchesForFindings(result.findings);
+        for (const { finding, draft } of drafts) {
+          const roadmapRow = await findRoadmapByHash(finding.hash);
+          if (!roadmapRow) continue;
+          const existingPatch = await findProposedPatchByFingerprint(
+            roadmapRow.id,
+            draft.filePath,
+            draft.findText,
+          );
+          if (existingPatch) continue;
+          await createProposedPatch({
+            findingId: roadmapRow.id,
+            category: draft.category,
+            title: draft.title,
+            rationale: draft.rationale,
+            filePath: draft.filePath,
+            findText: draft.findText,
+            replaceText: draft.replaceText,
+            diffPreview: draft.diffPreview,
+          });
+          patchesProposed += 1;
+        }
+      } catch (err) {
+        console.error("[Kagiso] patch generation failed", err);
+      }
+
+      // Clear findings that no longer apply (e.g. OpenAI healthy again).
+      const openHashes = await listOpenAuditFindings();
+      const stale = openHashes.filter((h) => h.hash && !currentHashes.has(h.hash));
+      const autoResolved = await autoResolveStaleAuditFindings(stale.map((s) => s.id));
+
       return {
         inserted,
         skipped,
+        patchesProposed,
+        autoResolved,
         totalFindings: result.findings.length,
         cost: result.cost,
         snapshot: snap,
@@ -4026,9 +4090,61 @@ export const appRouter = router({
         if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const mapped = input.decision === "approved" ? "approved_for_build" : "dismissed";
-        await decideRoadmapItem(input.itemId, mapped);
-        return { ok: true };
+        const { getDb } = await import("./db");
+        const { upgradeRoadmap } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        const [item] = db
+          ? await db.select().from(upgradeRoadmap).where(eq(upgradeRoadmap.id, input.itemId)).limit(1)
+          : [];
+
+        if (input.decision === "dismissed") {
+          await decideRoadmapItem(input.itemId, "dismissed");
+          return { ok: true, action: "dismissed" as const };
+        }
+
+        // OpenAI / WhatsApp / Resend circuit findings: Approve = apply the fix now.
+        const title = (item?.title ?? "").toLowerCase();
+        const section = item?.auditSection ?? "";
+        if (section === "agent_errors" || title.includes("openai") || title.includes("circuit")) {
+          const { resetCircuitBreaker } = await import("./_core/agentResilience");
+          if (title.includes("whatsapp")) resetCircuitBreaker("whatsapp");
+          else if (title.includes("resend")) resetCircuitBreaker("resend");
+          else resetCircuitBreaker("openai");
+          await decideRoadmapItem(input.itemId, "completed");
+          return { ok: true, action: "circuit_reset" as const };
+        }
+
+        // If Kagiso drafted a code patch for this finding, apply it on Approve.
+        const { listProposedPatches, getProposedPatch, markPatchApplied, markPatchFailed } =
+          await import("./db");
+        const linked = (await listProposedPatches({ status: "proposed", limit: 100 })).filter(
+          (p) => p.findingId === input.itemId,
+        );
+        if (linked[0]) {
+          const { applyProposedPatch } = await import("./_core/kagisoPatchApplier");
+          const patch = await getProposedPatch(linked[0].id);
+          if (patch) {
+            const result = await applyProposedPatch({
+              filePath: patch.filePath,
+              findText: patch.findText,
+              replaceText: patch.replaceText,
+            });
+            if (!result.ok) {
+              await markPatchFailed(patch.id, result.error);
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Patch apply failed: ${result.error}`,
+              });
+            }
+            await markPatchApplied(patch.id, ctx.user.id);
+            await decideRoadmapItem(input.itemId, "completed");
+            return { ok: true, action: "patch_applied" as const, bytesWritten: result.bytesWritten };
+          }
+        }
+
+        await decideRoadmapItem(input.itemId, "approved_for_build");
+        return { ok: true, action: "approved_for_build" as const };
       }),
 
     /**

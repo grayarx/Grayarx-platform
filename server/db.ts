@@ -1,4 +1,4 @@
-import { eq, desc, sql, gte, lte, and, count, inArray, ne, or, isNull } from "drizzle-orm";
+import { eq, desc, sql, gte, lte, and, count, inArray, ne, or, isNull, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
@@ -1422,6 +1422,28 @@ export async function resolveFallbackMessage(id: number, reviewerId?: number) {
     .update(fallbackMessages)
     .set({ resolvedAt: new Date(), resolvedBy: reviewerId ?? null })
     .where(eq(fallbackMessages.id, id));
+}
+
+/** Hard-delete one fallback inbox row (founder cleanup of test/junk). */
+export async function deleteFallbackMessage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(fallbackMessages).where(eq(fallbackMessages.id, id));
+}
+
+/** Hard-delete all resolved fallback rows. Returns count removed. */
+export async function deleteResolvedFallbackMessages(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({ id: fallbackMessages.id })
+    .from(fallbackMessages)
+    .where(isNotNull(fallbackMessages.resolvedAt));
+  if (!rows.length) return 0;
+  await db
+    .delete(fallbackMessages)
+    .where(inArray(fallbackMessages.id, rows.map((r) => r.id)));
+  return rows.length;
 }
 
 // === Pre-approval (Naledi) helpers ===

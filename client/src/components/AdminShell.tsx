@@ -166,7 +166,7 @@ export default function AdminShell({
             {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>
 
-          <div className="border-b border-primary/10 mb-8 overflow-x-auto">
+          <div className="border-b border-primary/10 mb-8 overflow-x-auto scrollbar-thin [scrollbar-color:rgba(212,175,55,0.35)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/30 [&::-webkit-scrollbar-track]:bg-transparent">
             <nav className="flex gap-1 min-w-max">
               {visibleLinks.map((link) => {
                 const Icon = link.icon;
