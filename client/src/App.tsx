@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AlertCircle, X } from "lucide-react";
@@ -370,7 +369,7 @@ function Router() {
   );
 }
 
-const POPIA_BANNER_DISMISSED_KEY = 'popia_banner_dismissed';
+const POPIA_BANNER_Z = 'z-[60]'; // above site nav (z-50) so the X is clickable
 
 function AppContent() {
   const {
@@ -379,21 +378,15 @@ function AppContent() {
     handleSign,
     handleReconfirm,
     handleDismiss,
+    handleBannerDismiss,
+    isFounderOrAdmin,
     isLoading,
     consentStatus,
     unsignedButDismissed,
   } = usePopiaConsent();
 
-  const [bannerDismissed, setBannerDismissed] = useState(
-    () => !!sessionStorage.getItem(POPIA_BANNER_DISMISSED_KEY)
-  );
-
-  const handleBannerDismiss = () => {
-    sessionStorage.setItem(POPIA_BANNER_DISMISSED_KEY, '1');
-    setBannerDismissed(true);
-  };
-
-  const showPendingBanner = unsignedButDismissed && !bannerDismissed;
+  // Founders/admins never see the dealer POPIA pending banner.
+  const showPendingBanner = unsignedButDismissed && !isFounderOrAdmin;
 
   const consentId =
     consentStatus && "consentId" in consentStatus ? consentStatus.consentId : undefined;
@@ -407,7 +400,10 @@ function AppContent() {
         isLoading={isLoading}
       />
       {showPendingBanner && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-4">
+        <div
+          className={`fixed top-0 left-0 right-0 ${POPIA_BANNER_Z} bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-4`}
+          role="status"
+        >
           <div className="flex items-center gap-2 text-sm text-amber-900">
             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
             <span>
@@ -418,15 +414,20 @@ function AppContent() {
             </span>
           </div>
           <button
-            onClick={handleBannerDismiss}
-            className="text-amber-600 hover:text-amber-800 shrink-0"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleBannerDismiss();
+            }}
+            className="relative z-[1] p-1.5 text-amber-600 hover:text-amber-800 shrink-0 rounded-sm"
             aria-label="Dismiss POPIA banner"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
-      {needsReconfirmation && consentId != null && (
+      {needsReconfirmation && consentId != null && !isFounderOrAdmin && (
         <div className="fixed top-20 left-0 right-0 z-50 px-4 max-w-3xl mx-auto">
           <POPIAReconfirmationBanner
             onReconfirm={() => handleReconfirm(consentId)}

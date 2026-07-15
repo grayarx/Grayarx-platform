@@ -5,22 +5,54 @@ import { isFounderEmail } from '@shared/founderAccess';
 import { isFounderOrAdmin as roleIsFounderOrAdmin } from '@shared/userRoles';
 
 const DISMISSED_KEY = 'popia_dismissed_until';
-/** Remind-me-later snooze — short so unsigned dealers see the modal again soon. */
+const BANNER_DISMISSED_KEY = 'popia_banner_dismissed_until';
+/** Remind-me-later / banner soft-dismiss — short so unsigned dealers are prompted again soon. */
 const DISMISS_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
-function isDismissed(): boolean {
+function readUntil(key: string): boolean {
   try {
-    const until = Number(localStorage.getItem(DISMISSED_KEY) ?? '0');
+    const until = Number(localStorage.getItem(key) ?? '0');
     return Date.now() < until;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
+}
+
+function writeUntil(key: string) {
+  try {
+    localStorage.setItem(key, String(Date.now() + DISMISS_TTL_MS));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearKey(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+function isDismissed(): boolean {
+  return readUntil(DISMISSED_KEY);
 }
 
 function setDismissedForTtl() {
-  try { localStorage.setItem(DISMISSED_KEY, String(Date.now() + DISMISS_TTL_MS)); } catch { /* ignore */ }
+  writeUntil(DISMISSED_KEY);
 }
 
 function clearDismissed() {
-  try { localStorage.removeItem(DISMISSED_KEY); } catch { /* ignore */ }
+  clearKey(DISMISSED_KEY);
+  clearKey(BANNER_DISMISSED_KEY);
+}
+
+function isBannerDismissed(): boolean {
+  return readUntil(BANNER_DISMISSED_KEY);
+}
+
+function setBannerDismissedForTtl() {
+  writeUntil(BANNER_DISMISSED_KEY);
 }
 
 export function usePopiaConsent() {
@@ -29,8 +61,9 @@ export function usePopiaConsent() {
   const [needsReconfirmation, setNeedsReconfirmation] = useState(false);
   const [isUnsigned, setIsUnsigned] = useState(false);
   const [dismissed, setDismissed] = useState(() => isDismissed());
+  const [bannerDismissed, setBannerDismissed] = useState(() => isBannerDismissed());
 
-  // Platform owners set POPIA requirements — never trap them behind the dealer modal.
+  // Platform owners set POPIA requirements — never trap them behind the dealer modal/banner.
   // Also respect founder emails even if role has not been promoted yet in this session.
   const isFounderOrAdmin =
     roleIsFounderOrAdmin(user) || isFounderEmail(user?.email);
@@ -46,11 +79,13 @@ export function usePopiaConsent() {
     }
   );
 
-  // If we discover we are a founder mid-session, force-hide any stuck modal.
+  // If we discover we are a founder mid-session, force-hide any stuck modal/banner.
   useEffect(() => {
     if (isFounderOrAdmin) {
       setShowModal(false);
       setIsUnsigned(false);
+      setDismissed(false);
+      setBannerDismissed(false);
     }
   }, [isFounderOrAdmin]);
 
@@ -58,6 +93,7 @@ export function usePopiaConsent() {
     onSuccess: () => {
       clearDismissed();
       setDismissed(false);
+      setBannerDismissed(false);
       setIsUnsigned(false);
       setShowModal(false);
       checkStatusQuery.refetch();
@@ -105,6 +141,13 @@ export function usePopiaConsent() {
     setShowModal(false);
   };
 
+  // Soft-dismiss the pending banner only (does not require signing POPIA).
+  // Same TTL as remind-later; Legal → POPIA remains available anytime.
+  const handleBannerDismiss = () => {
+    setBannerDismissedForTtl();
+    setBannerDismissed(true);
+  };
+
   const handleSign = async (signedName: string) => {
     if (!user || !user.dealershipId) return;
 
@@ -134,9 +177,12 @@ export function usePopiaConsent() {
     handleSign,
     handleReconfirm,
     handleDismiss,
+    handleBannerDismiss,
+    isFounderOrAdmin,
     isLoading: signMutation.isPending || reconfirmMutation.isPending,
     consentStatus: checkStatusQuery.data && checkStatusQuery.data.status ? checkStatusQuery.data : null,
-    // True when the dealer has not signed POPIA but chose "Remind me later" this session.
-    unsignedButDismissed: isUnsigned && dismissed && !isFounderOrAdmin,
+    // True when a non-founder dealer dismissed the modal and has not soft-dismissed the banner.
+    unsignedButDismissed:
+      isUnsigned && dismissed && !bannerDismissed && !isFounderOrAdmin,
   };
 }
