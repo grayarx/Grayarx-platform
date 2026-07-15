@@ -20,6 +20,7 @@ const MIGRATIONS = [
   "0067_onboarding_whatsapp_phone_number_id.sql",
   "0068_agent_display_name_optout_group.sql",
   "0069_dealer_groups.sql",
+  "0070_brand_logo_url_mediumtext.sql",
 ];
 
 async function main() {

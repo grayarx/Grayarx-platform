@@ -398,7 +398,10 @@ export const dealerships = mysqlTable("dealerships", {
   // Brand kit — used by every agent's outbound output (email signature,
   // invoice header, WhatsApp footer, etc.). Optional; defaults to GrayArx
   // gold/black look when missing.
-  brandLogoUrl: varchar("brandLogoUrl", { length: 500 }),
+  // mediumtext (not varchar) because logos uploaded via the admin console
+  // fall back to a base64 data: URL when no S3/R2 bucket is configured —
+  // same pattern as vehicles.primaryPhotoUrl above.
+  brandLogoUrl: mediumtext("brandLogoUrl"),
   brandAccentColor: varchar("brandAccentColor", { length: 16 }), // "#C9A24A"
   brandSignature: varchar("brandSignature", { length: 500 }),
   /** Public showroom visual template — dealer-controlled in Settings. */

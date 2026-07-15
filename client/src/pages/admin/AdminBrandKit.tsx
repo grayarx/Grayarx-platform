@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Palette, Upload, Clock } from "lucide-react";
+import { Palette, Upload, Clock, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 const DEFAULT_ACCENT = "#C9A24A";
+const ACCEPTED_LOGO_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+];
+const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 type WeekdayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface HoursDay {
@@ -97,6 +113,23 @@ export default function AdminBrandKit() {
   });
   const [hours, setHours] = useState<HoursWeek>(() => normaliseHours(null));
   const [hoursOverrideEnabled, setHoursOverrideEnabled] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // Reset to defaults immediately when switching dealership so the form
+  // never shows the previous dealer's (possibly stale/cached) values while
+  // the new one is loading — and so a hasty Save can't cross-save data.
+  useEffect(() => {
+    setForm({
+      brandLogoUrl: "",
+      brandAccentColor: DEFAULT_ACCENT,
+      brandSignature: "",
+      vatNumber: "",
+      bankDetails: "",
+      agentDisplayName: "",
+    });
+    setHours(normaliseHours(null));
+    setHoursOverrideEnabled(false);
+  }, [selectedId]);
 
   useEffect(() => {
     if (!brand) return;
@@ -120,6 +153,46 @@ export default function AdminBrandKit() {
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+
+  const uploadLogo = trpc.adminDealerships.uploadBrandLogo.useMutation();
+
+  const handleLogoFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+      toast.error("Unsupported file type. Use PNG, JPEG, WebP, or SVG.");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      toast.error(
+        `File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max 5MB.`,
+      );
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const dataBase64 = await fileToBase64(file);
+      const result = await uploadLogo.mutateAsync({
+        dealershipId: Number(selectedId),
+        dataBase64,
+        mimeType: file.type as
+          | "image/png"
+          | "image/jpeg"
+          | "image/webp"
+          | "image/svg+xml",
+        filename: file.name,
+      });
+      setForm((f) => ({ ...f, brandLogoUrl: result.url }));
+      toast.success("Logo uploaded — click Save brand kit to apply.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Logo upload failed");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   const previewAccent = useMemo(() => {
     return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(form.brandAccentColor)
@@ -175,27 +248,59 @@ export default function AdminBrandKit() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Logo URL</Label>
-                  <div className="flex gap-2 mt-1">
-                    <Input
-                      value={form.brandLogoUrl}
-                      onChange={(e) =>
-                        setForm({ ...form, brandLogoUrl: e.target.value })
-                      }
-                      placeholder="https://cdn.example.com/logo.png"
+                  <Label>Logo</Label>
+                  <div className="flex items-center gap-3 mt-1">
+                    {form.brandLogoUrl ? (
+                      <img
+                        src={form.brandLogoUrl}
+                        alt="logo preview"
+                        className="h-12 w-12 rounded-md object-contain bg-black/40 p-1 border border-primary/15"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.visibility =
+                            "hidden";
+                        }}
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center text-[10px] text-primary border border-primary/15">
+                        No logo
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      id="brand-logo-input"
+                      className="hidden"
+                      disabled={isUploadingLogo}
+                      onChange={handleLogoFileSelect}
                     />
                     <Button
+                      type="button"
                       variant="outline"
-                      size="icon"
+                      disabled={isUploadingLogo}
                       onClick={() =>
-                        toast.info(
-                          "File upload UI coming soon. Paste a public URL for now.",
-                        )
+                        document.getElementById("brand-logo-input")?.click()
                       }
                     >
-                      <Upload className="h-4 w-4" />
+                      {isUploadingLogo ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      {isUploadingLogo ? "Uploading…" : "Upload logo"}
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPEG, WebP, or SVG · max 5MB. Or paste a hosted URL
+                    below instead.
+                  </p>
+                  <Input
+                    className="mt-2"
+                    value={form.brandLogoUrl}
+                    onChange={(e) =>
+                      setForm({ ...form, brandLogoUrl: e.target.value })
+                    }
+                    placeholder="https://cdn.example.com/logo.png"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
