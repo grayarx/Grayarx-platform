@@ -172,9 +172,10 @@ async function startServer() {
     console.error(`[Express error] ${req.method} ${req.originalUrl}:`, err);
     if (res.headersSent) return;
     const status = typeof err?.status === "number" ? err.status : typeof err?.statusCode === "number" ? err.statusCode : 500;
+    const sentryEventId = (res as any).sentry;
     res.status(status).json({
       error: "Internal server error",
-      ...(res.sentry ? { sentryEventId: res.sentry } : {}),
+      ...(sentryEventId ? { sentryEventId } : {}),
     });
   });
 

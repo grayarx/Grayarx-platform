@@ -95,6 +95,18 @@ export class CircuitBreaker {
           .catch((err) =>
             console.error("[CircuitBreaker] reportCircuitBreakerOpen failed:", err),
           );
+        // Warning-level Sentry event (not a fatal error) so the founder sees
+        // degraded service (OpenAI/WhatsApp/Resend down) without waiting for
+        // the 24h self-audit cycle. No-ops when SENTRY_DSN isn't set.
+        import("./sentry")
+          .then(({ captureMessage }) =>
+            captureMessage(
+              `Circuit breaker "${name}" opened after ${this.consecutiveFailures} consecutive failures`,
+              "warning",
+              { breaker: name, consecutiveFailures: this.consecutiveFailures },
+            ),
+          )
+          .catch(() => {});
       }
       this.state = "open";
     }

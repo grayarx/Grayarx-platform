@@ -10,6 +10,22 @@ import { getLoginUrl } from "./const";
 import { ToastProvider } from "./components/ToastNotification";
 import "./index.css";
 
+// Optional client-side error tracking — no-ops when VITE_SENTRY_DSN isn't
+// set, so nothing breaks before the founder creates a Sentry account.
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+if (sentryDsn) {
+  import("@sentry/react")
+    .then(Sentry => {
+      Sentry.init({
+        dsn: sentryDsn,
+        environment: import.meta.env.MODE,
+        // Errors only — no performance tracing, to stay well within the free tier.
+        tracesSampleRate: 0,
+      });
+    })
+    .catch(err => console.warn("[Sentry] client init skipped:", err));
+}
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
