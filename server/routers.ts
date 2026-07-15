@@ -1003,9 +1003,50 @@ export const appRouter = router({
 
   // Protected dealer-only endpoints
   dealer: router({
-    stats: protectedProcedure.query(async () => getDashboardStats()),
-    activity: protectedProcedure.query(async () => getRecentActivity(10)),
-    leadsTrend: protectedProcedure.query(async () => getLeadsTrend(14)),
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      const isAdmin = isFounderOrAdmin(ctx.user);
+      const dealershipId = ctx.user.dealershipId ?? null;
+      if (!isAdmin && !dealershipId) {
+        return {
+          totalLeads: 0,
+          newLeads: 0,
+          qualifiedLeads: 0,
+          convertedLeads: 0,
+          totalBookings: 0,
+          pendingBookings: 0,
+          confirmedBookings: 0,
+          totalVehicles: 0,
+          availableVehicles: 0,
+          reservedVehicles: 0,
+          soldVehicles: 0,
+          leadsLast7Days: 0,
+          bookingsLast7Days: 0,
+          totalProspects: 0,
+          queuedProspects: 0,
+        };
+      }
+      // Dealer dashboard never surfaces platform Prospector aggregates.
+      // Scope to the user's dealership when set (including founder viewing a branch).
+      return getDashboardStats({
+        dealershipId: dealershipId ?? undefined,
+        includeProspects: false,
+      });
+    }),
+    activity: protectedProcedure.query(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      // No dealership context → empty feed (prevents cross-tenant / Prospector bleed).
+      if (!dealershipId) return [];
+      return getRecentActivity(10, {
+        dealershipId,
+        includeProspects: false,
+      });
+    }),
+    leadsTrend: protectedProcedure.query(async ({ ctx }) => {
+      const isAdmin = isFounderOrAdmin(ctx.user);
+      const dealershipId = ctx.user.dealershipId ?? null;
+      if (!isAdmin && !dealershipId) return [];
+      return getLeadsTrend(14, dealershipId ?? undefined);
+    }),
 
     /**
      * Sibling branches for the user's current dealership group.
@@ -1148,7 +1189,14 @@ export const appRouter = router({
         return { success: true, theme: input.theme };
       }),
 
-    listLeads: protectedProcedure.query(async () => listLeads(200)),
+    listLeads: protectedProcedure.query(async ({ ctx }) => {
+      const isAdmin = isFounderOrAdmin(ctx.user);
+      const dealershipId = ctx.user.dealershipId;
+      if (!isAdmin && !dealershipId) return [];
+      // Founders without a selected branch see nothing here — use admin tools for platform-wide.
+      if (!dealershipId) return [];
+      return listLeads(200, dealershipId);
+    }),
     listNetworkTradeIns: protectedProcedure.query(async ({ ctx }) => {
       const rows = await listNetworkTradeInQuotes(100);
       const dealershipId = ctx.user.dealershipId ?? 0;
@@ -1351,7 +1399,20 @@ export const appRouter = router({
           status: z.enum(["new", "contacted", "qualified", "converted", "lost"]),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const lead = await getLeadById(input.id);
+        if (!lead) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" });
+        }
+        if (
+          !isFounderOrAdmin(ctx.user) &&
+          (!ctx.user.dealershipId || lead.dealershipId !== ctx.user.dealershipId)
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This lead belongs to another dealership.",
+          });
+        }
         await updateLeadStatus(input.id, input.status);
         if (input.status === "converted" || input.status === "lost") {
           try {
@@ -1363,7 +1424,16 @@ export const appRouter = router({
         return { success: true } as const;
       }),
 
-    listBookings: protectedProcedure.query(async () => listBookings(200)),
+    /** Platform SaaS demo bookings — founder/admin only (not dealer customer test drives). */
+    listBookings: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Platform demos are founder/admin only",
+        });
+      }
+      return listBookings(200);
+    }),
     updateBookingStatus: protectedProcedure
       .input(
         z.object({
@@ -1371,7 +1441,13 @@ export const appRouter = router({
           status: z.enum(["pending", "confirmed", "completed", "cancelled"]),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Platform demos are founder/admin only",
+          });
+        }
         await updateBookingStatus(input.id, input.status);
         return { success: true } as const;
       }),
@@ -1729,7 +1805,12 @@ export const appRouter = router({
   }),
 
   prospects: router({
-    list: protectedProcedure.query(async () => listProspects(200)),
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+      }
+      return listProspects(200);
+    }),
 
     scout: protectedProcedure
       .input(
@@ -1741,7 +1822,10 @@ export const appRouter = router({
           count: z.number().int().min(1).max(10).default(5),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
         // Fetch names already in the DB so we can deduplicate both paths
         const existingRows = await listProspects(1000);
         const existingNames = existingRows.map((r) => r.dealershipName);
@@ -1888,7 +1972,10 @@ export const appRouter = router({
 
     handoff: protectedProcedure
       .input(z.object({ id: z.number().int() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
         const prospect = await getProspect(input.id);
         if (!prospect) return { success: false, error: "Prospect not found" } as const;
 
@@ -2007,14 +2094,20 @@ export const appRouter = router({
           ]),
         }),
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
         await updateProspectStatus(input.id, input.status);
         return { success: true } as const;
       }),
 
     remove: protectedProcedure
       .input(z.object({ id: z.number().int() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
         await deleteProspect(input.id);
         return { success: true } as const;
       }),
@@ -2149,8 +2242,8 @@ export const appRouter = router({
       ),
 
     runAudit: protectedProcedure.mutation(async () => {
-      // Gather inputs for the auditor
-      const kpis = await getDashboardStats();
+      // Gather inputs for the auditor (platform-wide founder audit)
+      const kpis = await getDashboardStats({ includeProspects: true });
       const agentStats = await getAgentStats();
       const recentActivity = await listAgentActivity({ limit: 200 });
 
@@ -2707,6 +2800,9 @@ export const appRouter = router({
     sendEmail: protectedProcedure
       .input(z.object({ id: z.number().int() }))
       .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
         const prospect = await getProspect(input.id);
         if (!prospect) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Prospect not found" });

@@ -194,9 +194,17 @@ export async function createLead(data: InsertLead): Promise<number> {
   return Number(result?.[0]?.insertId ?? result?.insertId ?? 0);
 }
 
-export async function listLeads(limit = 100) {
+export async function listLeads(limit = 100, dealershipId?: number | null) {
   const db = await getDb();
   if (!db) return [];
+  if (dealershipId != null) {
+    return db
+      .select()
+      .from(leads)
+      .where(eq(leads.dealershipId, dealershipId))
+      .orderBy(desc(leads.createdAt))
+      .limit(limit);
+  }
   return db.select().from(leads).orderBy(desc(leads.createdAt)).limit(limit);
 }
 
@@ -646,29 +654,44 @@ export async function deleteProspect(id: number) {
 }
 
 // === Aggregates / KPIs ===
-export async function getDashboardStats() {
-  const db = await getDb();
-  if (!db) {
-    return {
-      totalLeads: 0,
-      newLeads: 0,
-      qualifiedLeads: 0,
-      convertedLeads: 0,
-      totalBookings: 0,
-      pendingBookings: 0,
-      confirmedBookings: 0,
-      totalVehicles: 0,
-      availableVehicles: 0,
-      reservedVehicles: 0,
-      soldVehicles: 0,
-      leadsLast7Days: 0,
-      bookingsLast7Days: 0,
-      totalProspects: 0,
-      queuedProspects: 0,
-    };
-  }
 
+const EMPTY_DASHBOARD_STATS = {
+  totalLeads: 0,
+  newLeads: 0,
+  qualifiedLeads: 0,
+  convertedLeads: 0,
+  totalBookings: 0,
+  pendingBookings: 0,
+  confirmedBookings: 0,
+  totalVehicles: 0,
+  availableVehicles: 0,
+  reservedVehicles: 0,
+  soldVehicles: 0,
+  leadsLast7Days: 0,
+  bookingsLast7Days: 0,
+  totalProspects: 0,
+  queuedProspects: 0,
+} as const;
+
+/**
+ * Dashboard KPIs.
+ * Pass `dealershipId` to scope leads / vehicles / test-drive bookings to one tenant.
+ * Platform SaaS demos (`bookings`) and Prospector counts are never included when scoped.
+ */
+export async function getDashboardStats(opts?: {
+  dealershipId?: number | null;
+  /** Platform-wide Prospector totals — founder/admin audits only. */
+  includeProspects?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) return { ...EMPTY_DASHBOARD_STATS };
+
+  const dealershipId = opts?.dealershipId ?? null;
+  const includeProspects = opts?.includeProspects === true && dealershipId == null;
   const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const leadScope = dealershipId != null ? eq(leads.dealershipId, dealershipId) : undefined;
+  const vehicleScope =
+    dealershipId != null ? eq(vehicles.dealershipId, dealershipId) : undefined;
 
   const [totals] = await db
     .select({
@@ -677,15 +700,56 @@ export async function getDashboardStats() {
       qualifiedLeads: sql<number>`SUM(CASE WHEN ${leads.status} = 'qualified' THEN 1 ELSE 0 END)`,
       convertedLeads: sql<number>`SUM(CASE WHEN ${leads.status} = 'converted' THEN 1 ELSE 0 END)`,
     })
-    .from(leads);
+    .from(leads)
+    .where(leadScope);
 
-  const [bookingTotals] = await db
-    .select({
-      totalBookings: sql<number>`COUNT(*)`,
-      pendingBookings: sql<number>`SUM(CASE WHEN ${bookings.status} = 'pending' THEN 1 ELSE 0 END)`,
-      confirmedBookings: sql<number>`SUM(CASE WHEN ${bookings.status} = 'confirmed' THEN 1 ELSE 0 END)`,
-    })
-    .from(bookings);
+  let totalBookings = 0;
+  let pendingBookings = 0;
+  let confirmedBookings = 0;
+  let bookingsLast7Days = 0;
+
+  if (dealershipId != null) {
+    // Dealer dashboard: customer test drives, not GrayArx SaaS demo bookings.
+    const [tdTotals] = await db
+      .select({
+        totalBookings: sql<number>`COUNT(*)`,
+        pendingBookings: sql<number>`SUM(CASE WHEN ${testDriveBookings.status} = 'requested' THEN 1 ELSE 0 END)`,
+        confirmedBookings: sql<number>`SUM(CASE WHEN ${testDriveBookings.status} = 'confirmed' THEN 1 ELSE 0 END)`,
+      })
+      .from(testDriveBookings)
+      .where(eq(testDriveBookings.dealershipId, dealershipId));
+    totalBookings = Number(tdTotals?.totalBookings ?? 0);
+    pendingBookings = Number(tdTotals?.pendingBookings ?? 0);
+    confirmedBookings = Number(tdTotals?.confirmedBookings ?? 0);
+
+    const [td7] = await db
+      .select({ bookingsLast7Days: sql<number>`COUNT(*)` })
+      .from(testDriveBookings)
+      .where(
+        and(
+          eq(testDriveBookings.dealershipId, dealershipId),
+          gte(testDriveBookings.createdAt, since7),
+        ),
+      );
+    bookingsLast7Days = Number(td7?.bookingsLast7Days ?? 0);
+  } else {
+    const [bookingTotals] = await db
+      .select({
+        totalBookings: sql<number>`COUNT(*)`,
+        pendingBookings: sql<number>`SUM(CASE WHEN ${bookings.status} = 'pending' THEN 1 ELSE 0 END)`,
+        confirmedBookings: sql<number>`SUM(CASE WHEN ${bookings.status} = 'confirmed' THEN 1 ELSE 0 END)`,
+      })
+      .from(bookings);
+    totalBookings = Number(bookingTotals?.totalBookings ?? 0);
+    pendingBookings = Number(bookingTotals?.pendingBookings ?? 0);
+    confirmedBookings = Number(bookingTotals?.confirmedBookings ?? 0);
+
+    const [bookings7] = await db
+      .select({ bookingsLast7Days: sql<number>`COUNT(*)` })
+      .from(bookings)
+      .where(gte(bookings.createdAt, since7));
+    bookingsLast7Days = Number(bookings7?.bookingsLast7Days ?? 0);
+  }
 
   const [vehicleTotals] = await db
     .select({
@@ -694,90 +758,151 @@ export async function getDashboardStats() {
       reservedVehicles: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'reserved' THEN 1 ELSE 0 END)`,
       soldVehicles: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'sold' THEN 1 ELSE 0 END)`,
     })
-    .from(vehicles);
+    .from(vehicles)
+    .where(vehicleScope);
 
-  const [prospectTotals] = await db
-    .select({
-      totalProspects: sql<number>`COUNT(*)`,
-      queuedProspects: sql<number>`SUM(CASE WHEN ${prospects.status} = 'queued_for_call' THEN 1 ELSE 0 END)`,
-    })
-    .from(prospects);
+  let totalProspects = 0;
+  let queuedProspects = 0;
+  if (includeProspects) {
+    const [prospectTotals] = await db
+      .select({
+        totalProspects: sql<number>`COUNT(*)`,
+        queuedProspects: sql<number>`SUM(CASE WHEN ${prospects.status} = 'queued_for_call' THEN 1 ELSE 0 END)`,
+      })
+      .from(prospects);
+    totalProspects = Number(prospectTotals?.totalProspects ?? 0);
+    queuedProspects = Number(prospectTotals?.queuedProspects ?? 0);
+  }
 
   const [last7] = await db
     .select({ leadsLast7Days: sql<number>`COUNT(*)` })
     .from(leads)
-    .where(gte(leads.createdAt, since7));
-
-  const [bookings7] = await db
-    .select({ bookingsLast7Days: sql<number>`COUNT(*)` })
-    .from(bookings)
-    .where(gte(bookings.createdAt, since7));
+    .where(
+      leadScope
+        ? and(leadScope, gte(leads.createdAt, since7))
+        : gte(leads.createdAt, since7),
+    );
 
   return {
     totalLeads: Number(totals?.totalLeads ?? 0),
     newLeads: Number(totals?.newLeads ?? 0),
     qualifiedLeads: Number(totals?.qualifiedLeads ?? 0),
     convertedLeads: Number(totals?.convertedLeads ?? 0),
-    totalBookings: Number(bookingTotals?.totalBookings ?? 0),
-    pendingBookings: Number(bookingTotals?.pendingBookings ?? 0),
-    confirmedBookings: Number(bookingTotals?.confirmedBookings ?? 0),
+    totalBookings,
+    pendingBookings,
+    confirmedBookings,
     totalVehicles: Number(vehicleTotals?.totalVehicles ?? 0),
     availableVehicles: Number(vehicleTotals?.availableVehicles ?? 0),
     reservedVehicles: Number(vehicleTotals?.reservedVehicles ?? 0),
     soldVehicles: Number(vehicleTotals?.soldVehicles ?? 0),
     leadsLast7Days: Number(last7?.leadsLast7Days ?? 0),
-    bookingsLast7Days: Number(bookings7?.bookingsLast7Days ?? 0),
-    totalProspects: Number(prospectTotals?.totalProspects ?? 0),
-    queuedProspects: Number(prospectTotals?.queuedProspects ?? 0),
+    bookingsLast7Days,
+    totalProspects,
+    queuedProspects,
   };
 }
 
-export async function getRecentActivity(limit = 8) {
+export type DealerActivityItem = {
+  type: "lead" | "booking" | "prospect";
+  id: number;
+  title: string;
+  subtitle: string;
+  createdAt: Date;
+};
+
+/**
+ * Live activity for dealer `/dashboard`.
+ * - Always exclude AI Prospector events unless `includeProspects` (admin-only callers).
+ * - When `dealershipId` is set: only that tenant's leads + test-drive bookings.
+ * - Platform SaaS demos (`bookings`) are founder-only and omitted for scoped dealer feeds.
+ */
+export async function getRecentActivity(
+  limit = 8,
+  opts?: { dealershipId?: number | null; includeProspects?: boolean },
+): Promise<DealerActivityItem[]> {
   const db = await getDb();
   if (!db) return [];
 
-  const recentLeads = await db.select().from(leads).orderBy(desc(leads.createdAt)).limit(limit);
-  const recentBookings = await db.select().from(bookings).orderBy(desc(bookings.createdAt)).limit(limit);
-  const recentProspects = await db.select().from(prospects).orderBy(desc(prospects.createdAt)).limit(limit);
+  const dealershipId = opts?.dealershipId ?? null;
+  const includeProspects = opts?.includeProspects === true;
 
-  type Activity = {
-    type: "lead" | "booking" | "prospect";
-    id: number;
-    title: string;
-    subtitle: string;
-    createdAt: Date;
-  };
+  const recentLeads =
+    dealershipId != null
+      ? await db
+          .select()
+          .from(leads)
+          .where(eq(leads.dealershipId, dealershipId))
+          .orderBy(desc(leads.createdAt))
+          .limit(limit)
+      : await db.select().from(leads).orderBy(desc(leads.createdAt)).limit(limit);
 
-  const merged: Activity[] = [
+  const merged: DealerActivityItem[] = [
     ...recentLeads.map((l) => ({
       type: "lead" as const,
       id: l.id,
-      title: `New lead — ${l.dealershipName}`,
-      subtitle: `${l.contactName} · ${l.email}`,
+      title: `New lead — ${l.contactName}`,
+      subtitle: l.email,
       createdAt: l.createdAt,
     })),
-    ...recentBookings.map((b) => ({
-      type: "booking" as const,
-      id: b.id,
-      title: `Demo booked — ${b.dealershipName}`,
-      subtitle: `${b.contactName} · ${b.preferredDate} ${b.preferredTime}`,
-      createdAt: b.createdAt,
-    })),
-    ...recentProspects.map((p) => ({
-      type: "prospect" as const,
-      id: p.id,
-      title: `Prospect scouted — ${p.dealershipName}`,
-      subtitle: `${p.city ?? p.region ?? "South Africa"} · score ${p.score}`,
-      createdAt: p.createdAt,
-    })),
-  ]
+  ];
+
+  if (dealershipId != null) {
+    const recentTestDrives = await db
+      .select()
+      .from(testDriveBookings)
+      .where(eq(testDriveBookings.dealershipId, dealershipId))
+      .orderBy(desc(testDriveBookings.createdAt))
+      .limit(limit);
+    merged.push(
+      ...recentTestDrives.map((b) => ({
+        type: "booking" as const,
+        id: b.id,
+        title: `Test drive — ${b.customerName}`,
+        subtitle: `${b.referenceNumber} · ${b.status}`,
+        createdAt: b.createdAt,
+      })),
+    );
+  } else {
+    // Unscoped (founder platform view only): SaaS demo bookings, never dealer-tenant data mix via prospects unless opted in.
+    const recentBookings = await db
+      .select()
+      .from(bookings)
+      .orderBy(desc(bookings.createdAt))
+      .limit(limit);
+    merged.push(
+      ...recentBookings.map((b) => ({
+        type: "booking" as const,
+        id: b.id,
+        title: `Demo booked — ${b.dealershipName}`,
+        subtitle: `${b.contactName} · ${b.preferredDate} ${b.preferredTime}`,
+        createdAt: b.createdAt,
+      })),
+    );
+  }
+
+  if (includeProspects) {
+    const recentProspects = await db
+      .select()
+      .from(prospects)
+      .orderBy(desc(prospects.createdAt))
+      .limit(limit);
+    merged.push(
+      ...recentProspects.map((p) => ({
+        type: "prospect" as const,
+        id: p.id,
+        title: `Prospect scouted — ${p.dealershipName}`,
+        subtitle: `${p.city ?? p.region ?? "South Africa"} · score ${p.score}`,
+        createdAt: p.createdAt,
+      })),
+    );
+  }
+
+  return merged
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, limit);
-
-  return merged;
 }
 
-export async function getLeadsTrend(days = 14) {
+export async function getLeadsTrend(days = 14, dealershipId?: number | null) {
   const db = await getDb();
   if (!db) return [];
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -787,11 +912,17 @@ export async function getLeadsTrend(days = 14) {
   // query verbatim so the parser sees identical text on both sides.
   try {
     const result: any = await db.execute(
-      sql`SELECT DATE(\`createdAt\`) AS \`day\`, COUNT(*) AS \`count\`
-          FROM \`leads\`
-          WHERE \`createdAt\` >= ${since}
-          GROUP BY DATE(\`createdAt\`)
-          ORDER BY DATE(\`createdAt\`)`,
+      dealershipId != null
+        ? sql`SELECT DATE(\`createdAt\`) AS \`day\`, COUNT(*) AS \`count\`
+            FROM \`leads\`
+            WHERE \`createdAt\` >= ${since} AND \`dealershipId\` = ${dealershipId}
+            GROUP BY DATE(\`createdAt\`)
+            ORDER BY DATE(\`createdAt\`)`
+        : sql`SELECT DATE(\`createdAt\`) AS \`day\`, COUNT(*) AS \`count\`
+            FROM \`leads\`
+            WHERE \`createdAt\` >= ${since}
+            GROUP BY DATE(\`createdAt\`)
+            ORDER BY DATE(\`createdAt\`)`,
     );
     // mysql2/drizzle returns [rows, fields] for raw execute; normalise.
     const rows: Array<{ day: unknown; count: unknown }> = Array.isArray(result)

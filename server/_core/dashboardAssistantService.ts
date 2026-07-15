@@ -35,7 +35,7 @@ export async function gatherDashboardAssistantContext(): Promise<DashboardAssist
   const [agentStats, activityRows, dashboardStats] = await Promise.all([
     getAgentStats(),
     listAgentActivity({ limit: 30 }),
-    getDashboardStats(),
+    getDashboardStats({ includeProspects: true }),
   ]);
 
   const agents = AGENT_LIST.map((persona) => {

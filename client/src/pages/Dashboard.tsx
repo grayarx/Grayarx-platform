@@ -5,7 +5,6 @@ import {
   Phone,
   Calendar as CalendarIcon,
   Car,
-  Compass,
   Activity,
   Sparkles,
   ArrowUpRight,
@@ -28,7 +27,6 @@ import {
 } from "recharts";
 import DealerShell from "@/components/DealerShell";
 import { PhotoGuideCard } from "@/components/PhotoGuide";
-import AgentActivityFeed from "@/components/AgentActivityFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -92,7 +90,6 @@ export default function Dashboard() {
   const channelData = [
     { channel: "Leads", value: stats?.totalLeads ?? 0 },
     { channel: "Bookings", value: stats?.totalBookings ?? 0 },
-    { channel: "Prospects", value: stats?.totalProspects ?? 0 },
     { channel: "Inventory", value: stats?.totalVehicles ?? 0 },
   ];
 
@@ -101,7 +98,7 @@ export default function Dashboard() {
   return (
     <DealerShell
       title={`Welcome, ${user?.name?.split(" ")[0] ?? "Dealer"}`}
-      subtitle="Live operational view of leads, bookings, AI prospecting, and inventory."
+      subtitle="Live operational view of your dealership's leads, bookings, and inventory."
       actions={
         <div
           className="status-pill inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0"
@@ -181,23 +178,22 @@ export default function Dashboard() {
         />
         <StatCard
           icon={CalendarIcon}
-          label="Demo bookings"
+          label="Test-drive bookings"
           value={statsLoading ? "…" : stats?.totalBookings ?? 0}
           hint={`+${stats?.bookingsLast7Days ?? 0} in last 7 days`}
           delay={0.05}
-        />
-        <StatCard
-          icon={Compass}
-          label="Prospects scouted"
-          value={statsLoading ? "…" : stats?.totalProspects ?? 0}
-          hint={`${stats?.queuedProspects ?? 0} queued for call`}
-          delay={0.1}
         />
         <StatCard
           icon={Car}
           label="Live on showroom"
           value={statsLoading ? "…" : stats?.availableVehicles ?? 0}
           hint={`${stats?.totalVehicles ?? 0} imported · ${stats?.soldVehicles ?? 0} sold · ${stats?.reservedVehicles ?? 0} reserved`}
+          delay={0.1}
+        />
+        <StatCard
+          icon={Sparkles}
+          label="New leads"
+          value={statsLoading ? "…" : stats?.newLeads ?? 0}
           delay={0.15}
         />
       </div>
@@ -205,27 +201,27 @@ export default function Dashboard() {
       {/* Secondary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          icon={Sparkles}
-          label="New leads"
-          value={statsLoading ? "…" : stats?.newLeads ?? 0}
-          delay={0}
-        />
-        <StatCard
           icon={Phone}
           label="Qualified leads"
           value={statsLoading ? "…" : stats?.qualifiedLeads ?? 0}
-          delay={0.05}
+          delay={0}
         />
         <StatCard
           icon={ArrowUpRight}
           label="Converted leads"
           value={statsLoading ? "…" : stats?.convertedLeads ?? 0}
-          delay={0.1}
+          delay={0.05}
         />
         <StatCard
           icon={CalendarIcon}
-          label="Confirmed demos"
+          label="Confirmed bookings"
           value={statsLoading ? "…" : stats?.confirmedBookings ?? 0}
+          delay={0.1}
+        />
+        <StatCard
+          icon={Users}
+          label="Pending bookings"
+          value={statsLoading ? "…" : stats?.pendingBookings ?? 0}
           delay={0.15}
         />
       </div>
@@ -295,18 +291,18 @@ export default function Dashboard() {
             Live activity
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            New leads, bookings, and AI Prospector scouting events.
+            New leads and test-drive bookings for your dealership.
           </p>
         </CardHeader>
         <CardContent>
           {(!activity || activity.length === 0) ? (
             <p className="py-8 text-center text-muted-foreground text-sm">
-              No activity yet. Capture your first lead or run the Prospector to see it appear here.
+              No activity yet. Capture your first lead or book a test drive to see it appear here.
             </p>
           ) : (
             <div className="space-y-1">
               {activity.map((a, i) => {
-                const Icon = a.type === "lead" ? Users : a.type === "booking" ? CalendarIcon : Compass;
+                const Icon = a.type === "lead" ? Users : CalendarIcon;
                 return (
                   <motion.div
                     key={`${a.type}-${a.id}`}

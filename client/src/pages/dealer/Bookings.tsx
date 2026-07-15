@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +63,7 @@ function statusClass(s: string) {
   return map[s] ?? "";
 }
 
-export default function Bookings() {
+function PlatformDemosTab() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | BookingStatus>("all");
   const utils = trpc.useUtils();
@@ -91,25 +92,7 @@ export default function Bookings() {
   }, [data, filter, search]);
 
   return (
-    <DealerShell
-      title="Bookings"
-      subtitle="Customer test-drive requests handled by Lerato, plus SaaS demo requests for the GrayArx platform itself."
-    >
-      <Tabs defaultValue="testdrives" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="testdrives" className="gap-2">
-            <CarIcon className="h-4 w-4" /> Customer test drives
-          </TabsTrigger>
-          <TabsTrigger value="demos" className="gap-2">
-            <CalendarIcon className="h-4 w-4" /> Platform demos
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="testdrives">
-          <TestDrivesTab />
-        </TabsContent>
-
-        <TabsContent value="demos">
+    <>
       <div className="flex flex-col md:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -216,16 +199,51 @@ export default function Bookings() {
           </TableBody>
         </Table>
       </div>
-        </TabsContent>
-      </Tabs>
+    </>
+  );
+}
+
+export default function Bookings() {
+  const { user } = useAuth();
+  const isFounder = user?.role === "founder" || user?.role === "admin";
+
+  return (
+    <DealerShell
+      title="Bookings"
+      subtitle={
+        isFounder
+          ? "Customer test-drive requests handled by Lerato, plus SaaS demo requests for the GrayArx platform itself."
+          : "Customer test-drive requests for your dealership, handled by Lerato."
+      }
+    >
+      {isFounder ? (
+        <Tabs defaultValue="testdrives" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="testdrives" className="gap-2">
+              <CarIcon className="h-4 w-4" /> Customer test drives
+            </TabsTrigger>
+            <TabsTrigger value="demos" className="gap-2">
+              <CalendarIcon className="h-4 w-4" /> Platform demos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="testdrives">
+            <TestDrivesTab />
+          </TabsContent>
+
+          <TabsContent value="demos">
+            <PlatformDemosTab />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <TestDrivesTab />
+      )}
     </DealerShell>
   );
 }
 
 /**
- * Customer test-drive bookings handled by Lerato. Distinct from the SaaS
- * "Platform demos" tab above (which is a dealer requesting a demo of the
- * GrayArx product). Test drives are scoped automatically to the user's
+ * Customer test-drive bookings handled by Lerato. Scoped to the user's
  * dealership server-side via `adminBookings.list`.
  */
 type ReclassifyBooking = { id: number; referenceNumber: string; customerName: string };
@@ -473,7 +491,6 @@ function TestDrivesTab() {
         </Table>
       </div>
 
-      {/* Reclassify modal */}
       <Dialog open={!!reclassifyTarget} onOpenChange={(open) => !open && setReclassifyTarget(null)}>
         <DialogContent className="sm:max-w-md bg-card border-primary/20">
           <DialogHeader>
