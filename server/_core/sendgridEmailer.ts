@@ -1,10 +1,16 @@
+/**
+ * Legacy SendGrid helper — kept for optional local scripts only.
+ * Production email uses Resend (`resendEmailService.ts` / `emailService.ts`).
+ * Do not import this at server boot; `setApiKey("")` triggers
+ * `API key does not start with "SG."` from the SendGrid SDK.
+ */
+
 import sgMail from "@sendgrid/mail";
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY?.trim() ?? "";
+const sendgridReady = SENDGRID_API_KEY.startsWith("SG.");
 
-if (!SENDGRID_API_KEY) {
-  console.warn("⚠️ SENDGRID_API_KEY not set. Email sending will not work.");
-} else {
+if (sendgridReady) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
@@ -16,8 +22,10 @@ export interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  if (!SENDGRID_API_KEY) {
-    console.error("❌ SendGrid API key not configured");
+  if (!sendgridReady) {
+    console.warn(
+      "[SendGrid] Skipped — SENDGRID_API_KEY missing or invalid. Use Resend (RESEND_API_KEY) for production email."
+    );
     return false;
   }
 
@@ -30,10 +38,10 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     };
 
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${options.to}`);
+    console.log(`[SendGrid] Email sent to ${options.to}`);
     return true;
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error("[SendGrid] Error sending email:", error);
     return false;
   }
 }
@@ -48,8 +56,7 @@ export async function sendTestEmail(recipientEmail: string): Promise<boolean> {
         body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); color: #ffffff; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; background-color: #0a0e27; }
         .header { text-align: center; padding: 40px 20px; }
-        .logo { width: 150px; height: auto; margin-bottom: 20px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .logo { width: 150px; height: auto; margin-bottom: 20px; }
         .content { padding: 30px 20px; background-color: #1a1f3a; border-radius: 8px; margin: 20px; }
         .content h2 { color: #d4af37; margin-top: 0; }
         .content p { line-height: 1.6; color: #ffffff; }
@@ -59,23 +66,18 @@ export async function sendTestEmail(recipientEmail: string): Promise<boolean> {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/grayarx-logo-email-DQpzBzJ8VxvYZZ47wcX6UB.webp" alt="GrayArx" class="logo" style="display: inline-block;">
+            <img src="https://www.grayarx.com/logo-crest.png" alt="GrayArx" class="logo" style="display: inline-block;">
         </div>
-        
         <div class="content">
             <h2>Your 24/7 AI Sales Team is Ready</h2>
             <p>Hi there,</p>
-            <p><strong>✅ Email system is working!</strong></p>
-            <p>This test email confirms that SendGrid is properly configured and the animated logo is rendering.</p>
-            <p><strong>Check if the logo above is animated (pulsing effect).</strong></p>
-            <p>Your agents can now send emails to prospects 24/7.</p>
+            <p><strong>Email system test (legacy SendGrid path).</strong></p>
+            <p>Production transactional mail should use Resend.</p>
             <p>Best regards,<br><strong>GrayArx Team</strong></p>
         </div>
-        
         <div class="footer">
             <p>GrayArx — The Dealership AI Operating System</p>
-            <p>📧 grayarx@gmail.com | 📞 079 491 5187</p>
-            <p>🌐 www.grayarx.com</p>
+            <p>www.grayarx.com</p>
         </div>
     </div>
 </body>
@@ -84,7 +86,7 @@ export async function sendTestEmail(recipientEmail: string): Promise<boolean> {
 
   return sendEmail({
     to: recipientEmail,
-    subject: "✅ GrayArx Email System Test — Animated Logo Verification",
+    subject: "GrayArx Email System Test (SendGrid legacy)",
     html,
   });
 }

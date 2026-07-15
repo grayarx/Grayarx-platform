@@ -1,12 +1,10 @@
-import sgMail from "@sendgrid/mail";
+import { sendEmailViaResend } from "./resendEmailService";
 
 /**
- * Email Service Integration with SendGrid
- * Sends branded GrayArx emails with logo and professional templates
+ * Branded transactional email helpers.
+ * Production path is Resend (RESEND_API_KEY). SendGrid was removed from boot
+ * so an empty/mis-set SENDGRID_API_KEY no longer logs `API key does not start with "SG."`.
  */
-
-// Initialize SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
 
 interface EmailOptions {
   to: string | string[];
@@ -16,21 +14,22 @@ interface EmailOptions {
 }
 
 /**
- * Send branded GrayArx email via SendGrid
+ * Send branded GrayArx email via Resend
  */
 export async function sendBrandedEmail(options: EmailOptions): Promise<boolean> {
   try {
-    const result = await sgMail.send({
-      from: {
-        email: "noreply@grayarx.com",
-        name: "GrayArx Team",
-      },
-      to: Array.isArray(options.to) ? options.to : [options.to],
+    const result = await sendEmailViaResend({
+      from: "GrayArx Team <noreply@grayarx.com>",
+      to: options.to,
       subject: options.subject,
       html: wrapEmailTemplate(options.htmlContent),
-      text: options.textContent,
       replyTo: process.env.EMAIL_USER || "support@grayarx.com",
     });
+
+    if (!result.success) {
+      console.error("[Email Service] Failed to send email:", result.error);
+      return false;
+    }
 
     console.log(
       `[Email Service] Email sent successfully to ${Array.isArray(options.to) ? options.to.join(", ") : options.to}`

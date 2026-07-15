@@ -30,10 +30,14 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
-    if (!ENV.oAuthServerUrl) {
-      console.error(
-        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
+    // Manus platform OAuth — optional on Railway. Dealer login uses local
+    // email/password sessions (see authenticateRequest → verifyCustomSessionToken).
+    // Only the legacy /api/oauth/callback path needs OAUTH_SERVER_URL.
+    if (ENV.oAuthServerUrl) {
+      console.log("[OAuth] Manus OAuth client ready:", ENV.oAuthServerUrl);
+    } else {
+      console.log(
+        "[OAuth] Manus OAuth unused — dealer auth is local (email/password). Set OAUTH_SERVER_URL only if using Manus login."
       );
     }
   }

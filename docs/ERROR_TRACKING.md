@@ -31,7 +31,7 @@ quota on non-error data.
 - `server/_core/index.ts` — imports `./sentry` as the first module (before
   express) so init runs as early as possible; captures `uncaughtException` /
   `unhandledRejection` to Sentry alongside the existing `alertFounder()` email;
-  registers Sentry's Express error handler after all routes plus a JSON
+  registers a manual Sentry error middleware after all routes plus a JSON
   fallback error handler (so API clients get `{ error, sentryEventId }`
   instead of an HTML stack-trace page).
 - `server/_core/agentResilience.ts` — when a circuit breaker (OpenAI, WhatsApp,
@@ -43,11 +43,17 @@ quota on non-error data.
   a `.catch()`, so a missing/blocked Sentry SDK can never break page load.
 
 **Known limitation:** this project bundles the server into a single ESM file
-via esbuild, which means Sentry's automatic HTTP/Express instrumentation
-(request breadcrumbs, auto route names) doesn't attach — you may see a
-one-time `express is not instrumented` warning in the logs. This is expected
-and harmless: manual capture (uncaught exceptions, the Express error handler,
-and circuit-breaker warnings) still works normally and is all this setup needs.
+via esbuild, so Sentry cannot auto-patch Express (that would need
+`node --import ./instrument.mjs`, which we deliberately do **not** change on
+Railway). Instead we:
+
+1. Pass `skipOpenTelemetrySetup: true` in `Sentry.init()`
+2. Attach a thin manual error middleware that calls `captureException`
+   (instead of `setupExpressErrorHandler`, which prints
+   `express is not instrumented` at boot)
+
+Manual capture still covers uncaught exceptions, Express route errors, and
+circuit-breaker warnings — all this setup needs for error tracking.
 
 ## Founder setup steps (one-time)
 
