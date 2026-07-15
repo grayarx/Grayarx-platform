@@ -14,12 +14,12 @@
 - 3 CNAME records prepared for www.grayarx.com
 - Step-by-step implementation instructions
 - DNS propagation verification procedures
-- SendGrid domain verification process
+- Resend domain verification process
 
 **Action Required:**
 - Add 3 CNAME records to domain registrar
 - Wait 24-48 hours for DNS propagation
-- Verify in SendGrid dashboard
+- Verify in Resend dashboard
 
 ---
 
@@ -141,7 +141,7 @@
 ### Short-term (This Week)
 - ⏳ Add DNS records to domain registrar (5 min)
 - ⏳ Wait for DNS propagation (24-48 hours)
-- ⏳ Verify SendGrid domain (5 min)
+- ⏳ Verify Resend domain (5 min)
 - ⏳ Deploy to production (5 min)
 - ⏳ Enable dealership onboarding (5 min)
 
@@ -165,7 +165,7 @@
 1. **DNS_RECORDS_CONFIG.md** - DNS setup instructions
 2. **PRODUCTION_DEPLOYMENT.md** - Deployment procedures
 3. **TEST_DEALERSHIP_ONBOARDING.md** - Onboarding guide
-4. **SENDGRID_DNS_SETUP.md** - Email configuration
+4. **CREDENTIALS_SETUP.md** - Email configuration (Resend)
 5. **IMPLEMENTATION_COMPLETE.md** - Implementation summary
 6. **FINAL_DEPLOYMENT_SUMMARY.md** - This file
 
@@ -221,7 +221,7 @@
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|-----------|
 | DNS propagation delay | Low | Medium | Pre-configured records ready |
-| Email delivery issues | Low | High | SendGrid backup configured |
+| Email delivery issues | Low | High | Resend backup configured |
 | High load spike | Medium | Medium | Rate limiting + auto-scaling |
 | Data loss | Very Low | Critical | Database replication + backups |
 | Security breach | Very Low | Critical | Encryption + audit logging |
@@ -277,10 +277,10 @@
 2. **Verify DNS Propagation** (24-48 hours)
    - Use DNS checker: https://dnschecker.org
    - Search for: mail.www.grayarx.com
-   - Expected: CNAME pointing to sendgrid.net
+   - Expected: SPF/DKIM records from Resend dashboard
 
-3. **Verify SendGrid Domain** (5 minutes after DNS)
-   - Log in to SendGrid: https://app.sendgrid.com
+3. **Verify Resend Domain** (5 minutes after DNS)
+   - Log in to Resend: https://resend.com/domains
    - Go to Settings → Sender Authentication
    - Click Verify for www.grayarx.com
    - Confirm DKIM signing enabled
@@ -310,7 +310,7 @@
 - DNS Configuration: `DNS_RECORDS_CONFIG.md`
 - Deployment Guide: `PRODUCTION_DEPLOYMENT.md`
 - Onboarding Guide: `TEST_DEALERSHIP_ONBOARDING.md`
-- Email Setup: `SENDGRID_DNS_SETUP.md`
+- Email Setup: `CREDENTIALS_SETUP.md` (Resend section)
 
 ### Tools
 - Automated onboarding script: `scripts/onboard-test-dealership.mjs`

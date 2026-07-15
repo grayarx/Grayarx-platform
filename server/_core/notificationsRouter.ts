@@ -146,7 +146,7 @@ export const notificationsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // In production, this would call SendGrid or similar
+      // In production, this would call Resend
       // For now, create a notification record
       const result = await db
         .insert(notifications)

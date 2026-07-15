@@ -260,7 +260,7 @@ async function onboardTestDealership() {
     log(`  Test Leads Created: ${testLeadIds.length}`, 'yellow');
     log(`  Agents Activated: 5/5`, 'yellow');
     log('\nNext Steps:', 'blue');
-    log('  1. Monitor email delivery in SendGrid dashboard', 'yellow');
+    log('  1. Monitor email delivery in Resend dashboard', 'yellow');
     log('  2. Check agent performance in Analytics', 'yellow');
     log('  3. Verify lead qualification accuracy', 'yellow');
     log('  4. Test SMS and WhatsApp delivery', 'yellow');

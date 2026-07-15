@@ -48,9 +48,6 @@ DATABASE_URL=mysql://username:password@host:3306/grayarx
 
 # Authentication
 JWT_SECRET=generate-a-strong-random-string
-VITE_APP_ID=your-manus-app-id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
 OWNER_OPEN_ID=your-owner-id
 OWNER_NAME=Your Name
 
@@ -63,10 +60,9 @@ TWILIO_API_KEY=your_twilio_api_key
 TWILIO_PHONE_NUMBER=+1234567890
 TWILIO_MODE=live
 
-# SendGrid (Email)
-SENDGRID_API_KEY=SG.your_sendgrid_key
+# Resend (Email)
+RESEND_API_KEY=re_your_resend_key
 EMAIL_USER=noreply@grayarx.com
-EMAIL_PASSWORD=your_email_password
 
 # Analytics
 VITE_ANALYTICS_ENDPOINT=https://analytics.grayarx.com
@@ -108,16 +104,11 @@ Before deployment, collect the following:
    - API Key
    - Phone Number (verified)
 
-3. **SendGrid**
-   - API Key (starts with `SG.`)
-   - Verified sender email
+3. **Resend**
+   - API Key (starts with `re_`)
+   - Verified sender domain or email
 
-4. **Manus OAuth**
-   - App ID
-   - OAuth Server URL
-   - Portal URL
-
-5. **Database**
+4. **Database**
    - Connection string
    - Username/password
    - Database name
@@ -133,7 +124,7 @@ STRIPE_API_KEY=sk_live_your_key
 TWILIO_ACCOUNT_SID=your_sid
 TWILIO_API_KEY=your_key
 TWILIO_PHONE_NUMBER=+1234567890
-SENDGRID_API_KEY=SG.your_key
+RESEND_API_KEY=re_your_key
 EMAIL_USER=noreply@grayarx.com
 # ... add other variables
 EOF
@@ -158,10 +149,10 @@ curl https://api.stripe.com/v1/account \
 curl -X GET https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID \
   -u $TWILIO_ACCOUNT_SID:$TWILIO_API_KEY
 
-# Test SendGrid
+# Test Resend
 curl --request GET \
-  --url https://api.sendgrid.com/v3/mail/send \
-  --header "Authorization: Bearer $SENDGRID_API_KEY"
+  --url https://api.resend.com/domains \
+  --header "Authorization: Bearer $RESEND_API_KEY"
 ```
 
 ## Database Setup

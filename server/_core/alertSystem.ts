@@ -276,7 +276,7 @@ export async function deliverAlert(alert: Alert, channel: AlertChannel): Promise
 async function deliverEmailAlert(alert: Alert): Promise<void> {
   if (!alert.email) return;
 
-  // In production, use SendGrid/Resend
+  // In production, use Resend
   const subject = `[${alert.severity.toUpperCase()}] ${alert.title}`;
   const content = `
     <h2>${alert.title}</h2>

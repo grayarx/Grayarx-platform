@@ -2,8 +2,7 @@ import { sendEmailViaResend } from "./resendEmailService";
 
 /**
  * Branded transactional email helpers.
- * Production path is Resend (RESEND_API_KEY). SendGrid was removed from boot
- * so an empty/mis-set SENDGRID_API_KEY no longer logs `API key does not start with "SG."`.
+ * Production path is Resend only (RESEND_API_KEY).
  */
 
 interface EmailOptions {

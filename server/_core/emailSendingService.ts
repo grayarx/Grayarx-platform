@@ -39,7 +39,7 @@ interface EmailStats {
   bounceRate: number;
 }
 
-// Mock SendGrid integration
+// Prospect email sending (tracking metadata; delivery via Resend elsewhere)
 export const sendProspectEmail = async (
   prospectId: string,
   dealershipId: string,
@@ -50,28 +50,10 @@ export const sendProspectEmail = async (
   const emailId = `email-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const trackingPixelId = `pixel-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Mock SendGrid API call
-  console.log(`[SendGrid] Sending email to ${recipientEmail}`);
-  console.log(`[SendGrid] Subject: ${subject}`);
-  console.log(`[SendGrid] Email ID: ${emailId}`);
-  console.log(`[SendGrid] Tracking Pixel: ${trackingPixelId}`);
-
-  // In production, would call SendGrid API:
-  // const response = await sgMail.send({
-  //   to: recipientEmail,
-  //   from: process.env.SENDGRID_FROM_EMAIL,
-  //   subject,
-  //   html: body,
-  //   trackingSettings: {
-  //     clickTracking: { enabled: true },
-  //     openTracking: { enabled: true },
-  //   },
-  //   customArgs: {
-  //     prospectId,
-  //     dealershipId,
-  //     emailId,
-  //   },
-  // });
+  console.log(`[Email] Queued prospect email to ${recipientEmail}`);
+  console.log(`[Email] Subject: ${subject}`);
+  console.log(`[Email] Email ID: ${emailId}`);
+  console.log(`[Email] Tracking Pixel: ${trackingPixelId}`);
 
   return {
     success: true,
@@ -124,7 +106,7 @@ export const trackEmailClick = async (
   return event;
 };
 
-// Handle bounce events from SendGrid webhook
+// Handle bounce events from email webhook
 export const handleEmailBounce = async (
   emailId: string,
   prospectId: string,

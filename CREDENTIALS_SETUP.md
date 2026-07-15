@@ -10,8 +10,7 @@ GrayArx integrates with the following services:
 |---------|---------|----------|-----------|
 | Stripe | Payment processing | Yes | 15 min |
 | Twilio | SMS notifications | Yes | 10 min |
-| SendGrid | Email delivery | Yes | 10 min |
-| Manus OAuth | Authentication | Yes | 5 min |
+| Resend | Email delivery | Yes | 10 min |
 | Google OAuth | Social login | Optional | 10 min |
 | Apple OAuth | Social login | Optional | 10 min |
 
@@ -108,81 +107,72 @@ curl -X POST https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID/Mess
   -u $TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN
 ```
 
-### 3. SendGrid (Email Delivery)
+### 3. Resend (Email Delivery)
 
 **Purpose:** Send verification emails, password resets, alerts
 
 **Setup Steps:**
 
-1. Go to https://sendgrid.com/
-2. Create a SendGrid account
-3. Navigate to **Settings** → **API Keys**
+1. Go to https://resend.com/
+2. Create a Resend account
+3. Navigate to **API Keys**
 4. Click **Create API Key**
 5. Give it a name (e.g., "GrayArx Production")
-6. Select **Full Access**
-7. Copy the API key
+6. Copy the API key (starts with `re_`)
 
-**Sender Verification:**
+**Domain / Sender Verification:**
 
-1. Go to **Settings** → **Sender Authentication**
-2. Click **Verify a Single Sender**
-3. Enter your sender email (e.g., noreply@grayarx.com)
-4. Check your email and click verification link
-5. Repeat for additional sender addresses
+1. Go to **Domains** and add your sending domain (e.g., `grayarx.com`), or
+2. Use a verified single sender address under **Emails**
+3. Add the SPF/DKIM DNS records Resend provides
+4. Click **Verify** after DNS propagation
 
 **Configuration:**
 
 ```bash
 # Add to .env.production
-SENDGRID_API_KEY=SG.your_api_key_here
+RESEND_API_KEY=re_your_api_key_here
 EMAIL_USER=noreply@grayarx.com
-EMAIL_PASSWORD=not_used_with_sendgrid
 ```
 
 **Verification:**
 
 ```bash
 curl --request GET \
-  --url https://api.sendgrid.com/v3/mail/send \
-  --header "Authorization: Bearer SG.your_api_key_here" \
-  --header "Content-Type: application/json"
+  --url https://api.resend.com/domains \
+  --header "Authorization: Bearer re_your_api_key_here"
 ```
 
 **Testing:**
 
 ```bash
 curl --request POST \
-  --url https://api.sendgrid.com/v3/mail/send \
-  --header "Authorization: Bearer SG.your_api_key_here" \
+  --url https://api.resend.com/emails \
+  --header "Authorization: Bearer re_your_api_key_here" \
   --header "Content-Type: application/json" \
   --data '{
-    "personalizations": [{
-      "to": [{"email": "test@example.com"}]
-    }],
-    "from": {"email": "noreply@grayarx.com"},
+    "from": "noreply@grayarx.com",
+    "to": "test@example.com",
     "subject": "Test Email",
-    "content": [{"type": "text/plain", "value": "Test"}]
+    "html": "<p>Test</p>"
   }'
 ```
 
-### 4. Manus OAuth (Authentication)
+### 4. Dealer Authentication (Email/Password)
 
-**Purpose:** User authentication and authorization
+**Purpose:** Dealer login and session management
 
 **Setup Steps:**
 
-1. Contact Manus support or use provided credentials
-2. Get your **App ID**
-3. Get your **OAuth Server URL**
-4. Get your **Portal URL**
+1. Set a strong `JWT_SECRET` for session signing
+2. Dealers sign in at `/login` with email and password
+3. No external OAuth provider is required for dealer access
 
 **Configuration:**
 
 ```bash
 # Add to .env.production
-VITE_APP_ID=your_manus_app_id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
+JWT_SECRET=your_strong_random_secret
 OWNER_OPEN_ID=your_owner_id
 OWNER_NAME=Your Name
 ```
@@ -200,7 +190,6 @@ OWNER_NAME=Your Name
 5. Select **Web application**
 6. Add authorized redirect URIs:
    - `https://your-domain.com/oauth/callback`
-   - `https://your-domain.com/api/oauth/callback`
 7. Copy **Client ID** and **Client Secret**
 
 **Configuration:**
@@ -257,18 +246,18 @@ else
   echo "✓ TWILIO_ACCOUNT_SID configured"
 fi
 
-# Check SendGrid
-if [ -z "$SENDGRID_API_KEY" ]; then
-  echo "❌ SENDGRID_API_KEY not set"
+# Check Resend
+if [ -z "$RESEND_API_KEY" ]; then
+  echo "❌ RESEND_API_KEY not set"
 else
-  echo "✓ SENDGRID_API_KEY configured"
+  echo "✓ RESEND_API_KEY configured"
 fi
 
-# Check Manus OAuth
-if [ -z "$VITE_APP_ID" ]; then
-  echo "❌ VITE_APP_ID not set"
+# Check JWT (dealer auth)
+if [ -z "$JWT_SECRET" ]; then
+  echo "❌ JWT_SECRET not set"
 else
-  echo "✓ VITE_APP_ID configured"
+  echo "✓ JWT_SECRET configured"
 fi
 
 echo ""
@@ -293,9 +282,9 @@ echo "Credential validation complete!"
 4. Update `.env.production`
 5. Redeploy application
 
-### SendGrid API Key Rotation
+### Resend API Key Rotation
 
-1. Go to **Settings** → **API Keys**
+1. Go to **API Keys** in Resend dashboard
 2. Create a new API key
 3. Test with new key
 4. Delete old key
@@ -325,18 +314,13 @@ curl -X GET https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID \
 echo $TWILIO_PHONE_NUMBER | grep -E "^\+[0-9]{10,15}$"
 ```
 
-### SendGrid Connection Error
+### Resend Connection Error
 
 ```bash
 # Verify API key
 curl --request GET \
-  --url https://api.sendgrid.com/v3/mail/send \
-  --header "Authorization: Bearer $SENDGRID_API_KEY"
-
-# Check sender email
-curl --request GET \
-  --url https://api.sendgrid.com/v3/senders \
-  --header "Authorization: Bearer $SENDGRID_API_KEY"
+  --url https://api.resend.com/domains \
+  --header "Authorization: Bearer $RESEND_API_KEY"
 ```
 
 ## Security Best Practices
@@ -366,5 +350,5 @@ After setting up all credentials:
 For credential setup issues:
 - Stripe: https://support.stripe.com/
 - Twilio: https://support.twilio.com/
-- SendGrid: https://support.sendgrid.com/
+- Resend: https://resend.com/docs
 - Manus: support@manus.im

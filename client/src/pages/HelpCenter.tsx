@@ -34,7 +34,7 @@ const FAQS = [
   },
   {
     q: "Why didn't I receive a confirmation email?",
-    a: "Email delivery requires API credentials (SendGrid/Resend) to be configured in your environment. During the pilot, confirmations may not send until credentials are connected — your data is still saved.",
+    a: "Email delivery requires a Resend API key (`RESEND_API_KEY`) to be configured in your environment. During the pilot, confirmations may not send until credentials are connected — your data is still saved.",
   },
   {
     q: "How do test-drive bookings work?",

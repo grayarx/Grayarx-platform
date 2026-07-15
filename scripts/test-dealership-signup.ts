@@ -125,9 +125,9 @@ async function testDealershipSignup() {
     console.log("   - View open/click rates\n");
 
     console.log("6. 🔧 Verify webhook events:");
-    console.log("   - Check SendGrid webhook logs");
+    console.log("   - Check Resend webhook logs");
     console.log("   - Verify events are being received");
-    console.log("   - Check /api/webhooks/sendgrid endpoint\n");
+    console.log("   - Check /api/webhooks/resend endpoint\n");
 
     // Step 6: Database queries for monitoring
     console.log("=".repeat(80));

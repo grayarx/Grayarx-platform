@@ -2,7 +2,7 @@ import { invokeLLM } from "./llm";
 
 /**
  * Notification Service
- * Handles SMS and email notifications using Twilio and SendGrid
+ * Handles SMS (Twilio) and email (Resend) notifications
  */
 
 interface SMSNotification {
@@ -59,7 +59,7 @@ export async function sendSMS(notification: SMSNotification): Promise<{
 }
 
 /**
- * Send email notification via SendGrid
+ * Send email notification via Resend
  */
 export async function sendEmail(notification: EmailNotification): Promise<{
   success: boolean;
@@ -67,20 +67,20 @@ export async function sendEmail(notification: EmailNotification): Promise<{
   error?: string;
 }> {
   try {
-    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const { sendEmailViaResend } = await import("./resendEmailService");
+    const result = await sendEmailViaResend({
+      to: notification.email,
+      subject: notification.subject,
+      html: notification.htmlContent,
+    });
 
-    if (!sendgridApiKey) {
-      console.warn("[NotificationService] SendGrid API key missing, email not sent");
-      return { success: false, error: "SendGrid API key not configured" };
+    if (!result.success) {
+      return { success: false, error: result.error || "Email send failed" };
     }
-
-    // In production, use SendGrid SDK
-    // For now, log the notification
-    console.log(`[Email] To: ${notification.email}, Subject: ${notification.subject}`);
 
     return {
       success: true,
-      messageId: `email_${Date.now()}`,
+      messageId: result.id || `email_${Date.now()}`,
     };
   } catch (error) {
     console.error("[NotificationService] Email error:", error);

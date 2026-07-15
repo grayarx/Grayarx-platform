@@ -145,7 +145,7 @@ We share personal information with third-party service providers who assist us i
 | AWS | Cloud hosting | All data (encrypted) |
 | Twilio | SMS delivery | Phone numbers, message content |
 | Google Analytics | Analytics | Anonymized usage data |
-| SendGrid | Email delivery | Email addresses, message content |
+| Resend | Email delivery | Email addresses, message content |
 | OpenAI | AI/LLM chat polish | Conversation content for replies (not used to train GrayArx models) |
 
 All service providers are bound by confidentiality agreements and process data only as instructed.

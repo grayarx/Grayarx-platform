@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { NotificationService, emailTemplates } from "./notificationSystem";
 import { AnalyticsService } from "./analyticsService";
-import { StripeService, TwilioService, SendGridService, APIIntegrationManager } from "./apiIntegrations";
+import { StripeService, TwilioService, APIIntegrationManager } from "./apiIntegrations";
 
 describe("NotificationService", () => {
   let service: NotificationService;
@@ -297,95 +297,6 @@ describe("TwilioService", () => {
   });
 });
 
-describe("SendGridService", () => {
-  let service: SendGridService;
-
-  beforeEach(() => {
-    service = new SendGridService();
-  });
-
-  it("should send email", async () => {
-    const email = await service.sendEmail(
-      "test@example.com",
-      "Test Subject",
-      "Test body"
-    );
-
-    expect(email).toBeDefined();
-    expect(email.to).toBe("test@example.com");
-    expect(email.subject).toBe("Test Subject");
-    expect(email.status).toBe("queued");
-  });
-
-  it("should send bulk email", async () => {
-    const emails = await service.sendBulkEmail(
-      ["test1@example.com", "test2@example.com"],
-      "Test Subject",
-      "Test body"
-    );
-
-    expect(emails).toHaveLength(2);
-    expect(emails[0].to).toBe("test1@example.com");
-    expect(emails[1].to).toBe("test2@example.com");
-  });
-
-  it("should send templated email", async () => {
-    const email = await service.sendTemplatedEmail(
-      "test@example.com",
-      "welcome",
-      { name: "John" }
-    );
-
-    expect(email).toBeDefined();
-    expect(email.to).toBe("test@example.com");
-  });
-
-  it("should get email", async () => {
-    const email = await service.sendEmail(
-      "test@example.com",
-      "Test Subject",
-      "Test body"
-    );
-    const retrieved = await service.getEmail(email.id);
-
-    expect(retrieved).toBeDefined();
-    expect(retrieved?.subject).toBe("Test Subject");
-  });
-
-  it("should list emails", async () => {
-    await service.sendEmail("test@example.com", "Subject 1", "Body 1");
-    await service.sendEmail("test@example.com", "Subject 2", "Body 2");
-    await service.sendEmail("other@example.com", "Subject 3", "Body 3");
-
-    const emails = await service.listEmails("test@example.com");
-    expect(emails.length).toBe(2);
-  });
-
-  it("should track email open", async () => {
-    const email = await service.sendEmail(
-      "test@example.com",
-      "Subject",
-      "Body"
-    );
-    await service.trackEmailOpen(email.id);
-
-    const retrieved = await service.getEmail(email.id);
-    expect(retrieved?.openedAt).toBeDefined();
-  });
-
-  it("should track email click", async () => {
-    const email = await service.sendEmail(
-      "test@example.com",
-      "Subject",
-      "Body"
-    );
-    await service.trackEmailClick(email.id);
-
-    const retrieved = await service.getEmail(email.id);
-    expect(retrieved?.clickedAt).toBeDefined();
-  });
-});
-
 describe("APIIntegrationManager", () => {
   let manager: APIIntegrationManager;
 
@@ -396,7 +307,6 @@ describe("APIIntegrationManager", () => {
   it("should have all services initialized", () => {
     expect(manager.stripe).toBeDefined();
     expect(manager.twilio).toBeDefined();
-    expect(manager.sendgrid).toBeDefined();
   });
 
   it("should send multi-channel notification", async () => {
@@ -432,6 +342,5 @@ describe("APIIntegrationManager", () => {
 
     expect(status.stripe).toBe(true);
     expect(status.twilio).toBe(true);
-    expect(status.sendgrid).toBe(true);
   });
 });

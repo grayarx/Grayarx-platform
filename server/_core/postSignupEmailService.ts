@@ -13,67 +13,28 @@ import {
   getPendingEmailSequences,
 } from "../db-email-sequences";
 import { getEmailTemplate } from "./postSignupEmailTemplates";
-
-interface SendGridResponse {
-  success: boolean;
-  messageId?: string;
-  error?: string;
-}
+import { sendEmailViaResend } from "./resendEmailService";
 
 /**
- * Send email via SendGrid (or mock if credentials missing)
+ * Send post-signup sequence email via Resend
  */
-async function sendEmailViaSendGrid(
+async function sendPostSignupEmail(
   toEmail: string,
-  toName: string | undefined,
+  _toName: string | undefined,
   subject: string,
   htmlContent: string
-): Promise<SendGridResponse> {
-  const sendgridApiKey = process.env.SENDGRID_API_KEY;
-  const sendgridFromEmail = process.env.EMAIL_USER;
-
-  if (!sendgridApiKey || !sendgridFromEmail) {
-    console.warn("[PostSignupEmail] SendGrid credentials missing, using mock send");
-    return {
-      success: true,
-      messageId: `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    };
-  }
-
-  try {
-    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${sendgridApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [
-          {
-            to: [{ email: toEmail, name: toName }],
-            subject,
-          },
-        ],
-        from: { email: sendgridFromEmail, name: "GrayArx" },
-        content: [{ type: "text/html", value: htmlContent }],
-        trackingSettings: {
-          clickTracking: { enabled: true },
-          openTracking: { enabled: true },
-        },
-      }),
-    });
-
-    if (response.ok) {
-      const messageId = response.headers.get("x-message-id") || `sendgrid-${Date.now()}`;
-      return { success: true, messageId };
-    } else {
-      const error = await response.text();
-      return { success: false, error };
-    }
-  } catch (error) {
-    console.error("[PostSignupEmail] SendGrid error:", error);
-    return { success: false, error: String(error) };
-  }
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const result = await sendEmailViaResend({
+    to: toEmail,
+    subject,
+    html: htmlContent,
+    from: "GrayArx <noreply@grayarx.com>",
+  });
+  return {
+    success: result.success,
+    messageId: result.id,
+    error: result.error,
+  };
 }
 
 /**
@@ -169,7 +130,7 @@ export async function processPendingEmailSequences() {
     for (const emailSeq of pending) {
       try {
         // Send email
-        const sendResult = await sendEmailViaSendGrid(
+        const sendResult = await sendPostSignupEmail(
           emailSeq.recipientEmail,
           emailSeq.recipientName || undefined,
           emailSeq.subject,

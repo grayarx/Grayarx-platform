@@ -82,7 +82,7 @@ export const authEnhancedRouter = router({
         used: 0,
       });
 
-      // Send reset email via SendGrid
+      // Send reset email via Resend (optional — do not block if mail fails)
       const resetLink = `${process.env.VITE_APP_URL || "https://www.grayarx.com"}/reset-password?token=${token}`;
       try {
         // Email sending is optional - don't block password reset if it fails

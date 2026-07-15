@@ -19,7 +19,7 @@ This guide provides step-by-step instructions to deploy the GrayArx platform to 
 
 ### ✅ Infrastructure
 - [x] Database configured and tested
-- [x] Email service (SendGrid) configured
+- [x] Email service (Resend) configured
 - [x] SMS service (Twilio) configured
 - [x] WhatsApp service configured
 - [x] API rate limiting implemented
@@ -41,44 +41,30 @@ This guide provides step-by-step instructions to deploy the GrayArx platform to 
 - [x] Monitoring guide created
 
 ### ⏳ DNS Configuration (Pending)
-- [ ] DNS records added to domain registrar
+- [ ] DNS records added to domain registrar (if using custom sending domain)
 - [ ] DNS propagation verified (24-48 hours)
-- [ ] SendGrid domain verification complete
+- [ ] Resend domain verification complete
 
 ---
 
 ## Deployment Steps
 
-### Step 1: Verify DNS Configuration
+### Step 1: Verify DNS Configuration (Optional — custom sending domain)
 
-**Status:** ⏳ Pending (DNS records must be added manually)
+**Status:** ⏳ Pending (DNS records must be added manually if using a custom domain)
 
-1. Check if DNS records have been added:
-   ```bash
-   nslookup mail.www.grayarx.com
-   nslookup s1._domainkey.www.grayarx.com
-   nslookup s2._domainkey.www.grayarx.com
-   ```
+1. In Resend dashboard, add your sending domain (e.g. `grayarx.com`)
+2. Add the SPF, DKIM, and optional DMARC records Resend provides to your DNS registrar
+3. Wait 24-48 hours for DNS propagation, then click **Verify** in Resend
 
-2. Expected results:
-   ```
-   mail.www.grayarx.com CNAME sendgrid.net
-   s1._domainkey.www.grayarx.com CNAME s1.domainkey.sendgrid.net
-   s2._domainkey.www.grayarx.com CNAME s2.domainkey.sendgrid.net
-   ```
+### Step 2: Verify Resend Domain
 
-3. If DNS records are not found, add them to your domain registrar first
+**Status:** ⏳ Pending (After DNS propagation, if using custom domain)
 
-### Step 2: Verify SendGrid Domain
-
-**Status:** ⏳ Pending (After DNS propagation)
-
-1. Log in to SendGrid: https://app.sendgrid.com
-2. Go to **Settings** → **Sender Authentication**
-3. Find domain: `www.grayarx.com`
-4. Click **Verify** button
-5. Wait for verification (5-10 minutes after DNS propagation)
-6. Confirm DKIM signing is enabled
+1. Log in to Resend: https://resend.com/domains
+2. Find domain: `grayarx.com` (or your configured domain)
+3. Click **Verify** after DNS records propagate
+4. Confirm DKIM signing is enabled
 
 ### Step 3: Update Application Configuration
 
@@ -89,7 +75,7 @@ Update environment variables for production:
 ```bash
 # Email Configuration
 EMAIL_USER=noreply@www.grayarx.com
-SENDGRID_API_KEY=your_sendgrid_api_key
+RESEND_API_KEY=re_your_resend_api_key
 
 # SMS Configuration
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
@@ -101,8 +87,6 @@ DATABASE_URL=production_database_url
 
 # API Configuration
 VITE_APP_ID=production_app_id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
 
 # Security Configuration
 JWT_SECRET=production_jwt_secret
@@ -459,7 +443,7 @@ curl https://www.grayarx.com/api/health
 |------|--------|------|-------|
 | Code preparation | ✅ Complete | 2026-05-24 | All tests passing |
 | DNS configuration | ⏳ Pending | - | Awaiting manual DNS setup |
-| SendGrid verification | ⏳ Pending | - | After DNS propagation |
+| Resend verification | ⏳ Pending | - | After DNS propagation |
 | Application deployment | ✅ Ready | - | Can deploy immediately |
 | Dealership onboarding | ✅ Ready | - | Can enable immediately |
 | Monitoring setup | ✅ Ready | - | Can enable immediately |
@@ -471,7 +455,7 @@ curl https://www.grayarx.com/api/health
 
 1. ✅ Add DNS records to domain registrar (5 minutes)
 2. ⏳ Wait for DNS propagation (24-48 hours)
-3. ⏳ Verify SendGrid domain (5 minutes)
+3. ⏳ Verify Resend domain (5 minutes)
 4. ✅ Deploy to production (5 minutes)
 5. ✅ Enable dealership onboarding (5 minutes)
 6. ✅ Monitor real dealership usage (ongoing)

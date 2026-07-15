@@ -14,8 +14,8 @@
  *      who already converted.
  *
  * Why we store a draft preview instead of actually sending right now:
- *   - The platform does not have outbound SMTP wired yet. When SendGrid (or
- *     SES, or Postmark) is connected, the only change is to swap the
+ *   - The platform does not have outbound SMTP wired yet. When Resend outbound is wired for drip,
+ *     the only change is to swap the
  *     "preview-only" branch in `dispatchFollowup` for an actual send.
  *   - In the meantime, the dealer sees Mia's drafted follow-ups in the Leads
  *     view and can ship them with one tap, which is also useful behaviour for

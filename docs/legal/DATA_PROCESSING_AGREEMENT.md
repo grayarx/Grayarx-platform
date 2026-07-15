@@ -114,7 +114,7 @@ GrayArx engages the following sub-processors to process personal information:
 | Amazon Web Services (AWS) | Cloud hosting, data storage | EU, SA | Yes |
 | Stripe | Payment processing | US, EU | Yes |
 | Twilio | SMS delivery | US | Yes |
-| SendGrid | Email delivery | US | Yes |
+| Resend | Email delivery | US | Yes |
 | Google Analytics | Analytics | US | Yes |
 | OpenAI | AI/LLM chat polish | US | Yes |
 

@@ -147,7 +147,7 @@ export async function sendScheduledReportHandler(req: Request, res: Response) {
     console.log(`[Scheduled Report] Recipients: ${recipientEmails.join(", ")}`);
     console.log(`[Scheduled Report] Report Template ID: ${reportTemplateId}`);
 
-    // In production, integrate with email service (SendGrid, AWS SES, etc.)
+    // In production, integrate with email service (Resend)
     // For now, log the action
     for (const email of recipientEmails) {
       console.log(`[Scheduled Report] Email sent to ${email}`);

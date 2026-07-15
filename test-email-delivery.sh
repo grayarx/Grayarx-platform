@@ -1,92 +1,56 @@
 #!/bin/bash
 
 # Email Delivery Test Script
-# Tests SendGrid integration by sending a test email
+# Tests Resend integration by sending a test email
 
-echo "🧪 Testing Email Delivery with SendGrid..."
+echo "🧪 Testing Email Delivery with Resend..."
 echo ""
 
-# Check if SendGrid API key is configured
-if [ -z "$SENDGRID_API_KEY" ]; then
-    echo "❌ ERROR: SENDGRID_API_KEY not configured in environment"
+# Check if Resend API key is configured
+if [ -z "$RESEND_API_KEY" ]; then
+    echo "❌ ERROR: RESEND_API_KEY not configured in environment"
     echo ""
-    echo "To fix this, add your SendGrid API key to the environment:"
-    echo "  export SENDGRID_API_KEY='your-sendgrid-api-key'"
+    echo "To fix this, add your Resend API key to the environment:"
+    echo "  export RESEND_API_KEY='re_your-resend-api-key'"
     echo ""
     exit 1
 fi
 
-echo "✅ SendGrid API key found"
+echo "✅ Resend API key found"
 echo ""
 
-# Send test email via SendGrid API
+# Send test email via Resend API
 TEST_EMAIL="test@grayarx.local"
 SUBJECT="GrayArx Email Delivery Test"
-HTML_CONTENT="<html><body><h1>GrayArx Email Delivery Test</h1><p>If you received this email, the SendGrid integration is working correctly!</p><p>This is a test from the GrayArx platform.</p></body></html>"
+HTML_CONTENT="<html><body><h1>GrayArx Email Delivery Test</h1><p>If you received this email, the Resend integration is working correctly!</p><p>This is a test from the GrayArx platform.</p></body></html>"
 
 echo "📧 Sending test email to: $TEST_EMAIL"
 echo "Subject: $SUBJECT"
 echo ""
 
-# Use curl to send via SendGrid API
-RESPONSE=$(curl -s -X POST "https://api.sendgrid.com/v3/mail/send" \
-  -H "Authorization: Bearer $SENDGRID_API_KEY" \
+RESPONSE=$(curl -s -X POST "https://api.resend.com/emails" \
+  -H "Authorization: Bearer $RESEND_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
-    \"personalizations\": [
-      {
-        \"to\": [
-          {
-            \"email\": \"$TEST_EMAIL\",
-            \"name\": \"GrayArx Test\"
-          }
-        ]
-      }
-    ],
-    \"from\": {
-      \"email\": \"noreply@grayarx.com\",
-      \"name\": \"GrayArx Platform\"
-    },
+    \"from\": \"noreply@grayarx.com\",
+    \"to\": [\"$TEST_EMAIL\"],
     \"subject\": \"$SUBJECT\",
-    \"content\": [
-      {
-        \"type\": \"text/html\",
-        \"value\": \"$HTML_CONTENT\"
-      }
-    ]
+    \"html\": \"$HTML_CONTENT\"
   }")
 
-# Check response
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://api.sendgrid.com/v3/mail/send" \
-  -H "Authorization: Bearer $SENDGRID_API_KEY" \
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://api.resend.com/emails" \
+  -H "Authorization: Bearer $RESEND_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
-    \"personalizations\": [
-      {
-        \"to\": [
-          {
-            \"email\": \"$TEST_EMAIL\",
-            \"name\": \"GrayArx Test\"
-          }
-        ]
-      }
-    ],
-    \"from\": {
-      \"email\": \"noreply@grayarx.com\",
-      \"name\": \"GrayArx Platform\"
-    },
+    \"from\": \"noreply@grayarx.com\",
+    \"to\": [\"$TEST_EMAIL\"],
     \"subject\": \"$SUBJECT\",
-    \"content\": [
-      {
-        \"type\": \"text/html\",
-        \"value\": \"$HTML_CONTENT\"
-      }
-    ]
+    \"html\": \"$HTML_CONTENT\"
   }")
 
-if [ "$HTTP_CODE" = "202" ]; then
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
     echo "✅ Email sent successfully!"
-    echo "HTTP Status: $HTTP_CODE (202 Accepted)"
+    echo "HTTP Status: $HTTP_CODE"
     echo ""
     echo "📬 The email should arrive in your inbox within 1-2 minutes."
     echo ""
@@ -97,9 +61,9 @@ else
     echo "Response: $RESPONSE"
     echo ""
     echo "Troubleshooting:"
-    echo "1. Verify SendGrid API key is correct"
-    echo "2. Check SendGrid account status"
-    echo "3. Verify sender email is authenticated"
+    echo "1. Verify Resend API key is correct"
+    echo "2. Check Resend account status"
+    echo "3. Verify sender domain is authenticated in Resend"
     echo ""
     exit 1
 fi

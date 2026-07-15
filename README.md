@@ -1,6 +1,6 @@
-# Web App Template (tRPC + Manus Auth + Database)
+# Web App Template (tRPC + Auth + Database)
 
-This template gives you a React 19 + Tailwind 4 + Express 4 + tRPC 11 stack with Manus OAuth already wired. Procedures are your contracts, types flow end to end, and authentication "just works".
+This template gives you a React 19 + Tailwind 4 + Express 4 + tRPC 11 stack with dealer email/password auth. Procedures are your contracts, types flow end to end, and authentication "just works".
 
 ---
 
@@ -8,7 +8,7 @@ This template gives you a React 19 + Tailwind 4 + Express 4 + tRPC 11 stack with
 
 - **tRPC-first:** define procedures in `server/routers.ts`, consume them with `trpc.*` hooks.
 - **Superjson out of the box:** return Drizzle rows directly—`Date` stays a `Date`.
-- **Auth baked in:** `/api/oauth/callback` handles Manus OAuth, `protectedProcedure` injects `ctx.user`.
+- **Auth baked in:** Dealers sign in at `/login` with email and password; `protectedProcedure` injects `ctx.user`.
 - **Gateway-ready:** all RPC traffic is under `/api/trpc`, making it easy to route at the edge.
 
 ---
@@ -82,7 +82,7 @@ Files in `client/public` are available at the root of your site—reference them
 
 ## Authentication Flow
 
-- Manus OAuth completes at `/api/oauth/callback` and drops a session cookie.
+- Dealers authenticate at `/login` with email and password; the server issues a session cookie.
 - Each request to `/api/trpc` builds context via `server/_core/context.ts`, making the current user available as `ctx.user`.
 - Wrap protected logic in `protectedProcedure`; public access uses `publicProcedure`.
 - Frontend reads auth state with `trpc.auth.me.useQuery()` and invokes `trpc.auth.logout.useMutation()`—no cookie plumbing required.
@@ -94,9 +94,7 @@ Files in `client/public` are available at the root of your site—reference them
 Available pre-defined system envs:
 - `DATABASE_URL`: MySQL/TiDB connection string
 - `JWT_SECRET`: Session cookie signing secret
-- `VITE_APP_ID`: Manus OAuth application ID
-- `OAUTH_SERVER_URL`: Manus OAuth backend base URL
-- `VITE_OAUTH_PORTAL_URL`: Manus login portal URL (frontend)
+- `RESEND_API_KEY`: Resend API key for transactional email (starts with `re_`)
 - `OWNER_OPEN_ID`, `OWNER_NAME`: Owner's info
 - `BUILT_IN_FORGE_API_URL`: Manus built-in apis (includes llm, storage, data_api, notification, etc...)
 - `BUILT_IN_FORGE_API_KEY`: Bearer token used by Manus built-in apis (server-side)
@@ -616,7 +614,7 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  /** Stable user identifier (openId). Unique per user; set on email/password signup. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -1012,29 +1010,10 @@ Use `storagePut()` to upload files (see S3 File Storage section).
 
 ---
 
-## Manus OAuth Best Practices
+## Dealer Auth Best Practices
 
-**Key Rule:** Always use `window.location.origin` for redirect URLs—never hardcode domains or use `req.host`. Frontend and backend run on separate servers, so the frontend must pass its origin explicitly.
+**Key Rule:** Dealers sign in at `/login` with email and password. Protected routes use `protectedProcedure`; the session cookie is issued by the server after successful login.
 
-**Unsupported browsers:** Safari Private Browsing, Firefox Strict ETP, Brave Aggressive Shields, or any browser blocking cookies.
+**Session handling:** Frontend reads auth state with `trpc.auth.me.useQuery()` and logs out via `trpc.auth.logout.useMutation()`—no manual cookie plumbing required.
 
-**Anti-patterns:**
-```ts
-// ❌ Never construct URLs from env vars or patterns
-const url = `https://${projectName}.manus.space/callback`;
-const url = `https://${process.env.APP_SUBDOMAIN}.example.com/verify`;
-```
-
-**Correct approach:** This template already implements the pattern correctly:
-- `client/src/const.ts`: `getLoginUrl(returnPath?)` encodes origin + returnPath in state
-- `server/_core/oauth.ts`: `parseState()` extracts origin from state for redirects
-
-**For invite/magic links:** When backend generates URLs, frontend must pass origin in the request:
-```ts
-// Frontend
-const createInvite = trpc.invites.create.useMutation();
-await createInvite.mutateAsync({ eventId: "123", origin: window.location.origin });
-
-// Backend - use input.origin to build the URL
-const inviteUrl = `${input.origin}/events/${eventId}/join?token=${token}`;
-```
+**Password resets and verification emails** require `RESEND_API_KEY` to be configured in the environment.

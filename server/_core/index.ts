@@ -7,7 +7,6 @@ import path from "path";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerCustomAuthRoutes } from "./customAuth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerScheduledRoutes } from "./scheduled";
@@ -119,7 +118,6 @@ async function startServer() {
   registerStorageProxy(app);
   // Serve local uploads when Forge is not configured
   app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
-  registerOAuthRoutes(app);
   registerCustomAuthRoutes(app);
   registerScheduledRoutes(app);
   // Kagiso autonomous audit — self-scheduling, no external scheduler needed

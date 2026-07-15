@@ -110,10 +110,10 @@ async function testEmailDelivery() {
 
     console.log("5. 📊 Run this script again to see updated status\n");
 
-    console.log("6. 🔧 Configure SendGrid webhook:");
-    console.log("   - Go to SendGrid Dashboard");
-    console.log("   - Settings → Mail Send Settings → Event Webhook");
-    console.log("   - Add: https://www.grayarx.com/api/webhooks/sendgrid\n");
+    console.log("6. 🔧 Configure Resend webhook:");
+    console.log("   - Go to Resend Dashboard");
+    console.log("   - Webhooks → Add endpoint");
+    console.log("   - Add: https://www.grayarx.com/api/webhooks/resend\n");
 
     console.log("7. 📈 View analytics in admin dashboard:");
     console.log("   - Go to /admin/dealerships");

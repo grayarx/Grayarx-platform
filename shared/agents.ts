@@ -4,7 +4,7 @@
  *
  * Each agent is tied to a real-looking mailbox under @grayarx.com so dealers
  * can recognise them in their inbox. Configure the actual SMTP/IMAP later via
- * SendGrid / SES / Postmark; for now these are the canonical FROM addresses.
+ * Resend; for now these are the canonical FROM addresses.
  */
 
 export type AgentId =

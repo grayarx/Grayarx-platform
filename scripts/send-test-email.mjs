@@ -76,7 +76,7 @@ async function sendTestEmail() {
     console.log("📧 Preparing test email with animated logo...\n");
 
     // For demo purposes, we'll use a test transporter
-    // In production, configure with your email service (Gmail, SendGrid, etc.)
+    // In production, configure with Resend (RESEND_API_KEY)
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {

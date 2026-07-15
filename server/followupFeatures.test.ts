@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-describe("Email Sending Integration (SendGrid)", () => {
+describe("Email Sending Integration (Resend)", () => {
   describe("sendProspectEmail", () => {
     it("should send email to prospect", async () => {
       const result = {

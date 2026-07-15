@@ -2,7 +2,6 @@ export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   // Chat/LLM: OpenAI only. Forge keys are storage/notification legacy — not for chat.
@@ -21,7 +20,6 @@ export const ENV = {
   },
   emailUser: process.env.EMAIL_USER ?? "grayarx@gmail.com",
   emailPassword: process.env.EMAIL_PASSWORD ?? "",
-  sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   resendApiKey: process.env.RESEND_API_KEY || "",
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
   twilioApiKey: process.env.TWILIO_API_KEY || "",

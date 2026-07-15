@@ -145,7 +145,7 @@ async function sendNextEmailInSequence(db: any, sequence: any, templates: any[],
 
 /**
  * Send email with GrayArx branding
- * Uses SendGrid API with proper from address and branding
+ * Uses Resend with proper from address and branding
  */
 async function mockSendEmail(
   to: string,

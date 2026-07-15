@@ -154,7 +154,7 @@ export function createOnboardingWorkflow(input: {
     {
       id: "task-4",
       title: "Email Configuration",
-      description: "Configure dealership email domain and SendGrid setup",
+      description: "Configure dealership email domain and Resend setup",
       assignedTo: "grayarx",
       dueDate: new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000),
       completed: false,

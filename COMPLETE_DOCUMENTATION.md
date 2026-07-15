@@ -31,7 +31,7 @@ GrayArx is a comprehensive dealership management platform built with React 19, E
 - **Frontend:** React 19 + Tailwind CSS 4 + TypeScript
 - **Backend:** Express 4 + tRPC 11 + Node.js 22
 - **Database:** MySQL/TiDB with Drizzle ORM
-- **Authentication:** Manus OAuth + Custom Email/Password + 2FA
+- **Authentication:** Email/Password dealer login at `/login` + optional 2FA
 - **Security:** End-to-end encryption, audit logging, compliance tracking
 - **Performance:** 99.95% uptime, <150ms API response time
 - **Testing:** 150+ comprehensive tests, 95%+ code coverage
@@ -94,7 +94,7 @@ GrayArx is a comprehensive dealership management platform built with React 19, E
 | RPC | tRPC | 11 | Type-safe API |
 | Database | MySQL/TiDB | 8.x | Data persistence |
 | ORM | Drizzle | Latest | Database abstraction |
-| Auth | Manus OAuth | Latest | Identity management |
+| Auth | Email/Password + JWT | Latest | Dealer identity management |
 | Testing | Vitest | 2.x | Unit testing |
 | Build | Vite | 5.x | Module bundler |
 
@@ -354,22 +354,22 @@ const message = await twilio.sendSMS(
 - Status callbacks
 - Message logging
 
-### SendGrid Integration
+### Resend Integration
 
 **Email Sending**
 ```typescript
-const email = await sendgrid.sendEmail(
-  "user@example.com",
-  "Welcome to GrayArx",
-  "Thank you for signing up..."
-);
+const email = await sendEmailViaResend({
+  to: "user@example.com",
+  subject: "Welcome to GrayArx",
+  html: "Thank you for signing up...",
+});
 ```
 
 **Features**
-- Email delivery
+- Email delivery via Resend API
 - Template support
 - Bulk sending
-- Open/click tracking
+- Open/click tracking (via webhooks)
 - Bounce handling
 - Unsubscribe management
 
@@ -451,9 +451,6 @@ DATABASE_URL=mysql://user:password@host:3306/grayarx
 
 # Authentication
 JWT_SECRET=your-secret-key-here
-VITE_APP_ID=your-manus-app-id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
 
 # Stripe
 STRIPE_API_KEY=sk_live_your_key_here
@@ -463,8 +460,8 @@ TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_API_KEY=your_api_key
 TWILIO_PHONE_NUMBER=+1234567890
 
-# SendGrid
-SENDGRID_API_KEY=SG.your_key_here
+# Resend
+RESEND_API_KEY=re_your_key_here
 EMAIL_USER=noreply@grayarx.com
 
 # Analytics
@@ -514,9 +511,9 @@ VITE_APP_LOGO=https://your-cdn.com/logo.png
 
 All credentials are injected at runtime through environment variables. The system supports:
 
-1. **OAuth Credentials**
-   - Manus OAuth (built-in)
-   - Google OAuth (via environment)
+1. **Authentication**
+   - Email/password dealer login at `/login`
+   - Google OAuth (via environment, optional)
    - Apple OAuth (via environment)
 
 2. **Payment Processing**
@@ -524,7 +521,7 @@ All credentials are injected at runtime through environment variables. The syste
    - Stripe webhook secret
 
 3. **Communication**
-   - SendGrid API key
+   - Resend API key (`RESEND_API_KEY`)
    - Twilio Account SID and API key
    - Twilio phone number
 
@@ -662,10 +659,10 @@ All credentials are injected at runtime through environment variables. The syste
 - Check SMS quota
 
 **Email Delivery Issues**
-- Verify SendGrid API key
+- Verify Resend API key (`RESEND_API_KEY`)
 - Check email templates
-- Review bounce logs
-- Verify sender domain
+- Review bounce logs in Resend dashboard
+- Verify sender domain in Resend
 
 ---
 

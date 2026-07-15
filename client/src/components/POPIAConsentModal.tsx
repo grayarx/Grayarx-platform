@@ -83,7 +83,7 @@ You acknowledge that GrayArx shares personal information with the following sub-
 - Amazon Web Services (AWS) — Cloud hosting and data storage
 - Stripe — Payment processing
 - Twilio — SMS delivery
-- SendGrid — Email delivery
+- Resend — Email delivery
 - Google Analytics — Analytics and usage tracking
 - GrayArx AI Services — LLM & AI infrastructure
 

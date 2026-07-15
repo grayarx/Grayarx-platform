@@ -117,7 +117,7 @@ export async function executeEmailAlert(
   };
 
   try {
-    // In production, send email via SendGrid/Resend
+    // In production, send email via Resend
     // await sendEmail({
     //   to: recipientEmail,
     //   subject,

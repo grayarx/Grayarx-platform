@@ -2,7 +2,7 @@
  * FINAL INTEGRATION TEST - Complete Load Testing
  * 
  * Tests all three integrations:
- * 1. Email notifications (SendGrid)
+ * 1. Email notifications (Resend)
  * 2. Inventory sync (Cars.co.za/AutoTrader)
  * 3. WhatsApp Business API
  * 
@@ -21,11 +21,11 @@ describe("FINAL INTEGRATION TESTS - Honest Assessment", () => {
   // ============================================
   // 1. EMAIL NOTIFICATIONS TEST
   // ============================================
-  describe("Email Notifications (SendGrid)", () => {
-    it("should have SendGrid API key configured", () => {
-      const apiKey = process.env.SENDGRID_API_KEY;
+  describe("Email Notifications (Resend)", () => {
+    it("should have Resend API key configured", () => {
+      const apiKey = process.env.RESEND_API_KEY;
       if (!apiKey) {
-        testResults.email.errors.push("SENDGRID_API_KEY not configured in environment");
+        testResults.email.errors.push("RESEND_API_KEY not configured in environment");
         expect(apiKey).toBeDefined();
       } else {
         testResults.email.working = true;
@@ -294,19 +294,19 @@ Ford,Figo,2019,95000,125000`;
   describe("Honest Assessment - What Works & What Doesn't", () => {
     it("should report email integration status", () => {
       const status = {
-        feature: "Email Notifications (SendGrid)",
+        feature: "Email Notifications (Resend)",
         status: testResults.email.working ? "WORKING" : "NEEDS SETUP",
         details: {
-          sendgridConfigured: !!process.env.SENDGRID_API_KEY,
+          resendConfigured: !!process.env.RESEND_API_KEY,
           templatesReady: true,
           batchSendingReady: true,
           trackingReady: true,
         },
         nextSteps: [
-          "✓ SendGrid API key configured in environment",
+          "✓ Resend API key configured in environment",
           "✓ Email templates created with GrayArx branding",
           "✓ Batch sending logic implemented",
-          "⚠ Requires actual SendGrid account to send real emails",
+          "⚠ Requires actual Resend account to send real emails",
           "⚠ Test email delivery with testEmailDelivery() endpoint",
         ],
       };
@@ -374,7 +374,7 @@ Ford,Figo,2019,95000,125000`;
         overallStatus: "PRODUCTION READY WITH CAVEATS",
         completionPercentage: 95,
         workingFeatures: [
-          "✅ Email notification service (SendGrid integration ready)",
+          "✅ Email notification service (Resend integration ready)",
           "✅ Inventory sync scheduler (Cars.co.za/AutoTrader ready)",
           "✅ WhatsApp Business API setup guide (ready for configuration)",
           "✅ All tRPC endpoints compiled and tested",
@@ -383,15 +383,15 @@ Ford,Figo,2019,95000,125000`;
           "✅ Database schema ready",
         ],
         requiresSetup: [
-          "⚠️ SendGrid API key - Add to environment (already in project config)",
+          "⚠️ Resend API key - Add to environment (already in project config)",
           "⚠️ Enable heartbeat scheduler - For nightly inventory sync",
           "⚠️ WhatsApp Business API - Requires separate account setup (1-3 days approval)",
-          "⚠️ Test email delivery - Run testEmailDelivery() to verify SendGrid",
+          "⚠️ Test email delivery - Run testEmailDelivery() to verify Resend",
         ],
         knownLimitations: [
           "⚠️ WhatsApp Business API requires separate account (not included in GrayArx)",
           "⚠️ Cars.co.za/AutoTrader sync requires API access (may need scraping fallback)",
-          "⚠️ Email delivery depends on SendGrid service availability",
+          "⚠️ Email delivery depends on Resend service availability",
           "⚠️ Inventory sync runs on schedule - manual trigger available via executeSyncNow()",
         ],
         recommendations: [
