@@ -2,12 +2,21 @@
 
 **Audience:** Founder / sales on dealer calls  
 **Tone:** South African dealer — confident, plain, no hype  
-**Version:** July 2026 · v2 (replaces the first July draft)  
-**Rule:** Answers ≤ 2–3 sentences. Lead with the win. One-line **Note:** for caveats. Separate **Say this** vs **Never say**.
+**Version:** July 2026 · v3  
+**Rule:** Answers ≤ 2–3 sentences spoken. Lead with the win. One-line **Note:** for caveats. Use **Written (SMS/WhatsApp)** only when a short paste helps.
 
-**Verified product status (git `main` @ `dd3d669`, Jul 2026):**
-- Shipped: custom assistant name, STOP opt-out, DB inventory search, `/embed/:shortcode`, branded invoices + FNB EFT env, auto WhatsApp `phone_number_id` link, shortcodes, 24/7 Nala (web + WhatsApp).
-- Multi-branch (`groupKey` + Branch switcher): **shipped on `main` (`239af44`).** Includes groupKey, Branch switcher, Admin create group, `/admin/groups/:groupKey`. Migration `0069` must run on Railway deploy before production go-live for a dealer group.
+**Product truths (July 2026 — ship what we have):**
+- Tiers: **Showroom / Growth / Multi-site** (DB ids `starter` / `professional` / `enterprise`). No separate “Group” SKU yet — don’t invent one.
+- Pilot: Growth features @ negotiated rate; public list prices hidden (`PILOT_PRICING_HIDDEN`).
+- Nala 24/7 AI for Q&A, bookings, leads; humans optional for handoff. Showroom = web chat + click-to-chat; Growth+ = WhatsApp Cloud API bot (needs Meta WA Business number).
+- Chat LLM: **OpenAI → templates**. No Manus Forge for chat.
+- VIN: optional; if entered must be valid ISO 3779 (17 chars + check digit); masked publicly.
+- Multi-branch: one dealership row per branch + shared `groupKey` + Branch switcher (Multi-site).
+- Pilot stock: **CSV import** — not live Cars.co.za sync yet.
+- POPIA, STOP/START WhatsApp, usage caps per tier.
+- Billing: Stripe and/or bank EFT (FNB) when configured; soft public pricing.
+- Photo mirroring: optional (keep external URLs or mirror into GrayArx storage).
+- Agents improve via outcomes + dealer FAQs — **not** “we train on your customers.”
 
 ---
 
@@ -15,271 +24,358 @@
 
 **Say this**
 
-GrayArx gives your yard a 24/7 AI assistant on WhatsApp and webchat that answers stock questions from your live inventory, books viewings, and hands warm leads to your team. Buyers get your branded showroom and embed; you get a shortcode, auto-linked WhatsApp, and invoices with FNB EFT details. Multi-branch yards use one group key and a branch switcher so each site keeps its own stock and number.
+GrayArx gives your yard a 24/7 AI assistant — Nala by default — on webchat and, on Growth+, WhatsApp. She answers from your live inventory, books viewings, and drops warm leads in your inbox. Buyers get a branded showroom and embed; you get CSV stock, shortcodes, and invoices you can pay by card or EFT.
 
-**If they ask nothing else, say this**
+**If they ask nothing else**
 
 We put an AI sales floor on WhatsApp and your website that never closes — priced for SA independents, not enterprise CRM theatre.
 
 ---
 
-## 2. Top 15 questions dealers WILL ask
+## 2. Questions dealers WILL ask (by theme)
 
-### Q1. “What exactly do we get?”
+### Price & billing
 
-**Say this:** A public showroom, WhatsApp + webchat AI (default name Nala — you can rename it), live stock answers, booking links, lead inbox, and a drop-in embed for your site. Shortcode powers `/book`, `/apply`, and `/embed/{shortcode}`.
+#### Q1. “What does it cost?”
 
-**Note:** Pilot partners get Growth-level features; public price list stays soft until post-pilot.
+**Say this:** Pilot partners get Growth-level features at a founder-friendly monthly rate we agree on the call — not a per-seat CRM tax. Public site keeps list prices soft until post-pilot. Packaged tiers after that: Showroom, Growth, Multi-site.
 
----
+**Written:** Pilot = Growth features @ negotiated monthly. Public prices stay soft. Tiers: Showroom → Growth → Multi-site.
 
-### Q2. “Does it work after hours?”
-
-**Say this:** Yes — Nala replies 24/7 on WhatsApp and webchat so weekend and late-night buyers still get stock answers and next steps. Your team wakes up to leads and bookings, not a dead inbox.
-
-**Note:** Complex finance/trade-ins escalate to humans; AI does not close credit deals alone.
+**Note:** Do not invent a public ZAR figure unless founder confirmed today’s floor. Internal reference only (not on site): pilot often anchored near Showroom list while unlocking Growth.
 
 ---
 
-### Q3. “Will it sell the wrong car / invent stock?”
+#### Q2. “What’s in Showroom vs Growth vs Multi-site?”
 
-**Say this:** Stock answers are searched against your dealership’s database — make, model, body type, colour, budget — scoped to your yard only. If it is not in inventory, we say so and offer alternatives or a booking.
+**Say this:** Showroom = public showroom, inventory/CSV, leads, bookings, webchat Nala, click-to-chat WhatsApp. Growth adds Cloud API WhatsApp bot, higher AI/message caps, deal-score, photo angles. Multi-site = Growth plus multi-branch (`groupKey` + Branch switcher), highest caps, dedicated onboarding.
 
-**Note:** Keep CSV/photos current; garbage in, weak answers out.
-
----
-
-### Q4. “Can we call the bot something else — not Nala?”
-
-**Say this:** Yes. In dealer Settings you set a custom assistant name (up to 40 characters). Greetings, WhatsApp disclosure, and opt-out copy use that name.
-
-**Note:** Default remains Nala if left blank.
+**Note:** Internal ids are still starter / professional / enterprise — always say the display names to dealers.
 
 ---
 
-### Q5. “What about POPIA / people saying STOP?”
+#### Q3. “How do we pay — card or EFT?”
 
-**Say this:** Buyers can reply STOP (or unsubscribe / opt-out) and we stop proactive automated follow-ups. Reply START turns help back on. First chats acknowledge POPIA processing for the enquiry.
+**Say this:** Both when set up: Stripe for card, or GrayArx-branded invoices with FNB EFT pay-to details from secure settings. You choose what fits the yard.
 
-**Note:** You still own dealer-side consent for outbound marketing you send yourselves.
-
----
-
-### Q6. “Do we need Meta / WhatsApp Business?”
-
-**Say this:** No Cloud API chatbot without a WhatsApp Business number on Meta. If they have no WA Business number yet: they can still use webchat + public showroom + wa.me click-to-human. Path: get WhatsApp Business → we link `phone_number_id` → AI on. We auto-link when the display number matches onboarding or an unbound dealership.
-
-**Note:** Number must be verified and webhooks subscribed; until then webchat + showroom still work. Dealer Settings shows a WhatsApp AI setup checklist (linked / not linked).
+**Note:** Never paste full bank details into WhatsApp demos; invoices mask sensitive digits.
 
 ---
 
-### Q7. “How long to go live?”
+#### Q4. “What happens if we go over the message / AI cap?”
 
-**Say this:** Most yards: provision + shortcode same day; stock CSV + photos in a few hours; WhatsApp live once Meta verify + webhook subscribe are done. Target: useful in 48 hours.
+**Say this:** Each tier has fair-use caps (AI sessions and WhatsApp volume). We soft-block with a clear message so a runaway bot doesn’t blow the bill; we talk overage if you’re consistently hot.
 
-**Note:** Meta verification can delay WhatsApp; do not promise a same-day WA go-live if their Business Manager is messy.
-
----
-
-### Q8. “What does it cost?”
-
-**Say this:** Pilot is Growth-level features at a founder-friendly monthly rate discussed on the call — not a per-user CRM tax. List tiers after pilot: Showroom / Growth / Multi-site (future Group SKU above that).
-
-**Note:** Do not invent a public ZAR figure if the pricing page is still soft; confirm current pilot floor with founder before the call.
+**Note (caps — say ballpark, not spreadsheet):** Showroom ~400 AI/mo, click-to-chat only; Growth ~1,200 AI + ~2,000 WA msgs; Multi-site ~3,500 AI + ~8,000 WA.
 
 ---
 
-### Q9. “We already have Cars.co.za / Facebook ads.”
+### WhatsApp & Meta
 
-**Say this:** Keep them. GrayArx is the always-on reply layer for people who already messaged or landed on your showroom — not a replacement for classifieds or an ad-buy agency.
+#### Q5. “Do we need a WhatsApp Business number / Meta?”
 
-**Note:** “We convert inbound attention; we are not an ad-buy agency” is **not bad** — it sets scope and avoids competing with their media buyer. Softer alternative if they prefer: “We make sure the buyers your ads already send you get a fast, accurate answer — we don’t buy the clicks.”
+**Say this:** For the Cloud API bot (Growth+): yes — a verified WhatsApp Business number on Meta, webhooks subscribed, then we link `phone_number_id`. Without that you still get webchat, showroom, and wa.me click-to-human.
+
+**Written:** Cloud API bot = Meta WA Business number + webhook. No Meta yet → webchat + showroom + click-to-chat still work.
+
+**Note:** Dealer Settings shows a WhatsApp AI checklist (linked / not linked). Auto-link when display number matches an unbound dealership.
 
 ---
 
-### Q10. “Will it replace my salespeople?”
+#### Q6. “Do I need a new number?”
 
-**Say this:** No — it answers the 11pm “is the Hilux still available?” so your floor spends time on test drives and closes. Humans stay on negotiation, trade-in, and finance.
+**Say this:** Prefer your existing WhatsApp Business number if Meta will verify it for Cloud API — buyers keep messaging the number they know. Only get a new number if the current one can’t be moved to Business / Cloud API cleanly.
+
+**Note:** Never promise “same personal phone tomorrow” if Business Manager is a mess — Meta timing is theirs.
+
+---
+
+#### Q7. “How long until WhatsApp is live?”
+
+**Say this:** Provision + shortcode + CSV can be same day; WhatsApp AI goes live once Meta verify + webhook subscribe are done. Target useful yard in ~48 hours; WA may slip if Meta queues you.
+
+**Note:** Don’t promise same-day WA if their Business Manager isn’t ready.
+
+---
+
+### AI (Nala)
+
+#### Q8. “What exactly do we get?”
+
+**Say this:** A public showroom, AI on webchat (all tiers) and WhatsApp Cloud API on Growth+, live stock answers from your DB, booking links, lead inbox, website embed. Default assistant name Nala — rename in Settings. Shortcode powers `/book`, `/apply`, `/embed/{shortcode}`.
+
+**Note:** Humans are optional for handoff — not required for every reply.
+
+---
+
+#### Q9. “Does it work after hours?”
+
+**Say this:** Yes — Nala answers 24/7 on the channels you have live, so late-night and weekend buyers still get stock answers and next steps. Your team wakes up to leads and bookings.
+
+**Note:** Complex finance / trade-ins escalate to humans; AI does not approve credit.
+
+---
+
+#### Q10. “Will it replace my salespeople?”
+
+**Say this:** No — it answers the 11pm “is the Hilux still available?” so your floor spends time on test drives and closes. Humans own negotiation, trade-in, and finance.
 
 **Note:** Never pitch “fire half the floor.”
 
 ---
 
-### Q11. “Can it go on our own website?”
+#### Q11. “What if the AI is wrong?”
 
-**Say this:** Yes — open Dealer → Settings → Website embed. Copy-paste the iframe or script snippet (one click). Your shortcode is already generated; same code drives book and apply URLs.
+**Say this:** Stock answers are searched against your dealership’s inventory — if it’s not in the DB, we say so. Low-confidence or failed paths land in your fallback / human queue with a reference. Fix the stock row; the next answer follows the DB. Templates still reply if the LLM is briefly offline.
 
-**Note:** WordPress needs a one-line shortcode plugin only if they want `[grayarx_book code="…"]`; plain iframe/script needs no plugin.
+**Written:** Answers from your stock DB. Wrong listing → fix inventory. Fallback queue if unsure. Templates cover LLM outages.
 
----
-
-### Q12. “We have three branches.”
-
-**Say this:** Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by the same `groupKey`. Staff with sibling branches get a Branch switcher in the console. Founder ops: Admin → Dealerships → 5-click checklist (create group → assign key → WA id + shortcode → smoke-test switcher).
-
-**Note:** Shipped on `main`. Confirm migration `0069` has run on Railway before promising a go-live date for that dealer group.
-
-**Tier packaging (SA):** Recommend **Showroom → Growth → Multi-site → Group**. Today’s DB enum is still three IDs (`starter` / `professional` / `enterprise`); display names are Showroom / Growth / **Multi-site**. A fourth **Group** SKU (holding-company packaging above Multi-site) needs a clean enum migration later — do not promise a separate Group plan until that ships.
+**Note:** OpenAI polishes when quota is up; otherwise deterministic templates. No Manus Forge for chat.
 
 ---
 
-### Q13. “What languages?”
+#### Q12. “Do you train on our customers / our chats?”
 
-**Say this:** Built for SA — English, Afrikaans, isiZulu, isiXhosa, and the other official languages, plus Portuguese for diaspora buyers. The assistant matches the buyer’s language where detection is clear.
+**Say this:** No — we don’t sell a story that we “train on your customers.” The assistant gets sharper from deal outcomes you mark, FAQs you add, and keeping inventory accurate — not from harvesting buyer chats into a public model.
 
-**Note:** Quality is strongest in EN/AF; rare languages may be shorter / more careful.
-
----
-
-### Q14. “What if the AI is wrong or Meta is down?”
-
-**Say this:** Failed or low-confidence paths land in your fallback / human queue with a reference — not silent failure. Template replies still work if the LLM is briefly offline.
-
-**Note:** Meta outages are Meta’s; we monitor webhook health and dead-letter alerts on our side.
+**Note:** Point to privacy / POPIA docs if they want it in writing.
 
 ---
 
-### Q15. “How do invoices / payment work?”
+#### Q13. “Can we rename Nala?”
 
-**Say this:** Platform invoices are GrayArx-branded PDFs. Subscription invoices can include FNB EFT pay-to details from secure server env — no account numbers in chat or git.
+**Say this:** Yes — Settings → custom assistant name (up to 40 characters). Greetings, WhatsApp disclosure, and opt-out copy use that name.
 
-**Note:** Card/Stripe is optional; EFT works without it.
+**Note:** Blank = Nala.
 
 ---
 
-## 3. Deep dive appendix (by theme)
+#### Q14. “What languages?”
 
-### Stock & inventory
+**Say this:** Built for SA — English, Afrikaans, isiZulu, isiXhosa, and the other official languages, plus Portuguese for diaspora buyers. Matches the buyer’s language when detection is clear.
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Source of truth | Answers search your DB for that dealership — not a generic car brochure. | Sold units should be marked sold so they drop out. |
-| CSV import | Import CSV; we heal shortcodes and warn on bad rows rather than silently skipping stock. | R1 placeholders need a quick price fix before go-live. |
-| Photos | Showroom credibility = photos + price + km. | Weak photos = weak WhatsApp trust. |
-| Scale (5 000 cars) | Architecture is per-dealership DB search with limits — fine for large yards with fair-use caps on chat volume. | Multi-site / future Group tier + fair-use for mega fleets; don’t promise free unlimited AI on 5k active chats. |
+**Note:** Strongest in EN/AF; rarer languages may be shorter / more careful.
 
-### Meta / WhatsApp
+---
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Setup | Verified WA Business number + webhook subscribe + token. | Founder ops guide: production HTTPS webhook on grayarx.com. |
-| Auto-link | Matching display phone can bind `phone_number_id` automatically. | Ambiguous matches (two unbound dealers, same number) stay manual. |
-| Disclosure | Assistant identifies as AI; custom name shows in disclosure. | Required for trust + POPIA posture. |
+### Inventory & VIN
+
+#### Q15. “How does stock get in — Cars.co.za sync?”
+
+**Say this:** Pilot path is honest: CSV import (and manual edits) into your GrayArx inventory. That DB is what Nala and the showroom use. Live Cars.co.za sync is not the pilot promise — we can map their CSV exports; we don’t claim a always-on classifieds scrape as the product.
+
+**Written:** Pilot = CSV (or manual) into GrayArx. Not live Cars.co.za sync yet. Nala answers from your GrayArx stock.
+
+**Note:** Keep sold units marked sold; R1 placeholders need a price fix before go-live.
+
+---
+
+#### Q16. “What about VIN?”
+
+**Say this:** VIN is optional. If you enter one, it must be a valid ISO 3779 VIN — 17 characters, correct check digit (no I, O, Q). Public showroom and customer-facing docs mask it; staff see what they need in the dealer console.
+
+**Note:** Invalid VIN on CSV import soft-warns — fix in Inventory rather than inventing stock.
+
+---
+
+#### Q17. “Photos — do you host them?”
+
+**Say this:** You can keep photos on external URLs from the CSV, or optionally mirror them into GrayArx storage for durability. Mirroring is optional — not forced — so light yards aren’t paying for storage they don’t need.
+
+**Note:** Weak photos = weak WhatsApp trust; showroom credibility = photos + price + km.
+
+---
+
+### Multi-branch
+
+#### Q18. “We have three branches.”
+
+**Say this:** Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by one `groupKey`. Staff with sibling branches get a Branch switcher in the console. That’s the Multi-site packaging.
+
+**Note:** Confirm migration / ops: create group → assign `groupKey` → WA id + shortcode per branch → smoke-test switcher. Import stock per branch — never mix yards in one CSV.
+
+---
 
 ### POPIA & trust
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| STOP | Honoured for automated follow-ups; START resumes. | Dealer still needs lawful basis for their own campaigns. |
-| Data | Enquiry messages processed to help that enquiry. | Point them at legal hub / POPIA consent form for signatures. |
-| Masking | Customer-facing invoice PDFs mask sensitive digits (last-4 style). | Never paste full bank or ID numbers into WhatsApp demos. |
+#### Q19. “What about POPIA / people saying STOP?”
 
-### Pricing (talk track)
+**Say this:** Buyers can reply STOP (or unsubscribe / opt-out) and we stop proactive automated follow-ups. Reply START turns help back on. First chats acknowledge POPIA processing for the enquiry.
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Pilot | Growth features, founder rate, limited seats. | Soft public pricing page during pilot. |
-| Value frame | All-in showroom + AI + leads vs per-seat CRM. | Compare to “CRM + unanswered WhatsApp,” not to Cars.co.za listing fees. |
-| Overage | Heavy WhatsApp/AI use can attract overage later — protects both sides. | Year 1: avoid per-car-sold commission talk. |
+**Written:** STOP = stop automated follow-ups. START = resume. Enquiry processing disclosed up front.
 
-### After-hours
+**Note:** Dealer still owns lawful basis for their own outbound marketing campaigns.
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| 24/7 | Nala answers stock and captures intent overnight. | Bookings still respect your business hours where configured. |
-| Handoff | Morning list: leads, bookings, anything needing a human. | Train staff to open the dealer console daily. |
+---
 
-### Languages
+#### Q20. “Who owns the leads?”
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Coverage | 11 SA official languages + Portuguese. | EN/AF first-class; others supported carefully. |
-| Tone | SA English spelling and dealer-floor politeness. | No US slang in demos. |
+**Say this:** You do. Leads and bookings sit in your dealership account for your team to work. GrayArx is the platform processing them to deliver the service — we don’t resell your buyer list to other dealers.
 
-### Integrations
+**Note:** Point at dealer agreement / DPA / privacy hub if legal asks for paper.
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Website | Embed + book/apply shortcode URLs. | Works beside existing site — no full rebuild. |
-| Email | Transactional lead/booking mail via Resend. | SMS (Twilio) optional later. |
-| Billing | Branded invoice PDF + FNB EFT env; Stripe optional. | Never commit live account numbers. |
+---
 
-### Scale & failures
+### Support & contract
 
-| Topic | Say this | Note |
-|-------|----------|------|
-| Multi-yard | One group key, many dealership rows, Branch switcher. | After migrate `0069` on Railway: wire groupKey; until then separate accounts. |
-| LLM down | Templates + disclosure still reply; polish resumes when quota is up. | Don’t demo “perfect prose” as a hard dependency. |
-| Wrong answer | Correct the stock row; AI follows the DB next time. | Human override always available. |
+#### Q21. “How long to go live?”
+
+**Say this:** Most yards: provision + shortcode same day; stock CSV + photos in a few hours; WhatsApp once Meta is ready. Target: useful in 48 hours.
+
+**Note:** Meta verification can delay WA only.
+
+---
+
+#### Q22. “Who do we call when something breaks?”
+
+**Say this:** Founder-led support for pilots — hello@grayarx.com / founder cell on the onboarding pack. Growth and Multi-site get priority paths; Multi-site includes phone + named contact packaging.
+
+**Note:** Check webhook health first on WhatsApp issues before blaming the AI.
+
+---
+
+#### Q23. “What’s the contract / pilot terms?”
+
+**Say this:** Pilot agreement and POPIA consent before go-live — dealer agreement and consent form on grayarx.com/legal. Month-to-month style pilot unless you signed something different; we don’t lock you into a five-year CRM.
+
+**Note:** Send exact URLs from the onboarding checklist; don’t improvise legal terms on the call.
+
+---
+
+### Website & integrations
+
+#### Q24. “Can it go on our own website?”
+
+**Say this:** Yes — Dealer → Settings → Website embed. Copy-paste iframe or script. Same shortcode drives book and apply URLs. Works beside your existing site — no full rebuild.
+
+**Note:** WordPress shortcode plugin only if they want `[grayarx_book …]`; plain iframe needs no plugin.
+
+---
+
+#### Q25. “Email / SMS?”
+
+**Say this:** Transactional lead and booking mail is live (Resend). Twilio SMS is optional later — don’t sell it as included today.
+
+**Note:** Never promise SMS as default on Showroom.
+
+---
+
+## 3. Tough objections (say this / never say)
+
+### O1. “Why not just Cars.co.za?”
+
+**Say this:** Keep Cars.co.za — that’s where a lot of demand starts. GrayArx is the always-on reply and booking layer once someone messages you or lands on your showroom. Classifieds get attention; we convert the conversation from your live stock. We are not an ad-buy agency and we don’t replace your listing spend.
+
+**Never say:** “Cars.co.za is useless” / “Cancel your listings.”
+
+---
+
+### O2. “What if AI is wrong and we look stupid?”
+
+**Say this:** We don’t invent cars that aren’t in your inventory. Wrong answers are almost always stale stock — fix the row, mark sold, keep photos/prices current. Anything dicey goes to your human queue with a reference so a salesperson owns the close.
+
+**Never say:** “100% accurate / never hallucinates.”
+
+---
+
+### O3. “Do I need a new WhatsApp number?”
+
+**Say this:** Only if your current number can’t sit on Meta WhatsApp Business / Cloud API. Ideal path: same Business number buyers already use, verified, webhooks on, we link it. Until then webchat + click-to-chat still work.
+
+**Never say:** “Live on Meta tonight” when unverified or webhooks off.
+
+---
+
+### O4. “Who owns the leads?”
+
+**Say this:** Your dealership. We process them to run Nala, bookings, and your inbox — we don’t shop your leads to the dealer next door.
+
+**Never say:** “We own the data / we can sell your CRM.”
+
+---
+
+### O5. “Will this replace my team?”
+
+**Say this:** It replaces silence after hours — not your closers. Floor still owns trade-in, finance, and the handshake.
+
+**Never say:** “You can fire people.”
+
+---
+
+### O6. “We already pay for Facebook ads / a media buyer.”
+
+**Say this:** Keep them. We make sure the buyers those ads already send you get a fast, accurate answer from your stock — we don’t buy the clicks.
+
+**Never say:** “Fire your agency.”
+
+---
+
+### O7. “Is my data training ChatGPT / OpenAI on my customers?”
+
+**Say this:** We use OpenAI to polish replies when the key and quota are up; otherwise templates. We improve the product from outcomes and FAQs you control — not a pitch that we train foundation models on your buyers. See privacy / POPIA docs for processing detail.
+
+**Never say:** “We train on all your customer chats to make the model smarter for everyone.”
 
 ---
 
 ## 4. Tier cheat-sheet — what “AI 24/7” means
 
-| | **Showroom** (starter) | **Growth** (professional) | **Multi-site** (enterprise) |
-|--|------------------------|---------------------------|------------------------------|
+| | **Showroom** | **Growth** | **Multi-site** |
+|--|--------------|------------|----------------|
 | **Internal id** | `starter` | `professional` | `enterprise` |
-| **AI 24/7 means** | Webchat / showroom assistant answering stock & bookings around the clock within plan caps | Same + WhatsApp volume for a busy independent | Same + multi-branch / high volume + stronger model tier |
-| **Channels** | Web-first | Web + WhatsApp | Web + WhatsApp (multi-branch) |
-| **LLM tier** | Efficient model | Stronger (Growth) | Premium model |
-| **Stock ballpark** | ~150 vehicles included | ~500 | Fair-use unlimited\* |
-| **Pilot today** | - | **This is what pilots get** | Multi-branch after migrate `0069`; future **Group** SKU (4th tier) deferred |
+| **AI 24/7 means** | Webchat / showroom assistant within plan caps | Same + WhatsApp Cloud API volume for a busy independent | Same + multi-branch + highest caps |
+| **Channels** | Web + click-to-chat | Web + Cloud API WhatsApp | Web + WhatsApp (multi-branch) |
+| **Stock ballpark** | ~150 vehicles | ~500 | Fair-use unlimited\* |
+| **AI / WA caps** | ~400 AI/mo; no Cloud API bot | ~1,200 AI + ~2,000 WA msgs | ~3,500 AI + ~8,000 WA |
+| **Pilot today** | — | **Typical pilot unlock** | Multi-branch when groupKey ops done |
 
-**Recommended packaging (when enum can grow):** Showroom → Growth → Multi-site → **Group** (holding / multi-brand last).
-
-\*Contract fair-use — say “large yards welcome; we set sensible AI caps.”
+\*Contract fair-use — “large yards welcome; sensible AI caps.”
 
 **One-liner for “AI 24/7”:** The assistant is available every hour buyers message — not that a human salesperson is online at 03:00.
 
 ---
 
-## 5. Multi-branch pitch (shipped on main)
+## 5. Multi-branch pitch (ops)
 
-**Status:** Shipped on `main` (`239af44`): `groupKey`, Branch switcher, Admin create group, `/admin/groups/:groupKey`, migration `0069_dealer_groups`. **Migration `0069` must run on Railway deploy** before a dealer group is live in production.
+**Say this:** Each branch keeps its own stock, WhatsApp number, and shortcode. One `groupKey` links them so managers switch branches without juggling logins. Bill and report per branch cleanly.
 
-### Pitch (Say this)
+**Founder ops (Admin → Dealerships):**
+1. Create group (slug).
+2. One dealership row per yard.
+3. Same `groupKey` on each branch.
+4. Each branch: Meta `phone_number_id` + `publicShortcode`.
+5. Smoke-test Branch switcher → inventory/leads change.
+6. Import CSV **per branch**.
 
-Each branch keeps its own stock, WhatsApp number, and shortcode. We link them with one `groupKey` so managers switch branches in the console without juggling logins. You still report and bill per branch cleanly.
-
-### Ops steps (founder / admin) — also on Admin → Dealerships help card
-
-1. **Create group** — slug in Admin → Dealerships → Create group.  
-2. **Create / open each branch** — one dealership row per yard.  
-3. **Assign the same `groupKey`** on each branch (Group key dialog).  
-4. **WhatsApp + shortcode** — each branch’s Meta `phone_number_id` + confirm `publicShortcode`.  
-5. **Smoke-test** — dealer login → Branch switcher → inventory/leads change.  
-6. Import stock **per branch** (never mix yards in one CSV).  
-7. Only then tell the dealer “multi-branch is live on your account.”
-
-APIs: `adminDealerships.createGroup`, `adminDealerships.setGroupKey`, `dealer.listBranches` / `switchBranch`. Migration `0069` is in `scripts/apply-pending-migrations.mjs`.
-
-**Note:** Do not say "already live for everyone on grayarx.com" — code is on `main`; each group goes live only after migrate `0069` and ops setup below.
+**Note:** Don’t say “live for every dealer on grayarx.com” until that group’s migrate + ops steps are done.
 
 ---
 
-## 6. Never-say list (updated)
+## 6. Never-say list
 
 **Never say**
-
-- “It replaces your sales team / you can fire people.”  
-- “100% accurate every time” / “never hallucinates.”  
-- “Live on Meta tonight” when their number is unverified or webhooks off.  
-- "Multi-branch is in production for all dealers" (on `main` at `239af44`, but each group needs migrate `0069` + ops setup).  
-- Exact public ZAR prices if the pricing page is still pilot-soft — unless founder confirmed today’s number.  
-- “We store / paste your FNB account in WhatsApp” — EFT details come from secure env on invoices only.  
-- “Unlimited free AI on 5 000 cars with unlimited chats.”  
-- “POPIA is fully handled — you don’t need consent forms.”  
-- “Twilio SMS is included and live” (optional / later).  
-- “OpenAI / LLM is required for any reply” — templates cover outages.  
-- Competitor-bashing by name; US SaaS buzzwords (“synergy,” “disrupt,” “agentic swarm”).  
-- Promises about credit approval, guaranteed sales, or RMI/manufacturer compliance seals we don’t have.
+- “It replaces your sales team / fire people.”
+- “100% accurate every time” / “never hallucinates.”
+- “Live on Meta tonight” when unverified or webhooks off.
+- “Multi-branch is live for all dealers” without ops for that group.
+- Exact public ZAR if pricing page is still soft — unless founder confirmed.
+- “We paste your FNB account in WhatsApp.”
+- “Unlimited free AI on thousands of cars with unlimited chats.”
+- “POPIA fully handled — you don’t need consent forms.”
+- “Twilio SMS is included and live.”
+- “OpenAI is required for any reply” — templates cover outages.
+- “Manus Forge powers the chat.”
+- “Live Cars.co.za sync is included in the pilot.”
+- “We train on your customers’ chats.”
+- Competitor-bashing by name; US SaaS buzzwords.
+- Credit approval, guaranteed sales, or seals we don’t have.
 
 **Prefer instead**
-
-- “Answers from your live stock; humans close the deal.”  
-- “24/7 assistant — your team still owns negotiation and finance.”  
-- “WhatsApp once Meta verify + subscribe are done; webchat can start today.”  
-- “Branches = separate yards, one group key, switcher when we flip it on for you.”
+- “Answers from your live stock; humans close the deal.”
+- “24/7 assistant — your team still owns negotiation and finance.”
+- “WhatsApp once Meta verify + subscribe are done; webchat can start today.”
+- “Branches = separate yards, one group key, Branch switcher.”
+- “Pilot stock = CSV; classifieds stay for demand.”
 
 ---
 
@@ -287,15 +383,18 @@ APIs: `adminDealerships.createGroup`, `adminDealerships.setGroupKey`, `dealer.li
 
 | Truth | Dealer-facing line |
 |-------|--------------------|
-| Custom name | “Name the assistant whatever fits your brand.” |
-| STOP | “Buyers reply STOP — automated follow-ups stop.” |
-| DB search | “It looks up *your* cars, not a random catalogue.” |
-| Embed | “One shortcode → embed, book, apply.” |
-| Invoices | “Branded PDF; FNB EFT on platform invoices from secure settings.” |
-| WhatsApp auto-link | “We match your Business number to Meta’s id when we can.” |
-| Shortcodes | “Your public ID for showroom and links.” |
-| 24/7 Nala | “WhatsApp + webchat, day and night.” |
-| Multi-branch | "Shipped on main (`239af44`): groupKey, Branch switcher, Admin create group, `/admin/groups/:groupKey` — migrate `0069` on Railway first." |
+| Tiers | “Showroom, Growth, Multi-site — pilot is Growth features at a deal we agree.” |
+| Pricing | “Public prices soft during pilot.” |
+| Channels | “Webchat on Showroom; Cloud API WhatsApp on Growth+.” |
+| LLM | “OpenAI when available; templates always have a backstop. No Forge for chat.” |
+| STOP | “Buyers reply STOP — automated follow-ups stop; START resumes.” |
+| VIN | “Optional; if you enter it, it must be a real 17-character VIN; masked publicly.” |
+| Stock | “CSV into your GrayArx inventory — not live Cars.co.za sync yet.” |
+| Photos | “External URLs fine; mirroring into our storage is optional.” |
+| Learning | “Sharper from outcomes and FAQs you add — not ‘we train on your customers.’” |
+| Leads | “Your leads stay yours.” |
+| Multi-branch | “One dealership per branch + groupKey + Branch switcher.” |
+| Billing | “Stripe and/or FNB EFT on branded invoices when set.” |
 
 ---
 
