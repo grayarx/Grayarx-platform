@@ -3,6 +3,8 @@
  * Handles language detection, translation, and language-specific responses
  */
 
+import { formatDealerQaForSystemPrompt } from "../../shared/dealerQaPlaybook";
+
 export type SupportedLanguage = "en" | "af" | "zu" | "xh" | "st" | "tn" | "ve";
 
 export interface LanguageConfig {
@@ -308,10 +310,14 @@ export function detectLanguage(text: string): SupportedLanguage {
 }
 
 /**
- * Get language configuration
+ * Get language configuration (dealer-support prompts include the Q&A playbook).
  */
 export function getLanguageConfig(language: SupportedLanguage): LanguageConfig {
-  return LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS.en;
+  const base = LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS.en;
+  return {
+    ...base,
+    systemPrompt: `${base.systemPrompt}\n\n${formatDealerQaForSystemPrompt()}`,
+  };
 }
 
 /**

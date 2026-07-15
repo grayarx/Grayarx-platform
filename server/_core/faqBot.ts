@@ -8,6 +8,11 @@ import {
   formatEftPaymentText,
 } from "../../shared/bankDetails";
 import { getGrayArxBankDetailsFromEnv } from "./grayArxBank";
+import {
+  formatDealerQaReply,
+  matchDealerQa,
+  type DealerQaEntry,
+} from "../../shared/dealerQaPlaybook";
 
 export interface FAQItem {
   id: string;
@@ -351,9 +356,15 @@ Contact our team at grayarx@gmail.com and we'll help you build what you need.`,
 ];
 
 /**
- * Find FAQ answer by question or keywords
+ * Find FAQ answer by question or keywords.
+ * Prefers the dealer Q&A playbook (current product truths) over the legacy FAQ DB.
  */
 export function findFAQAnswer(userQuery: string): FAQItem | null {
+  const playbookHit = matchDealerQa(userQuery);
+  if (playbookHit) {
+    return enrichBillingFaq(dealerQaToFaqItem(playbookHit));
+  }
+
   const query = userQuery.toLowerCase();
 
   // Exact match first
@@ -371,6 +382,29 @@ export function findFAQAnswer(userQuery: string): FAQItem | null {
   if (keywordMatch) return enrichBillingFaq(keywordMatch);
 
   return null;
+}
+
+function dealerQaToFaqItem(entry: DealerQaEntry): FAQItem {
+  const categoryMap: Record<string, FAQItem["category"]> = {
+    price_billing: "pricing",
+    whatsapp_meta: "features",
+    ai_nala: "features",
+    inventory_vin: "technical",
+    multi_branch: "features",
+    popia_trust: "support",
+    support_contract: "support",
+    website_integrations: "technical",
+    objections: "features",
+    elevator: "features",
+    product_truths: "features",
+  };
+  return {
+    id: `playbook_${entry.id}`,
+    category: categoryMap[entry.theme] ?? "features",
+    question: entry.question,
+    keywords: entry.keywords,
+    answer: formatDealerQaReply(entry),
+  };
 }
 
 /** Append live EFT details from env when answering payment FAQs. */

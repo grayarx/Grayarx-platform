@@ -1,7 +1,14 @@
 /**
  * GrayArx Support Chatbot Knowledge Base
  * Comprehensive FAQ and information for dealership inquiries
+ *
+ * Prefer shared/dealerQaPlaybook.ts for current product truths (injected at search time).
  */
+
+import {
+  formatDealerQaReply,
+  matchDealerQa,
+} from "../../shared/dealerQaPlaybook";
 
 export interface FAQItem {
   id: string;
@@ -242,9 +249,24 @@ export const CHATBOT_FAQ: FAQItem[] = [
 ];
 
 /**
- * Find relevant FAQ items based on user query
+ * Find relevant FAQ items based on user query.
+ * Dealer Q&A playbook wins when it matches (current July 2026 truths).
  */
 export function findRelevantFAQ(query: string): FAQItem[] {
+  const playbookHit = matchDealerQa(query);
+  if (playbookHit) {
+    return [
+      {
+        id: `playbook_${playbookHit.id}`,
+        question: playbookHit.question,
+        answer: formatDealerQaReply(playbookHit),
+        category: playbookHit.theme,
+        keywords: playbookHit.keywords,
+        priority: 100,
+      },
+    ];
+  }
+
   const queryLower = query.toLowerCase();
   const keywords = queryLower.split(/\s+/);
 

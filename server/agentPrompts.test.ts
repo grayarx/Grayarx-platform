@@ -52,6 +52,16 @@ describe("agent guardrails — system prompt", () => {
     const prompt = buildSystemPrompt("booking", "en");
     expect(prompt.toLowerCase()).toContain("popia");
   });
+
+  it("injects dealer Q&A playbook for Kagiso and Sipho only", () => {
+    const kagiso = buildSystemPrompt("improvement", "en");
+    const sipho = buildSystemPrompt("prospector", "en");
+    const nala = buildSystemPrompt("whatsapp", "en");
+    expect(kagiso).toContain("Dealer Q&A Playbook");
+    expect(kagiso).toContain("Showroom / Growth / Multi-site");
+    expect(sipho).toContain("Dealer Q&A Playbook");
+    expect(nala).not.toContain("Dealer Q&A Playbook");
+  });
 });
 
 describe("agent guardrails — scoreDraft (English)", () => {

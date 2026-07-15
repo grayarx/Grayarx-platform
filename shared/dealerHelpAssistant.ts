@@ -13,11 +13,16 @@ import {
   isInventoryBulkDeleteConfirm,
   isInventoryBulkDeleteRequest,
 } from "./assistantActions";
+import {
+  formatDealerQaReply,
+  matchDealerQa,
+} from "./dealerQaPlaybook";
 
 export type DealerHelpIntent =
   | "greeting"
   | "help"
   | "navigation"
+  | "product_qa"
   | "inventory_bulk_delete"
   | "inventory_bulk_delete_confirm"
   | "bug_report"
@@ -102,9 +107,9 @@ const DEALER_NAV: Array<{
 
 export const DEALER_HELP_QUICK_PROMPTS = [
   "How do I import CSV?",
-  "How do I add photos?",
+  "What does it cost?",
+  "Do we need WhatsApp Business?",
   "Report a bug",
-  "Help",
 ] as const;
 
 export function isBugDescription(message: string): boolean {
@@ -120,7 +125,14 @@ export function classifyDealerHelpIntent(message: string): DealerHelpIntent {
   if (!lower) return "unknown";
 
   const ownerIntent = classifyDashboardIntent(message);
-  if (OWNER_ONLY_INTENTS.has(ownerIntent)) return "restricted";
+  if (OWNER_ONLY_INTENTS.has(ownerIntent)) {
+    // "WhatsApp" aliases to Nala in the owner classifier — don't block product Q&A
+    const clearlyAgentOps =
+      /\b(agent|roster|doing|status|where (are|is)|what did|my team)\b/i.test(lower);
+    if (clearlyAgentOps || ownerIntent === "agent_roster" || ownerIntent === "dashboard_stats") {
+      return "restricted";
+    }
+  }
   if (resolveAgentQuestion(lower)) return "restricted";
 
   if (/^(hi|hello|hey|howzit|good (morning|afternoon|evening))\b/.test(lower)) {
@@ -148,6 +160,18 @@ export function classifyDealerHelpIntent(message: string): DealerHelpIntent {
   }
 
   if (isBugDescription(message)) return "bug_report";
+
+  // Console nav wins when the message clearly points at a dealer page
+  const navHit = DEALER_NAV.some((h) => h.keywords.some((re) => re.test(message)));
+  if (
+    navHit &&
+    /\b(how (do|to)|where (do|to|is)|import|upload|navigate|go to|open)\b/i.test(lower)
+  ) {
+    return "navigation";
+  }
+
+  // Product / commercial Q&A from the dealer playbook
+  if (matchDealerQa(message)) return "product_qa";
 
   if (
     /\b(how (do|to)|where (do|to|is)|import|upload|navigate|go to|open)\b/i.test(lower)
@@ -210,12 +234,28 @@ function buildDealerHelp(): DealerHelpReply {
     reply: [
       "I can help with:",
       "",
+      "• **Product Q&A** — pricing, WhatsApp/Meta, POPIA, VIN, tiers, contract",
       "• **How do I…?** — CSV import, photos, leads, bookings, settings",
       "• **Delete all inventory** — bulk-remove your vehicles (with confirmation)",
       "• **Report a bug** — describe what broke and I'll log it for GrayArx support",
       "",
       `Email support: **${PRIMARY_INBOX}**`,
     ].join("\n"),
+  };
+}
+
+function buildProductQaReply(message: string): DealerHelpReply {
+  const entry = matchDealerQa(message);
+  if (!entry) return buildDealerUnknown();
+
+  return {
+    mode: "dealer",
+    intent: "product_qa",
+    links: [
+      { label: "Settings", href: "/dealer/settings" },
+      { label: "CSV Import", href: "/dealer/inventory/import" },
+    ],
+    reply: formatDealerQaReply(entry),
   };
 }
 
@@ -286,6 +326,7 @@ function buildDealerUnknown(): DealerHelpReply {
     links: buildDealerHelp().links,
     reply: [
       "Try asking:",
+      "• *What does it cost?* / *Do we need WhatsApp Business?*",
       "• *Delete all my inventory*",
       "• *How do I import CSV?*",
       "• *Where do I upload photos?*",
@@ -315,6 +356,8 @@ export function buildDealerHelpReply(input: {
       return buildDealerGreeting();
     case "help":
       return buildDealerHelp();
+    case "product_qa":
+      return buildProductQaReply(input.message);
     case "navigation":
       return buildDealerNavigation(input.message);
     case "bug_report_prompt":

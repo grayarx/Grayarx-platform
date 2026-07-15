@@ -146,6 +146,10 @@ import {
 } from "./db";
 import { storagePut } from "./storage";
 import { AGENTS, AGENT_LIST, PILOT_AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
+import {
+  agentGetsDealerQaPlaybook,
+  formatDealerQaForSystemPrompt,
+} from "../shared/dealerQaPlaybook";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
 import { ENV } from "./_core/env";
@@ -5266,6 +5270,9 @@ export const appRouter = router({
         }
 
         // Build a founder-chat-specific system prompt
+        const dealerQaBlock = agentGetsDealerQaPlaybook(internalAgentId)
+          ? `\n${formatDealerQaForSystemPrompt()}`
+          : "";
         const agentSystemPrompt = [
           `You are ${persona.displayName}, the ${persona.role} at GrayArx — the AI operating system for South African car dealerships.`,
           `You are chatting directly with the GrayArx founder/admin via an internal console. This is NOT a customer-facing channel.`,
@@ -5277,6 +5284,7 @@ export const appRouter = router({
           contextParts.length
             ? `Current data context:\n${contextParts.join("\n\n")}`
             : "No live data available right now.",
+          dealerQaBlock,
           ``,
           "If the founder asks you to perform an action (cancel a booking, update a status, etc.), respond with:",
           "1. Confirmation of what you understood",

@@ -20,6 +20,22 @@ describe("dealerHelpAssistant", () => {
     expect(res.links[0]?.href).toBe("/dealer/inventory/import");
   });
 
+  it("answers product Q&A from the dealer playbook", () => {
+    const res = buildDealerHelpReply({ message: "What does it cost?" });
+    expect(res.intent).toBe("product_qa");
+    expect(res.reply).toMatch(/Growth/);
+    expect(res.reply).toMatch(/Showroom/);
+  });
+
+  it("answers WhatsApp Business from the playbook", () => {
+    const res = buildDealerHelpReply({
+      message: "Do we need a WhatsApp Business number?",
+    });
+    expect(res.intent).toBe("product_qa");
+    expect(res.reply).toMatch(/Cloud API/);
+    expect(res.reply).not.toMatch(/Manus Forge/);
+  });
+
   it("prompts for bug details on short report", () => {
     expect(classifyDealerHelpIntent("report a bug")).toBe("bug_report_prompt");
   });

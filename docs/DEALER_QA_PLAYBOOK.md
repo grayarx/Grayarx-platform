@@ -5,6 +5,8 @@
 **Version:** July 2026 · v3  
 **Rule:** Answers ≤ 2–3 sentences spoken. Lead with the win. One-line **Note:** for caveats. Use **Written (SMS/WhatsApp)** only when a short paste helps.
 
+**Agent injection:** This playbook is loaded into `shared/dealerQaPlaybook.ts` and injected into dealer-support paths (Dealer Help chat, Kagiso/Sipho system prompts, FAQ / support chatbot). It is **not** injected into buyer-facing Nala (WhatsApp / showroom stock Q&A). Keep the shared TS module in sync when you edit answers here.
+
 **Product truths (July 2026 — ship what we have):**
 - Tiers: **Showroom / Growth / Multi-site** (DB ids `starter` / `professional` / `enterprise`). No separate “Group” SKU yet — don’t invent one.
 - Pilot: Growth features @ negotiated rate; public list prices hidden (`PILOT_PRICING_HIDDEN`). Missing Meta WA Business does **not** auto-downgrade to Showroom — Cloud API WhatsApp is just blocked until linked.

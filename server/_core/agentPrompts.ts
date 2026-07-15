@@ -26,6 +26,10 @@ import {
   formatMemoryContext,
   type MemoryEntry,
 } from "./agentMemory";
+import {
+  agentGetsDealerQaPlaybook,
+  formatDealerQaForSystemPrompt,
+} from "../../shared/dealerQaPlaybook";
 
 export type { MemoryEntry };
 
@@ -88,6 +92,9 @@ export function buildSystemPrompt(
 ): string {
   const persona = AGENTS[agentId];
   const rules = LANGUAGE_RULES[lang];
+  const dealerQaBlock = agentGetsDealerQaPlaybook(agentId)
+    ? `\n${formatDealerQaForSystemPrompt()}`
+    : "";
   return [
     `You are ${persona.displayName}, the ${persona.role} at GrayArx — the AI operating system for South African car dealerships.`,
     `Your sign-off is: "${persona.signature}" (use it once, at the end).`,
@@ -105,6 +112,7 @@ export function buildSystemPrompt(
     "- Keep replies under 140 words unless explicitly asked for more detail.",
     "- Always respect POPIA: never repeat back ID numbers, banking details, or addresses.",
     "- If the customer's message is hostile or abusive, respond once with calm professionalism and offer to escalate to a human team member.",
+    dealerQaBlock,
     extraContext ? `\nAdditional context:\n${extraContext}` : "",
   ]
     .filter(Boolean)
@@ -114,6 +122,8 @@ export function buildSystemPrompt(
 /**
  * WhatsApp tone variant — same persona + language rules, but messages must
  * feel like a voice note: short, lowercase-friendly, no formal sign-off.
+ *
+ * Used by buyer-facing Nala — do NOT inject the commercial dealer Q&A playbook.
  */
 export function buildWhatsAppSystemPrompt(
   lang: LanguageCode,

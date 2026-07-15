@@ -10,6 +10,7 @@ import {
   isInventoryBulkDeleteRequest,
   type AssistantPendingAction,
 } from "./assistantActions";
+import { formatDealerQaReply, matchDealerQa } from "./dealerQaPlaybook";
 
 export type DashboardIntent =
   | "greeting"
@@ -18,6 +19,7 @@ export type DashboardIntent =
   | "agent_activity"
   | "dashboard_stats"
   | "navigation"
+  | "product_qa"
   | "inventory_bulk_delete"
   | "inventory_bulk_delete_confirm"
   | "help"
@@ -271,6 +273,8 @@ export function classifyDashboardIntent(message: string): DashboardIntent {
     return "navigation";
   }
 
+  if (matchDealerQa(message)) return "product_qa";
+
   return "unknown";
 }
 
@@ -414,6 +418,25 @@ function buildNavigationReply(message: string): DashboardAssistantReply {
   };
 }
 
+function buildProductQaReply(message: string): DashboardAssistantReply {
+  const entry = matchDealerQa(message);
+  if (!entry) return buildUnknownReply();
+
+  return {
+    mode: "owner",
+    intent: "product_qa",
+    links: [
+      { label: "Kagiso roadmap", href: "/admin/kagiso-roadmap" },
+      { label: "Settings", href: "/dealer/settings" },
+    ],
+    reply: [
+      `**Dealer playbook — ${entry.question}**`,
+      "",
+      formatDealerQaReply(entry),
+    ].join("\n"),
+  };
+}
+
 function buildHelpReply(): DashboardAssistantReply {
   return {
     mode: "owner",
@@ -428,6 +451,7 @@ function buildHelpReply(): DashboardAssistantReply {
       "• *Where are my agents?* — full roster + status",
       "• *What is Lerato doing?* — recent activity for one agent",
       "• *Dashboard stats* — leads, bookings, inventory",
+      "• *What does it cost?* / *Do we need WhatsApp Business?* — dealer Q&A playbook",
       "• *How do I import CSV?* — navigation + short how-to",
       "• *Delete all inventory* — bulk-remove every vehicle (with confirmation)",
       "",
@@ -460,6 +484,7 @@ function buildUnknownReply(): DashboardAssistantReply {
       "• *Delete all my inventory* — bulk remove vehicles",
       "• *Where are my agents?*",
       "• *What did Nala do recently?*",
+      "• *What does Growth include?* — dealer playbook",
       "• *How do I import inventory?*",
       "• *Help* — full list of things I can answer",
     ].join("\n"),
@@ -487,6 +512,8 @@ export function buildDashboardAssistantReply(input: {
       return buildStatsReply(input.context);
     case "navigation":
       return buildNavigationReply(input.message);
+    case "product_qa":
+      return buildProductQaReply(input.message);
     case "help":
       return buildHelpReply();
     default:
