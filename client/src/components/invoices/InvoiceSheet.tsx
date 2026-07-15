@@ -53,7 +53,7 @@ export function InvoiceSheet({ doc }: { doc: InvoiceDocumentView }) {
             className="text-xs font-semibold uppercase tracking-[0.2em]"
             style={{ color: accent }}
           >
-            Tax invoice
+            {doc.documentTitle}
           </div>
           <div className="mt-1 font-mono text-lg font-bold">{doc.invoiceNumber}</div>
           <div className="mt-3 space-y-1 text-xs" style={{ color: INVOICE_BRAND.muted }}>
@@ -284,6 +284,7 @@ export function InvoiceSheet({ doc }: { doc: InvoiceDocumentView }) {
 
       {/* Footer */}
       <footer className="mt-12 border-t pt-6 text-xs leading-relaxed" style={{ borderColor: INVOICE_BRAND.rule, color: INVOICE_BRAND.muted }}>
+        {doc.vatFooterNote && <p className="mb-2">{doc.vatFooterNote}</p>}
         {doc.platformCredit && <p className="mb-2">{doc.platformCredit}</p>}
         <p className="mb-2">{doc.popiaFooter}</p>
         <p>

@@ -27,11 +27,28 @@ export function grayArxRegisteredAddressSingleLine(): string {
   return `${a.street}, ${a.city}, ${a.province} ${a.postalCode}, ${a.country}`;
 }
 
-/** Tax/VAT line for invoices and legal footers. */
+/**
+ * Full tax/VAT status for legal pages (dealer agreement, POPIA, Legal Hub).
+ * Do not put this on customer-facing invoices — income tax ref is not required there.
+ */
 export function grayArxTaxStatusLine(): string {
   const incomeTax = `Income tax ref: ${GRAYARX_LEGAL.incomeTaxReference}`;
   if (GRAYARX_LEGAL.vatRegistered && GRAYARX_LEGAL.vatNumber) {
     return `${incomeTax}. VAT no. ${GRAYARX_LEGAL.vatNumber}.`;
   }
   return `${incomeTax}. Not VAT-registered — prices exclude VAT.`;
+}
+
+/**
+ * Quiet footer note for dealer/customer invoices when GrayArx is not a VAT vendor.
+ * Returns null once VAT-registered (VAT number goes on the letterhead instead).
+ */
+export function grayArxInvoiceVatFooterNote(): string | null {
+  if (GRAYARX_LEGAL.vatRegistered) return null;
+  return `${GRAYARX_LEGAL.legalName} is not a VAT vendor. Prices exclude VAT.`;
+}
+
+/** Document title: "Tax Invoice" is a VAT Act type — use "Invoice" until registered. */
+export function grayArxInvoiceDocumentTitle(): string {
+  return GRAYARX_LEGAL.vatRegistered ? "Tax invoice" : "Invoice";
 }

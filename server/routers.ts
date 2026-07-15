@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { GRAYARX_LEGAL } from "../shared/companyLegal";
 import { validateVin } from "@shared/validateVin";
 import { z } from "zod";
 
@@ -4909,9 +4910,12 @@ export const appRouter = router({
         }
         const leadId = input.leadId ?? 0;
         const vehicleId = input.vehicleId ?? 0;
-        const vatRate = 0.15;
+        const vatRate = GRAYARX_LEGAL.vatRegistered ? 0.15 : 0;
         const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
-        const totalAmount = Math.round((input.subtotal + vatAmount) * 100) / 100;
+        const totalAmount =
+          vatRate === 0
+            ? Math.round(input.subtotal * 100) / 100
+            : Math.round((input.subtotal + vatAmount) * 100) / 100;
         const dueDate = new Date(Date.now() + input.paymentTermsDays * 24 * 60 * 60 * 1000);
 
         const dealership = await getDealershipById(input.dealershipId);
@@ -4966,9 +4970,12 @@ export const appRouter = router({
         }
         const leadId = input.leadId ?? 0;
         const vehicleId = input.vehicleId ?? 0;
-        const vatRate = 0.15;
+        const vatRate = GRAYARX_LEGAL.vatRegistered ? 0.15 : 0;
         const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
-        const totalAmount = Math.round((input.subtotal + vatAmount) * 100) / 100;
+        const totalAmount =
+          vatRate === 0
+            ? Math.round(input.subtotal * 100) / 100
+            : Math.round((input.subtotal + vatAmount) * 100) / 100;
         const invoiceNumber = `INV-${input.dealershipId}-${Date.now().toString().slice(-8)}`;
         const dueDate = new Date(Date.now() + input.paymentTermsDays * 24 * 60 * 60 * 1000);
 
@@ -4988,12 +4995,15 @@ export const appRouter = router({
           await setInvoicePdfUrl(invoiceId, pdfUrl);
         }
 
+        const vatLabel = GRAYARX_LEGAL.vatRegistered
+          ? "incl VAT"
+          : "no VAT — not VAT-registered";
         await logAgentActivity({
           agentId: "accountant",
           action: "invoice_created",
           subjectType: "invoice",
           subjectId: invoiceId,
-          summary: `Drafted invoice ${invoiceNumber} for R ${totalAmount.toFixed(2)} (incl VAT)`,
+          summary: `Drafted invoice ${invoiceNumber} for R ${totalAmount.toFixed(2)} (${vatLabel})`,
           payload: { invoiceId, dealershipId: input.dealershipId, totalAmount, pdfUrl },
         });
 

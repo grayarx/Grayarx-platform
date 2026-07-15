@@ -288,9 +288,10 @@ export default function AdminInvoices() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                VAT (15%) and total will be calculated automatically. Lead/Vehicle IDs are
-                only references for a specific deal — they are not how GrayArx gets paid.
-                You'll see a preview of the actual invoice before it's created.
+                Not VAT-registered — invoice total equals subtotal. VAT will be added only
+                after GrayArx registers for VAT. Lead/Vehicle IDs are only references for a
+                specific deal — they are not how GrayArx gets paid. You'll see a preview of
+                the actual invoice before it's created.
               </p>
             </div>
             <DialogFooter>

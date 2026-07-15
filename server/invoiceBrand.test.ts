@@ -110,6 +110,11 @@ describe("invoice brand helpers", () => {
     });
 
     expect(doc.letterheadMode).toBe("platform");
+    expect(doc.documentTitle).toBe("Invoice");
+    expect(doc.from.taxLine).toContain("Ent.");
+    expect(doc.from.taxLine).not.toContain("Income tax");
+    expect(doc.vatFooterNote).toContain("not a VAT vendor");
+    expect(doc.showVat).toBe(false);
     expect(doc.eftPayment?.accountNumber).toBe("11112222333");
     expect(doc.eftPayment?.paymentReference).toBe("GRAYARX-202607-ABC12");
     expect(doc.eftPayment?.bankName).toBe("FNB");

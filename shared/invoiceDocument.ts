@@ -12,8 +12,9 @@ import {
 } from "./invoiceBrand";
 import {
   GRAYARX_LEGAL,
+  grayArxInvoiceDocumentTitle,
+  grayArxInvoiceVatFooterNote,
   grayArxRegisteredAddressSingleLine,
-  grayArxTaxStatusLine,
 } from "./companyLegal";
 import {
   buildEftPaymentInstructions,
@@ -30,6 +31,8 @@ export type InvoiceLineItem = {
 
 export type InvoiceDocumentView = {
   letterheadMode: InvoiceLetterheadMode;
+  /** "Invoice" when not VAT-registered; "Tax invoice" only once registered. */
+  documentTitle: string;
   invoiceNumber: string;
   status: string;
   invoiceDate: string;
@@ -42,6 +45,8 @@ export type InvoiceDocumentView = {
   vatFormatted: string;
   totalFormatted: string;
   showVat: boolean;
+  /** Quiet footer VAT note when not a VAT vendor; null once registered. */
+  vatFooterNote: string | null;
   accentColor: string;
   logoUrl: string | null;
   from: {
@@ -50,6 +55,7 @@ export type InvoiceDocumentView = {
     email: string | null;
     phone: string | null;
     address: string | null;
+    /** Letterhead only: enterprise / VAT no. — never income tax ref on invoices. */
     taxLine: string | null;
   };
   billTo: {
@@ -186,6 +192,13 @@ export function buildInvoiceDocumentView(input: {
           },
         ];
 
+  const platformLetterheadLines = [
+    `Ent. ${GRAYARX_LEGAL.enterpriseNumber}`,
+    GRAYARX_LEGAL.vatRegistered && GRAYARX_LEGAL.vatNumber
+      ? `VAT no. ${GRAYARX_LEGAL.vatNumber}`
+      : null,
+  ].filter(Boolean);
+
   const from =
     letterheadMode === "platform"
       ? {
@@ -194,11 +207,11 @@ export function buildInvoiceDocumentView(input: {
           email: GRAYARX_LEGAL.supportEmail,
           phone: GRAYARX_LEGAL.phone,
           address: grayArxRegisteredAddressSingleLine(),
-          taxLine: grayArxTaxStatusLine(),
+          taxLine: platformLetterheadLines.join(" · ") || null,
         }
       : {
           name: input.dealership?.name ?? "Dealership",
-          subtitle: "Tax invoice / quotation · prepared with Thandi (GrayArx)",
+          subtitle: "Invoice / quotation · prepared with Thandi (GrayArx)",
           email: input.dealership?.contactEmail ?? null,
           phone: input.dealership?.contactPhone
             ? maskLast4(input.dealership.contactPhone)
@@ -208,7 +221,7 @@ export function buildInvoiceDocumentView(input: {
             : null,
           taxLine: input.dealership?.vatNumber
             ? `VAT no. ${input.dealership.vatNumber}`
-            : "VAT details on request",
+            : null,
         };
 
   const billTo =
@@ -232,6 +245,7 @@ export function buildInvoiceDocumentView(input: {
 
   return {
     letterheadMode,
+    documentTitle: grayArxInvoiceDocumentTitle(),
     invoiceNumber: input.invoice.invoiceNumber,
     status: input.invoice.status,
     invoiceDate: asDateLabel(input.invoice.invoiceDate),
@@ -244,6 +258,8 @@ export function buildInvoiceDocumentView(input: {
     vatFormatted: formatZar(vatAmount),
     totalFormatted: formatZar(totalAmount),
     showVat: vatAmount > 0,
+    vatFooterNote:
+      letterheadMode === "platform" ? grayArxInvoiceVatFooterNote() : null,
     accentColor: accent,
     logoUrl:
       letterheadMode === "dealership" && input.dealership?.brandLogoUrl
