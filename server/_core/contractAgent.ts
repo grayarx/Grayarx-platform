@@ -387,7 +387,8 @@ export function generateGoLiveChecklist(): OnboardingTask[] {
     {
       id: "golive-2",
       title: "Inventory imported",
-      description: "All vehicles in system with photos",
+      description:
+        "All vehicles in system with photos; no R1/placeholder prices left on available stock (fix in Inventory or Settings → Fix R1 prices)",
       assignedTo: "dealership",
       dueDate: new Date(),
       completed: false,

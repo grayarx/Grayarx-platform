@@ -383,9 +383,35 @@ Respond helpfully and offer to book a test drive.`,
         status: "open",
       }) as any;
 
+      const ticketId = result?.insertId ?? result?.[0]?.insertId ?? 0;
+
+      if (
+        ticketId &&
+        (input.category === "bug" ||
+          input.category === "performance" ||
+          input.severity === "critical" ||
+          input.severity === "high")
+      ) {
+        try {
+          const { enqueueKagisoBugInvestigation } = await import("./kagisoBugIntake");
+          await enqueueKagisoBugInvestigation({
+            ticketId,
+            dealershipId: input.dealershipId,
+            title: input.title,
+            description: input.description,
+            severity: input.severity,
+            category: input.category,
+            source: "support_form",
+          });
+        } catch (e) {
+          console.warn("[Kagiso] support-form bug intake failed", e);
+        }
+      }
+
       return {
-        ticketId: result?.insertId ?? result?.[0]?.insertId ?? 0,
-        message: "Support ticket created. Our team will review it shortly.",
+        ticketId,
+        message:
+          "Support ticket created. Kagiso will investigate bugs and propose a fix for founder approval.",
       };
     }),
 

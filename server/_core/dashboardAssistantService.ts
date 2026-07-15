@@ -108,6 +108,24 @@ async function createDealerSupportTicket(input: {
     content: `${input.reporterName} @ dealership ${input.dealershipId}: ${ticket.title}`,
   });
 
+  // Kagiso starts investigation (propose → founder approve; no auto prod write)
+  if (ticket.category === "bug" || ticket.severity === "critical" || ticket.severity === "high") {
+    try {
+      const { enqueueKagisoBugInvestigation } = await import("./kagisoBugIntake");
+      await enqueueKagisoBugInvestigation({
+        ticketId: id,
+        dealershipId: input.dealershipId,
+        title: ticket.title,
+        description: ticket.description,
+        severity: ticket.severity,
+        category: ticket.category,
+        source: "dealer_help",
+      });
+    } catch (e) {
+      console.warn("[Kagiso] bug intake failed", e);
+    }
+  }
+
   return { id, title: ticket.title };
 }
 

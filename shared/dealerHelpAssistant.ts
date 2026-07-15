@@ -274,7 +274,7 @@ export function buildBugReportConfirmation(input: {
     reply: [
       `Thanks — I've logged **ticket #${input.ticketId}**: ${input.title}`,
       "",
-      "GrayArx support will review it. For urgent issues email **hello@grayarx.com**.",
+      "Kagiso has started investigating and will propose a fix for founder approval. For urgent issues email **hello@grayarx.com**.",
     ].join("\n"),
   };
 }

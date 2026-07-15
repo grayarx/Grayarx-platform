@@ -294,7 +294,8 @@ export default function DealerSettings() {
                         </span>
                       ) : (
                         <span className="text-amber-600 font-medium">
-                          Not linked yet — ask GrayArx to connect your Meta number
+                          Not linked yet — auto-links when your contact phone matches Meta&apos;s
+                          display number, or ask GrayArx to paste the phone_number_id
                         </span>
                       )}
                     </li>

@@ -2,6 +2,9 @@
  * Fill missing year / fuel / km / transmission on demo exotic stock so the
  * showroom cards look complete for dealer demos. Photos are already present;
  * this only patches null metadata by make+model.
+ *
+ * Scoped to DEMO_DEALERSHIP_ID (default 1) so real pilot yards are never touched.
+ * Never writes prices — R1 placeholders must be fixed by dealers, not heal.
  */
 import { getDb, listVehicles, updateVehicle } from "../db";
 
@@ -35,11 +38,17 @@ function key(make: string | null | undefined, model: string | null | undefined):
   return `${(make ?? "").trim().toLowerCase()}|${(model ?? "").trim().toLowerCase()}`;
 }
 
+function demoDealershipId(): number {
+  const n = Number(process.env.DEMO_DEALERSHIP_ID || process.env.WHATSAPP_DEALERSHIP_ID || "1");
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
 export async function healDemoInventoryMetadata(): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
 
-  const rows = await listVehicles(500, { excludeSold: true });
+  const dealershipId = demoDealershipId();
+  const rows = await listVehicles(500, { dealershipId, excludeSold: true });
   let updated = 0;
 
   for (const v of rows) {
@@ -58,7 +67,9 @@ export async function healDemoInventoryMetadata(): Promise<number> {
   }
 
   if (updated > 0) {
-    console.log(`[Startup] Healed metadata on ${updated} demo vehicle(s)`);
+    console.log(
+      `[Startup] Healed metadata on ${updated} demo vehicle(s) (dealership ${dealershipId})`,
+    );
   }
   return updated;
 }

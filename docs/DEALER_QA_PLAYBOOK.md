@@ -7,16 +7,17 @@
 
 **Product truths (July 2026 — ship what we have):**
 - Tiers: **Showroom / Growth / Multi-site** (DB ids `starter` / `professional` / `enterprise`). No separate “Group” SKU yet — don’t invent one.
-- Pilot: Growth features @ negotiated rate; public list prices hidden (`PILOT_PRICING_HIDDEN`).
+- Pilot: Growth features @ negotiated rate; public list prices hidden (`PILOT_PRICING_HIDDEN`). Missing Meta WA Business does **not** auto-downgrade to Showroom — Cloud API WhatsApp is just blocked until linked.
 - Nala 24/7 AI for Q&A, bookings, leads; humans optional for handoff. Showroom = web chat + click-to-chat; Growth+ = WhatsApp Cloud API bot (needs Meta WA Business number).
 - Chat LLM: **OpenAI → templates**. No Manus Forge for chat.
 - VIN: optional; if entered must be valid ISO 3779 (17 chars + check digit); masked publicly.
 - Multi-branch: one dealership row per branch + shared `groupKey` + Branch switcher (Multi-site).
-- Pilot stock: **CSV import** — not live Cars.co.za sync yet.
+- Pilot stock: **CSV import** — not live Cars.co.za sync yet. Sold preserved on re-import; R1 placeholders excluded from public showroom until fixed.
 - POPIA, STOP/START WhatsApp, usage caps per tier.
-- Billing: Stripe and/or bank EFT (FNB) when configured; soft public pricing.
+- Billing: Stripe and/or bank EFT (FNB) when configured; soft public pricing. Contract: month-to-month or 12-month commit (founder rate lock).
 - Photo mirroring: optional (keep external URLs or mirror into GrayArx storage).
-- Agents improve via outcomes + dealer FAQs — **not** “we train on your customers.”
+- Agents improve via outcomes + dealer FAQs — **not** “we train on your customers.” Bug reports → Kagiso investigates → founder approves.
+- Pilot SLA: `docs/PILOT_SLA.md` (honest founder-led response times).
 
 ---
 
@@ -74,11 +75,11 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 #### Q5. “Do we need a WhatsApp Business number / Meta?”
 
-**Say this:** For the Cloud API bot (Growth+): yes — a verified WhatsApp Business number on Meta, webhooks subscribed, then we link `phone_number_id`. Without that you still get webchat, showroom, and wa.me click-to-human.
+**Say this:** For the Cloud API bot: yes — a verified WhatsApp Business number on Meta, webhooks subscribed, then we link `phone_number_id`. Pilot partners still get **Growth features** (showroom, inventory, leads, webchat Nala, caps) at the pilot price even before Meta is done — you’re not dropped to Showroom. Without WA Business you just can’t run Cloud API Nala on WhatsApp yet; webchat + wa.me click-to-chat still work.
 
-**Written:** Cloud API bot = Meta WA Business number + webhook. No Meta yet → webchat + showroom + click-to-chat still work.
+**Written:** Pilot = Growth features @ pilot price. Cloud API WhatsApp needs Meta WA Business. No Meta yet → still Growth web/showroom/leads/webchat; only the WhatsApp bot waits.
 
-**Note:** Dealer Settings shows a WhatsApp AI checklist (linked / not linked). Auto-link when display number matches an unbound dealership.
+**Note:** Settings shows WhatsApp AI checklist (linked / not linked). Auto-link **works** when Meta’s display number matches exactly one unbound dealership’s `contactPhone` (or pending onboarding owner phone) — then webhooks write `phone_number_id`. Manual Admin paste still fine if phones don’t match.
 
 ---
 
@@ -166,7 +167,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 **Written:** Pilot = CSV (or manual) into GrayArx. Not live Cars.co.za sync yet. Nala answers from your GrayArx stock.
 
-**Note:** Keep sold units marked sold; R1 placeholders need a price fix before go-live.
+**Note:** Keep sold units marked sold — CSV re-import will not resurrect sold stock as available. R1/placeholder prices are hidden from the public showroom and chat until fixed (Inventory or Settings → Fix R1 prices). Demo heal only touches demo-yard metadata — never writes R1 onto real dealers.
 
 ---
 
@@ -228,17 +229,19 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 #### Q22. “Who do we call when something breaks?”
 
-**Say this:** Founder-led support for pilots — hello@grayarx.com / founder cell on the onboarding pack. Growth and Multi-site get priority paths; Multi-site includes phone + named contact packaging.
+**Say this:** Founder-led support for pilots — hello@grayarx.com / founder cell on the onboarding pack. In Dealer Help chat, say *Report a bug: …* — that opens a ticket and **Kagiso starts investigating**, proposing a fix for founder approval (no silent prod writes). Growth and Multi-site get priority paths; Multi-site includes phone + named contact packaging.
 
-**Note:** Check webhook health first on WhatsApp issues before blaming the AI.
+**Note:** Check webhook health first on WhatsApp issues. Fallback inbox messages that clearly report platform errors also queue Kagiso. See `docs/PILOT_SLA.md` for honest response targets.
 
 ---
 
 #### Q23. “What’s the contract / pilot terms?”
 
-**Say this:** Pilot agreement and POPIA consent before go-live — dealer agreement and consent form on grayarx.com/legal. Month-to-month style pilot unless you signed something different; we don’t lock you into a five-year CRM.
+**Say this:** Pilot agreement and POPIA consent before go-live — dealer agreement and consent form on grayarx.com/legal. Default is **month-to-month** with 30 days’ notice; we also offer a **12-month commit** with founder rate lock if you want price certainty. We don’t lock you into a five-year CRM.
 
-**Note:** Send exact URLs from the onboarding checklist; don’t improvise legal terms on the call.
+**Written:** Month-to-month (cancel ~30 days) or 12-month commit (rate lock). SLA summary: `docs/PILOT_SLA.md`. Full legal SLA: `docs/legal/SERVICE_LEVEL_AGREEMENT.md`.
+
+**Note:** Send exact URLs from the onboarding checklist; don’t improvise legal terms on the call. Pilot SLA is founder-led response times — not enterprise credit theatre.
 
 ---
 
@@ -280,9 +283,9 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### O3. “Do I need a new WhatsApp number?”
 
-**Say this:** Only if your current number can’t sit on Meta WhatsApp Business / Cloud API. Ideal path: same Business number buyers already use, verified, webhooks on, we link it. Until then webchat + click-to-chat still work.
+**Say this:** Only if your current number can’t sit on Meta WhatsApp Business / Cloud API. Ideal path: same Business number buyers already use, verified, webhooks on, we link it (auto-link if contact phone matches Meta display). Until then you keep Growth webchat + click-to-chat — not a Showroom downgrade.
 
-**Never say:** “Live on Meta tonight” when unverified or webhooks off.
+**Never say:** “Live on Meta tonight” when unverified or webhooks off. / “No WA Business = you’re on Showroom.”
 
 ---
 
@@ -389,7 +392,9 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 | LLM | “OpenAI when available; templates always have a backstop. No Forge for chat.” |
 | STOP | “Buyers reply STOP — automated follow-ups stop; START resumes.” |
 | VIN | “Optional; if you enter it, it must be a real 17-character VIN; masked publicly.” |
-| Stock | “CSV into your GrayArx inventory — not live Cars.co.za sync yet.” |
+| Stock | “CSV into your GrayArx inventory — not live Cars.co.za sync yet. Sold stays sold; R1 hidden from public until fixed.” |
+| Support | “Bug report → Kagiso investigates → founder approves fix. Pilot SLA in docs/PILOT_SLA.md.” |
+| Contract | “Month-to-month or 12-month commit with founder rate lock.” |
 | Photos | “External URLs fine; mirroring into our storage is optional.” |
 | Learning | “Sharper from outcomes and FAQs you add — not ‘we train on your customers.’” |
 | Leads | “Your leads stay yours.” |

@@ -29,4 +29,14 @@ describe("dealerHelpAssistant", () => {
       isBugDescription("CSV import fails on row 12 with invalid price error"),
     ).toBe(true);
   });
+
+  it("mentions Kagiso investigation on bug confirmation", () => {
+    const res = buildDealerHelpReply({
+      message: "ignored",
+      ticket: { id: 42, title: "CSV import fails" },
+    });
+    expect(res.intent).toBe("bug_report");
+    expect(res.reply).toContain("Kagiso");
+    expect(res.reply).toContain("#42");
+  });
 });

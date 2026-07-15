@@ -253,7 +253,12 @@ export async function createVehicle(data: InsertVehicle) {
  */
 export async function listVehicles(
   limit = 2000,
-  opts?: { dealershipId?: number | null; excludeSold?: boolean },
+  opts?: {
+    dealershipId?: number | null;
+    excludeSold?: boolean;
+    /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
+    excludePlaceholderPrices?: boolean;
+  },
 ) {
   const db = await getDb();
   if (!db) return [];
@@ -264,23 +269,30 @@ export async function listVehicles(
   const soldFilter = opts?.excludeSold
     ? or(isNull(vehicles.status), ne(vehicles.status, "sold"))
     : undefined;
+  // R1 / nullish junk from CSV import must not go live on public surfaces
+  const priceFilter = opts?.excludePlaceholderPrices
+    ? sql`CAST(${vehicles.price} AS DECIMAL(12,2)) > 1`
+    : undefined;
+
+  const filters = [soldFilter, priceFilter].filter(Boolean);
 
   let rows;
   if (opts === undefined) {
     // No filter at all — admin/founder full-access path only
     rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
   } else if (opts.dealershipId != null) {
-    const whereClause = soldFilter
-      ? and(eq(vehicles.dealershipId, opts.dealershipId), soldFilter)
-      : eq(vehicles.dealershipId, opts.dealershipId);
+    const whereClause =
+      filters.length > 0
+        ? and(eq(vehicles.dealershipId, opts.dealershipId), ...filters)
+        : eq(vehicles.dealershipId, opts.dealershipId);
     rows = await baseQuery
       .where(whereClause)
       .orderBy(desc(vehicles.createdAt))
       .limit(limit);
-  } else if (soldFilter) {
-    // No dealership scoping but excludeSold is active (e.g. agent global search)
+  } else if (filters.length > 0) {
+    // No dealership scoping but public filters active (e.g. platform marketing showroom)
     rows = await baseQuery
-      .where(soldFilter)
+      .where(and(...filters))
       .orderBy(desc(vehicles.createdAt))
       .limit(limit);
   } else {
@@ -329,6 +341,8 @@ export async function searchVehiclesForChat(opts: {
   const filters = [
     eq(vehicles.dealershipId, opts.dealershipId),
     or(isNull(vehicles.status), ne(vehicles.status, "sold")),
+    // Never surface R1 / placeholder prices to buyers via chat
+    sql`CAST(${vehicles.price} AS DECIMAL(12,2)) > 1`,
   ];
 
   if (opts.make) {
@@ -1619,7 +1633,40 @@ export async function createFallbackMessage(input: {
     outboundReply: input.outboundReply,
     language: input.language ?? "en",
   });
-  return { id: result[0]?.insertId ?? 0, reference: input.referenceNumber };
+  const id = result[0]?.insertId ?? 0;
+
+  // If the inbound looks like a platform bug/error report, queue Kagiso investigation
+  const inbound = input.inboundMessage?.trim() ?? "";
+  if (
+    id &&
+    inbound.length >= 20 &&
+    /\b(bug|error|broken|not working|crash|500|failed|doesn't work|does not work)\b/i.test(inbound) &&
+    /\b(grayarx|nala|showroom|csv|import|webhook|whatsapp|login|dashboard|inventory|booking)\b/i.test(
+      inbound,
+    )
+  ) {
+    void import("./_core/kagisoBugIntake")
+      .then(({ enqueueKagisoBugInvestigation }) =>
+        enqueueKagisoBugInvestigation({
+          ticketId: id,
+          dealershipId: input.dealershipId,
+          title: `Fallback #${input.referenceNumber}: ${inbound.slice(0, 100)}`,
+          description: [
+            `Flagged from fallback inbox (${input.channel}, ref ${input.referenceNumber}).`,
+            "",
+            inbound.slice(0, 4000),
+          ].join("\n"),
+          severity: /\b(critical|down|urgent|can't login|cannot login)\b/i.test(inbound)
+            ? "critical"
+            : "high",
+          category: "bug",
+          source: "fallback_inbox",
+        }),
+      )
+      .catch((e) => console.warn("[Kagiso] fallback bug intake failed", e));
+  }
+
+  return { id, reference: input.referenceNumber };
 }
 
 export async function listFallbackMessages() {

@@ -167,6 +167,7 @@ import { resolveBrandKit, sanitizeHexColor } from "./_core/brandKit";
 import { isShowroomThemeId, resolveShowroomTheme } from "../shared/showroomThemes";
 import { parseInventoryCsv } from "./_core/csvInventory";
 import { isR1Price, repairPricesFromRows } from "./_core/csvPriceRepair";
+import { shouldApplyCsvStatus } from "./_core/csvStatusGuard";
 import { downloadAndStorePhoto, mirrorExternalPhoto, shouldMirrorPhoto } from "./_core/photoDownloader";
 import { buildHtmlEmail, buildPlainTextSignature } from "./_core/emailSignature";
 import { billingRouter } from "./_core/billingRouter";
@@ -672,9 +673,13 @@ export const appRouter = router({
           return listVehicles(2000, {
             dealershipId: input.dealershipId,
             excludeSold: true,
+            excludePlaceholderPrices: true,
           });
         }
-        return listVehicles(2000, { excludeSold: true });
+        return listVehicles(2000, {
+          excludeSold: true,
+          excludePlaceholderPrices: true,
+        });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
@@ -682,6 +687,9 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const vehicle = await getVehicle(input.id);
         if (!vehicle) return null;
+        // Sold + R1 placeholders stay off the public showroom until fixed
+        if (vehicle.status === "sold") return null;
+        if (isR1Price(vehicle.price)) return null;
         const photos = await listVehiclePhotos(input.id);
         return {
           ...vehicle,
@@ -2475,7 +2483,9 @@ export const appRouter = router({
               if (row.price != null && row.price > 1 && String(row.price) !== String(existing.price)) {
                 patch.price = String(row.price);
               }
-              if (row.status && row.status !== existing.status) {
+              // Keep sold units marked sold — CSV re-import must not resurrect them
+              // as available unless the CSV explicitly says sold (or reserved).
+              if (shouldApplyCsvStatus(existing.status, row.status)) {
                 patch.status = row.status;
               }
               if (row.km != null && row.km !== existing.km) {

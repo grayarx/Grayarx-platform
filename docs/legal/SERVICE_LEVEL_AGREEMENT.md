@@ -1,7 +1,9 @@
 # GrayArx Service Level Agreement (SLA)
 
 **Effective Date:** 1 June 2026  
-**Last Updated:** 23 May 2026
+**Last Updated:** 15 July 2026
+
+> **Pilot note:** During founder-led pilot, use the honest response targets in [`docs/PILOT_SLA.md`](../PILOT_SLA.md). The sections below remain the long-form commercial SLA; pilot partners should treat critical/high response times in the pilot summary as the operable commitment until a dedicated support desk is staffed.
 
 ---
 
