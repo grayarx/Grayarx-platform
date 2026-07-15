@@ -722,14 +722,29 @@ export const appRouter = router({
       return { shortcode: candidate?.publicShortcode ?? null };
     }),
     /** Public contact options for showroom vehicle cards (WhatsApp / web chat). */
-    contactOptions: publicProcedure.query(async () => {
+    contactOptions: publicProcedure
+      .input(
+        z
+          .object({
+            dealershipId: z.number().int().optional(),
+            shortcode: z.string().min(1).max(64).optional(),
+          })
+          .nullish(),
+      )
+      .query(async ({ input }) => {
       const all = await listAllDealerships();
-      const candidate =
-        all.find(
-          (d) =>
-            (d.status === "active" || d.status === "onboarding") &&
-            !!d.publicShortcode,
-        ) ?? all[0];
+      const code = input?.shortcode?.trim().toLowerCase();
+      const candidate = input?.dealershipId
+        ? (all.find((d) => d.id === input.dealershipId) ?? null)
+        : code
+          ? (all.find(
+              (d) => (d.publicShortcode ?? "").trim().toLowerCase() === code,
+            ) ?? null)
+          : (all.find(
+              (d) =>
+                (d.status === "active" || d.status === "onboarding") &&
+                !!d.publicShortcode,
+            ) ?? all[0]);
       if (!candidate) {
         return {
           shortcode: null as string | null,
@@ -748,24 +763,37 @@ export const appRouter = router({
         whatsappPhoneNumber: deployment?.whatsappPhoneNumber ?? "0820532685",
       };
     }),
-    /** Public showroom look — driven by the primary dealership's chosen template. */
+    /** Public showroom look — pass dealershipId or shortcode for that yard's theme. */
     appearance: publicProcedure
-      .input(z.object({ dealershipId: z.number().int().optional() }).nullish())
+      .input(
+        z
+          .object({
+            dealershipId: z.number().int().optional(),
+            shortcode: z.string().min(1).max(64).optional(),
+          })
+          .nullish(),
+      )
       .query(async ({ input }) => {
         const all = await listAllDealerships();
+        const code = input?.shortcode?.trim().toLowerCase();
         const candidate = input?.dealershipId
-          ? (all.find((d) => d.id === input.dealershipId) ?? all[0])
-          : (all.find(
-              (d) =>
-                (d.status === "active" || d.status === "onboarding") &&
-                !!d.publicShortcode,
-            ) ?? all[0]);
+          ? (all.find((d) => d.id === input.dealershipId) ?? null)
+          : code
+            ? (all.find(
+                (d) => (d.publicShortcode ?? "").trim().toLowerCase() === code,
+              ) ?? null)
+            : (all.find(
+                (d) =>
+                  (d.status === "active" || d.status === "onboarding") &&
+                  !!d.publicShortcode,
+              ) ?? all[0]);
         if (!candidate) {
           return {
             dealershipId: null as number | null,
             theme: resolveShowroomTheme(null),
             accentColor: null as string | null,
             dealershipName: "GrayArx Dealership",
+            publicShortcode: null as string | null,
           };
         }
         return {
@@ -773,6 +801,7 @@ export const appRouter = router({
           theme: resolveShowroomTheme(candidate.showroomTheme),
           accentColor: candidate.brandAccentColor ?? null,
           dealershipName: candidate.name ?? "GrayArx Dealership",
+          publicShortcode: candidate.publicShortcode ?? null,
         };
       }),
     enquire: publicProcedure

@@ -201,13 +201,30 @@ export default function DealerSettings() {
                   )}
                   Save look
                 </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="btn-cyber bg-transparent"
+                  disabled={!shortcode && !appearance}
+                >
+                  <Link
+                    href={
+                      shortcode
+                        ? `/showroom?shortcode=${encodeURIComponent(shortcode)}`
+                        : "/showroom"
+                    }
+                    target="_blank"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview showroom
+                  </Link>
+                </Button>
               </div>
-              <Button asChild variant="outline" className="btn-cyber bg-transparent">
-                <Link href="/showroom" target="_blank">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview showroom
-                </Link>
-              </Button>
+              <p className="text-xs text-muted-foreground max-w-lg">
+                Preview opens <span className="text-foreground font-medium">your</span>{" "}
+                public showroom with the saved theme and accent. Assistant name applies to
+                WhatsApp / chat greetings, not the listing grid.
+              </p>
             </>
           )}
         </CardContent>
@@ -381,7 +398,13 @@ export default function DealerSettings() {
                 </Button>
 
                 <Button asChild variant="outline" className="w-full">
-                  <Link href="/showroom">
+                  <Link
+                    href={
+                      shortcode
+                        ? `/showroom?shortcode=${encodeURIComponent(shortcode)}`
+                        : "/showroom"
+                    }
+                  >
                     <Eye className="mr-2 h-4 w-4" />
                     View live showroom
                   </Link>

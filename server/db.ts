@@ -2438,24 +2438,27 @@ export async function updateDealershipBrand(
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  const set: Record<string, unknown> = {
-    brandLogoUrl: patch.brandLogoUrl ?? null,
-    brandAccentColor: patch.brandAccentColor ?? null,
-    brandSignature: patch.brandSignature ?? null,
-    vatNumber: patch.vatNumber ?? null,
-    bankDetails: patch.bankDetails ?? null,
-  };
-  if (Object.prototype.hasOwnProperty.call(patch, "businessHoursJson")) {
+  // Only write keys present on the patch — never wipe logo/VAT/etc. when
+  // dealer Settings only updates theme / accent / assistant name.
+  const set: Record<string, unknown> = {};
+  const has = (k: keyof typeof patch) =>
+    Object.prototype.hasOwnProperty.call(patch, k);
+
+  if (has("brandLogoUrl")) set.brandLogoUrl = patch.brandLogoUrl ?? null;
+  if (has("brandAccentColor")) set.brandAccentColor = patch.brandAccentColor ?? null;
+  if (has("brandSignature")) set.brandSignature = patch.brandSignature ?? null;
+  if (has("vatNumber")) set.vatNumber = patch.vatNumber ?? null;
+  if (has("bankDetails")) set.bankDetails = patch.bankDetails ?? null;
+  if (has("businessHoursJson")) {
     set.businessHoursJson = patch.businessHoursJson ?? null;
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "showroomTheme")) {
+  if (has("showroomTheme")) {
     set.showroomTheme = patch.showroomTheme ?? "futuristic";
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "agentDisplayName")) {
-    const v = patch.agentDisplayName?.trim() || null;
-    set.agentDisplayName = v;
+  if (has("agentDisplayName")) {
+    set.agentDisplayName = patch.agentDisplayName?.trim() || null;
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "groupKey")) {
+  if (has("groupKey")) {
     const raw = patch.groupKey?.trim() || null;
     const key = raw ? normalizeGroupKey(raw) : null;
     if (key) {
@@ -2463,6 +2466,7 @@ export async function updateDealershipBrand(
     }
     set.groupKey = key;
   }
+  if (Object.keys(set).length === 0) return;
   await db.update(dealerships).set(set).where(eq(dealerships.id, id));
 }
 
