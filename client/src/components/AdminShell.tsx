@@ -19,6 +19,7 @@ import {
   DollarSign,
   Mail,
   Megaphone,
+  Calendar,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -34,6 +35,7 @@ const ADMIN_LINKS = [
   { href: "/admin/ops", label: "Ops Live", icon: Activity, founderOnly: true },
   { href: "/admin/prospector", label: "Prospector", icon: Compass },
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
+  { href: "/admin/platform-demos", label: "Platform demos", icon: Calendar, founderOnly: true },
   { href: "/admin/approvals", label: "Approvals", icon: CheckSquare },
   { href: "/admin/kagiso-roadmap", label: "Kagiso Roadmap", icon: Sparkles, founderOnly: true },
   { href: "/admin/compliance", label: "Compliance", icon: ShieldAlert, founderOnly: true },

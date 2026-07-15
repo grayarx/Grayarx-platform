@@ -43,7 +43,7 @@ const DEALER_LINKS = [
   { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "AI teammates and shared activity feed" },
   { href: "/dealer/agents/chat", label: "Agent Chat", icon: MessageSquare, tip: "Chat directly with Nala, Lerato, Kagiso and more" },
   { href: "/dealer/leads", label: "Leads", icon: Users, tip: "Inbound enquiries from web, email, WhatsApp" },
-  { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Test drives (Lerato) and platform demos" },
+  { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Your dealership's test-drive requests (Lerato)" },
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
@@ -52,7 +52,7 @@ const DEALER_LINKS = [
   { href: "/dealer/team", label: "Team", icon: Users, tip: "Invite staff to this dealership" },
   { href: "/dealer/legal", label: "Legal", icon: Scale, tip: "Policies, dealer agreement, POPIA forms" },
   { href: "/showroom", label: "Showroom", icon: Store, tip: "Your public stock page — what buyers see" },
-  { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Partner dealerships and referrals" },
+  { href: "/dealer/network", label: "Dealer Network", icon: Network, tip: "Photos-only peer stock — no prices or contacts" },
 ];
 
 export default function DealerShell({
@@ -156,9 +156,11 @@ export default function DealerShell({
             </div>
           </div>
 
-          {/* Tabs (sticky on scroll for quick navigation) */}
-          <div className="sticky top-20 z-20 -mx-2 px-2 mb-8 bg-background/85 backdrop-blur-md border-b border-primary/10 overflow-x-auto">
-            <nav className="flex gap-1 min-w-max">
+          {/* Tabs (sticky on scroll). Thin dark scrollbar — avoids Windows white overlay bar. */}
+          <div
+            className="sticky top-20 z-20 -mx-2 px-2 mb-8 bg-background/85 backdrop-blur-md border-b border-primary/10 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgba(212,175,55,0.35)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/35"
+          >
+            <nav className="flex gap-1 min-w-max pb-px">
               {dealerLinks.map((link) => {
                 const Icon = link.icon;
                 // Agent Chat link: active on /dealer/agents/chat and sub-paths

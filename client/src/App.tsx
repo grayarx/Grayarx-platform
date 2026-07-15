@@ -70,6 +70,7 @@ import AdminOverview from "./pages/admin/AdminOverview";
 import AdminOps from "./pages/admin/AdminOps";
 import AdminProspector from "./pages/admin/AdminProspector";
 import AdminOnboarding from "./pages/admin/AdminOnboarding";
+import AdminPlatformDemos from "./pages/admin/AdminPlatformDemos";
 import AdminApprovals from "./pages/admin/AdminApprovals";
 import AdminKagisoRoadmap from "./pages/admin/AdminKagisoRoadmap";
 import AdminFallback from "./pages/admin/AdminFallback";
@@ -251,6 +252,9 @@ function Router() {
       <Route path="/admin/onboarding">
         <AdminRouteGuard><AdminOnboarding /></AdminRouteGuard>
       </Route>
+      <Route path="/admin/platform-demos">
+        <AdminRouteGuard><AdminPlatformDemos /></AdminRouteGuard>
+      </Route>
       <Route path="/admin/approvals">
         <AdminRouteGuard><AdminApprovals /></AdminRouteGuard>
       </Route>
@@ -369,7 +373,7 @@ function Router() {
   );
 }
 
-const POPIA_BANNER_Z = 'z-[60]'; // above site nav (z-50) so the X is clickable
+const POPIA_BANNER_Z = 'z-[100]'; // above site nav (z-50) so the X is always clickable
 
 function AppContent() {
   const {
@@ -415,15 +419,20 @@ function AppContent() {
           </div>
           <button
             type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleBannerDismiss();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleBannerDismiss();
             }}
-            className="relative z-[1] p-1.5 text-amber-600 hover:text-amber-800 shrink-0 rounded-sm"
+            className="relative z-[1] p-2 -mr-1 text-amber-600 hover:text-amber-800 shrink-0 rounded-sm cursor-pointer"
             aria-label="Dismiss POPIA banner"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 pointer-events-none" />
           </button>
         </div>
       )}

@@ -228,37 +228,74 @@ function parseAiFilters(query: string) {
   const filters: { maxPrice?: number; fuel?: string; bodyHint?: string; searchTerms: string[] } = {
     searchTerms: [],
   };
-  const priceMatch = q.match(/(?:under|below|max|budget)\s*r?\s*([\d,]+)\s*k?/i);
+  // "under R800k", "below 500000", "budget R1.2m", "max R450 000"
+  const priceMatch =
+    q.match(/(?:under|below|max|budget|up\s*to)\s*r?\s*([\d,.]+)\s*(k|m)?/i) ||
+    q.match(/\br\s*([\d,.]+)\s*(k|m)\b/i);
   if (priceMatch) {
     let n = Number(priceMatch[1].replace(/,/g, ""));
-    if (/k/i.test(priceMatch[0]) || n < 1000) n *= 1000;
-    filters.maxPrice = n;
+    const unit = (priceMatch[2] || "").toLowerCase();
+    if (unit === "m") n *= 1_000_000;
+    else if (unit === "k" || n < 1000) n *= 1000;
+    if (Number.isFinite(n) && n > 0) filters.maxPrice = n;
   }
   if (/diesel/i.test(q)) filters.fuel = "Diesel";
   else if (/petrol|gasoline/i.test(q)) filters.fuel = "Petrol";
-  else if (/electric|ev/i.test(q)) filters.fuel = "Electric";
+  else if (/electric|ev\b/i.test(q)) filters.fuel = "Electric";
   else if (/hybrid/i.test(q)) filters.fuel = "Hybrid";
-  if (/suv/i.test(q)) filters.bodyHint = "suv";
+  if (/\bsuvs?\b/i.test(q)) filters.bodyHint = "suv";
   else if (/bakkie|bakkies|pickup|truck/i.test(q)) filters.bodyHint = "bakkie";
   else if (/sedan|saloon/i.test(q)) filters.bodyHint = "sedan";
   else if (/hatch/i.test(q)) filters.bodyHint = "hatch";
   else if (/coupe|sport/i.test(q)) filters.bodyHint = "coupe";
-  // Pull out make/model keywords
-  const makes = ["bmw", "mercedes", "toyota", "volkswagen", "vw", "ford", "audi", "hilux", "corvette", "porsche"];
+  const makes = [
+    "bmw", "mercedes", "toyota", "volkswagen", "vw", "ford", "audi", "hilux",
+    "corvette", "porsche", "ferrari", "lamborghini", "mclaran", "mclaren",
+    "nissan", "hyundai", "kia", "mazda", "honda", "land rover", "range rover",
+  ];
   for (const m of makes) {
-    if (q.includes(m)) filters.searchTerms.push(m === "vw" ? "volkswagen" : m);
+    if (q.includes(m)) filters.searchTerms.push(m === "vw" ? "volkswagen" : m === "mclaran" ? "mclaren" : m);
   }
   return filters;
 }
 
 export default function Showroom() {
-  // Fetch appearance first to obtain the dealership context (id, theme, branding).
-  // The vehicle list is then scoped to that dealership — no cross-tenant leakage.
-  const { data: appearance } = trpc.showroom.appearance.useQuery();
-  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery({
-    dealershipId: appearance?.dealershipId ?? undefined,
+  const urlSearch = useSearch();
+  const showroomScope = useMemo(() => {
+    const params = new URLSearchParams(
+      urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch,
+    );
+    const rawId = params.get("dealershipId") ?? params.get("dealerId");
+    const dealershipId = rawId && Number(rawId) > 0 ? Number(rawId) : undefined;
+    const shortcode =
+      params.get("shortcode")?.trim() ||
+      params.get("d")?.trim() ||
+      undefined;
+    return { dealershipId, shortcode };
+  }, [urlSearch]);
+
+  // Appearance + stock scoped by ?dealershipId= / ?shortcode= so dealer Settings
+  // "Preview showroom" opens THAT yard's theme/accent — not a random primary dealer.
+  const { data: appearance } = trpc.showroom.appearance.useQuery({
+    dealershipId: showroomScope.dealershipId,
+    shortcode: showroomScope.shortcode,
   });
-  const { data: contactOptions } = trpc.showroom.contactOptions.useQuery();
+  const scopedDealershipId =
+    showroomScope.dealershipId ?? appearance?.dealershipId ?? undefined;
+  const needsDealerScope = Boolean(
+    showroomScope.dealershipId || showroomScope.shortcode,
+  );
+  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery(
+    { dealershipId: scopedDealershipId },
+    {
+      // Don't flash platform-wide stock while resolving a dealer-scoped preview.
+      enabled: !needsDealerScope || scopedDealershipId != null,
+    },
+  );
+  const { data: contactOptions } = trpc.showroom.contactOptions.useQuery({
+    dealershipId: scopedDealershipId,
+    shortcode: showroomScope.shortcode,
+  });
 
   const theme = appearance?.theme ?? "classic";
   const themeClass = useMemo(() => {
@@ -283,7 +320,6 @@ export default function Showroom() {
   const [transmissionFilter, setTransmissionFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "best_deals">("default");
   const [maxPriceFilter, setMaxPriceFilter] = useState<number | null>(null);
-  const urlSearch = useSearch();
 
   useEffect(() => {
     const params = new URLSearchParams(urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch);
@@ -379,11 +415,13 @@ export default function Showroom() {
   const handleAiSearch = () => {
     if (!aiQuery.trim()) return;
     setAiThinking(true);
+    setAiResult(null);
     const parsed = parseAiFilters(aiQuery);
     setAiFilters(parsed);
-    // Also apply first meaningful keyword to the text search bar
+    // Apply make keywords to the text bar; do NOT also force body type into search
+    // (that double-filters and looks "broken" when stock has no SUVs).
     if (parsed.searchTerms.length) setSearch(parsed.searchTerms[0]);
-    else if (parsed.bodyHint) setSearch(parsed.bodyHint);
+    else setSearch("");
     aiSearch.mutate(
       { query: aiQuery },
       {
@@ -391,20 +429,41 @@ export default function Showroom() {
           setAiThinking(false);
           const matches = allVehicles.filter((v) => {
             const matchPrice = !parsed.maxPrice || v.price <= parsed.maxPrice;
-            const matchFuel = !parsed.fuel || v.fuel.toLowerCase() === parsed.fuel.toLowerCase();
-            const matchBody = !parsed.bodyHint || (v.bodyType ?? v.title).toLowerCase().includes(parsed.bodyHint);
-            const matchTerms = !parsed.searchTerms.length || parsed.searchTerms.some((t) => matchesQuery(v, t));
+            const matchFuel =
+              !parsed.fuel || v.fuel.toLowerCase() === parsed.fuel.toLowerCase();
+            const matchBody =
+              !parsed.bodyHint ||
+              (v.bodyType ?? v.title).toLowerCase().includes(parsed.bodyHint);
+            const matchTerms =
+              !parsed.searchTerms.length ||
+              parsed.searchTerms.some((t) => matchesQuery(v, t));
             return matchPrice && matchFuel && matchBody && matchTerms;
           });
+          const bits: string[] = [];
+          if (parsed.bodyHint) bits.push(parsed.bodyHint.toUpperCase());
+          if (parsed.maxPrice)
+            bits.push(`under R${(parsed.maxPrice / 1000).toLocaleString("en-ZA")}k`);
+          if (parsed.fuel) bits.push(parsed.fuel);
+          const filterHint = bits.length ? ` (${bits.join(" · ")})` : "";
           if (matches.length === 0) {
             setAiResult(
-              `No exact matches for "${aiQuery}" in current stock. Try adjusting filters below, or contact us — we may have similar vehicles arriving soon.`,
+              `No matches for "${aiQuery}"${filterHint} in current stock. Clear AI search or try a different budget / body type.`,
             );
           } else {
             setAiResult(
-              `Found ${matches.length} vehicle${matches.length === 1 ? "" : "s"} matching your query. ${matches.slice(0, 2).map((v) => v.title).join(", ")}${matches.length > 2 ? " and more" : ""}.`,
+              `Found ${matches.length} vehicle${matches.length === 1 ? "" : "s"}${filterHint}: ${matches
+                .slice(0, 2)
+                .map((v) => v.title)
+                .join(", ")}${matches.length > 2 ? " and more" : ""}.`,
             );
           }
+          // Scroll results into view so the filter change is obvious.
+          requestAnimationFrame(() => {
+            document.getElementById("showroom-results")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
         },
       },
     );
@@ -598,7 +657,10 @@ export default function Showroom() {
       {/* Inventory Grid */}
       <section className="py-12">
         <div className="container">
-          <div className="text-sm text-muted-foreground mb-6 flex flex-wrap items-center gap-3">
+          <div
+            id="showroom-results"
+            className="text-sm text-muted-foreground mb-6 flex flex-wrap items-center gap-3 scroll-mt-28"
+          >
             <span>
               Showing <span className="text-foreground font-semibold">{filtered.length}</span> vehicles
             </span>

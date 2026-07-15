@@ -135,7 +135,14 @@ export default function TradeInNetwork() {
             <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p>No trade-ins on the network yet.</p>
             <p className="text-sm mt-1">
-              When sellers list after getting an estimate on /trade-in, they appear here.
+              When a private seller gets an estimate on{" "}
+              <a href="/trade-in" className="text-primary underline underline-offset-2">
+                /trade-in
+              </a>{" "}
+              and opts in to list, they appear here for every dealership to invite for inspection.
+            </p>
+            <p className="text-xs mt-3 text-muted-foreground/80">
+              Filters and invite / written-offer actions are live — the list is empty until the first seller opts in.
             </p>
           </CardContent>
         </Card>
