@@ -1,17 +1,17 @@
 import { Request, Response } from "express";
-import { sdk } from "./sdk";
 import { invokeLLM } from "./llm";
+import { isAuthorizedScheduledTask } from "./scheduledAuth";
 
 /**
- * Heartbeat handler for sending scheduled reports
- * Called by Manus platform on the cron schedule
+ * Heartbeat handler for sending scheduled reports.
+ * Originally called only by the Manus platform's cron session; now also
+ * accepts the `X-Scheduled-Task-Secret` header (see scheduledAuth.ts) so an
+ * external cron works on Railway.
  */
 
 export async function sendScheduledReportHandler(req: Request, res: Response) {
   try {
-    // Authenticate as cron job
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron || !user.taskUid) {
+    if (!(await isAuthorizedScheduledTask(req))) {
       return res.status(403).json({ error: "cron-only" });
     }
 

@@ -3,6 +3,8 @@ import { invokeLLM } from "./llm";
 import { createProspects, getProspectsSchedule } from "../db";
 import { sendScheduledReportHandler } from "./scheduledReportHandler";
 import { alertFounder } from "./founderAlert";
+import { isAuthorizedScheduledTask } from "./scheduledAuth";
+import { runDatabaseBackup } from "./backupService";
 
 /**
  * Weekly rotation of SA provinces — every night the prospector targets the
@@ -131,9 +133,7 @@ export function registerScheduledRoutes(app: Express) {
    */
   app.post("/api/scheduled/kagiso-audit", async (req: Request, res: Response) => {
     try {
-      const { sdk } = await import("./sdk");
-      const user = await sdk.authenticateRequest(req);
-      if (!user.isCron) {
+      if (!(await isAuthorizedScheduledTask(req))) {
         return res.status(403).json({ error: "cron-only" });
       }
 
@@ -208,9 +208,9 @@ export function registerScheduledRoutes(app: Express) {
   // passed. Idempotent and safe to invoke from a Heartbeat cron or manually.
   app.post("/api/scheduled/lead-followup-tick", async (req: Request, res: Response) => {
     try {
-      const isCron = (req.headers["x-manus-heartbeat"] as string) === "true";
       const isOwner = (req as unknown as { ctx?: { user?: { role?: string } } }).ctx?.user?.role === "admin";
-      if (!isCron && !isOwner && process.env.NODE_ENV === "production") {
+      const authorized = isOwner || (await isAuthorizedScheduledTask(req));
+      if (!authorized && process.env.NODE_ENV === "production") {
         return res.status(403).json({ error: "cron-only" });
       }
       const { tickFollowups } = await import("./leadDrip");
@@ -232,6 +232,9 @@ export function registerScheduledRoutes(app: Express) {
   // qualified prospects into the DB every run.
   app.post("/api/scheduled/prospect-nightly", async (req: Request, res: Response) => {
     try {
+      if (!(await isAuthorizedScheduledTask(req)) && process.env.NODE_ENV === "production") {
+        return res.status(403).json({ error: "cron-only" });
+      }
       const schedule = await getProspectsSchedule();
       const region = nextRegion(schedule?.lastRegion);
       const count = typeof req.body?.count === "number" ? Math.max(1, Math.min(10, req.body.count)) : 5;
@@ -257,9 +260,7 @@ export function registerScheduledRoutes(app: Express) {
    */
   app.post("/api/scheduled/whatsapp-queue", async (req: Request, res: Response) => {
     try {
-      const { sdk } = await import("./sdk");
-      const user = await sdk.authenticateRequest(req);
-      if (!user.isCron) {
+      if (!(await isAuthorizedScheduledTask(req))) {
         return res.status(403).json({ error: "cron-only" });
       }
 
@@ -278,8 +279,7 @@ export function registerScheduledRoutes(app: Express) {
   /** Weekly market guide refresh — rotates through model guides */
   app.post("/api/scheduled/market-guide-weekly", async (req: Request, res: Response) => {
     try {
-      const isCron = (req.headers["x-manus-heartbeat"] as string) === "true";
-      if (!isCron && process.env.NODE_ENV === "production") {
+      if (!(await isAuthorizedScheduledTask(req)) && process.env.NODE_ENV === "production") {
         return res.status(403).json({ error: "cron-only" });
       }
       const { triggerMarketGuideRefreshIfDue } = await import("./marketGuideRefresh");
@@ -289,6 +289,34 @@ export function registerScheduledRoutes(app: Express) {
     } catch (err) {
       console.error("[Scheduled] market-guide-weekly failed", err);
       res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  /**
+   * Daily DB backup — exports core tables to gzip'd JSON and uploads to
+   * S3/R2 (or local ephemeral disk + founder alert if not configured).
+   * See server/_core/backupService.ts and docs/BACKUP_RESTORE.md.
+   */
+  app.post("/api/scheduled/db-backup", async (req: Request, res: Response) => {
+    try {
+      if (!(await isAuthorizedScheduledTask(req))) {
+        return res.status(403).json({ error: "cron-only" });
+      }
+      const result = await runDatabaseBackup("full");
+      console.log("[Scheduled] db-backup", { id: result.id, status: result.status, durable: result.durable });
+      if (result.status !== "completed") {
+        return res.status(500).json({ ok: false, ...result });
+      }
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error("[Scheduled] db-backup failed", err);
+      alertFounder({
+        title: "Scheduled job failed: db-backup",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
+      return res.status(500).json({ ok: false, error: String(err) });
     }
   });
 }

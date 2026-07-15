@@ -5,6 +5,26 @@ import { rateLimitService } from "../_core/rateLimitService";
 import { backupService } from "../_core/backupService";
 import { detectBruteForce, detectSuspiciousLocation, lockAccount, blockIP, getThreatHistory, getSecurityAgentStatus, activateSecurityAgent, clearSecurityState } from "../_core/securityAgent";
 
+// backupService now does a REAL DB export + upload (see server/_core/backupService.ts) —
+// mock the DB and storage/alert side effects so this test stays fast and offline.
+// vi.mock calls are hoisted above the imports above, so this still applies.
+vi.mock("../db", () => ({
+  getDb: vi.fn().mockResolvedValue({
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockResolvedValue([]),
+  }),
+}));
+vi.mock("../storage", () => ({
+  storagePutRaw: vi.fn().mockResolvedValue({
+    key: "backups/test.json.gz",
+    url: "https://cdn.example.com/backups/test.json.gz",
+    durable: true,
+  }),
+}));
+vi.mock("../_core/founderAlert", () => ({
+  alertFounder: vi.fn().mockResolvedValue({ emailSent: true, pushSent: false }),
+}));
+
 describe("Services Router", () => {
   beforeEach(() => {
     monitoringService.clearLogs();

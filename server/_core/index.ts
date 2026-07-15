@@ -1,4 +1,7 @@
 import "dotenv/config";
+// Sentry must be imported as early as possible (before other modules) so its
+// auto-instrumentation can wrap them. No-ops cleanly when SENTRY_DSN is unset.
+import { attachSentryErrorHandler, captureException } from "./sentry";
 import express from "express";
 import path from "path";
 import { createServer } from "http";
@@ -19,8 +22,48 @@ import { createContext } from "./context";
 import { apiRouter, healthRouter } from "../api";
 import { serveStatic, setupVite } from "./vite";
 import { registerVehicleOgMiddleware } from "./vehicleOgHtml";
+import { alertFounder } from "./founderAlert";
 // import { websocketServerManager } from "./websocketServer";
 // import { incidentEscalationEngine } from "./incidentEscalation";
+
+/**
+ * Process-level safety net. Before this, an uncaught exception or unhandled
+ * promise rejection anywhere in the app would either crash Node with a raw
+ * stack trace in the Railway logs (no alert to the founder) or — for
+ * unhandled rejections on older/permissive Node configs — silently vanish,
+ * leaving the process limping in a possibly-corrupt state.
+ *
+ * Node best practice (see Node.js docs on `process.on('uncaughtException')`):
+ * an uncaughtException means the app is in an undefined state, so the
+ * correct move is to log it, alert a human, and exit — letting Railway's
+ * restart policy bring up a clean process — rather than trying to keep
+ * running. `unhandledRejection` is treated the same way for consistency
+ * (Node itself terminates on unhandled rejections by default since v15).
+ */
+function registerProcessSafetyNet() {
+  const handleFatal = (kind: "uncaughtException" | "unhandledRejection", err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error(`[FATAL] ${kind}:`, err);
+    captureException(err, { kind });
+
+    alertFounder({
+      title: `CRITICAL: ${kind} — server restarting`,
+      content: `${kind} caught at process level.\n\nMessage: ${message}\n\nStack:\n${stack?.slice(0, 1500) ?? "(no stack)"}\n\nProcess will exit; Railway's restart policy should bring it back up.`,
+      category: "ops",
+    })
+      .catch(() => {})
+      .finally(() => {
+        // Give the alert (best-effort) a brief moment to flush before exiting.
+        setTimeout(() => process.exit(1), 250);
+      });
+  };
+
+  process.on("uncaughtException", (err) => handleFatal("uncaughtException", err));
+  process.on("unhandledRejection", (reason) => handleFatal("unhandledRejection", reason));
+}
+
+registerProcessSafetyNet();
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -116,6 +159,24 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+  // Error-handling middleware MUST be registered last, after every route
+  // (including the Vite/static SPA catch-all above) — Express only walks
+  // forward through the stack for `next(err)`, so anything registered
+  // earlier would miss errors thrown by later middleware.
+  attachSentryErrorHandler(app);
+  // Fallback error handler — Express's default is an HTML page, which isn't
+  // useful for API/JSON clients. Anything that reaches here has already been
+  // reported to Sentry (above); this just makes sure the client gets a clean
+  // JSON response instead of a stack trace.
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(`[Express error] ${req.method} ${req.originalUrl}:`, err);
+    if (res.headersSent) return;
+    const status = typeof err?.status === "number" ? err.status : typeof err?.statusCode === "number" ? err.statusCode : 500;
+    res.status(status).json({
+      error: "Internal server error",
+      ...(res.sentry ? { sentryEventId: res.sentry } : {}),
+    });
+  });
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

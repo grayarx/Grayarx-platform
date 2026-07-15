@@ -1,6 +1,7 @@
 import { ENV } from "./_core/env";
 import * as fs from "fs/promises";
 import * as path from "path";
+import * as os from "os";
 import crypto from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -98,6 +99,43 @@ export async function storagePut(
     const mime = contentType.startsWith("image/") ? contentType : "image/jpeg";
     return { key, url: `data:${mime};base64,${base64}` };
   }
+}
+
+/**
+ * Upload a raw buffer without the base64-data-URL fallback that `storagePut`
+ * uses for images. Intended for larger payloads (e.g. gzip'd DB backups)
+ * that must not be stuffed into a DB column as base64.
+ *
+ * - If S3/R2 is configured (`S3_BUCKET_NAME` + friends): uploads there and
+ *   returns `durable: true`.
+ * - Otherwise: writes to the OS temp dir (Railway's filesystem is ephemeral —
+ *   this is lost on redeploy/restart) and returns `durable: false` so callers
+ *   can alert the founder that no durable off-server backup was made.
+ */
+export async function storagePutRaw(
+  relKey: string,
+  data: Buffer,
+  contentType = "application/octet-stream",
+): Promise<{ key: string; url: string; durable: boolean; localPath?: string }> {
+  const key = appendHashSuffix(normalizeKey(relKey));
+
+  if (s3Client && s3Bucket) {
+    await s3Client.send(new PutObjectCommand({
+      Bucket: s3Bucket,
+      Key: key,
+      Body: data,
+      ContentType: contentType,
+    }));
+    const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
+    const url = publicUrlBase ? `${publicUrlBase}/${key}` : `/manus-storage/${key}`;
+    return { key, url, durable: true };
+  }
+
+  const localDir = path.join(os.tmpdir(), "grayarx-backups");
+  await fs.mkdir(localDir, { recursive: true });
+  const localPath = path.join(localDir, path.basename(key));
+  await fs.writeFile(localPath, data);
+  return { key, url: `file://${localPath}`, durable: false, localPath };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
