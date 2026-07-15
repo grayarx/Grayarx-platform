@@ -37,9 +37,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Receipt, FileText, AlertCircle, Printer } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { InvoicePreviewDialog } from "@/components/invoices/InvoicePreviewDialog";
+import { Plus, Receipt, FileText, AlertCircle, Printer, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+
+type InvoiceKind = "subscription" | "other";
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-slate-500/10 text-slate-300 border-slate-500/30",
@@ -72,19 +76,44 @@ export default function AdminInvoices() {
     { enabled: effectiveDealershipId !== null },
   );
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({
+  const emptyForm = {
+    invoiceType: "subscription" as InvoiceKind,
     leadId: "",
     vehicleId: "",
     subtotal: "",
     paymentTermsDays: "30",
+  };
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+
+  // Draft flow: form -> preview (no DB write yet) -> confirm creates it for real.
+  const [draftPreviewOpen, setDraftPreviewOpen] = useState(false);
+
+  const buildDraftPayload = () => ({
+    dealershipId: effectiveDealershipId ?? 0,
+    leadId:
+      form.invoiceType === "other" && form.leadId ? Number(form.leadId) : undefined,
+    vehicleId:
+      form.invoiceType === "other" && form.vehicleId
+        ? Number(form.vehicleId)
+        : undefined,
+    subtotal: Number(form.subtotal),
+    paymentTermsDays: Number(form.paymentTermsDays) || 30,
+  });
+
+  const previewInvoice = trpc.thandi.previewInvoice.useMutation({
+    onSuccess: () => {
+      setCreateOpen(false);
+      setDraftPreviewOpen(true);
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
   });
 
   const generateInvoice = trpc.thandi.generateInvoice.useMutation({
     onSuccess: (res) => {
       toast.success(`Invoice ${res.invoiceNumber} drafted`);
-      setCreateOpen(false);
-      setForm({ leadId: "", vehicleId: "", subtotal: "", paymentTermsDays: "30" });
+      setDraftPreviewOpen(false);
+      setForm(emptyForm);
       utils.thandi.listInvoices.invalidate();
     },
     onError: (e: { message: string }) => toast.error(e.message),
@@ -111,8 +140,21 @@ export default function AdminInvoices() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  // Gate the "Email EFT" send action behind a preview of the exact invoice
+  // the dealership will see, so nothing goes out unreviewed.
+  const [sendPreview, setSendPreview] = useState<{ invoiceId: number } | null>(
+    null,
+  );
+  const sendPreviewQuery = trpc.thandi.getInvoice.useQuery(
+    { invoiceId: sendPreview?.invoiceId ?? 0 },
+    { enabled: !!sendPreview },
+  );
+
   const emailInvoice = trpc.billing.emailInvoicePaymentInstructions.useMutation({
-    onSuccess: (res) => toast.success(`EFT invoice emailed to ${res.to}`),
+    onSuccess: (res) => {
+      toast.success(`EFT invoice emailed to ${res.to}`);
+      setSendPreview(null);
+    },
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
@@ -159,28 +201,68 @@ export default function AdminInvoices() {
               <DialogTitle>Draft a new invoice</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="leadId">Lead ID</Label>
-                  <Input
-                    id="leadId"
-                    type="number"
-                    value={form.leadId}
-                    onChange={(e) => setForm({ ...form, leadId: e.target.value })}
-                    placeholder="e.g. 42"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="vehicleId">Vehicle ID</Label>
-                  <Input
-                    id="vehicleId"
-                    type="number"
-                    value={form.vehicleId}
-                    onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
-                    placeholder="e.g. 17"
-                  />
-                </div>
+              <div>
+                <Label className="mb-2 block">Invoice type</Label>
+                <RadioGroup
+                  value={form.invoiceType}
+                  onValueChange={(v) =>
+                    setForm({ ...form, invoiceType: v as InvoiceKind })
+                  }
+                  className="gap-2"
+                >
+                  <label
+                    htmlFor="type-subscription"
+                    className="flex cursor-pointer items-start gap-2 rounded-md border border-input p-3 text-sm hover:bg-accent/40"
+                  >
+                    <RadioGroupItem value="subscription" id="type-subscription" className="mt-0.5" />
+                    <span>
+                      <span className="font-medium">Subscription (monthly platform fee)</span>
+                      <span className="block text-xs text-muted-foreground">
+                        The common case — GrayArx bills the dealership for platform access.
+                        No lead/vehicle needed.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="type-other"
+                    className="flex cursor-pointer items-start gap-2 rounded-md border border-input p-3 text-sm hover:bg-accent/40"
+                  >
+                    <RadioGroupItem value="other" id="type-other" className="mt-0.5" />
+                    <span>
+                      <span className="font-medium">Other / linked to a lead-vehicle</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Rare — a specific referral or commission invoice tied to one deal.
+                      </span>
+                    </span>
+                  </label>
+                </RadioGroup>
               </div>
+
+              {form.invoiceType === "other" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="leadId">Lead ID (optional)</Label>
+                    <Input
+                      id="leadId"
+                      type="number"
+                      value={form.leadId}
+                      onChange={(e) => setForm({ ...form, leadId: e.target.value })}
+                      placeholder="e.g. 42"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="vehicleId">Vehicle ID (optional)</Label>
+                    <Input
+                      id="vehicleId"
+                      type="number"
+                      value={form.vehicleId}
+                      onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
+                      placeholder="e.g. 17"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="subtotal">Subtotal (R, excl VAT)</Label>
@@ -206,9 +288,9 @@ export default function AdminInvoices() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                VAT (15%) and total will be calculated automatically. The invoice
-                starts in <code>draft</code> status — Thandi will hold it for
-                review before sending.
+                VAT (15%) and total will be calculated automatically. Lead/Vehicle IDs are
+                only references for a specific deal — they are not how GrayArx gets paid.
+                You'll see a preview of the actual invoice before it's created.
               </p>
             </div>
             <DialogFooter>
@@ -219,23 +301,17 @@ export default function AdminInvoices() {
                 className="btn-gold"
                 disabled={
                   !effectiveDealershipId ||
-                  !form.leadId ||
-                  !form.vehicleId ||
                   !form.subtotal ||
-                  generateInvoice.isPending
+                  Number(form.subtotal) <= 0 ||
+                  previewInvoice.isPending
                 }
                 onClick={() => {
                   if (!effectiveDealershipId) return;
-                  generateInvoice.mutate({
-                    dealershipId: effectiveDealershipId,
-                    leadId: Number(form.leadId),
-                    vehicleId: Number(form.vehicleId),
-                    subtotal: Number(form.subtotal),
-                    paymentTermsDays: Number(form.paymentTermsDays) || 30,
-                  });
+                  previewInvoice.mutate(buildDraftPayload());
                 }}
               >
-                {generateInvoice.isPending ? "Drafting…" : "Draft invoice"}
+                <Eye className="h-4 w-4 mr-2" />
+                {previewInvoice.isPending ? "Building preview…" : "Preview invoice"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -380,8 +456,12 @@ export default function AdminInvoices() {
                 {(invoicesQuery.data ?? []).map((inv: any) => (
                   <TableRow key={inv.id}>
                     <TableCell className="font-mono text-xs">{inv.invoiceNumber}</TableCell>
-                    <TableCell className="text-muted-foreground">#{inv.leadId}</TableCell>
-                    <TableCell className="text-muted-foreground">#{inv.vehicleId}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {Number(inv.leadId) > 0 ? `#${inv.leadId}` : "— (subscription)"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {Number(inv.vehicleId) > 0 ? `#${inv.vehicleId}` : "—"}
+                    </TableCell>
                     <TableCell>{formatRand(Number(inv.subtotal))}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatRand(Number(inv.vatAmount))}
@@ -468,9 +548,7 @@ export default function AdminInvoices() {
                             disabled={
                               emailInvoice.isPending || !platformBank?.configured
                             }
-                            onClick={() =>
-                              emailInvoice.mutate({ invoiceId: inv.id })
-                            }
+                            onClick={() => setSendPreview({ invoiceId: inv.id })}
                           >
                             Email EFT
                           </Button>
@@ -484,6 +562,69 @@ export default function AdminInvoices() {
           </CardContent>
         </Card>
       )}
+
+      <InvoicePreviewDialog
+        open={draftPreviewOpen}
+        onOpenChange={(open) => {
+          setDraftPreviewOpen(open);
+          if (!open) setCreateOpen(true);
+        }}
+        title="Preview — nothing created yet"
+        loading={previewInvoice.isPending}
+        doc={previewInvoice.data?.document}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDraftPreviewOpen(false);
+                setCreateOpen(true);
+              }}
+            >
+              Back to edit
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={!effectiveDealershipId || generateInvoice.isPending}
+              onClick={() => {
+                if (!effectiveDealershipId) return;
+                generateInvoice.mutate(buildDraftPayload());
+              }}
+            >
+              {generateInvoice.isPending ? "Creating…" : "Confirm & create draft"}
+            </Button>
+          </>
+        }
+      />
+
+      <InvoicePreviewDialog
+        open={!!sendPreview}
+        onOpenChange={(open) => !open && setSendPreview(null)}
+        title={`Review before sending${
+          sendPreviewQuery.data?.invoice?.invoiceNumber
+            ? ` — ${sendPreviewQuery.data.invoice.invoiceNumber}`
+            : ""
+        }`}
+        loading={sendPreviewQuery.isLoading}
+        doc={sendPreviewQuery.data?.document}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setSendPreview(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={emailInvoice.isPending}
+              onClick={() => {
+                if (!sendPreview) return;
+                emailInvoice.mutate({ invoiceId: sendPreview.invoiceId });
+              }}
+            >
+              {emailInvoice.isPending ? "Sending…" : "Confirm & email EFT invoice"}
+            </Button>
+          </>
+        }
+      />
     </AdminShell>
   );
 }

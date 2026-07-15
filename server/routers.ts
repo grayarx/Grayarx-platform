@@ -4131,12 +4131,73 @@ export const appRouter = router({
         };
       }),
 
+    /**
+     * Upload a dealership logo (from the admin console file picker).
+     * Accepts a base64-encoded image, stores it via the shared storage
+     * helper (S3/R2 if configured, else a base64 data: URL fallback — same
+     * path as vehicle photo uploads), and returns the resulting URL. The
+     * caller still has to call `updateBrandKit` to persist the URL.
+     */
+    uploadBrandLogo: protectedProcedure
+      .input(
+        z.object({
+          dealershipId: z.number().int(),
+          dataBase64: z.string().min(20),
+          mimeType: z.enum([
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/svg+xml",
+          ]),
+          filename: z.string().max(128).optional(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const dealership = await getDealershipById(input.dealershipId);
+        if (!dealership) throw new TRPCError({ code: "NOT_FOUND" });
+
+        const cleanBase64 = input.dataBase64.replace(/^data:[^;]+;base64,/, "");
+        const buffer = Buffer.from(cleanBase64, "base64");
+        if (buffer.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Empty image data" });
+        }
+        const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+        if (buffer.length > MAX_LOGO_BYTES) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Logo image too large (max 5MB)",
+          });
+        }
+
+        const ext =
+          input.mimeType === "image/png"
+            ? "png"
+            : input.mimeType === "image/webp"
+              ? "webp"
+              : input.mimeType === "image/svg+xml"
+                ? "svg"
+                : "jpg";
+        const safeName = (input.filename || `logo-${Date.now()}`).replace(
+          /[^a-zA-Z0-9._-]/g,
+          "_",
+        );
+        const key = `brand-logos/${input.dealershipId}/${safeName}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        return { url } as const;
+      }),
+
     /** Patch any subset of brand kit fields. Hex colour is sanitised server-side. */
     updateBrandKit: protectedProcedure
       .input(
         z.object({
           dealershipId: z.number().int(),
-          brandLogoUrl: z.string().url().max(500).nullable().optional(),
+          // Accepts a hosted https:// URL (paste-URL fallback) or a base64
+          // data: URL returned by uploadBrandLogo when no S3/R2 bucket is
+          // configured — hence the generous max length.
+          brandLogoUrl: z.string().url().max(8_000_000).nullable().optional(),
           brandAccentColor: z.string().max(16).nullable().optional(),
           brandSignature: z.string().max(500).nullable().optional(),
           vatNumber: z.string().max(32).nullable().optional(),
@@ -4818,12 +4879,22 @@ export const appRouter = router({
         return { invoice, payments, dealership, lead, vehicle, document };
       }),
 
-    generateInvoice: protectedProcedure
+    /**
+     * Preview the invoice document (letterhead, line items, VAT, EFT details)
+     * WITHOUT persisting anything — lets Thandi/founder sanity-check a draft
+     * before it's actually created or sent. Same rendering used by the real
+     * print page (buildInvoiceDocumentView), just fed synthetic invoice data.
+     */
+    previewInvoice: protectedProcedure
       .input(
         z.object({
           dealershipId: z.number().int(),
-          leadId: z.number().int(),
-          vehicleId: z.number().int(),
+          // Only set for a referral/commission invoice tied to a specific
+          // lead+vehicle. Leave unset (or 0) for standard subscription
+          // billing — GrayArx bills dealerships a flat monthly platform fee,
+          // not per-lead / per-vehicle-sold.
+          leadId: z.number().int().optional(),
+          vehicleId: z.number().int().optional(),
           subtotal: z.number().nonnegative(),
           paymentTermsDays: z.number().int().min(1).max(180).default(30),
         }),
@@ -4832,6 +4903,65 @@ export const appRouter = router({
         if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
+        const leadId = input.leadId ?? 0;
+        const vehicleId = input.vehicleId ?? 0;
+        const vatRate = 0.15;
+        const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
+        const totalAmount = Math.round((input.subtotal + vatAmount) * 100) / 100;
+        const dueDate = new Date(Date.now() + input.paymentTermsDays * 24 * 60 * 60 * 1000);
+
+        const dealership = await getDealershipById(input.dealershipId);
+        const lead = leadId > 0 ? await getLeadById(leadId) : null;
+        const vehicle = vehicleId > 0 ? await getVehicle(vehicleId) : null;
+
+        const { buildInvoiceDocumentView } = await import(
+          "../shared/invoiceDocument"
+        );
+        const { getGrayArxBankDetailsFromEnv } = await import(
+          "./_core/grayArxBank"
+        );
+        const document = buildInvoiceDocumentView({
+          invoice: {
+            invoiceNumber: "PREVIEW — not yet created",
+            status: "draft",
+            invoiceDate: new Date(),
+            dueDate,
+            leadId,
+            vehicleId,
+            subtotal: input.subtotal,
+            vatAmount,
+            totalAmount,
+          },
+          dealership,
+          lead,
+          vehicle,
+          payments: [],
+          platformBank: getGrayArxBankDetailsFromEnv(),
+        });
+
+        return { document, vatAmount, totalAmount, dueDate };
+      }),
+
+    generateInvoice: protectedProcedure
+      .input(
+        z.object({
+          dealershipId: z.number().int(),
+          // Optional — only relevant for a referral/commission invoice tied
+          // to a specific lead+vehicle. Standard subscription invoices (the
+          // common case) leave these unset; the platform letterhead kicks in
+          // automatically (see resolveLetterheadMode) whenever either is 0.
+          leadId: z.number().int().optional(),
+          vehicleId: z.number().int().optional(),
+          subtotal: z.number().nonnegative(),
+          paymentTermsDays: z.number().int().min(1).max(180).default(30),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const leadId = input.leadId ?? 0;
+        const vehicleId = input.vehicleId ?? 0;
         const vatRate = 0.15;
         const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
         const totalAmount = Math.round((input.subtotal + vatAmount) * 100) / 100;
@@ -4840,10 +4970,10 @@ export const appRouter = router({
 
         const invoiceId = await createInvoice({
           dealershipId: input.dealershipId,
-          leadId: input.leadId,
+          leadId,
           invoiceNumber,
           dueDate,
-          vehicleId: input.vehicleId,
+          vehicleId,
           subtotal: input.subtotal,
           vatAmount,
           totalAmount,
