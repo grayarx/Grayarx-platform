@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("./db", () => ({
-  createTestDriveBooking: vi.fn().mockResolvedValue(undefined),
+  createTestDriveBooking: vi.fn().mockResolvedValue({ id: 42 }),
   createFallbackMessage: vi.fn().mockResolvedValue(undefined),
   listFutureBookingWindows: vi.fn().mockResolvedValue([]),
   logAgentActivity: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("./_core/chatBookingConversion", () => ({
+  markNalaChatBookingConversion: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./_core/bookingAgent", () => ({
@@ -26,6 +30,7 @@ vi.mock("./_core/fallbackAgent", () => ({
 vi.mock("./_core/nalaReplyOrchestrator", () => ({
   resolveNalaReply: vi.fn(),
   stripMarkdownForWhatsApp: vi.fn((s: string) => s),
+  getConvState: vi.fn(() => undefined),
 }));
 
 vi.mock("./_core/agentPrompts", () => ({
@@ -35,6 +40,9 @@ vi.mock("./_core/agentPrompts", () => ({
 import { resolveRoutedReply } from "./_core/agentIntentRouter";
 import { resolveNalaReply } from "./_core/nalaReplyOrchestrator";
 import { runFallbackAgent, isAfterHoursSAST } from "./_core/fallbackAgent";
+import { createTestDriveBooking, logAgentActivity } from "./db";
+import { markNalaChatBookingConversion } from "./_core/chatBookingConversion";
+import { runBookingAgent } from "./_core/bookingAgent";
 
 describe("agentIntentRouter", () => {
   const baseInput = {
@@ -118,5 +126,45 @@ describe("agentIntentRouter", () => {
     expect(res.agent).toBe("nala");
     expect(res.reply).toBe("It's red.");
     expect(resolveNalaReply).toHaveBeenCalledOnce();
+  });
+
+  it("marks WhatsApp Lerato bookings as chat→booking conversions", async () => {
+    vi.mocked(runBookingAgent).mockResolvedValue({
+      referenceNumber: "GA-1-CONV",
+      outboundReply: "Booked — awaiting confirmation.",
+      language: "en",
+      requestedSlotStart: new Date("2026-07-10T10:00:00+02:00"),
+      requestedSlotEnd: new Date("2026-07-10T11:00:00+02:00"),
+      suggestedSlotStart: new Date("2026-07-10T10:00:00+02:00"),
+      suggestedSlotEnd: new Date("2026-07-10T11:00:00+02:00"),
+      slotShifted: false,
+    } as any);
+
+    const res = await resolveRoutedReply({
+      ...baseInput,
+      channel: "whatsapp",
+      customerPhone: "+27820001111",
+      customerName: "Thabo Test",
+      message: "I'd like to book a test drive tomorrow at 10",
+    });
+
+    expect(res.agent).toBe("lerato");
+    expect(createTestDriveBooking).toHaveBeenCalledOnce();
+    expect(logAgentActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: "booking",
+        action: "booking_received",
+        subjectId: 42,
+      }),
+    );
+    expect(markNalaChatBookingConversion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dealershipId: 1,
+        referenceNumber: "GA-1-CONV",
+        channel: "whatsapp",
+        bookingId: 42,
+        customerContact: "+27820001111",
+      }),
+    );
   });
 });

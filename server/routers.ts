@@ -154,6 +154,7 @@ import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
 import { placeOutboundCall } from "./_core/calling";
 import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, generateMemoryAugmentedReply, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
 import { recordOutcome } from "./_core/agentMemory";
+import { markNalaChatBookingConversion } from "./_core/chatBookingConversion";
 import { runAudit, type AuditInput, applyFindingToSettings } from "./_core/improvementAgent";
 import { proposeNewAgent, type ProposalContext } from "./_core/proposeNewAgent";
 import { runFallbackAgent, isAfterHoursSAST } from "./_core/fallbackAgent";
@@ -3678,6 +3679,14 @@ export const appRouter = router({
             slotShifted: drafted.slotShifted,
             channel: input.channel,
           },
+        });
+        // Tag chat-originated bookings as conversion wins for Nala/Lerato learning.
+        void markNalaChatBookingConversion({
+          dealershipId: dealership.id,
+          referenceNumber: drafted.referenceNumber,
+          channel: input.channel,
+          bookingId: persisted.id,
+          customerContact: input.customerContact,
         });
         try {
           await notifyOwner({

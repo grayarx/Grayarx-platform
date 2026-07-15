@@ -28,6 +28,7 @@ import {
   listFutureBookingWindows,
   logAgentActivity,
 } from "../db";
+import { markNalaChatBookingConversion } from "./chatBookingConversion";
 
 export type RoutedReplyResult = {
   agent: RoutedAgentId;
@@ -145,7 +146,7 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
       existingWindows,
     });
 
-    await createTestDriveBooking({
+    const persisted = await createTestDriveBooking({
       dealershipId: input.dealershipId,
       vehicleId: input.vehicleId ?? null,
       referenceNumber: drafted.referenceNumber,
@@ -165,12 +166,22 @@ async function handleLeratoRoute(input: ResolveRoutedReplyInput, lang: LanguageC
       agentId: "booking",
       action: "booking_received",
       subjectType: "test_drive_booking",
+      subjectId: persisted?.id && persisted.id > 0 ? persisted.id : null,
       summary: `Lerato pencilled a WhatsApp test drive (${drafted.referenceNumber})`,
       payload: {
         reference: drafted.referenceNumber,
         dealershipId: input.dealershipId,
         channel: "whatsapp",
       },
+    });
+
+    // Tag the Nala/WhatsApp chat as a conversion win for agent learning.
+    void markNalaChatBookingConversion({
+      dealershipId: input.dealershipId,
+      referenceNumber: drafted.referenceNumber,
+      channel: "whatsapp",
+      bookingId: persisted?.id ?? null,
+      customerContact: contact,
     });
 
     let reply = drafted.outboundReply;
