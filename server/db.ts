@@ -1274,16 +1274,98 @@ export async function updateWhatsappDraftStatus(
 }
 
 /** Find a vehicle by its CSV-imported externalRef (stock/VIN/registration). Used to dedupe imports. */
-export async function findVehicleByExternalRef(ref: string) {
+export async function findVehicleByExternalRef(
+  ref: string,
+  dealershipId?: number | null,
+) {
   const db = await getDb();
   if (!db) return undefined;
   const normalized = ref.trim().toLowerCase();
-  const [row] = await db
-    .select()
-    .from(vehicles)
-    .where(sql`LOWER(TRIM(${vehicles.externalRef})) = ${normalized}`)
-    .limit(1);
+  const refMatch = sql`LOWER(TRIM(${vehicles.externalRef})) = ${normalized}`;
+  const [row] =
+    dealershipId != null
+      ? await db
+          .select()
+          .from(vehicles)
+          .where(and(refMatch, eq(vehicles.dealershipId, dealershipId)))
+          .limit(1)
+      : await db.select().from(vehicles).where(refMatch).limit(1);
   return row;
+}
+
+/** Vehicles that have an externalRef for a dealership (used by mark-missing-as-sold). */
+export async function listVehiclesWithExternalRef(dealershipId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: vehicles.id,
+      externalRef: vehicles.externalRef,
+      status: vehicles.status,
+    })
+    .from(vehicles)
+    .where(
+      and(
+        eq(vehicles.dealershipId, dealershipId),
+        sql`${vehicles.externalRef} IS NOT NULL`,
+        sql`TRIM(${vehicles.externalRef}) <> ''`,
+      ),
+    );
+}
+
+/** Persist live stock-sync settings / last-run result on a dealership. */
+export async function updateDealershipStockSync(
+  id: number,
+  patch: {
+    stockSyncFeedUrl?: string | null;
+    stockSyncEnabled?: boolean;
+    stockSyncMarkMissingAsSold?: boolean;
+    stockSyncSkipPhotoMirror?: boolean;
+    stockSyncLastAt?: Date | null;
+    stockSyncLastResult?: unknown | null;
+  },
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const set: Record<string, unknown> = {};
+  const has = (k: keyof typeof patch) =>
+    Object.prototype.hasOwnProperty.call(patch, k);
+
+  if (has("stockSyncFeedUrl")) {
+    const raw = patch.stockSyncFeedUrl?.trim() || null;
+    set.stockSyncFeedUrl = raw;
+  }
+  if (has("stockSyncEnabled")) {
+    set.stockSyncEnabled = patch.stockSyncEnabled ? 1 : 0;
+  }
+  if (has("stockSyncMarkMissingAsSold")) {
+    set.stockSyncMarkMissingAsSold = patch.stockSyncMarkMissingAsSold ? 1 : 0;
+  }
+  if (has("stockSyncSkipPhotoMirror")) {
+    set.stockSyncSkipPhotoMirror = patch.stockSyncSkipPhotoMirror ? 1 : 0;
+  }
+  if (has("stockSyncLastAt")) set.stockSyncLastAt = patch.stockSyncLastAt ?? null;
+  if (has("stockSyncLastResult")) {
+    set.stockSyncLastResult = patch.stockSyncLastResult ?? null;
+  }
+  if (Object.keys(set).length === 0) return;
+  await db.update(dealerships).set(set).where(eq(dealerships.id, id));
+}
+
+/** Dealerships with nightly stock sync enabled and a feed URL set. */
+export async function listDealershipsWithStockSyncEnabled() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(dealerships)
+    .where(
+      and(
+        eq(dealerships.stockSyncEnabled, 1),
+        sql`${dealerships.stockSyncFeedUrl} IS NOT NULL`,
+        sql`TRIM(${dealerships.stockSyncFeedUrl}) <> ''`,
+      ),
+    );
 }
 
 /** Count vehicles with suspiciously low prices (e.g. R1 from bad CSV import). */

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -11,6 +11,8 @@ import {
   Car,
   Gauge,
   Fuel,
+  RefreshCw,
+  Link2,
 } from "lucide-react";
 import { Link } from "wouter";
 import DealerShell from "@/components/DealerShell";
@@ -19,6 +21,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar, LoadingSpinner } from "@/components/LoadingAnimations";
@@ -79,6 +82,40 @@ export default function InventoryImportPage() {
   } | null>(null);
 
   const [mirrorPhotos, setMirrorPhotos] = useState(true);
+  const [markMissingAsSold, setMarkMissingAsSold] = useState(false);
+  const [feedUrl, setFeedUrl] = useState("");
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [syncMarkMissing, setSyncMarkMissing] = useState(false);
+
+  const syncConfig = trpc.inventorySync.getConfig.useQuery(undefined, {
+    retry: false,
+  });
+  const saveSyncConfig = trpc.inventorySync.saveConfig.useMutation({
+    onSuccess: () => {
+      toast.success("Stock sync settings saved");
+      syncConfig.refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const syncNow = trpc.inventorySync.syncNow.useMutation({
+    onSuccess: (res) => {
+      toast.success(
+        `Synced — ${res.created} new · ${res.updated} updated · ${res.unchanged} unchanged` +
+          (res.markedSold > 0 ? ` · ${res.markedSold} marked sold` : ""),
+      );
+      syncConfig.refetch();
+      utils.dealer.listVehicles.invalidate();
+      utils.showroom.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  useEffect(() => {
+    if (!syncConfig.data) return;
+    setFeedUrl(syncConfig.data.feedUrl ?? "");
+    setSyncEnabled(syncConfig.data.enabled);
+    setSyncMarkMissing(syncConfig.data.markMissingAsSold);
+  }, [syncConfig.data]);
 
   const [lastImport, setLastImport] = useState<{
     created: number;
@@ -180,7 +217,11 @@ export default function InventoryImportPage() {
   const handleImport = () => {
     setImportProgress(5);
     commitMutation.mutate(
-      { csv, skipPhotoMirror: !mirrorPhotos },
+      {
+        csv,
+        skipPhotoMirror: !mirrorPhotos,
+        markMissingAsSold,
+      },
       {
         onSettled: () => {
           if (!commitMutation.isSuccess) setImportProgress(null);
@@ -208,8 +249,134 @@ export default function InventoryImportPage() {
   return (
     <DealerShell
       title="Import Inventory CSV"
-      subtitle="Drag a CSV from your DMS or stock export. Your inventory feeds the showroom instantly."
+      subtitle="Drag a CSV from your DMS or stock export — or paste a live feed URL for nightly sync."
     >
+      <Card className="mb-6 border-primary/25">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <RefreshCw className="h-4 w-4 text-primary" />
+            Live stock sync
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <p className="text-muted-foreground">
+            Point GrayArx at a public HTTPS CSV export (Cars.co.za dealer export, Google Sheet published as CSV, or your DMS feed).
+            Nightly cron keeps price, km, and status current. Match key = stock / VIN column.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="stock-feed-url" className="flex items-center gap-1.5">
+              <Link2 className="h-3.5 w-3.5" />
+              CSV feed URL
+            </Label>
+            <Input
+              id="stock-feed-url"
+              type="url"
+              placeholder="https://…"
+              value={feedUrl}
+              onChange={(e) => setFeedUrl(e.target.value)}
+              className="font-mono text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3 flex-1">
+              <div>
+                <Label htmlFor="sync-enabled" className="text-sm font-medium">
+                  Nightly sync
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Requires platform cron on /api/scheduled/inventory-sync
+                </p>
+              </div>
+              <Switch
+                id="sync-enabled"
+                checked={syncEnabled}
+                onCheckedChange={setSyncEnabled}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3 flex-1">
+              <div>
+                <Label htmlFor="sync-mark-sold" className="text-sm font-medium">
+                  Missing from feed → sold
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Only units that already have a stock number
+                </p>
+              </div>
+              <Switch
+                id="sync-mark-sold"
+                checked={syncMarkMissing}
+                onCheckedChange={setSyncMarkMissing}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saveSyncConfig.isPending}
+              onClick={() =>
+                saveSyncConfig.mutate({
+                  feedUrl,
+                  enabled: syncEnabled,
+                  markMissingAsSold: syncMarkMissing,
+                })
+              }
+            >
+              {saveSyncConfig.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Save sync settings
+            </Button>
+            <Button
+              type="button"
+              className="btn-gold"
+              disabled={syncNow.isPending || (!feedUrl.trim() && !csv.trim())}
+              onClick={() =>
+                syncNow.mutate(csv.trim() ? { csv } : undefined)
+              }
+            >
+              {syncNow.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Sync now
+            </Button>
+          </div>
+          {syncConfig.data?.lastAt && (
+            <p className="text-xs text-muted-foreground">
+              Last sync:{" "}
+              <span className="text-foreground">
+                {new Date(syncConfig.data.lastAt).toLocaleString("en-ZA")}
+              </span>
+              {syncConfig.data.lastResult &&
+              typeof syncConfig.data.lastResult === "object" &&
+              syncConfig.data.lastResult !== null ? (
+                <span>
+                  {" "}
+                  —{" "}
+                  {(syncConfig.data.lastResult as { error?: string }).error
+                    ? `Error: ${(syncConfig.data.lastResult as { error: string }).error}`
+                    : [
+                        (syncConfig.data.lastResult as { created?: number }).created != null
+                          ? `${(syncConfig.data.lastResult as { created: number }).created} new`
+                          : "",
+                        (syncConfig.data.lastResult as { updated?: number }).updated != null
+                          ? `${(syncConfig.data.lastResult as { updated: number }).updated} updated`
+                          : "",
+                        (syncConfig.data.lastResult as { markedSold?: number }).markedSold
+                          ? `${(syncConfig.data.lastResult as { markedSold: number }).markedSold} sold`
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                </span>
+              ) : null}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <AnimatePresence>
         {isImporting && (
           <motion.div
@@ -551,6 +718,21 @@ export default function InventoryImportPage() {
                         id="mirror-photos"
                         checked={mirrorPhotos}
                         onCheckedChange={setMirrorPhotos}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+                      <div>
+                        <Label htmlFor="mark-missing-sold" className="text-sm font-medium">
+                          Missing from this file → sold
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Marks stock-numbered units not in this CSV as sold (manual adds without stock # are left alone)
+                        </p>
+                      </div>
+                      <Switch
+                        id="mark-missing-sold"
+                        checked={markMissingAsSold}
+                        onCheckedChange={setMarkMissingAsSold}
                       />
                     </div>
                     <Button

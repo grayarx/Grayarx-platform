@@ -23,6 +23,7 @@ Use this when the first paying / pilot dealership signs. Target: **live in 48 ho
 ## Day 0 — Inventory (1–2 hours)
 
 - [ ] Import stock (CSV or manual) — minimum **10 vehicles** for credible showroom
+- [ ] **Live stock sync** — paste CSV feed URL on Import Inventory, Sync now, enable nightly (see `docs/STOCK_SYNC.md`)
 - [ ] Every unit: photo, price, km, year, make, model, colour
 - [ ] Fix R1 placeholder prices (Kagiso CSV repair or manual)
 - [ ] Mark sold units unavailable — don't leave ghost listings

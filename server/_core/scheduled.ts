@@ -319,4 +319,33 @@ export function registerScheduledRoutes(app: Express) {
       return res.status(500).json({ ok: false, error: String(err) });
     }
   });
+
+  /**
+   * Nightly stock sync — fetches each dealership's CSV feed URL and
+   * create/update/sold-marks inventory. See inventorySyncService.ts.
+   */
+  app.post("/api/scheduled/inventory-sync", async (req: Request, res: Response) => {
+    try {
+      if (!(await isAuthorizedScheduledTask(req))) {
+        return res.status(403).json({ error: "cron-only" });
+      }
+      const { syncAllEnabledStockFeeds } = await import("./inventorySyncService");
+      const result = await syncAllEnabledStockFeeds();
+      console.log("[Scheduled] inventory-sync", {
+        ran: result.ran,
+        ok: result.ok,
+        failures: result.results.filter((r) => !r.success).length,
+      });
+      return res.json(result);
+    } catch (err) {
+      console.error("[Scheduled] inventory-sync failed", err);
+      alertFounder({
+        title: "Scheduled job failed: inventory-sync",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/dealer/inventory/import",
+      }).catch(() => {});
+      return res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
 }

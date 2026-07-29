@@ -1,141 +1,187 @@
 /**
- * Inventory Sync Router - tRPC procedures for inventory management
+ * Live stock sync — dealer configures a CSV feed URL; cron / Sync now commits it.
  */
 
-import { protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { executeInventorySync, getSyncJobStatus } from "../_core/inventorySyncScheduler";
+import {
+  getDealershipById,
+  updateDealershipStockSync,
+} from "../db";
+import {
+  assertSafeFeedUrl,
+  syncDealershipStock,
+} from "../_core/inventorySyncService";
+import { protectedProcedure, router } from "../_core/trpc";
 
-export const inventorySyncRouter = {
-  /**
-   * Execute immediate inventory sync
-   */
-  executeSyncNow: protectedProcedure.mutation(async () => {
-    try {
-      const result = await executeInventorySync();
+function requireDealershipId(user: {
+  role?: string | null;
+  dealershipId?: number | null;
+}): number {
+  if (user.dealershipId != null) return user.dealershipId;
+  if (user.role === "founder" || user.role === "admin") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Select a dealership context to configure stock sync",
+    });
+  }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "No dealership linked to this account",
+  });
+}
 
-      return {
-        success: true,
-        message: "Inventory sync completed",
-        carsCoZa: {
-          status: result.carsCoZa.status,
-          vehiclesProcessed: result.carsCoZa.vehiclesProcessed,
-          vehiclesAdded: result.carsCoZa.vehiclesAdded,
-          vehiclesUpdated: result.carsCoZa.vehiclesUpdated,
-          errors: result.carsCoZa.errors,
-        },
-        autotrader: {
-          status: result.autotrader.status,
-          vehiclesProcessed: result.autotrader.vehiclesProcessed,
-          vehiclesAdded: result.autotrader.vehiclesAdded,
-          vehiclesUpdated: result.autotrader.vehiclesUpdated,
-          errors: result.autotrader.errors,
-        },
-        totalVehiclesAdded: result.totalVehiclesAdded,
-        totalVehiclesUpdated: result.totalVehiclesUpdated,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Inventory sync failed: ${String(error)}`,
-        error: String(error),
-      };
+export const inventorySyncRouter = router({
+  /** Current feed settings + last run for this dealership. */
+  getConfig: protectedProcedure.query(async ({ ctx }) => {
+    const dealershipId = requireDealershipId(ctx.user);
+    const dealer = await getDealershipById(dealershipId);
+    if (!dealer) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Dealership not found" });
     }
-  }),
-
-  /**
-   * Get sync schedule status
-   */
-  getSyncScheduleStatus: protectedProcedure.query(async () => {
     return {
-      isEnabled: true,
-      schedule: "0 2 * * *", // 2 AM daily
-      timezone: "UTC",
-      lastSync: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      nextSync: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      message: "Nightly inventory sync is enabled and will run at 2 AM UTC daily",
+      feedUrl: dealer.stockSyncFeedUrl ?? "",
+      enabled: Boolean(dealer.stockSyncEnabled),
+      markMissingAsSold: Boolean(dealer.stockSyncMarkMissingAsSold),
+      skipPhotoMirror: dealer.stockSyncSkipPhotoMirror == null
+        ? true
+        : Boolean(dealer.stockSyncSkipPhotoMirror),
+      lastAt: dealer.stockSyncLastAt?.toISOString() ?? null,
+      lastResult: dealer.stockSyncLastResult ?? null,
+      scheduleHint: "Nightly via POST /api/scheduled/inventory-sync (external cron)",
     };
   }),
 
-  /**
-   * Enable/disable nightly sync
-   */
-  setScheduleEnabled: protectedProcedure
+  saveConfig: protectedProcedure
     .input(
       z.object({
-        enabled: z.boolean(),
-      })
+        feedUrl: z.string().max(500).optional(),
+        enabled: z.boolean().optional(),
+        markMissingAsSold: z.boolean().optional(),
+        skipPhotoMirror: z.boolean().optional(),
+      }),
     )
-    .mutation(async ({ input }) => {
-      // In production, this would update a database setting
+    .mutation(async ({ ctx, input }) => {
+      const dealershipId = requireDealershipId(ctx.user);
+      const url = input.feedUrl?.trim() ?? undefined;
+      if (url) {
+        try {
+          assertSafeFeedUrl(url);
+        } catch (e) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e instanceof Error ? e.message : "Invalid feed URL",
+          });
+        }
+      }
+      if (input.enabled && !url) {
+        const existing = await getDealershipById(dealershipId);
+        if (!existing?.stockSyncFeedUrl && !url) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Set a feed URL before enabling nightly sync",
+          });
+        }
+      }
+      await updateDealershipStockSync(dealershipId, {
+        ...(input.feedUrl !== undefined
+          ? { stockSyncFeedUrl: url || null }
+          : {}),
+        ...(input.enabled !== undefined
+          ? { stockSyncEnabled: input.enabled }
+          : {}),
+        ...(input.markMissingAsSold !== undefined
+          ? { stockSyncMarkMissingAsSold: input.markMissingAsSold }
+          : {}),
+        ...(input.skipPhotoMirror !== undefined
+          ? { stockSyncSkipPhotoMirror: input.skipPhotoMirror }
+          : {}),
+      });
+      return { success: true as const };
+    }),
+
+  /**
+   * Run sync immediately from the saved feed URL, or from an optional pasted CSV.
+   */
+  syncNow: protectedProcedure
+    .input(
+      z
+        .object({
+          csv: z.string().min(1).max(2_000_000).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const dealershipId = requireDealershipId(ctx.user);
+      const result = await syncDealershipStock(dealershipId, {
+        csvOverride: input?.csv,
+        ownerUserId: ctx.user.id,
+      });
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error || "Stock sync failed",
+        });
+      }
+      return result;
+    }),
+
+  /** @deprecated — use syncNow */
+  executeSyncNow: protectedProcedure.mutation(async ({ ctx }) => {
+    const dealershipId = requireDealershipId(ctx.user);
+    const result = await syncDealershipStock(dealershipId, {
+      ownerUserId: ctx.user.id,
+    });
+    return {
+      success: result.success,
+      message: result.success
+        ? "Inventory sync completed"
+        : result.error || "Inventory sync failed",
+      totalVehiclesAdded: result.created,
+      totalVehiclesUpdated: result.updated,
+      markedSold: result.markedSold,
+      error: result.error,
+    };
+  }),
+
+  /** @deprecated — use getConfig */
+  getSyncScheduleStatus: protectedProcedure.query(async ({ ctx }) => {
+    const dealershipId = requireDealershipId(ctx.user);
+    const dealer = await getDealershipById(dealershipId);
+    return {
+      isEnabled: Boolean(dealer?.stockSyncEnabled),
+      schedule: "0 3 * * *",
+      timezone: "Africa/Johannesburg",
+      lastSync: dealer?.stockSyncLastAt?.toISOString() ?? null,
+      nextSync: null,
+      message: dealer?.stockSyncEnabled
+        ? "Nightly stock sync is enabled — ensure cron hits /api/scheduled/inventory-sync"
+        : "Nightly stock sync is off — save a feed URL and enable it on Import Inventory",
+    };
+  }),
+
+  setScheduleEnabled: protectedProcedure
+    .input(z.object({ enabled: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const dealershipId = requireDealershipId(ctx.user);
+      if (input.enabled) {
+        const dealer = await getDealershipById(dealershipId);
+        if (!dealer?.stockSyncFeedUrl) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Set a stock feed URL before enabling nightly sync",
+          });
+        }
+      }
+      await updateDealershipStockSync(dealershipId, {
+        stockSyncEnabled: input.enabled,
+      });
       return {
-        success: true,
+        success: true as const,
+        enabled: input.enabled,
         message: input.enabled
           ? "Nightly inventory sync enabled"
           : "Nightly inventory sync disabled",
-        enabled: input.enabled,
       };
     }),
-
-  /**
-   * Get sync history
-   */
-  getSyncHistory: protectedProcedure
-    .input(
-      z.object({
-        limit: z.number().default(10),
-      })
-    )
-    .query(async ({ input }) => {
-      // In production, this would query sync history from database
-      return {
-        syncs: [
-          {
-            id: "sync_1",
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            source: "cars_co_za",
-            status: "completed",
-            vehiclesProcessed: 150,
-            vehiclesAdded: 12,
-            vehiclesUpdated: 45,
-            duration: 45000,
-          },
-          {
-            id: "sync_2",
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            source: "autotrader",
-            status: "completed",
-            vehiclesProcessed: 200,
-            vehiclesAdded: 8,
-            vehiclesUpdated: 62,
-            duration: 52000,
-          },
-        ],
-        total: 2,
-      };
-    }),
-
-  /**
-   * Configure sync sources
-   */
-  configureSyncSources: protectedProcedure
-    .input(
-      z.object({
-        carsCoZaEnabled: z.boolean().default(true),
-        autotraderEnabled: z.boolean().default(true),
-        syncInterval: z.enum(["daily", "twice_daily", "weekly"]).default("daily"),
-      })
-    )
-    .mutation(async ({ input }) => {
-      // In production, this would save configuration to database
-      return {
-        success: true,
-        message: "Sync sources configured successfully",
-        config: {
-          carsCoZaEnabled: input.carsCoZaEnabled,
-          autotraderEnabled: input.autotraderEnabled,
-          syncInterval: input.syncInterval,
-        },
-      };
-    }),
-};
+});

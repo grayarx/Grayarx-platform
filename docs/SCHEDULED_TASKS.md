@@ -59,6 +59,7 @@ options:
 | `POST /api/scheduled/prospect-nightly` | daily (e.g. 03:00 UTC / 05:00 SAST) | Generates 5 fresh dealership prospects, rotating through SA provinces. |
 | `POST /api/scheduled/market-guide-weekly` | weekly, Monday (e.g. 04:00 UTC / 06:00 SAST) | Refreshes the live SA market guide used by Tumi valuations. |
 | `POST /api/scheduled/db-backup` | daily (e.g. 02:00 UTC / 04:00 SAST) | **New** — exports core tables to gzip'd JSON and uploads to S3/R2 (see `docs/BACKUP_RESTORE.md`). |
+| `POST /api/scheduled/inventory-sync` | daily (e.g. 03:00 UTC / 05:00 SAST) | **Live stock sync** — for each dealership with sync enabled, fetches their CSV feed URL and create/update/sold-marks inventory. Configure per dealer under Import Inventory → Live stock sync. |
 | `POST /api/scheduled/kagiso-audit` | optional, nightly | Runs the autonomous Kagiso audit against a DB snapshot. |
 | `POST /api/scheduled/sendReport` | per dealer's report frequency setting | Sends scheduled analytics reports. Needs a JSON body (`reportTemplateId`, `recipientEmails`, `frequency`, `timezone`) — wire this up per-dealer if/when scheduled reports go live; the cron trigger alone isn't enough for this one. |
 

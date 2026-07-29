@@ -21,6 +21,7 @@ const MIGRATIONS = [
   "0068_agent_display_name_optout_group.sql",
   "0069_dealer_groups.sql",
   "0070_brand_logo_url_mediumtext.sql",
+  "0071_stock_sync.sql",
 ];
 
 async function main() {

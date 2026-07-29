@@ -135,7 +135,6 @@ import {
   createWhatsappDraft,
   listWhatsappDrafts,
   updateWhatsappDraftStatus,
-  findVehicleByExternalRef,
   findVehicleByMakeModelYear,
   findVehicleByTitle,
   countSuspiciousPriceVehicles,
@@ -172,7 +171,7 @@ import { resolveBrandKit, sanitizeHexColor } from "./_core/brandKit";
 import { isShowroomThemeId, resolveShowroomTheme } from "../shared/showroomThemes";
 import { parseInventoryCsv } from "./_core/csvInventory";
 import { isR1Price, repairPricesFromRows } from "./_core/csvPriceRepair";
-import { shouldApplyCsvStatus } from "./_core/csvStatusGuard";
+import { commitInventoryCsv } from "./_core/inventoryCsvCommit";
 import { downloadAndStorePhoto, mirrorExternalPhoto, shouldMirrorPhoto } from "./_core/photoDownloader";
 import { buildHtmlEmail, buildPlainTextSignature } from "./_core/emailSignature";
 import { billingRouter } from "./_core/billingRouter";
@@ -2579,6 +2578,8 @@ export const appRouter = router({
           csv: z.string().min(1).max(2_000_000),
           /** Keep external image URLs as-is — much faster for bulk imports. */
           skipPhotoMirror: z.boolean().optional(),
+          /** Mark stock-ref vehicles missing from this CSV as sold. */
+          markMissingAsSold: z.boolean().optional(),
         }),
       )
       .mutation(async ({ input, ctx }) => {
@@ -2595,124 +2596,15 @@ export const appRouter = router({
             message: "Too many CSV imports. Please try again later.",
           });
         }
-        const preview = parseInventoryCsv(input.csv);
-        let created = 0;
-        let updated = 0;
-        let unchanged = 0;
-        let importedWithWarnings = 0;
-        const failedRows: Array<{ title: string; reason: string }> = [];
-        for (const row of preview.validRows) {
-          if (row.externalRef) {
-            const existing = await findVehicleByExternalRef(row.externalRef);
-            if (existing) {
-              // Build a patch of fields that actually changed
-              const patch: Record<string, unknown> = {};
-              if (row.price != null && row.price > 1 && String(row.price) !== String(existing.price)) {
-                patch.price = String(row.price);
-              }
-              // Keep sold units marked sold — CSV re-import must not resurrect them
-              // as available unless the CSV explicitly says sold (or reserved).
-              if (shouldApplyCsvStatus(existing.status, row.status)) {
-                patch.status = row.status;
-              }
-              if (row.km != null && row.km !== existing.km) {
-                patch.km = row.km;
-              }
-              if (Object.keys(patch).length > 0) {
-                await updateVehicle(existing.id, patch as never);
-                updated++;
-              } else {
-                unchanged++;
-              }
-              continue;
-            }
-          }
-          try {
-            const primaryUrl = row.imageUrls[0] ?? row.imageUrl;
-            const storedImageUrl = input.skipPhotoMirror
-              ? null
-              : await downloadAndStorePhoto(
-                  primaryUrl,
-                  row.title,
-                  row.externalRef,
-                );
-            const primary = storedImageUrl || primaryUrl;
-            // Founders/admins have no dealershipId — fall back to 1 (the primary
-            // test/seed dealership) so imported vehicles are never orphaned.
-            const importDealershipId = ctx.user.dealershipId ?? 1;
-            const result = await createVehicle({
-              ownerUserId: ctx.user.id,
-              dealershipId: importDealershipId,
-              title: row.title,
-              make: row.make,
-              model: row.model,
-              year: row.year,
-              // null price → store as "1" (R1 placeholder, flagged as suspicious — dealer fixes in inventory)
-              price: row.price != null ? String(row.price) : "1",
-              km: row.km,
-              fuel: row.fuel,
-              transmission: row.transmission,
-              location: row.location,
-              imageUrl: primary,
-              primaryPhotoUrl: primary,
-              description: row.description,
-              externalRef: row.externalRef,
-              vin: row.vin,
-              ...(row.status ? { status: row.status as "available" | "sold" | "pending" | "reserved" } : {}),
-            });
-            const vehicleId = (result as { insertId?: number })?.insertId;
-            if (vehicleId && row.imageUrls.length > 0) {
-              for (let pi = 0; pi < row.imageUrls.length; pi++) {
-                const rawUrl = row.imageUrls[pi];
-                const stored =
-                  pi === 0
-                    ? primary
-                    : input.skipPhotoMirror
-                      ? rawUrl
-                      : (await downloadAndStorePhoto(rawUrl, row.title, row.externalRef)) || rawUrl;
-                if (!stored) continue;
-                await addVehiclePhoto({
-                  vehicleId,
-                  url: stored,
-                  storageKey: `import/${vehicleId}/${pi}-${Date.now()}`,
-                  position: pi,
-                  caption: null,
-                });
-              }
-            }
-            created++;
-            if (row.dataWarnings.length > 0 || row.photoWarnings.length > 0) {
-              importedWithWarnings++;
-            }
-          } catch (err) {
-            const reason = err instanceof Error ? err.message : String(err);
-            failedRows.push({ title: row.title, reason });
-          }
-        }
-        await logAgentActivity({
-          agentId: "improvement",
-          action: "inventory_imported",
-          subjectType: null,
-          summary: `Imported ${created} new vehicle${created === 1 ? "" : "s"} via CSV (${updated} updated, ${unchanged} unchanged, ${preview.skippedRows.length} skipped, ${failedRows.length} failed).`,
-          payload: {
-            created,
-            updated,
-            unchanged,
-            skipped: preview.skippedRows.length,
-            duplicatesInCsv: preview.duplicateRefs.length,
-            failed: failedRows.length,
-          },
+        // Founders/admins have no dealershipId — fall back to 1 (primary seed dealer).
+        const importDealershipId = ctx.user.dealershipId ?? 1;
+        return commitInventoryCsv({
+          csv: input.csv,
+          dealershipId: importDealershipId,
+          ownerUserId: ctx.user.id,
+          skipPhotoMirror: input.skipPhotoMirror,
+          markMissingAsSold: input.markMissingAsSold,
         });
-        return {
-          created,
-          updated,
-          unchanged,
-          repaired: updated, // backward-compat alias
-          importedWithWarnings,
-          skipped: preview.skippedRows,
-          duplicatesInCsv: preview.duplicateRefs,
-          failedRows,
-        };
       }),
 
     /** Fix vehicles stuck at R1 by re-matching rows from the original CSV. */

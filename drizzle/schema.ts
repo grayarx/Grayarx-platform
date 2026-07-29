@@ -102,6 +102,8 @@ export const vehicles = mysqlTable("vehicles", {
   externalRef: varchar("externalRef", { length: 128 }), // stock/VIN/reg from CSV import; dedup key
   views: int("views").default(0).notNull(),
   leadCount: int("leadCount").default(0).notNull(),
+  /** Last successful CSV / stock-feed sync that touched this row. */
+  lastSyncedAt: timestamp("lastSyncedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -442,6 +444,23 @@ export const dealerships = mysqlTable("dealerships", {
    * same groupKey lets founder/admin group them later without a full hierarchy UI.
    */
   groupKey: varchar("groupKey", { length: 64 }),
+  /**
+   * Live stock sync — HTTPS URL to a Cars.co.za / DMS CSV export.
+   * When stockSyncEnabled, nightly cron + "Sync now" fetch this feed and
+   * create/update inventory (matched by externalRef / stock number).
+   */
+  stockSyncFeedUrl: varchar("stockSyncFeedUrl", { length: 500 }),
+  stockSyncEnabled: tinyint("stockSyncEnabled").default(0).notNull(),
+  /** If true, units with an externalRef missing from the latest feed → sold. */
+  stockSyncMarkMissingAsSold: tinyint("stockSyncMarkMissingAsSold")
+    .default(0)
+    .notNull(),
+  stockSyncSkipPhotoMirror: tinyint("stockSyncSkipPhotoMirror")
+    .default(1)
+    .notNull(),
+  stockSyncLastAt: timestamp("stockSyncLastAt"),
+  /** JSON: { created, updated, unchanged, markedSold, failed, error? } */
+  stockSyncLastResult: json("stockSyncLastResult"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
