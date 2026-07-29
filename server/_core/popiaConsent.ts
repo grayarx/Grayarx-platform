@@ -38,9 +38,7 @@ By signing this form, the authorised dealership representative confirms that the
    - Right to withdraw consent at any time
 4. Will notify GrayArx within 24 hours of becoming aware of any personal
    information security compromise or data breach at the dealership level.
-5. Will comply with applicable South African law including POPIA, the National
-   Credit Act (NCA), Consumer Protection Act (CPA), and the Electronic
-   Communications and Transactions Act (ECTA).
+5. Will comply with applicable South African law including POPIA, the National Credit Act (NCA), Consumer Protection Act (CPA), and the Electronic Communications and Transactions Act (ECTA).
 6. Acknowledge that customers interacting with GrayArx AI agents (WhatsApp,
    email) must be informed that they may be communicating with an AI assistant.
 7. Accept full responsibility for POPIA compliance in their customer-facing use

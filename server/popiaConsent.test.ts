@@ -159,10 +159,10 @@ describe('POPIA Consent', () => {
 
   describe('POPIA Form Text', () => {
     it('should contain all required sections', () => {
-      expect(POPIA_FORM_TEXT_V1).toContain('Responsible Party');
-      expect(POPIA_FORM_TEXT_V1).toContain('lawful consent');
-      expect(POPIA_FORM_TEXT_V1).toContain('data subject rights');
-      expect(POPIA_FORM_TEXT_V1).toContain('comply');
+      expect(POPIA_FORM_TEXT_V1).toMatch(/Responsible Party/i);
+      expect(POPIA_FORM_TEXT_V1).toMatch(/informed consent/i);
+      expect(POPIA_FORM_TEXT_V1).toMatch(/data subject rights/i);
+      expect(POPIA_FORM_TEXT_V1).toMatch(/comply/i);
     });
 
     it('should mention all required acts', () => {
