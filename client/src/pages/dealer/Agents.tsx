@@ -20,11 +20,13 @@ import {
   Moon,
   Bot,
   Zap,
+  Car,
   type LucideIcon,
 } from "lucide-react";
 import type { AgentId } from "@shared/agents";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 /**
  * Icon + accent ring per agent. Kept as a Partial map with a default fallback
@@ -40,6 +42,8 @@ const ICONS: Partial<Record<AgentId, LucideIcon>> = {
   whatsapp: MessageCircle,
   accountant: Calculator,
   fallback: Moon,
+  preapproval: Calculator,
+  tradein: Car,
 };
 
 const RING_COLORS: Partial<Record<AgentId, string>> = {
@@ -51,6 +55,8 @@ const RING_COLORS: Partial<Record<AgentId, string>> = {
   whatsapp: "from-green-500/30 to-green-500/0 ring-green-500/40",
   accountant: "from-cyan-500/30 to-cyan-500/0 ring-cyan-500/40",
   fallback: "from-slate-500/30 to-slate-500/0 ring-slate-500/40",
+  preapproval: "from-rose-500/30 to-rose-500/0 ring-rose-500/40",
+  tradein: "from-orange-500/30 to-orange-500/0 ring-orange-500/40",
 };
 
 function getInitials(name: string): string {
@@ -81,10 +87,13 @@ export default function Agents() {
   const [filter, setFilter] = useState<AgentId | "all">("all");
   const feedRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
+  const { user } = useAuth();
+  const isFounder = user?.role === "founder" || user?.role === "admin";
 
   const roster = trpc.agent.list.useQuery(undefined, {
     refetchInterval: 15_000,
   });
+  const isDealerAudience = roster.data?.audience === "dealer" || !isFounder;
 
   const feedInput = useMemo(
     () => ({
@@ -134,9 +143,13 @@ export default function Agents() {
   return (
     <DealerShell
       title="Agents"
-      subtitle="Your AI teammates — who they are, what they're doing, and how they talk to each other."
+      subtitle={
+        isDealerAudience
+          ? "Your dealership AI teammates — WhatsApp, email, bookings, finance, trade-in, and after-hours cover."
+          : "Full GrayArx platform roster — including founder ops agents."
+      }
     >
-      {/* Inbox header */}
+      {/* Inbox / routing header — dealers never see the GrayArx founder mailbox */}
       <Card className="bg-card/60 border-white/10 backdrop-blur p-5 mb-8 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gold/10 ring-1 ring-gold/30 flex items-center justify-center">
@@ -144,17 +157,21 @@ export default function Agents() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Primary inbox (where every reply lands)
+              {isDealerAudience
+                ? "Where customer work lands"
+                : "Primary inbox (GrayArx platform)"}
             </p>
             <p className="font-semibold">
-              {roster.data?.primaryInbox ?? "hello@grayarx.com"}
+              {isDealerAudience
+                ? "Leads · Bookings · Pre-approvals · WhatsApp"
+                : (roster.data?.primaryInbox ?? "hello@grayarx.com")}
             </p>
           </div>
         </div>
         <p className="text-xs text-muted-foreground max-w-md">
-          Each agent has their own @grayarx.com address used for outbound mail.
-          Replies all consolidate into this inbox so nothing falls through the
-          cracks.
+          {isDealerAudience
+            ? "Nala, Mia, Lerato, Naledi, Tumi, and Bongi work for your yard. GrayArx founder tools (Sipho, Kagiso, Thandi, compliance mailbox) stay on the admin console — not here."
+            : "Each platform agent has an @grayarx.com address. Replies consolidate into the GrayArx founder inbox."}
         </p>
       </Card>
 

@@ -1,0 +1,4 @@
+{
+  "install": "pnpm install",
+  "start": "node scripts/ensure-brand-assets.mjs"
+}

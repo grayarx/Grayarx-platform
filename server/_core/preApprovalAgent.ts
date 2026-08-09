@@ -17,6 +17,18 @@
  */
 import { invokeLLM } from "./llm";
 import { generateReferenceNumber } from "./fallbackAgent";
+import {
+  computeAffordabilityHint,
+  type AffordabilityHint,
+} from "../../shared/preapprovalAffordability";
+
+export type { AffordabilityHint } from "../../shared/preapprovalAffordability";
+export {
+  computeAffordabilityHint,
+  FI_DOCUMENT_CHECKLIST,
+  FI_BANK_PORTAL_NOTE,
+  affordabilityLabel,
+} from "../../shared/preapprovalAffordability";
 
 export type EmploymentStatus =
   | "permanent"
@@ -61,12 +73,6 @@ export interface PreApprovalOutput {
   affordabilityHint: AffordabilityHint;
 }
 
-export interface AffordabilityHint {
-  monthlyDisposable: number | null;
-  debtToIncomeRatio: number | null; // 0..1
-  flag: "ok" | "tight" | "stretched" | "insufficient_data";
-}
-
 /**
  * Mask a South African ID number to the last 4 digits with bullets for the
  * leading 9. Returns null if the input is empty/whitespace, and a full bullet
@@ -79,48 +85,6 @@ export function maskSouthAfricanId(raw: string | null | undefined): string | nul
   if (cleaned.length <= 4) return "•".repeat(cleaned.length);
   const last4 = cleaned.slice(-4);
   return "•".repeat(Math.max(0, cleaned.length - 4)) + last4;
-}
-
-/**
- * Compute a non-binding affordability snapshot for the human reviewer.
- * Insufficient data returns flag="insufficient_data" — never blocks submission.
- */
-export function computeAffordabilityHint(
-  input: Pick<
-    PreApprovalInput,
-    | "netMonthlyIncome"
-    | "totalMonthlyExpenses"
-    | "existingDebtMonthly"
-    | "grossMonthlyIncome"
-  >,
-): AffordabilityHint {
-  const net = input.netMonthlyIncome ?? null;
-  const exp = input.totalMonthlyExpenses ?? null;
-  const debt = input.existingDebtMonthly ?? null;
-  const gross = input.grossMonthlyIncome ?? null;
-
-  if (net == null && gross == null) {
-    return { monthlyDisposable: null, debtToIncomeRatio: null, flag: "insufficient_data" };
-  }
-  const incomeForRatio = net ?? gross ?? 0;
-  const monthlyDisposable =
-    net != null && exp != null ? Number((net - exp - (debt ?? 0)).toFixed(2)) : null;
-
-  let debtRatio: number | null = null;
-  if (incomeForRatio > 0 && debt != null) {
-    debtRatio = Number(Math.min(1, debt / incomeForRatio).toFixed(2));
-  }
-
-  let flag: AffordabilityHint["flag"] = "ok";
-  if (monthlyDisposable != null) {
-    if (monthlyDisposable < 0) flag = "stretched";
-    else if (monthlyDisposable < 2000) flag = "tight";
-  } else {
-    flag = "insufficient_data";
-  }
-  if (debtRatio != null && debtRatio >= 0.4) flag = "stretched";
-
-  return { monthlyDisposable, debtToIncomeRatio: debtRatio, flag };
 }
 
 /**

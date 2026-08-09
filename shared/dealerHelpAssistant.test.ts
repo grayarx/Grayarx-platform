@@ -6,12 +6,21 @@ import {
 } from "./dealerHelpAssistant";
 
 describe("dealerHelpAssistant", () => {
-  it("blocks agent roster questions for dealers", () => {
-    expect(classifyDealerHelpIntent("where are my agents")).toBe("restricted");
+  it("explains background agents without exposing founder tools or an agents page", () => {
+    expect(classifyDealerHelpIntent("where are my agents")).toBe("help");
     const res = buildDealerHelpReply({ message: "where are my agents" });
     expect(res.mode).toBe("dealer");
+    expect(res.reply).toMatch(/background/i);
+    expect(res.reply).toMatch(/Leads/);
+    expect(res.reply).not.toMatch(/Sipho ·/);
+    expect(res.links.every((l) => l.href !== "/dealer/agents")).toBe(true);
+  });
+
+  it("blocks founder-only agent questions for dealers", () => {
+    expect(classifyDealerHelpIntent("where is Sipho")).toBe("restricted");
+    const res = buildDealerHelpReply({ message: "what is Kagiso doing" });
     expect(res.intent).toBe("restricted");
-    expect(res.reply).toContain("owner");
+    expect(res.reply).toMatch(/platform ops|founder/i);
   });
 
   it("allows navigation help", () => {
@@ -46,13 +55,14 @@ describe("dealerHelpAssistant", () => {
     ).toBe(true);
   });
 
-  it("mentions Kagiso investigation on bug confirmation", () => {
+  it("confirms bug tickets without exposing Kagiso as a dealer agent", () => {
     const res = buildDealerHelpReply({
       message: "ignored",
       ticket: { id: 42, title: "CSV import fails" },
     });
     expect(res.intent).toBe("bug_report");
-    expect(res.reply).toContain("Kagiso");
+    expect(res.reply).toContain("GrayArx support");
+    expect(res.reply).not.toContain("Kagiso");
     expect(res.reply).toContain("#42");
   });
 });

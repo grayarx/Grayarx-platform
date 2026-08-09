@@ -31,8 +31,20 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, MessageSquareWarning, Inbox, Send } from "lucide-react";
+import {
+  computeAffordabilityHint,
+  affordabilityLabel,
+  FI_DOCUMENT_CHECKLIST,
+  FI_BANK_PORTAL_NOTE,
+} from "@shared/preapprovalAffordability";
 
 type Decision = "approved" | "declined" | "more_info";
+
+function numOrNull(n: string | number | null | undefined): number | null {
+  if (n == null || n === "") return null;
+  const v = typeof n === "string" ? Number(n) : n;
+  return Number.isFinite(v) ? v : null;
+}
 
 function fmtZAR(n: string | number | null | undefined): string {
   if (n == null || n === "") return "—";
@@ -47,10 +59,12 @@ function fmtZAR(n: string | number | null | undefined): string {
 
 function statusBadge(status: string) {
   switch (status) {
+    case "submitted":
+    case "in_review":
     case "received":
-      return <Badge variant="outline">Received</Badge>;
+      return <Badge variant="outline">Pending review</Badge>;
     case "approved":
-      return <Badge className="bg-emerald-600/15 text-emerald-400 border border-emerald-600/30">Approved</Badge>;
+      return <Badge className="bg-emerald-600/15 text-emerald-400 border border-emerald-600/30">Proceed to F&I</Badge>;
     case "declined":
       return <Badge className="bg-destructive/15 text-destructive border border-destructive/30">Declined</Badge>;
     case "more_info_needed":
@@ -58,6 +72,20 @@ function statusBadge(status: string) {
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }
+}
+
+function affordabilityBadge(flag: ReturnType<typeof computeAffordabilityHint>["flag"]) {
+  const label = affordabilityLabel(flag);
+  if (flag === "ok") {
+    return <Badge className="bg-emerald-600/15 text-emerald-300 border-emerald-600/30">{label}</Badge>;
+  }
+  if (flag === "tight") {
+    return <Badge className="bg-amber-600/15 text-amber-300 border-amber-600/30">{label}</Badge>;
+  }
+  if (flag === "stretched") {
+    return <Badge className="bg-destructive/15 text-destructive border-destructive/30">{label}</Badge>;
+  }
+  return <Badge variant="outline">{label}</Badge>;
 }
 
 export default function AdminPreApprovals() {
@@ -93,9 +121,9 @@ export default function AdminPreApprovals() {
       if (row?.phone) {
         const msg =
           variables.decision === "approved"
-            ? `Hi ${row.fullName}, great news! Your finance pre-approval application (ref: ${row.referenceNumber}) has been reviewed and we'd like to discuss next steps. Please contact us at your earliest convenience.`
+            ? `Hi ${row.fullName}, we've reviewed your finance enquiry (ref: ${row.referenceNumber}) and would like to continue with our F&I team for the formal bank application. This is not a credit approval yet — the bank makes that decision. We'll contact you shortly about the document pack.`
             : variables.decision === "declined"
-              ? `Hi ${row.fullName}, thank you for your application (ref: ${row.referenceNumber}). Unfortunately we are unable to proceed at this time. Please contact us if you'd like to discuss alternatives.`
+              ? `Hi ${row.fullName}, thank you for your application (ref: ${row.referenceNumber}). We are unable to proceed at this time. Please contact us if you'd like to discuss alternatives.`
               : `Hi ${row.fullName}, we've reviewed your application (ref: ${row.referenceNumber}) and need a bit more information. We'll be in touch shortly.`;
         setWaTarget({ phone: row.phone, name: row.fullName });
         setWaText(msg);
@@ -110,13 +138,23 @@ export default function AdminPreApprovals() {
 
   const stats = useMemo(() => {
     const total = rows.length;
-    const pending = rows.filter((r: any) => r.status === "received").length;
+    const pending = rows.filter((r: any) =>
+      r.status === "submitted" || r.status === "in_review" || r.status === "received",
+    ).length;
     const approved = rows.filter((r: any) => r.status === "approved").length;
     const declined = rows.filter((r: any) => r.status === "declined").length;
     return { total, pending, approved, declined };
   }, [rows]);
 
   const active = openId != null ? rows.find((r: any) => r.id === openId) : null;
+  const activeHint = active
+    ? computeAffordabilityHint({
+        netMonthlyIncome: numOrNull(active.netMonthlyIncome),
+        totalMonthlyExpenses: numOrNull(active.totalMonthlyExpenses),
+        existingDebtMonthly: numOrNull(active.existingDebtMonthly),
+        grossMonthlyIncome: numOrNull(active.grossMonthlyIncome),
+      })
+    : null;
 
   return (
     <AdminShell
@@ -228,12 +266,53 @@ export default function AdminPreApprovals() {
               </span>
             </DialogTitle>
             <DialogDescription>
-              Naledi captured this. The decision below is yours — never automated.
+              Naledi captured this. Approve means “proceed to dealer F&I / bank portal” — never a
+              credit decision. GrayArx never auto-approves.
             </DialogDescription>
           </DialogHeader>
 
           {active && (
             <div className="space-y-5">
+              {activeHint && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Affordability hint (reviewer only)
+                    </span>
+                    {affordabilityBadge(activeHint.flag)}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-muted-foreground text-xs">Monthly disposable</div>
+                      <div>{fmtZAR(activeHint.monthlyDisposable)}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">Debt-to-income</div>
+                      <div>
+                        {activeHint.debtToIncomeRatio != null
+                          ? `${Math.round(activeHint.debtToIncomeRatio * 100)}%`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Hint only — not a credit score. Do not tell the applicant they are “approved”.
+                  </p>
+                </div>
+              )}
+
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  F&I document pack (dealer collects — not GrayArx)
+                </p>
+                <ul className="text-sm space-y-1 list-disc pl-4">
+                  {FI_DOCUMENT_CHECKLIST.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted-foreground pt-1">{FI_BANK_PORTAL_NOTE}</p>
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <div className="text-muted-foreground text-xs">Email</div>

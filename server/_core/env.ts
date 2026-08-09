@@ -22,8 +22,13 @@ export const ENV = {
   emailPassword: process.env.EMAIL_PASSWORD ?? "",
   resendApiKey: process.env.RESEND_API_KEY || "",
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-  twilioApiKey: process.env.TWILIO_API_KEY || "",
-  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
+  /** Twilio Auth Token (console) — also accepts legacy TWILIO_API_KEY name. */
+  twilioApiKey: process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_API_KEY || "",
+  /** Outbound voice/SMS from-number — TWILIO_FROM_NUMBER preferred. */
+  twilioPhoneNumber:
+    process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER || "",
+  /** Soft switch for Themba sales dials (default on when credentials exist). */
+  enableOutboundSalesCalls: process.env.ENABLE_OUTBOUND_SALES_CALLS !== "false",
   googleOAuthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
   googleOAuthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || "",
   appleOAuthClientId: process.env.APPLE_OAUTH_CLIENT_ID || "",

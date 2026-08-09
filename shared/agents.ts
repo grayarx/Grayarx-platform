@@ -2,9 +2,13 @@
  * Canonical agent personas — the "team roster" displayed on the Agents page
  * and used throughout the system for any agent-attributed action.
  *
- * Each agent is tied to a real-looking mailbox under @grayarx.com so dealers
- * can recognise them in their inbox. Configure the actual SMTP/IMAP later via
- * Resend; for now these are the canonical FROM addresses.
+ * Audience:
+ * - dealer  → visible inside a dealership console (customer-facing ops)
+ * - founder → GrayArx platform ops only (prospecting, compliance accounting, Kagiso)
+ *
+ * Each agent is tied to a real-looking mailbox under @grayarx.com so founders
+ * can recognise them in their inbox. Dealers should NOT see the GrayArx
+ * founder primary inbox as "their" shared inbox.
  */
 
 export type AgentId =
@@ -19,6 +23,9 @@ export type AgentId =
   | "preapproval"
   | "tradein";
 
+/** Who may see this agent in roster / activity UIs. */
+export type AgentAudience = "dealer" | "founder";
+
 export type AgentPersona = {
   id: AgentId;
   displayName: string;
@@ -28,6 +35,8 @@ export type AgentPersona = {
   color: string; // Tailwind/CSS class for badges
   description: string;
   avatarUrl: string;
+  /** dealer = dealership console; founder = GrayArx platform ops only */
+  audience: AgentAudience;
 };
 
 export const AGENTS: Record<AgentId, AgentPersona> = {
@@ -42,6 +51,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-mia-UEewSarNBdAgodzLRxVAU5.webp",
     description:
       "Replies to lead emails within seconds, in the customer's language. Follows up at smart intervals (day 1, 3, 7) until the lead either books a test drive or opts out.",
+    audience: "dealer",
   },
   calling: {
     id: "calling",
@@ -53,7 +63,8 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-themba-a4kg3nBuYDzsMeGY8onqkm.webp",
     description:
-      "Optional future add-on — outbound AI calling for dealerships that explicitly opt in. Not active during the pilot; your team handles calls.",
+      "GrayArx sales voice — dials dealerships Sipho scouts, delivers the playbook pitch (alongside existing tools, free pilot, demo CTA), and hands warm interest to Henrique for contract close. Founder-only; not shown to customer dealerships.",
+    audience: "founder",
   },
   booking: {
     id: "booking",
@@ -66,6 +77,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-lerato-MHEMVdXmRiHSXFiXkpPCFN.webp",
     description:
       "Owns the test-drive calendar. Finds free slots, confirms appointments, and sends WhatsApp + email reminders before the booking.",
+    audience: "dealer",
   },
   prospector: {
     id: "prospector",
@@ -78,6 +90,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-sipho-ntvMMNVigvLKKf5htoC6qD.webp",
     description:
       "Goes hunting at 05:00 SAST every night, rotating through SA provinces weekly. Scores each dealership 0–100 and hands the hot ones to the Calling Agent.",
+    audience: "founder",
   },
   improvement: {
     id: "improvement",
@@ -90,6 +103,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-kagiso-5nPwDHzWaXXAEMZt5wdSQv.webp",
     description:
       "Reads every other agent's activity, the dashboard KPIs and the multilingual self-check scores. Writes a prioritised list of improvements with impact estimates, and applies the safe ones automatically — like a sales-ops manager that never sleeps.",
+    audience: "founder",
   },
   whatsapp: {
     id: "whatsapp",
@@ -102,6 +116,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-nala-NLdVzsVDeAxVihGRKcbJEo.webp",
     description:
       "Drafts WhatsApp replies in the buyer's language using a casual, voice-note-like tone. Shorter than email, no formal sign-off, emoji-light. The same multilingual guardrails apply.",
+    audience: "dealer",
   },
   accountant: {
     id: "accountant",
@@ -113,6 +128,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl: "",
     description:
       "Generates invoices, payment statements and VAT reconciliation. POPIA-aware: masks ID and bank-account numbers to last-4-digits in every customer-facing document.",
+    audience: "founder",
   },
   fallback: {
     id: "fallback",
@@ -124,6 +140,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl: "",
     description:
       "Watches every channel after-hours. When no human is available, replies professionally with a reference number and books the customer for a callback first thing next business morning.",
+    audience: "dealer",
   },
   tradein: {
     id: "tradein",
@@ -135,6 +152,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl: "",
     description:
       "Values trade-ins in seconds using an eight-factor South-African market model (year, mileage, condition, transmission, fuel, body type, service history, market). Writes a plain-language memo the dealer principal can hand to the buyer.",
+    audience: "dealer",
   },
   preapproval: {
     id: "preapproval",
@@ -146,6 +164,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl: "",
     description:
       "Walks finance applicants through the pre-approval steps in plain language, captures the documents and information a human F&I manager needs, and acknowledges every applicant with a reference number. Never grants approval \u2014 every decision is made by a human.",
+    audience: "dealer",
   },
 };
 
@@ -162,11 +181,39 @@ export const AGENT_LIST: AgentPersona[] = [
   AGENTS.tradein,
 ];
 
-/** Pilot roster — excludes outbound voice until a dealership opts in. */
-export const PILOT_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter((a) => a.id !== "calling");
+/** Agents a dealership should see in their console (customer ops only). */
+export const DEALER_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter(
+  (a) => a.audience === "dealer",
+);
+
+/** GrayArx platform agents — never shown in a dealer console. */
+export const FOUNDER_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter(
+  (a) => a.audience === "founder",
+);
 
 /**
- * The single inbound mailbox dealers/customers can reply to.
- * (This is where Mia listens.)
+ * Legacy pilot list (buyer-ops + founder ops except voice).
+ * Prefer agentsForAudience() for UI.
+ */
+export const PILOT_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter((a) => a.id !== "calling");
+
+/** Full founder/admin roster — includes Themba for Sipho → sales-call handoff. */
+export const FOUNDER_OPS_AGENT_LIST: AgentPersona[] = AGENT_LIST;
+
+const DEALER_AGENT_IDS = new Set(DEALER_AGENT_LIST.map((a) => a.id));
+
+export function isDealerFacingAgent(id: AgentId | string): boolean {
+  return DEALER_AGENT_IDS.has(id as AgentId);
+}
+
+/** Roster for the current viewer. Dealers never receive founder-only personas. */
+export function agentsForAudience(audience: AgentAudience): AgentPersona[] {
+  if (audience === "dealer") return DEALER_AGENT_LIST;
+  return FOUNDER_OPS_AGENT_LIST;
+}
+
+/**
+ * The single inbound mailbox for GrayArx founder/platform ops.
+ * Do not present this to dealerships as "your primary inbox".
  */
 export const PRIMARY_INBOX = "hello@grayarx.com";

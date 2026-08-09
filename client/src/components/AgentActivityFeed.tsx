@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
-import { AGENT_LIST } from "../../../shared/agents";
+import { DEALER_AGENT_LIST } from "../../../shared/agents";
 
 function formatRelative(value: string | Date | null | undefined): string {
   if (!value) return "";
@@ -17,8 +17,9 @@ function formatRelative(value: string | Date | null | undefined): string {
 }
 
 /**
- * Per-agent activity feed: shows each registered agent and the last
+ * Per-agent activity feed: shows each dealer-facing agent and the last
  * three events they emitted, side-by-side. Lightweight (1 query, polled).
+ * Founder-only agents (Sipho, Kagiso, Thandi, Themba) are excluded.
  */
 export default function AgentActivityFeed({
   perAgent = 3,
@@ -32,10 +33,13 @@ export default function AgentActivityFeed({
     { refetchInterval: 60_000, staleTime: 30_000 },
   );
 
+  const roster = DEALER_AGENT_LIST;
+
   const grouped = useMemo(() => {
     const map = new Map<string, NonNullable<typeof data>>();
-    for (const a of AGENT_LIST) map.set(a.id, [] as never);
+    for (const a of roster) map.set(a.id, [] as never);
     for (const row of data ?? []) {
+      if (!map.has(row.agentId)) continue;
       const list = map.get(row.agentId) ?? ([] as never);
       if (list.length < perAgent) {
         (list as unknown as Array<typeof row>).push(row);
@@ -43,7 +47,7 @@ export default function AgentActivityFeed({
       }
     }
     return map;
-  }, [data, perAgent]);
+  }, [data, perAgent, roster]);
 
   return (
     <Card className="glass card-premium">
@@ -53,12 +57,12 @@ export default function AgentActivityFeed({
           Per-agent activity
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Latest moves from every named agent on your team.
+          Latest moves from your dealership AI teammates.
         </p>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {AGENT_LIST.map((agent, i) => {
+          {roster.map((agent, i) => {
             const events = grouped.get(agent.id) ?? [];
             return (
               <motion.div

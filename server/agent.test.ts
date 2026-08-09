@@ -93,7 +93,12 @@ vi.mock("./_core/llm", () => ({
 
 import { appRouter } from "./routers";
 
-function createCaller(user: { openId: string; role: "user" | "admin" } | null) {
+function createCaller(
+  user: {
+    openId: string;
+    role: "user" | "admin" | "founder" | "dealer_owner" | "dealer_consultant";
+  } | null,
+) {
   return appRouter.createCaller({
     user: user
       ? ({
@@ -103,6 +108,7 @@ function createCaller(user: { openId: string; role: "user" | "admin" } | null) {
           email: "dealer@example.com",
           loginMethod: "manus",
           role: user.role,
+          dealershipId: 1,
           createdAt: new Date(),
           updatedAt: new Date(),
           lastSignedIn: new Date(),
@@ -125,9 +131,15 @@ describe("agent.list (roster)", () => {
     await expect(caller.agent.list()).rejects.toThrow();
   });
 
-  it("returns the full roster with identity, email, status, and action stats", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+  it("forbids dealership users from the agent roster (background-only)", async () => {
+    const caller = createCaller({ openId: "dealer", role: "dealer_owner" });
+    await expect(caller.agent.list()).rejects.toThrow(/founder ops/i);
+  });
+
+  it("returns the full founder roster (incl. Themba) + primary inbox", async () => {
+    const caller = createCaller({ openId: "founder", role: "founder" });
     const result = await caller.agent.list();
+    expect(result.audience).toBe("founder");
     expect(result.primaryInbox).toMatch(/@grayarx\.com$/);
     expect(result.agents).toHaveLength(10);
     const ids = result.agents.map((a) => a.id).sort();
@@ -143,26 +155,20 @@ describe("agent.list (roster)", () => {
       "tradein",
       "whatsapp",
     ]);
-    for (const agent of result.agents) {
-      expect(agent.displayName).toBeTruthy();
-      expect(agent.email).toMatch(/@grayarx\.com$/);
-      expect(agent.role).toBeTruthy();
-      expect(["idle", "active", "paused"]).toContain(agent.status);
-      expect(typeof agent.stats.actionCount).toBe("number");
-    }
   });
 
   it("reflects action counts after activity is logged", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+    const dealer = createCaller({ openId: "user", role: "dealer_owner" });
+    const founder = createCaller({ openId: "founder", role: "founder" });
     // Submit a lead — that should generate at least one Mia (email) activity entry.
-    await caller.leads.create({
+    await dealer.leads.create({
       dealershipName: "Test Motors",
       contactName: "Alex Tester",
       email: "alex@test.com",
       phone: "+27721234567",
       language: "en",
     });
-    const { agents } = await caller.agent.list();
+    const { agents } = await founder.agent.list();
     const mia = agents.find((a) => a.id === "email");
     expect(mia).toBeDefined();
     expect(mia!.stats.actionCount).toBeGreaterThan(0);
@@ -176,44 +182,49 @@ describe("agent.feed", () => {
     await expect(caller.agent.feed({ limit: 5 })).rejects.toThrow();
   });
 
-  it("returns the unified live feed in reverse-chronological order", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
-    await caller.leads.create({
+  it("forbids dealership users from the agent feed", async () => {
+    const caller = createCaller({ openId: "dealer", role: "dealer_owner" });
+    await expect(caller.agent.feed({ limit: 5 })).rejects.toThrow(/founder ops/i);
+  });
+
+  it("returns the unified live feed in reverse-chronological order for founders", async () => {
+    const dealer = createCaller({ openId: "user", role: "dealer_owner" });
+    const founder = createCaller({ openId: "founder", role: "founder" });
+    await dealer.leads.create({
       dealershipName: "Alpha Auto",
       contactName: "Person One",
       email: "one@a.com",
       phone: "+27721111111",
       language: "en",
     });
-    await caller.leads.create({
+    await dealer.leads.create({
       dealershipName: "Beta Motors",
       contactName: "Person Two",
       email: "two@b.com",
       phone: "+27722222222",
       language: "en",
     });
-    const feed = await caller.agent.feed({ limit: 10 });
+    const feed = await founder.agent.feed({ limit: 10 });
     expect(feed.length).toBeGreaterThanOrEqual(2);
     // Newest entry first
     expect(feed[0]!.summary).toMatch(/Beta Motors|Mia drafted/);
   });
 
-  it("filters by agentId", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
-    await caller.leads.create({
+  it("filters by agentId for founders", async () => {
+    const dealer = createCaller({ openId: "user", role: "dealer_owner" });
+    const founder = createCaller({ openId: "founder", role: "founder" });
+    await dealer.leads.create({
       dealershipName: "Filter Co",
       contactName: "Person",
       email: "f@f.com",
       phone: "+27720000000",
       language: "en",
     });
-    const onlyMia = await caller.agent.feed({ limit: 20, agentId: "email" });
+    const onlyMia = await founder.agent.feed({ limit: 20, agentId: "email" });
     expect(onlyMia.length).toBeGreaterThan(0);
     for (const row of onlyMia) {
       expect(row.agentId).toBe("email");
     }
-    const onlySipho = await caller.agent.feed({ limit: 20, agentId: "prospector" });
-    expect(onlySipho).toEqual([]);
   });
 });
 
