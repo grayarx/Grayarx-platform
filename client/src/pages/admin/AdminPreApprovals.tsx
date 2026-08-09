@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, MessageSquareWarning, Inbox, Send } from "lucide-react";
+import { CheckCircle2, XCircle, MessageSquareWarning, Inbox, Send, Trash2 } from "lucide-react";
 import {
   computeAffordabilityHint,
   affordabilityLabel,
@@ -110,6 +110,15 @@ export default function AdminPreApprovals() {
       }
     },
     onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const removeRow = trpc.adminPreApprovals.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Pre-approval removed");
+      utils.adminPreApprovals.list.invalidate();
+      setOpenId(null);
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const decide = trpc.adminPreApprovals.decide.useMutation({
@@ -236,17 +245,32 @@ export default function AdminPreApprovals() {
                     <TableCell>{r.desiredTermMonths ? `${r.desiredTermMonths} mo` : "—"}</TableCell>
                     <TableCell>{statusBadge(r.status)}</TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setOpenId(r.id);
-                          setDecision(r.humanDecision ?? "approved");
-                          setNote(r.humanNote ?? "");
-                        }}
-                      >
-                        Review
-                      </Button>
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setOpenId(r.id);
+                            setDecision(r.humanDecision ?? "approved");
+                            setNote(r.humanNote ?? "");
+                          }}
+                        >
+                          Review
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          disabled={removeRow.isPending}
+                          onClick={() => {
+                            if (!confirm(`Remove pre-approval ${r.referenceNumber}?`)) return;
+                            removeRow.mutate({ id: r.id });
+                          }}
+                          aria-label={`Remove ${r.referenceNumber}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

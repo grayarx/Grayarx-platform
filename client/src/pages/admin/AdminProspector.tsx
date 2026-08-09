@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, Globe, Sparkles, Loader2, Send, PhoneCall, Copy } from "lucide-react";
+import { Mail, Phone, Globe, Sparkles, Loader2, Send, PhoneCall, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -83,6 +83,14 @@ export default function AdminProspector() {
   const handoff = trpc.prospects.handoff.useMutation({
     onError: (e: { message: string }) => toast.error(e.message),
   });
+  const removeProspect = trpc.prospects.remove.useMutation({
+    onSuccess: () => {
+      utils.prospects.list.invalidate();
+      toast.success("Prospect removed");
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
   async function handleSendEmail(p: {
     id: number;
@@ -319,6 +327,27 @@ export default function AdminProspector() {
                       <PhoneCall className="h-3 w-3 mr-1.5" />
                     )}
                     Hand off to Themba
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full h-7 text-xs text-destructive hover:text-destructive"
+                    disabled={removingId === p.id || removeProspect.isPending}
+                    onClick={() => {
+                      if (!confirm(`Remove ${p.dealershipName} from Prospector?`)) return;
+                      setRemovingId(p.id);
+                      removeProspect.mutate(
+                        { id: p.id },
+                        { onSettled: () => setRemovingId(null) },
+                      );
+                    }}
+                  >
+                    {removingId === p.id ? (
+                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3 mr-1.5" />
+                    )}
+                    Remove
                   </Button>
                 </div>
               </CardContent>

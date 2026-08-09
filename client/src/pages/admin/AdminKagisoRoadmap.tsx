@@ -19,6 +19,7 @@ import {
   GitPullRequest,
   Check,
   Wand2,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -110,6 +111,13 @@ export default function AdminKagisoRoadmap() {
       }
       utils.adminKagiso.listRoadmap.invalidate();
       utils.adminKagiso.listProposedPatches.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const removeItem = trpc.adminKagiso.deleteRoadmap.useMutation({
+    onSuccess: () => {
+      toast.success("Removed from roadmap");
+      utils.adminKagiso.listRoadmap.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -689,7 +697,25 @@ export default function AdminKagisoRoadmap() {
                     )}
                     {item.status !== "pending" &&
                       item.status !== "proposed" && (
-                        <Badge variant="outline">{item.status}</Badge>
+                        <>
+                          <Badge variant="outline">{item.status}</Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            disabled={busyId === item.id || removeItem.isPending}
+                            onClick={() => {
+                              if (!confirm("Remove this roadmap item?")) return;
+                              setBusyId(item.id);
+                              removeItem.mutate(
+                                { itemId: item.id },
+                                { onSettled: () => setBusyId(null) },
+                              );
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove
+                          </Button>
+                        </>
                       )}
                   </div>
                 </div>
