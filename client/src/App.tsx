@@ -255,6 +255,9 @@ function Router() {
       <Route path="/admin/platform-demos">
         <AdminRouteGuard><AdminPlatformDemos /></AdminRouteGuard>
       </Route>
+      <Route path="/admin/bookings">
+        <Redirect to="/admin/platform-demos" />
+      </Route>
       <Route path="/admin/approvals">
         <AdminRouteGuard><AdminApprovals /></AdminRouteGuard>
       </Route>
@@ -363,6 +366,9 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/ai-ethics" component={AIEthics} />
       <Route path="/dpa" component={DPA} />
+      <Route path="/legal/dpa">
+        <Redirect to="/dpa" />
+      </Route>
       <Route path="/aup" component={AUP} />
       <Route path="/sla" component={SLA} />
       <Route path="/credit-disclaimer" component={CreditDisclaimer} />

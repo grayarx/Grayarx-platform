@@ -79,7 +79,7 @@ export default function Terms() {
         <li><strong>Data deletion:</strong> customers may request deletion of their data at any time via <strong>privacy@grayarx.com</strong>.</li>
         <li><strong>Data residency:</strong> data is stored in South Africa or in compliant cross-border jurisdictions with adequate protections under POPIA section 72.</li>
         <li><strong>No commercialisation:</strong> we do not sell, share for commercial gain, or monetise customer personal information.</li>
-        <li>A full Data Processing Agreement (DPA) is available at <a href="/legal/dpa">/legal/dpa</a>.</li>
+        <li>A full Data Processing Agreement (DPA) is available at <a href="/dpa">/dpa</a>.</li>
       </ul>
 
       <h2>11. WhatsApp and AI communications</h2>

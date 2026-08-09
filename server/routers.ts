@@ -92,6 +92,7 @@ import {
   listBookings,
   updateLeadStatus,
   updateBookingStatus,
+  deleteBooking,
   listVehicles,
   createVehicle,
   listVehiclePhotos,
@@ -234,6 +235,7 @@ import {
   createOnboardingSubmission,
   listOnboardingSubmissions,
   updateOnboardingStatus,
+  deleteOnboardingSubmission,
   provisionOnboardingSubmission,
   createApproval,
   listPendingApprovals,
@@ -247,6 +249,7 @@ import {
   listPreApprovals,
   getPreApproval,
   decidePreApproval,
+  deletePreApproval,
   createTestDriveBooking,
   listTestDriveBookings,
   getTestDriveBooking,
@@ -256,6 +259,7 @@ import {
   listRoadmap,
   getPlatformOpsSnapshot,
   decideRoadmapItem,
+  deleteRoadmapItem,
   findRoadmapByHash,
   getKagisoSnapshot,
   getLastKagisoAuditRunAt,
@@ -662,7 +666,7 @@ export const appRouter = router({
         notifyOwner({
           title: "New GrayArx demo booking",
           content: `${input.dealershipName} — ${input.preferredDate} ${input.preferredTime}`,
-          actionUrl: `${ENV.appUrl}/admin/bookings`,
+          actionUrl: `${ENV.appUrl}/admin/platform-demos`,
         }).catch(() => undefined);
         return { success: true } as const;
       }),
@@ -1482,6 +1486,18 @@ export const appRouter = router({
           });
         }
         await updateBookingStatus(input.id, input.status);
+        return { success: true } as const;
+      }),
+    deleteBooking: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Platform demos are founder/admin only",
+          });
+        }
+        await deleteBooking(input.id);
         return { success: true } as const;
       }),
 
@@ -3053,6 +3069,22 @@ export const appRouter = router({
         await updateOnboardingStatus(input.id, input.decision, ctx.user.id as any);
         return { ok: true };
       }),
+    /** Remove rejected / new test junk from the queue (not provisioned dealerships). */
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const result = await deleteOnboardingSubmission(input.id);
+        if (!result.deleted) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.reason ?? "Could not delete submission",
+          });
+        }
+        return { ok: true };
+      }),
   }),
 
   // ---- Admin: approval queue ----
@@ -3728,7 +3760,7 @@ export const appRouter = router({
      * WhatsApp inbound webhook (when Nala classifies an intent as a
      * booking). Lerato never confirms a slot autonomously: she persists a
      * `requested` row + her suggested next-in-hours slot and notifies the
-     * owner. A human flips it to `confirmed` from /admin/bookings.
+     * owner. A human flips it to `confirmed` from /admin/platform-demos.
      */
     submit: publicProcedure
       .input(
@@ -4119,6 +4151,15 @@ export const appRouter = router({
           summary: `Human reviewer set pre-approval ${row.referenceNumber} to ${input.decision}`,
           payload: { note: input.note ?? null },
         });
+        return { ok: true as const };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await deletePreApproval(input.id);
         return { ok: true as const };
       }),
   }),
@@ -4774,6 +4815,15 @@ export const appRouter = router({
 
         await decideRoadmapItem(input.itemId, "approved_for_build");
         return { ok: true, action: "approved_for_build" as const };
+      }),
+    deleteRoadmap: protectedProcedure
+      .input(z.object({ itemId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await deleteRoadmapItem(input.itemId);
+        return { ok: true };
       }),
 
     /**

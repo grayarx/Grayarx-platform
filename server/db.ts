@@ -246,6 +246,13 @@ export async function updateBookingStatus(
   await db.update(bookings).set({ status }).where(eq(bookings.id, id));
 }
 
+/** Hard-delete a platform demo booking (founder cleanup). */
+export async function deleteBooking(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(bookings).where(eq(bookings.id, id));
+}
+
 // === Vehicles ===
 export async function createVehicle(data: InsertVehicle) {
   const db = await getDb();
@@ -1689,6 +1696,30 @@ export async function updateOnboardingStatus(
 }
 
 /**
+ * Remove an onboarding submission from the founder queue.
+ * Safe for rejected / new test junk. Blocks delete when a dealership was provisioned
+ * so we don't orphan the live tenant record silently.
+ */
+export async function deleteOnboardingSubmission(id: number): Promise<{ deleted: boolean; reason?: string }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [row] = await db
+    .select()
+    .from(onboardingSubmissions)
+    .where(eq(onboardingSubmissions.id, id))
+    .limit(1);
+  if (!row) return { deleted: false, reason: "not_found" };
+  if (row.provisionedDealershipId || row.status === "provisioned" || row.status === "approved") {
+    return {
+      deleted: false,
+      reason: "provisioned_or_approved — suspend the dealership instead of deleting this row",
+    };
+  }
+  await db.delete(onboardingSubmissions).where(eq(onboardingSubmissions.id, id));
+  return { deleted: true };
+}
+
+/**
  * Approve + provision: create the dealership (with contactPhone + optional
  * whatsappPhoneNumberId) and mark the submission provisioned.
  * Idempotent if already provisioned.
@@ -2021,6 +2052,13 @@ export async function decidePreApproval(input: {
     .where(eq(preApprovals.id, input.id));
 }
 
+/** Hard-delete a pre-approval row (founder cleanup after decision / test junk). */
+export async function deletePreApproval(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(preApprovals).where(eq(preApprovals.id, id));
+}
+
 // Upgrade roadmap
 export async function createRoadmapItem(input: {
   title: string;
@@ -2186,6 +2224,13 @@ export async function decideRoadmapItem(
   const db = await getDb();
   if (!db) return;
   await db.update(upgradeRoadmap).set({ status: decision }).where(eq(upgradeRoadmap.id, id));
+}
+
+/** Hard-delete a roadmap item (usually dismissed / completed clutter). */
+export async function deleteRoadmapItem(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(upgradeRoadmap).where(eq(upgradeRoadmap.id, id));
 }
 
 // Dealerships (admin-side)

@@ -5,11 +5,13 @@ import {
   Mail,
   Phone,
   Calendar as CalendarIcon,
+  Trash2,
 } from "lucide-react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -59,6 +61,13 @@ export default function AdminPlatformDemos() {
       utils.dealer.listBookings.invalidate();
       toast.success("Demo booking updated");
     },
+  });
+  const removeBooking = trpc.dealer.deleteBooking.useMutation({
+    onSuccess: () => {
+      utils.dealer.listBookings.invalidate();
+      toast.success("Demo booking removed");
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
   });
 
   const filtered = useMemo(() => {
@@ -115,19 +124,20 @@ export default function AdminPlatformDemos() {
               <TableHead>When</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden md:table-cell">Booked</TableHead>
+              <TableHead className="w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+                <TableCell colSpan={6} className="py-12 text-center">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
                 </TableCell>
               </TableRow>
             )}
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                   No platform demo bookings yet.
                 </TableCell>
               </TableRow>
@@ -183,6 +193,21 @@ export default function AdminPlatformDemos() {
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                   {new Date(b.createdAt).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-destructive hover:text-destructive"
+                    disabled={removeBooking.isPending}
+                    onClick={() => {
+                      if (!confirm(`Remove demo for ${b.dealershipName}?`)) return;
+                      removeBooking.mutate({ id: b.id });
+                    }}
+                    aria-label={`Remove ${b.dealershipName}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
