@@ -133,7 +133,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 **Written:** Answers from your stock DB. Wrong listing → fix inventory. Fallback queue if unsure. Templates cover LLM outages.
 
-**Note:** OpenAI polishes when quota is up; otherwise deterministic templates. No Manus Forge for chat.
+**Note:** OpenAI polishes replies when OPENAI_API_KEY is set and billing is active; otherwise deterministic templates. No Manus Forge for chat.
 
 ---
 
@@ -317,7 +317,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ### O7. “Is my data training ChatGPT / OpenAI on my customers?”
 
-**Say this:** We use OpenAI to polish replies when the key and quota are up; otherwise templates. We improve the product from outcomes and FAQs you control — not a pitch that we train foundation models on your buyers. See privacy / POPIA docs for processing detail.
+**Say this:** We use OpenAI to polish replies when the API key and billing are active; otherwise templates. We improve the product from outcomes and FAQs you control — not a pitch that we train foundation models on your buyers. See privacy / POPIA docs for processing detail.
 
 **Never say:** “We train on all your customer chats to make the model smarter for everyone.”
 
