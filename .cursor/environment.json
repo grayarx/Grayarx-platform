@@ -1,0 +1,17 @@
+{
+  "name": "GrayArx Platform",
+  "install": "bash scripts/cloud-agent-install.sh",
+  "start": "bash scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "NODE_EXTRA_CA_CERTS=/etc/mysql/dev-certs/ca.pem pnpm dev"
+    }
+  ],
+  "ports": [
+    {
+      "name": "dev",
+      "port": 3000
+    }
+  ]
+}

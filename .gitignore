@@ -122,3 +122,6 @@ grayarx-v2-ui/.env
 nala-stress-test.mjs
 stress-test-output.txt
 
+
+# Stray file created by scripts/kill-dev-ports.mjs Windows redirect on non-Windows hosts
+nul
