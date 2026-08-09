@@ -321,6 +321,35 @@ export function registerScheduledRoutes(app: Express) {
   });
 
   /**
+   * Weekly pilot proof digest — emails founder with leads / bookings /
+   * after-hours / pre-approval numbers for demos and "still in a contract" follow-ups.
+   */
+  app.post("/api/scheduled/weekly-pilot-digest", async (req: Request, res: Response) => {
+    try {
+      if (!(await isAuthorizedScheduledTask(req))) {
+        return res.status(403).json({ error: "cron-only" });
+      }
+      const { sendPilotProofDigestEmail } = await import("./pilotProofDigest");
+      const result = await sendPilotProofDigestEmail();
+      console.log("[Scheduled] weekly-pilot-digest", {
+        emailSent: result.emailSent,
+        leadsLast7d: result.digest.leadsLast7d,
+        afterHours: result.digest.afterHoursRepliesLast7d,
+      });
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error("[Scheduled] weekly-pilot-digest failed", err);
+      alertFounder({
+        title: "Scheduled job failed: weekly-pilot-digest",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
+      return res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  /**
    * Nightly stock sync — fetches each dealership's CSV feed URL and
    * create/update/sold-marks inventory. See inventorySyncService.ts.
    */

@@ -5,7 +5,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Globe, Sparkles, Loader2, Send } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Mail, Phone, Globe, Sparkles, Loader2, Send, PhoneCall, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -15,9 +24,29 @@ const SEGMENT_LABELS: Record<string, string> = {
   whatsapp_manual: "WhatsApp — manual replies",
 };
 
+type HandoffPack = {
+  dealershipName: string;
+  called: boolean;
+  queued: boolean;
+  reason?: string;
+  followUpText: string;
+  callScript: string;
+};
+
+async function copyText(label: string, text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  } catch {
+    toast.error(`Could not copy ${label}`);
+  }
+}
+
 export default function AdminProspector() {
   const utils = trpc.useUtils();
   const [sendingId, setSendingId] = useState<number | null>(null);
+  const [handoffId, setHandoffId] = useState<number | null>(null);
+  const [handoffPack, setHandoffPack] = useState<HandoffPack | null>(null);
   const [segments, setSegments] = useState<Record<number, string>>({});
 
   const { data, isLoading } = trpc.prospects.list.useQuery();
@@ -49,6 +78,9 @@ export default function AdminProspector() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
   const sendEmail = trpc.pilotEmail.sendToDbProspect.useMutation({
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+  const handoff = trpc.prospects.handoff.useMutation({
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
@@ -88,6 +120,33 @@ export default function AdminProspector() {
       }
     } finally {
       setSendingId(null);
+    }
+  }
+
+  async function handleHandoff(p: { id: number; dealershipName: string }) {
+    setHandoffId(p.id);
+    try {
+      const result = await handoff.mutateAsync({ id: p.id });
+      if (!result.success) {
+        toast.error("error" in result ? String(result.error) : "Handoff failed");
+        return;
+      }
+      void utils.prospects.list.invalidate();
+      setHandoffPack({
+        dealershipName: p.dealershipName,
+        called: Boolean(result.called),
+        queued: Boolean(result.queued),
+        reason: "reason" in result ? result.reason : undefined,
+        followUpText: result.followUpText ?? "",
+        callScript: result.callScript ?? "",
+      });
+      if (result.called) {
+        toast.success(`Themba dialled ${p.dealershipName}`);
+      } else {
+        toast.message(`Queued for Themba — copy the follow-up below`);
+      }
+    } finally {
+      setHandoffId(null);
     }
   }
 
@@ -152,6 +211,7 @@ export default function AdminProspector() {
         {data?.map((p) => {
           const email = p.email?.trim().toLowerCase() ?? "";
           const prior = email ? emailedByAddress.get(email) : undefined;
+          const status = String(p.status ?? "");
           return (
             <Card key={p.id} className="card-premium">
               <CardContent className="p-5 space-y-3">
@@ -163,6 +223,11 @@ export default function AdminProspector() {
                     <Badge variant="outline" className="text-xs">
                       Score {p.score ?? "—"}
                     </Badge>
+                    {status ? (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {status.replace(/_/g, " ")}
+                      </Badge>
+                    ) : null}
                     {prior ? (
                       <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px]">
                         Emailed {new Date(prior.sentAt).toLocaleDateString()}
@@ -208,43 +273,114 @@ export default function AdminProspector() {
                     ~{p.estimatedMonthlyVolume} vehicles/month
                   </p>
                 )}
-                {p.email && (
-                  <div className="pt-2 border-t border-primary/10 space-y-2">
-                    <Select
-                      value={segments[p.id] ?? "basic_website_no_showroom"}
-                      onValueChange={(v) => setSegments((prev) => ({ ...prev, [p.id]: v }))}
-                    >
-                      <SelectTrigger className="h-7 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(SEGMENT_LABELS).map(([val, label]) => (
-                          <SelectItem key={val} value={val} className="text-xs">
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      className="w-full h-7 text-xs btn-gold"
-                      disabled={sendingId === p.id}
-                      onClick={() => handleSendEmail(p)}
-                    >
-                      {sendingId === p.id ? (
-                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3 w-3 mr-1.5" />
-                      )}
-                      {prior ? "Resend pilot email" : "Send pilot email"}
-                    </Button>
-                  </div>
-                )}
+                <div className="pt-2 border-t border-primary/10 space-y-2">
+                  {p.email && (
+                    <>
+                      <Select
+                        value={segments[p.id] ?? "basic_website_no_showroom"}
+                        onValueChange={(v) => setSegments((prev) => ({ ...prev, [p.id]: v }))}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(SEGMENT_LABELS).map(([val, label]) => (
+                            <SelectItem key={val} value={val} className="text-xs">
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        className="w-full h-7 text-xs btn-gold"
+                        disabled={sendingId === p.id}
+                        onClick={() => handleSendEmail(p)}
+                      >
+                        {sendingId === p.id ? (
+                          <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3 w-3 mr-1.5" />
+                        )}
+                        {prior ? "Resend pilot email" : "Send pilot email"}
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full h-7 text-xs"
+                    disabled={handoffId === p.id || handoff.isPending}
+                    onClick={() => handleHandoff(p)}
+                  >
+                    {handoffId === p.id ? (
+                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    ) : (
+                      <PhoneCall className="h-3 w-3 mr-1.5" />
+                    )}
+                    Hand off to Themba
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      <Dialog open={handoffPack != null} onOpenChange={(v) => !v && setHandoffPack(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Themba handoff · {handoffPack?.dealershipName}</DialogTitle>
+            <DialogDescription>
+              {handoffPack?.called
+                ? "Outbound call started. Keep the WhatsApp follow-up ready."
+                : "Call queued (Twilio not dialling yet). Copy the playbook texts below."}
+              {handoffPack?.reason ? ` ${handoffPack.reason}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {handoffPack && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    WhatsApp / email follow-up
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => copyText("Follow-up", handoffPack.followUpText)}
+                  >
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  </Button>
+                </div>
+                <Textarea readOnly value={handoffPack.followUpText} className="min-h-[120px] text-sm" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Call script (spoken opener)
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => copyText("Call script", handoffPack.callScript)}
+                  >
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  </Button>
+                </div>
+                <Textarea readOnly value={handoffPack.callScript} className="min-h-[100px] text-sm" />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHandoffPack(null)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }

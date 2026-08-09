@@ -199,7 +199,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
       "Stock answers are searched against your dealership’s inventory — if it’s not in the DB, we say so. Low-confidence or failed paths land in your fallback / human queue with a reference. Fix the stock row; the next answer follows the DB. Templates still reply if the LLM is briefly offline.",
     written:
       "Answers from your stock DB. Wrong listing → fix inventory. Fallback queue if unsure. Templates cover LLM outages.",
-    note: "OpenAI polishes when quota is up; otherwise deterministic templates. No Manus Forge for chat.",
+    note: "OpenAI polishes replies when OPENAI_API_KEY is set and billing is active; otherwise deterministic templates. No Manus Forge for chat.",
     keywords: ["wrong", "hallucinate", "incorrect", "mistake", "ai wrong", "inaccurate"],
     neverSay: ["100% accurate", "never hallucinates"],
   },
@@ -405,7 +405,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "objections",
     question: "Is my data training ChatGPT / OpenAI on my customers?",
     answer:
-      "We use OpenAI to polish replies when the key and quota are up; otherwise templates. We improve the product from outcomes and FAQs you control — not a pitch that we train foundation models on your buyers. See privacy / POPIA docs for processing detail.",
+      "We use OpenAI to polish replies when the API key and billing are active; otherwise templates. We improve the product from outcomes and FAQs you control — not a pitch that we train foundation models on your buyers. See privacy / POPIA docs for processing detail.",
     neverSay: ["We train on all your customer chats to make the model smarter for everyone"],
     keywords: ["training chatgpt", "openai on my", "foundation model"],
   },

@@ -1,7 +1,11 @@
+import { useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Users,
   UserPlus,
@@ -18,6 +22,9 @@ import {
   Bot,
   Mail,
   Webhook,
+  Loader2,
+  FileText,
+  Send,
 } from "lucide-react";
 
 function relativeTime(ms: number | null): string {
@@ -34,6 +41,8 @@ function relativeTime(ms: number | null): string {
 }
 
 export default function AdminOps() {
+  const [digestPreview, setDigestPreview] = useState<string | null>(null);
+
   const { data, isLoading, refetch, isFetching } =
     trpc.adminOps.snapshot.useQuery(undefined, {
       refetchInterval: 30_000,
@@ -43,6 +52,28 @@ export default function AdminOps() {
   const { data: health } = trpc.adminOps.health.useQuery(undefined, {
     refetchInterval: 120_000,
     staleTime: 60_000,
+  });
+
+  const pilotDigest = trpc.adminOps.pilotDigest.useQuery(undefined, {
+    enabled: false,
+  });
+  const sendPilotDigest = trpc.adminOps.sendPilotDigest.useMutation({
+    onSuccess: (r) => {
+      toast.success(
+        r.emailSent
+          ? "Pilot proof digest emailed to founder alerts"
+          : "Digest built but email did not send (check Resend)",
+      );
+      setDigestPreview(
+        [
+          `Leads: ${r.digest.leadsLast7d}`,
+          `Test drives: ${r.digest.testDrivesLast7d}`,
+          `After-hours: ${r.digest.afterHoursRepliesLast7d}`,
+          `Pre-approvals: ${r.digest.preApprovalsLast7d}`,
+        ].join(" · "),
+      );
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
   });
 
   const healthTiles = health
@@ -132,6 +163,41 @@ export default function AdminOps() {
               <Activity className="h-3 w-3 animate-pulse" /> refreshing
             </Badge>
           ) : null}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={pilotDigest.isFetching}
+            onClick={async () => {
+              const r = await pilotDigest.refetch();
+              if (r.data?.text) {
+                setDigestPreview(r.data.text);
+                toast.success("Pilot digest preview ready");
+              } else if (r.error) {
+                toast.error(r.error.message);
+              }
+            }}
+          >
+            {pilotDigest.isFetching ? (
+              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+            ) : (
+              <FileText className="h-3 w-3 mr-1.5" />
+            )}
+            Preview pilot digest
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 text-xs btn-gold"
+            disabled={sendPilotDigest.isPending}
+            onClick={() => sendPilotDigest.mutate()}
+          >
+            {sendPilotDigest.isPending ? (
+              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="h-3 w-3 mr-1.5" />
+            )}
+            Email pilot digest
+          </Button>
           <button
             type="button"
             className="text-xs text-muted-foreground hover:text-primary"
@@ -202,6 +268,16 @@ export default function AdminOps() {
           );
         })}
       </div>
+      {digestPreview ? (
+        <Card className="mt-8 border-primary/20">
+          <CardContent className="p-4 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Pilot proof digest
+            </p>
+            <Textarea readOnly value={digestPreview} className="min-h-[180px] font-mono text-xs" />
+          </CardContent>
+        </Card>
+      ) : null}
       {data ? (
         <p className="text-xs text-muted-foreground mt-6">
           Snapshot generated{" "}

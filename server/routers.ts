@@ -556,7 +556,7 @@ export const appRouter = router({
           } catch (e) {
             console.error("[leads.create] scheduleFollowups failed", e);
           }
-          // Instant pilot welcome — Resend ships even when OpenAI quota is empty.
+          // Instant pilot welcome — Resend ships even if OpenAI is unavailable.
           sendLeadAcknowledgmentEmail(
             input.email,
             input.contactName,
@@ -2023,14 +2023,19 @@ export const appRouter = router({
           payload: { rationale: prospect.rationale, phone: prospect.phone },
         });
 
-        const { buildThembaSalesFollowUpText } = await import("./_core/salesCallScript");
-        const followUpText = buildThembaSalesFollowUpText({
+        const {
+          buildThembaSalesFollowUpText,
+          buildThembaSalesSayScript,
+        } = await import("./_core/salesCallScript");
+        const prospectCtx = {
           dealershipName: prospect.dealershipName,
           city: prospect.city,
           region: prospect.region,
           rationale: prospect.rationale,
           score: prospect.score,
-        });
+        };
+        const followUpText = buildThembaSalesFollowUpText(prospectCtx);
+        const callScript = buildThembaSalesSayScript(prospectCtx);
 
         if (!prospect.phone) {
           await createCallAttempt({
@@ -2053,19 +2058,14 @@ export const appRouter = router({
             queued: true,
             called: false,
             followUpText,
+            callScript,
             reason: "No phone number on the prospect — queued with playbook follow-up text.",
           } as const;
         }
 
         const callResult = await placeOutboundCall({
           toNumber: prospect.phone,
-          prospect: {
-            dealershipName: prospect.dealershipName,
-            city: prospect.city,
-            region: prospect.region,
-            rationale: prospect.rationale,
-            score: prospect.score,
-          },
+          prospect: prospectCtx,
         });
 
         if (callResult.ok) {
@@ -2097,6 +2097,7 @@ export const appRouter = router({
             called: true,
             sid: callResult.sid,
             followUpText,
+            callScript,
             reason: "Themba placed the outbound sales call.",
           } as const;
         }
@@ -2121,7 +2122,7 @@ export const appRouter = router({
           subjectType: "prospect",
           subjectId: prospect.id,
           summary: `Themba queued ${prospect.dealershipName} — ${skipReason}`,
-          payload: { phone: prospect.phone, followUpText, skipReason },
+          payload: { phone: prospect.phone, followUpText, callScript, skipReason },
         });
 
         return {
@@ -2129,6 +2130,7 @@ export const appRouter = router({
           queued: true,
           called: false,
           followUpText,
+          callScript,
           reason: skipReason,
         } as const;
       }),
@@ -4478,6 +4480,25 @@ export const appRouter = router({
       }
       const { getPlatformHealth } = await import("./_core/platformHealth");
       return getPlatformHealth();
+    }),
+    /** Preview weekly pilot proof numbers (leads / bookings / Bongi / F&I). */
+    pilotDigest: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { buildPilotProofDigest, formatPilotProofDigestText } = await import(
+        "./_core/pilotProofDigest"
+      );
+      const digest = await buildPilotProofDigest(7);
+      return { digest, text: formatPilotProofDigestText(digest) };
+    }),
+    /** Email the pilot proof digest to the founder alert inbox. */
+    sendPilotDigest: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { sendPilotProofDigestEmail } = await import("./_core/pilotProofDigest");
+      return sendPilotProofDigestEmail();
     }),
   }),
 
