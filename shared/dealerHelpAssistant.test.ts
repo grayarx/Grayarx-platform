@@ -6,14 +6,14 @@ import {
 } from "./dealerHelpAssistant";
 
 describe("dealerHelpAssistant", () => {
-  it("answers dealer agent roster questions without exposing founder tools", () => {
+  it("explains background agents without exposing founder tools or an agents page", () => {
     expect(classifyDealerHelpIntent("where are my agents")).toBe("help");
     const res = buildDealerHelpReply({ message: "where are my agents" });
     expect(res.mode).toBe("dealer");
-    expect(res.reply).toMatch(/Nala/);
-    expect(res.reply).toMatch(/Naledi/);
+    expect(res.reply).toMatch(/background/i);
+    expect(res.reply).toMatch(/Leads/);
     expect(res.reply).not.toMatch(/Sipho ·/);
-    expect(res.links.some((l) => l.href === "/dealer/agents")).toBe(true);
+    expect(res.links.every((l) => l.href !== "/dealer/agents")).toBe(true);
   });
 
   it("blocks founder-only agent questions for dealers", () => {

@@ -34,23 +34,28 @@ const PHOTO_HINT_ROUTES = [
   "/dealer/csv-photo",
 ];
 
-// Dealer-facing sidebar — minimal by design.
-// Prospector, Kagiso roadmap, Thandi invoices, compliance mailbox live under /admin
-// and are NOT visible to dealer_owner / dealer_consultant roles.
-// Agents page shows dealer-facing teammates only (Nala, Mia, Lerato, Naledi, Tumi, Bongi).
-// Agent Chat (direct ops chat incl. Sipho/Kagiso/Thandi) stays founder/admin only.
+// Dealer-facing sidebar — outcomes only. AI agents run 24/7 in the background;
+// dealers work Leads / Bookings / Inventory — they do not see an agent roster.
+// Founder ops (Agents, Agent Chat, Sipho, Themba, Kagiso, compliance inbox) live under /admin
+// or founder-only links below.
 const DEALER_LINKS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, tip: "KPIs, recent activity, quick actions" },
-  { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "Your AI teammates — WhatsApp, email, bookings, finance, trade-in" },
+  {
+    href: "/dealer/agents",
+    label: "Agents",
+    icon: Bot,
+    tip: "Founder ops — full GrayArx agent roster",
+    founderOnly: true,
+  },
   {
     href: "/dealer/agents/chat",
     label: "Agent Chat",
     icon: MessageSquare,
-    tip: "Founder ops chat with the full GrayArx agent roster",
+    tip: "Founder ops chat with Sipho, Themba, Kagiso and more",
     founderOnly: true,
   },
   { href: "/dealer/leads", label: "Leads", icon: Users, tip: "Inbound enquiries from web, email, WhatsApp" },
-  { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Your dealership's test-drive requests (Lerato)" },
+  { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Your dealership's test-drive requests" },
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },

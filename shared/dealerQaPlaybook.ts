@@ -58,7 +58,7 @@ export const DEALER_QA_THEMES: Record<
 };
 
 /** Agents that may receive the full commercial playbook in system prompts. */
-export const DEALER_QA_AGENT_IDS = ["improvement", "prospector"] as const;
+export const DEALER_QA_AGENT_IDS = ["improvement", "prospector", "calling"] as const;
 
 export function agentGetsDealerQaPlaybook(agentId: string): boolean {
   return (DEALER_QA_AGENT_IDS as readonly string[]).includes(agentId);

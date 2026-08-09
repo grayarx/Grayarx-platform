@@ -110,8 +110,8 @@ export default function DashboardChatAgent() {
       config.data.mode === "owner"
         ? [{ label: "Platform agents", href: "/dealer/agents" }]
         : [
-            { label: "Your Agents", href: "/dealer/agents" },
-            { label: "Dashboard", href: "/dashboard" },
+            { label: "Leads", href: "/dealer/leads" },
+            { label: "Bookings", href: "/dealer/bookings" },
           ];
     setMessages([
       {

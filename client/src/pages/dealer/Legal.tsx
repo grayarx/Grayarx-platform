@@ -1,16 +1,20 @@
 import DealerShell from "@/components/DealerShell";
 import { LegalDocumentLinks } from "@/components/LegalDocumentLinks";
-import ComplianceContactForm from "@/components/ComplianceContactForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GRAYARX_LEGAL } from "@shared/companyLegal";
 import { Scale, Mail } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Dealer legal pack only — the GrayArx compliance *inbox* (privacy@ / legal@
+ * monitoring) is founder-only under /admin/compliance. Dealers get documents
+ * + mailto, not the founder mailbox UI.
+ */
 export default function DealerLegal() {
   return (
     <DealerShell
-      title="Legal & compliance"
+      title="Legal & agreements"
       subtitle="Policies, agreements, and POPIA documents for your dealership."
     >
       <Card className="border-primary/15 mb-6">
@@ -26,15 +30,6 @@ export default function DealerLegal() {
         </CardHeader>
         <CardContent>
           <LegalDocumentLinks showPilotBanner={false} />
-        </CardContent>
-      </Card>
-
-      <Card className="border-primary/10 mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Send a compliance message</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ComplianceContactForm compact />
         </CardContent>
       </Card>
 

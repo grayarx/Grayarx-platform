@@ -218,18 +218,21 @@ function buildDealerAgentsReply(): DealerHelpReply {
   return {
     mode: "dealer",
     intent: "help",
-    links: [{ label: "Your Agents", href: "/dealer/agents" }],
+    links: [
+      { label: "Leads", href: "/dealer/leads" },
+      { label: "Bookings", href: "/dealer/bookings" },
+    ],
     reply: [
-      "Your dealership AI teammates are on **Agents**:",
-      "• **Nala** — WhatsApp / web chat",
-      "• **Mia** — email follow-ups",
-      "• **Lerato** — test-drive bookings",
-      "• **Naledi** — finance pre-approval forms (human F&I decides)",
-      "• **Tumi** — trade-in valuations",
-      "• **Bongi** — after-hours cover",
+      "Your AI runs **in the background 24/7** — you don’t manage an agent roster.",
       "",
-      "Customer work lands in **Leads**, **Bookings**, and **Pre-approvals** — not a shared GrayArx founder inbox.",
-      "Platform-only tools (Sipho, Kagiso, Thandi, compliance mailbox) stay with GrayArx and are not in your console.",
+      "What shows up for you:",
+      "• **Leads** — WhatsApp / web / email enquiries (Nala + Mia)",
+      "• **Bookings** — test-drive requests (Lerato)",
+      "• Finance forms → your F&I queue (Naledi; humans decide)",
+      "• Trade-ins → Trade-In Network (Tumi)",
+      "• After-hours cover (Bongi)",
+      "",
+      "GrayArx founder tools (Sipho, Themba, Kagiso, Thandi, compliance inbox) are not in your console.",
     ].join("\n"),
   };
 }
@@ -238,13 +241,16 @@ function buildRestrictedReply(): DealerHelpReply {
   return {
     mode: "dealer",
     intent: "restricted",
-    links: [{ label: "Your Agents", href: "/dealer/agents" }],
+    links: [
+      { label: "Leads", href: "/dealer/leads" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
     reply: [
-      "That tool is **GrayArx platform ops** (founder console) — not part of your dealership agents.",
+      "That tool is **GrayArx founder ops** — not part of your dealership console.",
       "",
-      "Your yard uses Nala, Mia, Lerato, Naledi, Tumi, and Bongi. Open **Agents** to see them.",
+      "Your AI works quietly in the background. Use **Leads**, **Bookings**, and **Inventory**.",
       "",
-      "I can also help with CSV import, inventory, leads, photos, or bug reports.",
+      "I can also help with CSV import, photos, or bug reports.",
       "",
       `Urgent support: **${PRIMARY_INBOX}**`,
     ].join("\n"),

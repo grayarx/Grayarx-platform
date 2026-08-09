@@ -56,6 +56,7 @@ describe("dealerQaPlaybook", () => {
   it("only Kagiso (improvement) and Sipho (prospector) get the playbook", () => {
     expect(agentGetsDealerQaPlaybook("improvement")).toBe(true);
     expect(agentGetsDealerQaPlaybook("prospector")).toBe(true);
+    expect(agentGetsDealerQaPlaybook("calling")).toBe(true);
     expect(agentGetsDealerQaPlaybook("whatsapp")).toBe(false);
     expect(agentGetsDealerQaPlaybook("fallback")).toBe(false);
     expect(agentGetsDealerQaPlaybook("email")).toBe(false);

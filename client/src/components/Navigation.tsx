@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Globe, ChevronDown, LogOut, LayoutDashboard, Users, Calendar, Car, User, Bot, Scale } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, LogOut, LayoutDashboard, Users, Calendar, Car, User, Scale } from "lucide-react";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -187,11 +187,6 @@ export default function Navigation() {
                 <DropdownMenuItem asChild>
                   <Link href="/dealer/legal" className="cursor-pointer">
                     <Scale className="h-4 w-4 mr-2" /> Legal & compliance
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dealer/agents" className="cursor-pointer">
-                    <Bot className="h-4 w-4 mr-2" /> AI agents
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

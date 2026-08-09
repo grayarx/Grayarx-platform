@@ -30,8 +30,8 @@ describe("agent audience scoping", () => {
 
   it("agentsForAudience returns the correct lists", () => {
     expect(agentsForAudience("dealer")).toEqual(DEALER_AGENT_LIST);
-    expect(agentsForAudience("founder").every((a) => a.id !== "calling")).toBe(true);
-    expect(agentsForAudience("founder").length).toBe(AGENT_LIST.length - 1);
+    expect(agentsForAudience("founder").some((a) => a.id === "calling")).toBe(true);
+    expect(agentsForAudience("founder").length).toBe(AGENT_LIST.length);
   });
 
   it("every persona has an audience tag", () => {

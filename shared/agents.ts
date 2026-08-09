@@ -63,7 +63,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-themba-a4kg3nBuYDzsMeGY8onqkm.webp",
     description:
-      "Optional future add-on — outbound AI calling for dealerships that explicitly opt in. Not active during the pilot; your team handles calls.",
+      "GrayArx sales voice — dials dealerships Sipho scouts, delivers the playbook pitch (alongside existing tools, free pilot, demo CTA), and hands warm interest to Henrique for contract close. Founder-only; not shown to customer dealerships.",
     audience: "founder",
   },
   booking: {
@@ -191,8 +191,14 @@ export const FOUNDER_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter(
   (a) => a.audience === "founder",
 );
 
-/** Founder/admin pilot roster — excludes outbound voice until opted in. */
+/**
+ * Legacy pilot list (buyer-ops + founder ops except voice).
+ * Prefer agentsForAudience() for UI.
+ */
 export const PILOT_AGENT_LIST: AgentPersona[] = AGENT_LIST.filter((a) => a.id !== "calling");
+
+/** Full founder/admin roster — includes Themba for Sipho → sales-call handoff. */
+export const FOUNDER_OPS_AGENT_LIST: AgentPersona[] = AGENT_LIST;
 
 const DEALER_AGENT_IDS = new Set(DEALER_AGENT_LIST.map((a) => a.id));
 
@@ -203,7 +209,7 @@ export function isDealerFacingAgent(id: AgentId | string): boolean {
 /** Roster for the current viewer. Dealers never receive founder-only personas. */
 export function agentsForAudience(audience: AgentAudience): AgentPersona[] {
   if (audience === "dealer") return DEALER_AGENT_LIST;
-  return PILOT_AGENT_LIST;
+  return FOUNDER_OPS_AGENT_LIST;
 }
 
 /**

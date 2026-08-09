@@ -1,23 +1,33 @@
 /**
- * Calling Agent — places an outbound voice call via Twilio's REST API.
+ * Themba (Calling Agent) — places outbound GrayArx sales calls via Twilio.
+ *
+ * Used after Sipho hands off a dealership prospect. Script content comes from
+ * the dealer Q&A playbook (elevator + contract framing + demo CTA).
  *
  * Gracefully degrades when secrets are missing: returns `{ skipped: true }`
  * so the rest of the flow (status update, DB logging) still works.
  *
- * Required env (set via webdev_request_secrets):
+ * Required env:
  *   TWILIO_ACCOUNT_SID
  *   TWILIO_AUTH_TOKEN
- *   TWILIO_FROM_NUMBER  (E.164 — e.g. +1xxx... your verified Twilio number)
+ *   TWILIO_FROM_NUMBER  (E.164)
  *
  * Optional:
- *   TWILIO_TWIML_URL    (TwiML Bin or webhook returning <Response><Say>...).
- *                       Defaults to a built-in TwiML Bin equivalent embedded as URL-encoded TwiML.
+ *   TWILIO_TWIML_URL — override TwiML URL (defaults to playbook-based Echo TwiML)
+ *   ENABLE_OUTBOUND_SALES_CALLS — set to "false" to force queue-only
  */
+
+import {
+  buildSalesTwiml,
+  type SalesProspectContext,
+} from "./salesCallScript";
 
 type PlaceCallInput = {
   toNumber: string; // E.164 preferred (+27...). We'll normalize SA local numbers.
   prospectName?: string;
   rationale?: string;
+  /** Richer Sipho context — preferred over legacy name/rationale fields. */
+  prospect?: SalesProspectContext;
 };
 
 type PlaceCallResult =
@@ -35,25 +45,20 @@ function normalizeToE164(raw: string): string | null {
   return null;
 }
 
-function buildTwimlUrl(prospectName: string, rationale: string): string {
-  // Inline TwiML Bin via twimlets.com Echo (publicly available, signed).
-  // Falls back to a generic message if Echo is unreachable.
-  const message =
-    `Hello, this is the GrayArx AI calling agent. ` +
-    `We are reaching out to ${prospectName || "your dealership"} ` +
-    `because ${rationale || "we believe GrayArx can help you capture more leads"}. ` +
-    `If you would like a no-pressure demo, please press one or stay on the line. ` +
-    `Thank you for your time.`;
-
-  const twiml = `<Response><Say voice="Polly.Joanna" language="en-ZA">${message
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")}</Say><Pause length="2"/></Response>`;
-
+function buildTwimlUrl(prospect: SalesProspectContext): string {
+  const twiml = buildSalesTwiml(prospect);
   return `https://twimlets.com/echo?Twiml=${encodeURIComponent(twiml)}`;
 }
 
 export async function placeOutboundCall(input: PlaceCallInput): Promise<PlaceCallResult> {
+  if (process.env.ENABLE_OUTBOUND_SALES_CALLS === "false") {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "Outbound sales calls disabled (ENABLE_OUTBOUND_SALES_CALLS=false).",
+    };
+  }
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_FROM_NUMBER;
@@ -69,9 +74,12 @@ export async function placeOutboundCall(input: PlaceCallInput): Promise<PlaceCal
   const to = normalizeToE164(input.toNumber);
   if (!to) return { ok: false, error: `Invalid destination number: ${input.toNumber}` };
 
-  const twimlUrl =
-    process.env.TWILIO_TWIML_URL ||
-    buildTwimlUrl(input.prospectName ?? "your dealership", input.rationale ?? "");
+  const prospect: SalesProspectContext = input.prospect ?? {
+    dealershipName: input.prospectName ?? "your dealership",
+    rationale: input.rationale ?? null,
+  };
+
+  const twimlUrl = process.env.TWILIO_TWIML_URL || buildTwimlUrl(prospect);
 
   const body = new URLSearchParams({
     To: to,

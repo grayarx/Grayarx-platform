@@ -25,12 +25,16 @@ GrayArx is a **dealership AI operating system** that works **alongside** your cu
 | Languages | SA official languages + Portuguese (as configured) |
 | POPIA pack | Privacy, dealer agreement, consent forms |
 
+## How agents show up for the dealer
+
+Agents run **in the background 24/7**. The dealership console is outcomes-only (Leads, Bookings, Inventory, Pre-approvals) — not an agent roster, not Sipho/Themba/Kagiso, and not the GrayArx compliance inbox.
+
 ## Out of scope (not sold as bank credit)
 
 - Instant bank / MFC / WesBank credit approval  
 - Bureau score pulls without a lender partner  
 - Replacing your DMS or manufacturer CRM on day one  
-- GrayArx **founder** tools (Sipho prospecting, Kagiso platform improvements, Thandi platform invoices, compliance mailbox) — those stay on the GrayArx admin console
+- GrayArx **founder** tools (Sipho prospecting, Themba sales calling, Kagiso platform improvements, Thandi platform invoices, compliance mailbox) — founder console only
 
 ---
 

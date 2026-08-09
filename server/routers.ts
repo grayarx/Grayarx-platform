@@ -2014,22 +2014,124 @@ export const appRouter = router({
         const prospect = await getProspect(input.id);
         if (!prospect) return { success: false, error: "Prospect not found" } as const;
 
-        // Pilot: queue for human follow-up — outbound AI calling is opt-in only (future).
+        // Sipho → Themba: attempt outbound sales call (playbook script). Falls back to queue.
         await updateProspectStatus(prospect.id, "queued_for_call");
         await logAgentActivity({
           agentId: "prospector",
           action: "handoff",
           subjectType: "prospect",
           subjectId: prospect.id,
-          summary: `Sipho flagged ${prospect.dealershipName} (score ${prospect.score}) for your team to follow up.`,
+          summary: `Sipho handed ${prospect.dealershipName} (score ${prospect.score}) to Themba for a GrayArx sales call.`,
           payload: { rationale: prospect.rationale, phone: prospect.phone },
+        });
+
+        const { buildThembaSalesFollowUpText } = await import("./_core/salesCallScript");
+        const followUpText = buildThembaSalesFollowUpText({
+          dealershipName: prospect.dealershipName,
+          city: prospect.city,
+          region: prospect.region,
+          rationale: prospect.rationale,
+          score: prospect.score,
+        });
+
+        if (!prospect.phone) {
+          await createCallAttempt({
+            prospectId: prospect.id,
+            toNumber: "unknown",
+            status: "skipped",
+            errorMessage: "No phone on prospect",
+            notes: followUpText,
+          });
+          await logAgentActivity({
+            agentId: "calling",
+            action: "call_skipped",
+            subjectType: "prospect",
+            subjectId: prospect.id,
+            summary: `Themba could not dial ${prospect.dealershipName} — no phone on file. Use the WhatsApp/email follow-up.`,
+            payload: { followUpText },
+          });
+          return {
+            success: true,
+            queued: true,
+            called: false,
+            followUpText,
+            reason: "No phone number on the prospect — queued with playbook follow-up text.",
+          } as const;
+        }
+
+        const callResult = await placeOutboundCall({
+          toNumber: prospect.phone,
+          prospect: {
+            dealershipName: prospect.dealershipName,
+            city: prospect.city,
+            region: prospect.region,
+            rationale: prospect.rationale,
+            score: prospect.score,
+          },
+        });
+
+        if (callResult.ok) {
+          await updateProspectStatus(prospect.id, "called");
+          await createCallAttempt({
+            prospectId: prospect.id,
+            toNumber: prospect.phone,
+            fromNumber: process.env.TWILIO_FROM_NUMBER ?? null,
+            providerCallSid: callResult.sid,
+            status: "initiated",
+            notes: followUpText,
+          });
+          await logAgentActivity({
+            agentId: "calling",
+            action: "outbound_call",
+            subjectType: "prospect",
+            subjectId: prospect.id,
+            summary: `Themba dialled ${prospect.dealershipName} with the GrayArx sales pitch (SID ${callResult.sid}).`,
+            payload: {
+              sid: callResult.sid,
+              status: callResult.status,
+              phone: prospect.phone,
+              followUpText,
+            },
+          });
+          return {
+            success: true,
+            queued: false,
+            called: true,
+            sid: callResult.sid,
+            followUpText,
+            reason: "Themba placed the outbound sales call.",
+          } as const;
+        }
+
+        const skipReason =
+          "skipped" in callResult && callResult.skipped
+            ? callResult.reason
+            : "error" in callResult
+              ? callResult.error
+              : "Call not placed";
+
+        await createCallAttempt({
+          prospectId: prospect.id,
+          toNumber: prospect.phone,
+          status: "skipped",
+          errorMessage: skipReason,
+          notes: followUpText,
+        });
+        await logAgentActivity({
+          agentId: "calling",
+          action: "call_queued",
+          subjectType: "prospect",
+          subjectId: prospect.id,
+          summary: `Themba queued ${prospect.dealershipName} — ${skipReason}`,
+          payload: { phone: prospect.phone, followUpText, skipReason },
         });
 
         return {
           success: true,
           queued: true,
           called: false,
-          reason: "Outbound AI calling is not enabled in the pilot — follow up via email, WhatsApp, or your own phone.",
+          followUpText,
+          reason: skipReason,
         } as const;
       }),
 
@@ -2155,15 +2257,20 @@ export const appRouter = router({
      * - Founders/admins → full pilot roster + GrayArx primary inbox
      */
     list: protectedProcedure.query(async ({ ctx }) => {
-      const isOwner = isFounderOrAdmin(ctx.user);
-      const roster = agentsForAudience(isOwner ? "founder" : "dealer");
+      // Agent roster is founder/admin ops only — dealers see outcomes (leads/bookings), not personas.
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Agent roster is GrayArx founder ops only. Dealership AI runs in the background.",
+        });
+      }
+      const roster = agentsForAudience("founder");
       const stats = await getAgentStats();
       const empty = { actionCount: 0, lastActionAt: null as Date | null, lastAction: null as string | null };
       const ACTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
       return {
-        audience: isOwner ? ("founder" as const) : ("dealer" as const),
-        // Never expose the GrayArx founder inbox as a dealership "primary inbox".
-        primaryInbox: isOwner ? PRIMARY_INBOX : null,
+        audience: "founder" as const,
+        primaryInbox: PRIMARY_INBOX,
         agents: roster.map((persona) => {
           const s = stats[persona.id] ?? empty;
           const lastMs = s.lastActionAt ? new Date(s.lastActionAt).getTime() : 0;
@@ -2179,8 +2286,7 @@ export const appRouter = router({
     }),
 
     /**
-     * Unified live activity feed. Optionally filter by agentId.
-     * Dealers only receive dealer-facing agent activity.
+     * Unified live activity feed. Founder/admin ops only.
      */
     feed: protectedProcedure
       .input(
@@ -2192,21 +2298,17 @@ export const appRouter = router({
           .optional(),
       )
       .query(async ({ input, ctx }) => {
-        const isOwner = isFounderOrAdmin(ctx.user);
-        if (!isOwner && input?.agentId && !isDealerFacingAgent(input.agentId)) {
+        if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "That agent is not available in the dealership console.",
+            message: "Agent activity is GrayArx founder ops only.",
           });
         }
         const rows = await listAgentActivity({
-          agentId: input?.agentId === "calling" ? undefined : input?.agentId,
+          agentId: input?.agentId,
           limit: input?.limit ?? 100,
         });
-        return rows
-          .filter((r) => r.agentId !== "calling")
-          .filter((r) => isOwner || isDealerFacingAgent(r.agentId as AgentId))
-          .map((r) => ({
+        return rows.map((r) => ({
           id: r.id,
           agentId: r.agentId,
           action: r.action,
@@ -2220,7 +2322,7 @@ export const appRouter = router({
         }));
       }),
 
-    /** Fire a test ping so viewers can verify an agent is wired up. */
+    /** Fire a test ping so founders can verify an agent is wired up. */
     ping: protectedProcedure
       .input(
         z.object({
@@ -2239,21 +2341,14 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        const isOwner = isFounderOrAdmin(ctx.user);
-        if (!isOwner && !isDealerFacingAgent(input.agentId)) {
+        if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "That agent is not available in the dealership console.",
-          });
-        }
-        if (input.agentId === "calling") {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Outbound calling is not enabled in the pilot.",
+            message: "Agent ping is GrayArx founder ops only.",
           });
         }
         const persona = AGENTS[input.agentId];
-        const who = ctx.user.name || ctx.user.email || "Dealer";
+        const who = ctx.user.name || ctx.user.email || "Founder";
         const summary = `${persona.displayName} responded to a test ping from ${who}. Agent is online and logging activity.`;
         await logAgentActivity({
           agentId: input.agentId,
