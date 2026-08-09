@@ -150,8 +150,6 @@ import {
   AGENT_LIST,
   PRIMARY_INBOX,
   agentsForAudience,
-  isDealerFacingAgent,
-  type AgentId,
 } from "../shared/agents";
 import {
   agentGetsDealerQaPlaybook,
