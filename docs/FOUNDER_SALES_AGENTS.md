@@ -32,6 +32,8 @@ Covers price, WhatsApp/Meta, POPIA, contract (month-to-month vs 12-month), SLA, 
 
 ## Env
 
+Full steps: **`docs/TWILIO_THEMBA_SETUP.md`**
+
 ```
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=

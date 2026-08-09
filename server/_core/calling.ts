@@ -9,8 +9,8 @@
  *
  * Required env:
  *   TWILIO_ACCOUNT_SID
- *   TWILIO_AUTH_TOKEN
- *   TWILIO_FROM_NUMBER  (E.164)
+ *   TWILIO_AUTH_TOKEN  (or legacy TWILIO_API_KEY — same Auth Token from Twilio console)
+ *   TWILIO_FROM_NUMBER (or legacy TWILIO_PHONE_NUMBER) — E.164 voice number
  *
  * Optional:
  *   TWILIO_TWIML_URL — override TwiML URL (defaults to playbook-based Echo TwiML)
@@ -60,14 +60,16 @@ export async function placeOutboundCall(input: PlaceCallInput): Promise<PlaceCal
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  // Prefer AUTH_TOKEN; accept API_KEY for older SMS docs / Railway names.
+  const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_API_KEY;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER;
 
   if (!accountSid || !authToken || !fromNumber) {
     return {
       ok: false,
       skipped: true,
-      reason: "Twilio credentials missing — call queued in DB but not placed.",
+      reason:
+        "Twilio credentials missing (need TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN/API_KEY + TWILIO_FROM_NUMBER/PHONE_NUMBER) — call queued but not placed.",
     };
   }
 
