@@ -35,13 +35,20 @@ const PHOTO_HINT_ROUTES = [
 ];
 
 // Dealer-facing sidebar — minimal by design.
-// Prospector, Improvements, Inventory Import, all-dealership lists live under /admin
+// Prospector, Kagiso roadmap, Thandi invoices, compliance mailbox live under /admin
 // and are NOT visible to dealer_owner / dealer_consultant roles.
-// Agents command centre (/dealer/agents) is founder/admin only — hidden from dealer nav.
+// Agents page shows dealer-facing teammates only (Nala, Mia, Lerato, Naledi, Tumi, Bongi).
+// Agent Chat (direct ops chat incl. Sipho/Kagiso/Thandi) stays founder/admin only.
 const DEALER_LINKS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, tip: "KPIs, recent activity, quick actions" },
-  { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "AI teammates and shared activity feed" },
-  { href: "/dealer/agents/chat", label: "Agent Chat", icon: MessageSquare, tip: "Chat directly with Nala, Lerato, Kagiso and more" },
+  { href: "/dealer/agents", label: "Agents", icon: Bot, tip: "Your AI teammates — WhatsApp, email, bookings, finance, trade-in" },
+  {
+    href: "/dealer/agents/chat",
+    label: "Agent Chat",
+    icon: MessageSquare,
+    tip: "Founder ops chat with the full GrayArx agent roster",
+    founderOnly: true,
+  },
   { href: "/dealer/leads", label: "Leads", icon: Users, tip: "Inbound enquiries from web, email, WhatsApp" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Your dealership's test-drive requests (Lerato)" },
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
@@ -70,9 +77,7 @@ export default function DealerShell({
   const [location] = useLocation();
   const isFounder = user?.role === "founder" || user?.role === "admin";
   const dealerLinks = DEALER_LINKS.filter(
-    (l) =>
-      (l.href !== "/dealer/agents" && l.href !== "/dealer/agents/chat") ||
-      isFounder,
+    (l) => !("founderOnly" in l && l.founderOnly) || isFounder,
   );
 
   const showPhotoHint = PHOTO_HINT_ROUTES.some(

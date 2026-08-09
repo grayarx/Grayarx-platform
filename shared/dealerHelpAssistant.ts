@@ -124,16 +124,31 @@ export function classifyDealerHelpIntent(message: string): DealerHelpIntent {
   const lower = message.trim().toLowerCase();
   if (!lower) return "unknown";
 
+  // Founder-only agent names → redirect away from platform ops
+  if (isFounderOnlyAgentQuestion(lower)) {
+    return "restricted";
+  }
+
+  // Dealer-facing agent / roster questions → helpful dealer roster answer
+  if (
+    resolveAgentQuestion(lower) ||
+    /\b(where (are|is) (my )?agents?|agent roster|my (ai )?team|ai teammates)\b/i.test(lower)
+  ) {
+    return "help";
+  }
+
   const ownerIntent = classifyDashboardIntent(message);
   if (OWNER_ONLY_INTENTS.has(ownerIntent)) {
     // "WhatsApp" aliases to Nala in the owner classifier — don't block product Q&A
     const clearlyAgentOps =
       /\b(agent|roster|doing|status|where (are|is)|what did|my team)\b/i.test(lower);
-    if (clearlyAgentOps || ownerIntent === "agent_roster" || ownerIntent === "dashboard_stats") {
+    if (ownerIntent === "dashboard_stats") {
       return "restricted";
     }
+    if (clearlyAgentOps || ownerIntent === "agent_roster") {
+      return "help";
+    }
   }
-  if (resolveAgentQuestion(lower)) return "restricted";
 
   if (/^(hi|hello|hey|howzit|good (morning|afternoon|evening))\b/.test(lower)) {
     return "greeting";
@@ -193,17 +208,43 @@ function resolveAgentQuestion(lower: string): boolean {
   );
 }
 
+function isFounderOnlyAgentQuestion(lower: string): boolean {
+  return /\b(sipho|kagiso|themba|thandi|prospector|improvement agent|accountant|compliance inbox|founder inbox)\b/i.test(
+    lower,
+  );
+}
+
+function buildDealerAgentsReply(): DealerHelpReply {
+  return {
+    mode: "dealer",
+    intent: "help",
+    links: [{ label: "Your Agents", href: "/dealer/agents" }],
+    reply: [
+      "Your dealership AI teammates are on **Agents**:",
+      "• **Nala** — WhatsApp / web chat",
+      "• **Mia** — email follow-ups",
+      "• **Lerato** — test-drive bookings",
+      "• **Naledi** — finance pre-approval forms (human F&I decides)",
+      "• **Tumi** — trade-in valuations",
+      "• **Bongi** — after-hours cover",
+      "",
+      "Customer work lands in **Leads**, **Bookings**, and **Pre-approvals** — not a shared GrayArx founder inbox.",
+      "Platform-only tools (Sipho, Kagiso, Thandi, compliance mailbox) stay with GrayArx and are not in your console.",
+    ].join("\n"),
+  };
+}
+
 function buildRestrictedReply(): DealerHelpReply {
   return {
     mode: "dealer",
     intent: "restricted",
-    links: [],
+    links: [{ label: "Your Agents", href: "/dealer/agents" }],
     reply: [
-      "That information is only available on the **GrayArx owner** account (agent roster and platform ops).",
+      "That tool is **GrayArx platform ops** (founder console) — not part of your dealership agents.",
       "",
-      "For your dealership console I can help with:",
-      "• Finding pages (CSV import, inventory, leads, photos)",
-      "• Reporting bugs or issues",
+      "Your yard uses Nala, Mia, Lerato, Naledi, Tumi, and Bongi. Open **Agents** to see them.",
+      "",
+      "I can also help with CSV import, inventory, leads, photos, or bug reports.",
       "",
       `Urgent support: **${PRIMARY_INBOX}**`,
     ].join("\n"),
@@ -314,7 +355,7 @@ export function buildBugReportConfirmation(input: {
     reply: [
       `Thanks — I've logged **ticket #${input.ticketId}**: ${input.title}`,
       "",
-      "Kagiso has started investigating and will propose a fix for founder approval. For urgent issues email **hello@grayarx.com**.",
+      "GrayArx support has the ticket and will investigate. For urgent issues email **hello@grayarx.com**.",
     ].join("\n"),
   };
 }
@@ -348,6 +389,15 @@ export function buildDealerHelpReply(input: {
   }
 
   const intent = classifyDealerHelpIntent(input.message);
+
+  const lower = input.message.trim().toLowerCase();
+  if (
+    intent === "help" &&
+    (resolveAgentQuestion(lower) ||
+      /\b(where (are|is) (my )?agents?|agent roster|my (ai )?team|ai teammates)\b/i.test(lower))
+  ) {
+    return buildDealerAgentsReply();
+  }
 
   switch (intent) {
     case "restricted":

@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "How do the AI agents work?",
-    a: "Each agent handles a specific job behind the scenes: Nala (WhatsApp), Mia (email), Lerato (bookings), Sipho (prospecting), Tumi (trade-in), and Kagiso (improvements). You see leads and bookings in your dashboard — GrayArx runs the agents for you. Outbound AI calling is a future opt-in, not part of the pilot.",
+    a: "Your dealership console shows the customer-ops team: Nala (WhatsApp), Mia (email), Lerato (bookings), Naledi (finance pre-approvals), Tumi (trade-in), and Bongi (after-hours). You work from Leads, Bookings, and Pre-approvals — GrayArx runs the agents for you. Platform-only agents (Sipho prospecting, Kagiso improvements, Thandi invoices) stay on the GrayArx founder console and are not shown to dealerships.",
   },
   {
     q: "Why didn't I receive a confirmation email?",

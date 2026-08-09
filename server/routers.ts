@@ -145,7 +145,14 @@ import {
   listMarketGuideLive,
 } from "./db";
 import { storagePut } from "./storage";
-import { AGENTS, AGENT_LIST, PILOT_AGENT_LIST, PRIMARY_INBOX } from "../shared/agents";
+import {
+  AGENTS,
+  AGENT_LIST,
+  PRIMARY_INBOX,
+  agentsForAudience,
+  isDealerFacingAgent,
+  type AgentId,
+} from "../shared/agents";
 import {
   agentGetsDealerQaPlaybook,
   formatDealerQaForSystemPrompt,
@@ -2143,19 +2150,20 @@ export const appRouter = router({
 
   agent: router({
     /**
-     * Returns the canonical roster of agents with identity, email, and
-     * live status (action count + last action) so the UI can render cards.
+     * Returns the roster for the current viewer:
+     * - Dealers → customer-ops agents only (Nala, Mia, Lerato, Naledi, Tumi, Bongi)
+     * - Founders/admins → full pilot roster + GrayArx primary inbox
      */
     list: protectedProcedure.query(async ({ ctx }) => {
-      if (!isFounderOrAdmin(ctx.user)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
-      }
-      const roster = PILOT_AGENT_LIST;
+      const isOwner = isFounderOrAdmin(ctx.user);
+      const roster = agentsForAudience(isOwner ? "founder" : "dealer");
       const stats = await getAgentStats();
       const empty = { actionCount: 0, lastActionAt: null as Date | null, lastAction: null as string | null };
       const ACTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
       return {
-        primaryInbox: PRIMARY_INBOX,
+        audience: isOwner ? ("founder" as const) : ("dealer" as const),
+        // Never expose the GrayArx founder inbox as a dealership "primary inbox".
+        primaryInbox: isOwner ? PRIMARY_INBOX : null,
         agents: roster.map((persona) => {
           const s = stats[persona.id] ?? empty;
           const lastMs = s.lastActionAt ? new Date(s.lastActionAt).getTime() : 0;
@@ -2172,6 +2180,7 @@ export const appRouter = router({
 
     /**
      * Unified live activity feed. Optionally filter by agentId.
+     * Dealers only receive dealer-facing agent activity.
      */
     feed: protectedProcedure
       .input(
@@ -2183,8 +2192,12 @@ export const appRouter = router({
           .optional(),
       )
       .query(async ({ input, ctx }) => {
-        if (!isFounderOrAdmin(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        const isOwner = isFounderOrAdmin(ctx.user);
+        if (!isOwner && input?.agentId && !isDealerFacingAgent(input.agentId)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "That agent is not available in the dealership console.",
+          });
         }
         const rows = await listAgentActivity({
           agentId: input?.agentId === "calling" ? undefined : input?.agentId,
@@ -2192,6 +2205,7 @@ export const appRouter = router({
         });
         return rows
           .filter((r) => r.agentId !== "calling")
+          .filter((r) => isOwner || isDealerFacingAgent(r.agentId as AgentId))
           .map((r) => ({
           id: r.id,
           agentId: r.agentId,
@@ -2206,7 +2220,7 @@ export const appRouter = router({
         }));
       }),
 
-    /** Fire a test ping so dealers can verify an agent is wired up. */
+    /** Fire a test ping so viewers can verify an agent is wired up. */
     ping: protectedProcedure
       .input(
         z.object({
@@ -2225,8 +2239,12 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        if (!isFounderOrAdmin(ctx.user)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        const isOwner = isFounderOrAdmin(ctx.user);
+        if (!isOwner && !isDealerFacingAgent(input.agentId)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "That agent is not available in the dealership console.",
+          });
         }
         if (input.agentId === "calling") {
           throw new TRPCError({
@@ -5227,6 +5245,13 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
+        // Direct agent chat is a GrayArx founder/admin ops tool — not for dealers.
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Agent chat is reserved for GrayArx founders and admins.",
+          });
+        }
         const user: any = ctx.user;
         const db = await getDb();
 

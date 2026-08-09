@@ -44,7 +44,6 @@ export default function Navigation() {
   // we want to learn what dealerships actually use and what they'd pay for
   // it before anchoring them to a number. The route itself still resolves
   // (redirects home) so no old link can leak the page.
-  const isFounder = user?.role === "founder" || user?.role === "admin";
 
   const NAV_LINKS = [
     { href: "/", label: t("nav.home"), tip: "Platform overview and lead capture" },
@@ -190,13 +189,11 @@ export default function Navigation() {
                     <Scale className="h-4 w-4 mr-2" /> Legal & compliance
                   </Link>
                 </DropdownMenuItem>
-                {isFounder && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/dealer/agents" className="cursor-pointer">
-                      <Bot className="h-4 w-4 mr-2" /> AI agents
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/dealer/agents" className="cursor-pointer">
+                    <Bot className="h-4 w-4 mr-2" /> AI agents
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="cursor-pointer text-red-400 focus:text-red-300">
                   <LogOut className="h-4 w-4 mr-2" /> Sign out

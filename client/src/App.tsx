@@ -31,6 +31,7 @@ import { SocialLoginSetup } from "./pages/SocialLoginSetup";
 import { AdminUsers } from "./pages/AdminUsers";
 import { AdminAuditLog } from "./pages/AdminAuditLog";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
+import { DealerRouteGuard } from "./components/DealerRouteGuard";
 // import { OAuthCallbackPage } from "./pages/OAuthCallback";
 // import { TwoFactorSetupPage } from "./pages/TwoFactorSetupPage";
 // import { PasswordResetFlowPage } from "./pages/PasswordResetFlow";
@@ -214,7 +215,7 @@ function Router() {
         <AdminRouteGuard><AgentChat /></AdminRouteGuard>
       </Route>
       <Route path="/dealer/agents">
-        <AdminRouteGuard><Agents /></AdminRouteGuard>
+        <DealerRouteGuard><Agents /></DealerRouteGuard>
       </Route>
       <Route path="/dealer/network" component={DealerNetwork} />
       <Route path="/dealer/email-sequences" component={EmailSequences} />

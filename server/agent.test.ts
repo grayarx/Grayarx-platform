@@ -93,7 +93,12 @@ vi.mock("./_core/llm", () => ({
 
 import { appRouter } from "./routers";
 
-function createCaller(user: { openId: string; role: "user" | "admin" } | null) {
+function createCaller(
+  user: {
+    openId: string;
+    role: "user" | "admin" | "founder" | "dealer_owner" | "dealer_consultant";
+  } | null,
+) {
   return appRouter.createCaller({
     user: user
       ? ({
@@ -103,6 +108,7 @@ function createCaller(user: { openId: string; role: "user" | "admin" } | null) {
           email: "dealer@example.com",
           loginMethod: "manus",
           role: user.role,
+          dealershipId: 1,
           createdAt: new Date(),
           updatedAt: new Date(),
           lastSignedIn: new Date(),
@@ -125,16 +131,39 @@ describe("agent.list (roster)", () => {
     await expect(caller.agent.list()).rejects.toThrow();
   });
 
-  it("returns the full roster with identity, email, status, and action stats", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+  it("returns only dealer-facing agents for dealership users (no founder inbox)", async () => {
+    const caller = createCaller({ openId: "dealer", role: "dealer_owner" });
     const result = await caller.agent.list();
+    expect(result.audience).toBe("dealer");
+    expect(result.primaryInbox).toBeNull();
+    expect(result.agents).toHaveLength(6);
+    const ids = result.agents.map((a) => a.id).sort();
+    expect(ids).toEqual([
+      "booking",
+      "email",
+      "fallback",
+      "preapproval",
+      "tradein",
+      "whatsapp",
+    ]);
+    for (const agent of result.agents) {
+      expect(agent.displayName).toBeTruthy();
+      expect(agent.email).toMatch(/@grayarx\.com$/);
+      expect(agent.audience).toBe("dealer");
+      expect(["idle", "active", "paused"]).toContain(agent.status);
+    }
+  });
+
+  it("returns the full pilot roster + primary inbox for founders", async () => {
+    const caller = createCaller({ openId: "founder", role: "founder" });
+    const result = await caller.agent.list();
+    expect(result.audience).toBe("founder");
     expect(result.primaryInbox).toMatch(/@grayarx\.com$/);
-    expect(result.agents).toHaveLength(10);
+    expect(result.agents).toHaveLength(9);
     const ids = result.agents.map((a) => a.id).sort();
     expect(ids).toEqual([
       "accountant",
       "booking",
-      "calling",
       "email",
       "fallback",
       "improvement",
@@ -143,17 +172,10 @@ describe("agent.list (roster)", () => {
       "tradein",
       "whatsapp",
     ]);
-    for (const agent of result.agents) {
-      expect(agent.displayName).toBeTruthy();
-      expect(agent.email).toMatch(/@grayarx\.com$/);
-      expect(agent.role).toBeTruthy();
-      expect(["idle", "active", "paused"]).toContain(agent.status);
-      expect(typeof agent.stats.actionCount).toBe("number");
-    }
   });
 
   it("reflects action counts after activity is logged", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+    const caller = createCaller({ openId: "user", role: "dealer_owner" });
     // Submit a lead — that should generate at least one Mia (email) activity entry.
     await caller.leads.create({
       dealershipName: "Test Motors",
@@ -177,7 +199,7 @@ describe("agent.feed", () => {
   });
 
   it("returns the unified live feed in reverse-chronological order", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+    const caller = createCaller({ openId: "user", role: "dealer_owner" });
     await caller.leads.create({
       dealershipName: "Alpha Auto",
       contactName: "Person One",
@@ -196,10 +218,12 @@ describe("agent.feed", () => {
     expect(feed.length).toBeGreaterThanOrEqual(2);
     // Newest entry first
     expect(feed[0]!.summary).toMatch(/Beta Motors|Mia drafted/);
+    // Dealers never see founder-only agent rows
+    expect(feed.every((r) => r.agentId !== "prospector")).toBe(true);
   });
 
-  it("filters by agentId", async () => {
-    const caller = createCaller({ openId: "user", role: "user" });
+  it("filters by agentId and forbids founder agents for dealers", async () => {
+    const caller = createCaller({ openId: "user", role: "dealer_owner" });
     await caller.leads.create({
       dealershipName: "Filter Co",
       contactName: "Person",
@@ -212,8 +236,9 @@ describe("agent.feed", () => {
     for (const row of onlyMia) {
       expect(row.agentId).toBe("email");
     }
-    const onlySipho = await caller.agent.feed({ limit: 20, agentId: "prospector" });
-    expect(onlySipho).toEqual([]);
+    await expect(
+      caller.agent.feed({ limit: 20, agentId: "prospector" }),
+    ).rejects.toThrow(/not available/i);
   });
 });
 

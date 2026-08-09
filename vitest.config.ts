@@ -33,7 +33,6 @@ const EXCLUDED_SUITES = [
   "**/auth.integration.test.ts",
   "**/checkEmailVerification.test.ts",
   "**/notifications.integration.test.ts",
-  "**/agent.test.ts",
   "**/admin-network.test.ts",
   "**/routers.test.ts",
   "**/routers/allNewFeatures.test.ts",

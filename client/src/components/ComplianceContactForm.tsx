@@ -79,8 +79,8 @@ export default function ComplianceContactForm({ compact }: { compact?: boolean }
           <div>
             <h3 className="font-display text-lg font-semibold">Contact compliance team</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Messages are logged, monitored, and forwarded to our founder inbox — same as emailing{" "}
-              {selected.email}.
+              Messages are logged and monitored by the GrayArx compliance team — same as emailing{" "}
+              {selected.email}. This is support for legal/POPIA questions, not one of your dealership AI agents.
             </p>
           </div>
         </div>
