@@ -64,7 +64,8 @@ export const RATE_LIMITS = Object.freeze({
   PUBLIC_FALLBACK_INBOUND: { max: 20, windowMs: 60 * 1000 }, // shortcode spam
   PREAPPROVAL_SUBMIT: { max: 5, windowMs: 60 * 60 * 1000 }, // POPIA-heavy
   BOOKING_SUBMIT: { max: 10, windowMs: 60 * 60 * 1000 },
-  INVENTORY_CSV: { max: 10, windowMs: 60 * 60 * 1000 },
+  // Chunked bulk imports (1000 cars ÷ 40) need many commits per session.
+  INVENTORY_CSV: { max: 120, windowMs: 60 * 60 * 1000 },
 });
 
 /**
