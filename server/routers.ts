@@ -1696,6 +1696,43 @@ export const appRouter = router({
         return { success: true as const, deleted };
       }),
 
+    /** Bulk-set status for selected vehicles (Available / Reserved / Fix / Sold). */
+    updateVehiclesStatus: protectedProcedure
+      .input(
+        z.object({
+          ids: z.array(z.number().int().positive()).min(1).max(2000),
+          status: z.enum(["available", "reserved", "sold", "fix"]),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const allPlatform = isFounderOrAdmin(ctx.user);
+        if (!allPlatform && ctx.user.dealershipId == null) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "No dealership linked — cannot update inventory.",
+          });
+        }
+        const { updateVehiclesStatusByIds } = await import("./db");
+        const updated = await updateVehiclesStatusByIds(input.ids, input.status, {
+          allPlatform,
+          dealershipId: allPlatform ? null : ctx.user.dealershipId,
+        });
+        void logAgentActivity({
+          agentId: allPlatform ? "improvement" : "fallback",
+          action: "inventory_bulk_status",
+          subjectType: "inventory",
+          summary: `Set ${updated} vehicle${updated === 1 ? "" : "s"} to ${input.status}.`,
+          payload: {
+            updated,
+            requested: input.ids.length,
+            status: input.status,
+            userId: ctx.user.id,
+          },
+        });
+        return { success: true as const, updated, status: input.status };
+      }),
+
     // Accept a base64-encoded image (from a phone camera or file picker),
     // upload it to S3 storage, and return the public URL.
     uploadVehiclePhoto: protectedProcedure
