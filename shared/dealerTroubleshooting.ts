@@ -32,11 +32,11 @@ export const DEALER_TROUBLESHOOTING: TroubleshootingEntry[] = [
     title: "“Dealer or admin access required” when uploading",
     steps: [
       "This means your login isn’t set as a **dealer** yet, so uploads are blocked.",
-      "Fix: your account needs **dealer access** and a **garage (dealership)** linked to it.",
-      "Ask GrayArx to enable dealer access for your email (or finish onboarding to create your dealership).",
-      "Once enabled, log out and back in — then **CSV Import** will work.",
+      "On **CSV Import** (or any dealer page), tap the gold **Set up my dealership** button.",
+      "That creates your garage and turns your login into a dealer — then click **Preview** again.",
+      "If the banner is gone but Preview still fails, log out and back in once.",
     ],
-    links: [{ label: "Dashboard", href: "/dashboard" }],
+    links: [{ label: "CSV Import", href: "/dealer/inventory/import" }],
   },
   {
     id: "no_dealership",
@@ -49,10 +49,13 @@ export const DEALER_TROUBLESHOOTING: TroubleshootingEntry[] = [
     title: "Account isn’t linked to a garage (dealership)",
     steps: [
       "Your login exists but isn’t attached to a dealership, so there’s nowhere to store cars.",
-      "Complete **onboarding** to create your dealership, or ask GrayArx to link your account to one.",
-      "After it’s linked, **Inventory** and **CSV Import** will work.",
+      "Tap **Set up my dealership** on the dealer console (gold banner) — one click creates and links your garage.",
+      "After that, **Inventory** and **CSV Import** will work.",
     ],
-    links: [{ label: "Dashboard", href: "/dashboard" }],
+    links: [
+      { label: "CSV Import", href: "/dealer/inventory/import" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
   },
   {
     id: "import_not_showing",

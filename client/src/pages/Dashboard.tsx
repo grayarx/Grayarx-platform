@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import DealerShell from "@/components/DealerShell";
 import { PhotoGuideCard } from "@/components/PhotoGuide";
+import ShareShowroomCard from "@/components/ShareShowroomCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -110,6 +111,7 @@ export default function Dashboard() {
       }
     >
       <PhotoGuideCard />
+      <ShareShowroomCard />
 
       {isFounder && (
         <Card className="mb-6 border-primary/25 bg-primary/5">

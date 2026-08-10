@@ -50,7 +50,7 @@ describe("dealerHelpAssistant", () => {
       message: "i cant upload csv it says dealer or admin access required",
     });
     expect(res.intent).toBe("troubleshooting");
-    expect(res.reply).toMatch(/dealer access/i);
+    expect(res.reply).toMatch(/Set up my dealership/i);
     expect(res.reply).not.toMatch(/Bulk-import stock from a CSV file/);
   });
 
