@@ -6,7 +6,10 @@
  * #-comment lines are preserved on every chunk.
  */
 
+/** Default batch size when photo-save is ON (heavier). */
 export const CSV_IMPORT_CHUNK_SIZE = 40;
+/** Faster batches when keeping external image links (demo / large files). */
+export const CSV_IMPORT_CHUNK_SIZE_FAST = 100;
 
 export function splitInventoryCsv(
   csv: string,

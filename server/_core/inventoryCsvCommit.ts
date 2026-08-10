@@ -1,18 +1,23 @@
 /**
  * Shared CSV inventory commit — used by manual import and live stock sync.
  * Match by externalRef (stock/VIN); sold units stay sold unless CSV says sold/reserved.
+ *
+ * Performance notes (1000-car demos):
+ * - Prefetch existing stock refs once (no per-row SELECT)
+ * - Bulk-insert gallery photos (one INSERT per vehicle / chunk)
  */
 
 import {
-  addVehiclePhoto,
+  addVehiclePhotosBulk,
   createVehicle,
-  deleteVehiclePhoto,
-  findVehicleByExternalRef,
-  listVehiclePhotos,
+  deleteVehiclePhotosForVehicle,
+  getDb,
   listVehiclesWithExternalRef,
   logAgentActivity,
   updateVehicle,
 } from "../db";
+import { vehicles } from "../../drizzle/schema";
+import { and, eq, sql } from "drizzle-orm";
 import { parseInventoryCsv } from "./csvInventory";
 import { shouldApplyCsvStatus } from "./csvStatusGuard";
 import { resolveImportPhotoUrls } from "./photoDownloader";
@@ -33,6 +38,69 @@ export type InventoryCommitResult = {
   photoMirrorSkippedReason?: string | null;
 };
 
+type ExistingVehicle = {
+  id: number;
+  externalRef: string | null;
+  status: string | null;
+  price: string | number | null;
+  km: number | null;
+  imageUrl: string | null;
+  primaryPhotoUrl: string | null;
+};
+
+async function loadExistingByRef(
+  dealershipId: number,
+): Promise<Map<string, ExistingVehicle>> {
+  const db = await getDb();
+  const map = new Map<string, ExistingVehicle>();
+  if (!db) return map;
+  const rows = await db
+    .select({
+      id: vehicles.id,
+      externalRef: vehicles.externalRef,
+      status: vehicles.status,
+      price: vehicles.price,
+      km: vehicles.km,
+      imageUrl: vehicles.imageUrl,
+      primaryPhotoUrl: vehicles.primaryPhotoUrl,
+    })
+    .from(vehicles)
+    .where(
+      and(
+        eq(vehicles.dealershipId, dealershipId),
+        sql`${vehicles.externalRef} IS NOT NULL`,
+        sql`TRIM(${vehicles.externalRef}) <> ''`,
+      ),
+    );
+  for (const row of rows) {
+    const ref = (row.externalRef ?? "").trim().toLowerCase();
+    if (ref) map.set(ref, row);
+  }
+  return map;
+}
+
+function galleryRows(
+  vehicleId: number,
+  urls: string[],
+): Array<{
+  vehicleId: number;
+  url: string;
+  storageKey: string;
+  position: number;
+  caption: null;
+}> {
+  const ts = Date.now();
+  return urls
+    .filter(Boolean)
+    .map((url, pi) => ({
+      vehicleId,
+      url,
+      storageKey: `import/${vehicleId}/${pi}-${ts}`,
+      position: pi,
+      caption: null,
+    }));
+}
+
 export async function commitInventoryCsv(opts: {
   csv: string;
   dealershipId: number;
@@ -52,17 +120,26 @@ export async function commitInventoryCsv(opts: {
   const seenRefs = new Set<string>();
   const syncedAt = new Date();
   const startedAt = Date.now();
-  // Stay under typical Cloudflare/proxy ~100s limits for the whole request.
   const MIRROR_DEADLINE_MS = 55_000;
 
-  const resolvePhotos = async (urls: string[], title: string, externalRef: string | null) => {
-    const res = await resolveImportPhotoUrls(urls, { title, externalRef }, {
-      skipMirror: opts.skipPhotoMirror,
-      concurrency: 4,
-      perPhotoMs: 8_000,
-      deadlineMs: MIRROR_DEADLINE_MS,
-      startedAt,
-    });
+  const existingByRef = await loadExistingByRef(opts.dealershipId);
+
+  const resolvePhotos = async (
+    urls: string[],
+    title: string,
+    externalRef: string | null,
+  ) => {
+    const res = await resolveImportPhotoUrls(
+      urls,
+      { title, externalRef },
+      {
+        skipMirror: opts.skipPhotoMirror,
+        concurrency: 4,
+        perPhotoMs: 8_000,
+        deadlineMs: MIRROR_DEADLINE_MS,
+        startedAt,
+      },
+    );
     photosMirrored += res.mirrored;
     photosLinked += res.linked;
     if (res.skippedMirror && !opts.skipPhotoMirror) {
@@ -73,12 +150,10 @@ export async function commitInventoryCsv(opts: {
   };
 
   for (const row of preview.validRows) {
-    if (row.externalRef) {
-      seenRefs.add(row.externalRef.trim().toLowerCase());
-      const existing = await findVehicleByExternalRef(
-        row.externalRef,
-        opts.dealershipId,
-      );
+    const refKey = row.externalRef?.trim().toLowerCase() || "";
+    if (refKey) {
+      seenRefs.add(refKey);
+      const existing = existingByRef.get(refKey);
       if (existing) {
         const patch: Record<string, unknown> = { lastSyncedAt: syncedAt };
         if (
@@ -95,15 +170,9 @@ export async function commitInventoryCsv(opts: {
           patch.km = row.km;
         }
 
-        // Re-import can refresh listing photos when the CSV primary URL changed
-        // (e.g. fixing mismatched demo stock photos). Unchanged URLs leave the
-        // gallery alone so nightly sync does not thrash photo rows.
         const csvPrimary = row.imageUrls[0] ?? row.imageUrl;
         if (csvPrimary) {
-          const prevPrimary =
-            (existing as { primaryPhotoUrl?: string | null }).primaryPhotoUrl ||
-            (existing as { imageUrl?: string | null }).imageUrl ||
-            null;
+          const prevPrimary = existing.primaryPhotoUrl || existing.imageUrl || null;
           if (csvPrimary !== prevPrimary) {
             const sourceUrls =
               row.imageUrls.length > 0
@@ -120,28 +189,26 @@ export async function commitInventoryCsv(opts: {
             patch.imageUrl = primary;
             patch.primaryPhotoUrl = primary;
             if (resolved.length > 0) {
-              const existingPhotos = await listVehiclePhotos(existing.id);
-              for (const photo of existingPhotos) {
-                await deleteVehiclePhoto(photo.id);
-              }
-              for (let pi = 0; pi < resolved.length; pi++) {
-                const stored = resolved[pi];
-                if (!stored) continue;
-                await addVehiclePhoto({
-                  vehicleId: existing.id,
-                  url: stored,
-                  storageKey: `import/${existing.id}/${pi}-${Date.now()}`,
-                  position: pi,
-                });
-              }
+              await deleteVehiclePhotosForVehicle(existing.id);
+              await addVehiclePhotosBulk(galleryRows(existing.id, resolved));
             }
           }
         }
 
         const changedKeys = Object.keys(patch).filter((k) => k !== "lastSyncedAt");
         await updateVehicle(existing.id, patch as never);
-        if (changedKeys.length > 0) updated++;
-        else unchanged++;
+        if (changedKeys.length > 0) {
+          updated++;
+          existingByRef.set(refKey, {
+            ...existing,
+            price: (patch.price as string) ?? existing.price,
+            km: (patch.km as number) ?? existing.km,
+            status: (patch.status as string) ?? existing.status,
+            imageUrl: (patch.imageUrl as string) ?? existing.imageUrl,
+            primaryPhotoUrl:
+              (patch.primaryPhotoUrl as string) ?? existing.primaryPhotoUrl,
+          });
+        } else unchanged++;
         continue;
       }
     }
@@ -181,17 +248,18 @@ export async function commitInventoryCsv(opts: {
       });
       const vehicleId = (result as { insertId?: number })?.insertId;
       if (vehicleId && resolved.length > 0) {
-        for (let pi = 0; pi < resolved.length; pi++) {
-          const stored = resolved[pi];
-          if (!stored) continue;
-          await addVehiclePhoto({
-            vehicleId,
-            url: stored,
-            storageKey: `import/${vehicleId}/${pi}-${Date.now()}`,
-            position: pi,
-            caption: null,
-          });
-        }
+        await addVehiclePhotosBulk(galleryRows(vehicleId, resolved));
+      }
+      if (vehicleId && refKey) {
+        existingByRef.set(refKey, {
+          id: vehicleId,
+          externalRef: row.externalRef,
+          status: row.status ?? "available",
+          price: row.price != null ? String(row.price) : "1",
+          km: row.km,
+          imageUrl: primary,
+          primaryPhotoUrl: primary,
+        });
       }
       created++;
       if (row.dataWarnings.length > 0 || row.photoWarnings.length > 0) {

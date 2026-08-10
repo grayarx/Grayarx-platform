@@ -748,10 +748,47 @@ export async function addVehiclePhoto(input: {
   return { id: res?.insertId ?? 0 };
 }
 
+/** One INSERT for many gallery rows — critical for 1000-car CSV speed. */
+export async function addVehiclePhotosBulk(
+  photos: Array<{
+    vehicleId: number;
+    url: string;
+    storageKey: string;
+    position?: number;
+    caption?: string | null;
+  }>,
+): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (photos.length === 0) return 0;
+  const CHUNK = 200;
+  let inserted = 0;
+  for (let i = 0; i < photos.length; i += CHUNK) {
+    const slice = photos.slice(i, i + CHUNK);
+    await db.insert(vehiclePhotos).values(
+      slice.map((p) => ({
+        vehicleId: p.vehicleId,
+        url: p.url,
+        storageKey: p.storageKey,
+        position: p.position ?? 0,
+        caption: p.caption ?? null,
+      })),
+    );
+    inserted += slice.length;
+  }
+  return inserted;
+}
+
 export async function deleteVehiclePhoto(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(vehiclePhotos).where(eq(vehiclePhotos.id, id));
+}
+
+export async function deleteVehiclePhotosForVehicle(vehicleId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(vehiclePhotos).where(eq(vehiclePhotos.vehicleId, vehicleId));
 }
 
 /** Bulk-update photo positions (for drag-to-reorder). orderedPhotoIds[0] becomes position 0 (hero). */

@@ -23,6 +23,13 @@ describe("splitInventoryCsv", () => {
     expect(chunks[2].split("\n").filter((l) => l.startsWith("20")).length).toBe(20);
   });
 
+  it("supports fast 100-row batches", () => {
+    const lines = [HEADER, ...Array.from({ length: 250 }, (_, i) => row(i + 1))];
+    const chunks = splitInventoryCsv(lines.join("\n") + "\n", 100);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0].split("\n").filter((l) => l.startsWith("20")).length).toBe(100);
+  });
+
   it("keeps comment preamble on every chunk", () => {
     const csv = `# note\n${HEADER}\n${row(1)}\n${row(2)}\n`;
     const chunks = splitInventoryCsv(csv, 1);
