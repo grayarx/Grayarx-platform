@@ -3,7 +3,7 @@ import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Settings2, Plug, Network, Plus } from "lucide-react";
+import { Building2, Settings2, Plug, Network, Plus, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ export default function AdminDealerships() {
   const [groupDealershipId, setGroupDealershipId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const groupKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -182,11 +183,20 @@ export default function AdminDealerships() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="flex-1"
                   onClick={() => setGroupDealershipId(d.id)}
                 >
                   <Network className="h-3.5 w-3.5 mr-2" />
                   Group key
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setDeleteTarget({ id: d.id, name: d.name })}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  Delete
                 </Button>
               </div>
             </CardContent>
@@ -216,7 +226,85 @@ export default function AdminDealerships() {
       )}
       {createOpen && <CreateDealershipDialog onClose={() => setCreateOpen(false)} />}
       {createGroupOpen && <CreateGroupDialog onClose={() => setCreateGroupOpen(false)} />}
+      {deleteTarget && (
+        <DeleteDealershipDialog
+          dealershipId={deleteTarget.id}
+          dealershipName={deleteTarget.name}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </AdminShell>
+  );
+}
+
+function DeleteDealershipDialog({
+  dealershipId,
+  dealershipName,
+  onClose,
+}: {
+  dealershipId: number;
+  dealershipName: string;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const [confirmName, setConfirmName] = useState("");
+  const remove = trpc.adminDealerships.remove.useMutation({
+    onSuccess: (res) => {
+      toast.success(
+        `Deleted "${dealershipName}" — ${res.vehicles} vehicle(s), ${res.leads} lead(s), ${res.bookings} booking(s) removed; ${res.usersUnlinked} user(s) unlinked.`,
+      );
+      utils.adminDealerships.list.invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const matches = confirmName.trim() === dealershipName.trim();
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Delete dealership
+          </DialogTitle>
+          <DialogDescription>
+            This permanently deletes <strong className="text-foreground">{dealershipName}</strong>{" "}
+            and all of its vehicles, photos, leads, and test-drive bookings. Any staff accounts
+            linked to it are kept but unlinked. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-name">
+            Type the dealership name to confirm
+          </Label>
+          <Input
+            id="confirm-name"
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+            placeholder={dealershipName}
+            autoComplete="off"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!matches || remove.isPending}
+            onClick={() => remove.mutate({ dealershipId, confirmName: confirmName.trim() })}
+          >
+            {remove.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Delete permanently
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

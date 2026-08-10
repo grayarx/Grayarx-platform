@@ -222,6 +222,26 @@ async function startServer() {
     }
   })();
 
+  // ── One-time demo stock purge (only when PURGE_DEMO_INVENTORY is set) ──
+  (async () => {
+    try {
+      const { purgeDemoInventoryIfRequested } = await import("./purgeDemoInventory");
+      await purgeDemoInventoryIfRequested();
+    } catch (e) {
+      console.warn("[Startup] demo inventory purge skipped:", (e as Error).message);
+    }
+  })();
+
+  // ── One-time account fix (only when FIX_DEALER_ACCOUNT is set) ──
+  (async () => {
+    try {
+      const { fixDealerAccountsIfRequested } = await import("./fixDealerAccount");
+      await fixDealerAccountsIfRequested();
+    } catch (e) {
+      console.warn("[Startup] dealer account fix skipped:", (e as Error).message);
+    }
+  })();
+
   // ── Demo showroom: fill missing year/fuel/km/transmission for pitch demos ──
   (async () => {
     try {

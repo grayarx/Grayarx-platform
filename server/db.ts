@@ -554,6 +554,64 @@ export async function deleteVehicle(id: number) {
   await db.delete(vehicles).where(eq(vehicles.id, id));
 }
 
+/**
+ * Founder/admin: delete a dealership and everything scoped to it — vehicles +
+ * their photos, leads, and test-drive bookings — and unlink (not delete) any
+ * users pointed at it. Returns what was removed.
+ */
+export async function deleteDealershipCascade(dealershipId: number): Promise<{
+  vehicles: number;
+  photos: number;
+  leads: number;
+  bookings: number;
+  usersUnlinked: number;
+}> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const vehicleRows = await db
+    .select({ id: vehicles.id })
+    .from(vehicles)
+    .where(eq(vehicles.dealershipId, dealershipId));
+  const vehicleIds = vehicleRows.map((r) => r.id);
+
+  // drizzle/mysql2 returns the ResultSetHeader at [0]; affectedRows may also be
+  // on the object directly depending on driver wrapping.
+  const affected = (r: unknown): number => {
+    const a = r as { affectedRows?: number } | Array<{ affectedRows?: number }> | undefined;
+    if (Array.isArray(a)) return Number(a[0]?.affectedRows ?? 0);
+    return Number(a?.affectedRows ?? 0);
+  };
+
+  let photos = 0;
+  if (vehicleIds.length > 0) {
+    const photoRes = await db
+      .delete(vehiclePhotos)
+      .where(inArray(vehiclePhotos.vehicleId, vehicleIds));
+    photos = affected(photoRes);
+  }
+
+  await db.delete(vehicles).where(eq(vehicles.dealershipId, dealershipId));
+  const leadRes = await db.delete(leads).where(eq(leads.dealershipId, dealershipId));
+  const bookingRes = await db
+    .delete(testDriveBookings)
+    .where(eq(testDriveBookings.dealershipId, dealershipId));
+  const userRes = await db
+    .update(users)
+    .set({ dealershipId: null })
+    .where(eq(users.dealershipId, dealershipId));
+
+  await db.delete(dealerships).where(eq(dealerships.id, dealershipId));
+
+  return {
+    vehicles: vehicleIds.length,
+    photos,
+    leads: affected(leadRes),
+    bookings: affected(bookingRes),
+    usersUnlinked: affected(userRes),
+  };
+}
+
 /** Count vehicles in scope for bulk-delete (platform-wide or per-owner). */
 export async function countVehiclesScoped(allPlatform: boolean, ownerUserId?: number) {
   const db = await getDb();
