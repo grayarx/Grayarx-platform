@@ -10,7 +10,16 @@ import { COOKIE_NAME, REMEMBER_ME_MS, SESSION_MS } from "../../shared/const";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { isFounderEmail } from "../../shared/founderAccess";
-import { promoteUserToFounder } from "../db";
+import { promoteUserToFounder, createDealership } from "../db";
+
+/** Friendly default dealership name from the signup name/email. */
+function deriveDealershipName(name: string | null | undefined, email: string): string {
+  const n = (name ?? "").trim();
+  if (n.length >= 2) return /dealer|motors|auto|cars|garage/i.test(n) ? n : `${n} Motors`;
+  const local = (email.split("@")[0] || "dealership").replace(/[._-]+/g, " ").trim();
+  const titled = local.replace(/\b\w/g, (c) => c.toUpperCase());
+  return `${titled || "My"} Dealership`;
+}
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -297,7 +306,29 @@ export const authEnhancedRouter = router({
 
         const passwordHash = await bcrypt.hash(input.password, 12);
         const openId = `local_${crypto.randomUUID()}`;
-        const role = isFounderEmail(email) ? "founder" : "user";
+
+        // Self-serve provisioning: a normal signup becomes a dealer_owner with
+        // their own dealership, so they can use the console (import stock, etc.)
+        // immediately — no manual linking. Founders stay platform-level.
+        let role: "founder" | "dealer_owner" | "user" = isFounderEmail(email)
+          ? "founder"
+          : "user";
+        let dealershipId: number | null = null;
+        if (role !== "founder") {
+          try {
+            const created = await createDealership({
+              name: deriveDealershipName(input.name, email),
+              contactEmail: email,
+              status: "active",
+            });
+            dealershipId = created.id;
+            role = "dealer_owner";
+          } catch (provisionErr) {
+            // Never fail signup because provisioning hiccuped — they can be
+            // linked later. Log and continue as a plain user.
+            console.warn("[signupWithEmail] dealership provisioning failed:", provisionErr);
+          }
+        }
 
         await db.insert(users).values({
           openId,
@@ -307,6 +338,7 @@ export const authEnhancedRouter = router({
           loginMethod: "email",
           lastSignedIn: new Date(),
           role,
+          dealershipId,
           emailVerified: 0,
         });
 
@@ -326,7 +358,16 @@ export const authEnhancedRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-        return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            dealershipId: user.dealershipId,
+          },
+        };
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         console.error("[signupWithEmail] Unexpected error:", err);
