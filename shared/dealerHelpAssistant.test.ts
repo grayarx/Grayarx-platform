@@ -45,6 +45,33 @@ describe("dealerHelpAssistant", () => {
     expect(res.reply).not.toMatch(/Manus Forge/);
   });
 
+  it("gives a real fix for 'dealer or admin access required' (not a nav link)", () => {
+    const res = buildDealerHelpReply({
+      message: "i cant upload csv it says dealer or admin access required",
+    });
+    expect(res.intent).toBe("troubleshooting");
+    expect(res.reply).toMatch(/dealer access/i);
+    expect(res.reply).not.toMatch(/Bulk-import stock from a CSV file/);
+  });
+
+  it("troubleshoots imported cars that aren't showing", () => {
+    const res = buildDealerHelpReply({ message: "I imported cars but they don't show" });
+    expect(res.intent).toBe("troubleshooting");
+    expect(res.reply).toMatch(/price above R1|same dealership/i);
+    expect(res.links.some((l) => l.href === "/dealer/inventory")).toBe(true);
+  });
+
+  it("troubleshoots missing photos and R1 prices", () => {
+    expect(classifyDealerHelpIntent("my photos are not loading")).toBe("troubleshooting");
+    expect(classifyDealerHelpIntent("all my prices show R1")).toBe("troubleshooting");
+  });
+
+  it("does NOT hijack plain how-to questions", () => {
+    // A how-to (no problem signal) must still be navigation, not troubleshooting.
+    expect(classifyDealerHelpIntent("how do I import csv")).toBe("navigation");
+    expect(classifyDealerHelpIntent("What does it cost?")).toBe("product_qa");
+  });
+
   it("prompts for bug details on short report", () => {
     expect(classifyDealerHelpIntent("report a bug")).toBe("bug_report_prompt");
   });

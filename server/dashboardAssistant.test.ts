@@ -95,14 +95,17 @@ describe("dashboardAssistant.chat", () => {
     expect(res.reply).toContain("Lerato");
   });
 
-  it("blocks agent roster for dealership users", async () => {
+  it("explains background agents to dealers (no founder ops roster)", async () => {
     const caller = appRouter.createCaller(dealerCtx as any);
     const res = await caller.dashboardAssistant.chat({
       message: "where are my agents?",
     });
     expect(res.mode).toBe("dealer");
-    expect(res.intent).toBe("restricted");
-    expect(res.reply).toContain("owner");
+    // Dealers get a helpful "your AI runs in the background" answer, not a wall.
+    expect(res.intent).toBe("help");
+    expect(res.reply).toMatch(/background/i);
+    // Founder-only tooling must not be exposed to dealers.
+    expect(res.reply).not.toMatch(/Sipho ·/);
   });
 
   it("allows dealer navigation help", async () => {

@@ -17,12 +17,17 @@ import {
   formatDealerQaReply,
   matchDealerQa,
 } from "./dealerQaPlaybook";
+import {
+  formatTroubleshootingReply,
+  matchTroubleshooting,
+} from "./dealerTroubleshooting";
 
 export type DealerHelpIntent =
   | "greeting"
   | "help"
   | "navigation"
   | "product_qa"
+  | "troubleshooting"
   | "inventory_bulk_delete"
   | "inventory_bulk_delete_confirm"
   | "bug_report"
@@ -107,7 +112,8 @@ const DEALER_NAV: Array<{
 
 export const DEALER_HELP_QUICK_PROMPTS = [
   "How do I import CSV?",
-  "What does it cost?",
+  "Why can't I upload?",
+  "My cars aren't showing",
   "Do we need WhatsApp Business?",
   "Report a bug",
 ] as const;
@@ -160,6 +166,20 @@ export function classifyDealerHelpIntent(message: string): DealerHelpIntent {
 
   if (isInventoryBulkDeleteRequest(lower)) {
     return "inventory_bulk_delete";
+  }
+
+  // Explicit bug reports create a ticket — even if a troubleshooting topic
+  // also matches ("Bug: CSV import fails with invalid price").
+  const explicitBugReport =
+    /^\s*bug\b/i.test(lower) ||
+    /\b(report (a )?bug|bug report|found a bug|log (a )?(bug|issue)|file (a )?bug)\b/i.test(lower);
+  if (explicitBugReport) {
+    return isBugDescription(message) ? "bug_report" : "bug_report_prompt";
+  }
+
+  // Known problems get a real fix (steps), before generic help / bug / nav.
+  if (matchTroubleshooting(message)) {
+    return "troubleshooting";
   }
 
   if (/\b(help|what can you|how do i use|support)\b/i.test(lower) && !isBugDescription(message)) {
@@ -291,6 +311,17 @@ function buildDealerHelp(): DealerHelpReply {
   };
 }
 
+function buildTroubleshootingReply(message: string): DealerHelpReply {
+  const entry = matchTroubleshooting(message);
+  if (!entry) return buildDealerUnknown();
+  return {
+    mode: "dealer",
+    intent: "troubleshooting",
+    links: entry.links,
+    reply: formatTroubleshootingReply(entry),
+  };
+}
+
 function buildProductQaReply(message: string): DealerHelpReply {
   const entry = matchDealerQa(message);
   if (!entry) return buildDealerUnknown();
@@ -373,12 +404,11 @@ function buildDealerUnknown(): DealerHelpReply {
     links: buildDealerHelp().links,
     reply: [
       "Try asking:",
+      "• *How do I import CSV?* / *Where do I upload photos?*",
       "• *What does it cost?* / *Do we need WhatsApp Business?*",
+      "• Stuck? *“It won’t let me upload”*, *“my cars aren’t showing”*, *“photos aren’t loading”*",
       "• *Delete all my inventory*",
-      "• *How do I import CSV?*",
-      "• *Where do I upload photos?*",
       "• *Report a bug: …* (describe the issue)",
-      "• *Help*",
     ].join("\n"),
   };
 }
@@ -414,6 +444,8 @@ export function buildDealerHelpReply(input: {
       return buildDealerHelp();
     case "product_qa":
       return buildProductQaReply(input.message);
+    case "troubleshooting":
+      return buildTroubleshootingReply(input.message);
     case "navigation":
       return buildDealerNavigation(input.message);
     case "bug_report_prompt":
