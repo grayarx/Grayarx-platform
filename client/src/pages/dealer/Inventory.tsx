@@ -849,34 +849,38 @@ export default function Inventory() {
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card-premium rounded-2xl border border-primary/10 py-20 text-center text-muted-foreground">
-          <CarIcon className="h-10 w-10 mx-auto text-primary/40 mb-4" />
-          <p className="text-lg mb-1">
-            {data && data.length > 0
-              ? "No vehicles match those filters."
-              : "No vehicles yet."}
-          </p>
-          <p className="text-sm">
-            {data && data.length > 0 ? (
-              "Try clearing the search or changing the filter."
-            ) : (
-              <>
-                Click{" "}
-                <button
-                  type="button"
-                  onClick={() => setOpen(true)}
-                  className="text-primary font-semibold underline underline-offset-2 hover:text-primary/80"
-                >
-                  Add vehicle
-                </button>{" "}
-                to publish your first listing, or{" "}
-                <Link href="/dealer/inventory/import" className="text-primary font-semibold underline underline-offset-2">
-                  import from CSV
-                </Link>.
-              </>
-            )}
-          </p>
-        </div>
+        data && data.length > 0 ? (
+          <div className="card-premium rounded-2xl border border-primary/10 py-20 text-center text-muted-foreground">
+            <Search className="h-10 w-10 mx-auto text-primary/40 mb-4" />
+            <p className="text-lg mb-1">No vehicles match those filters.</p>
+            <p className="text-sm">Try clearing the search or changing the filter.</p>
+          </div>
+        ) : (
+          <div className="card-premium rounded-2xl border border-primary/15 py-16 px-6 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <CarIcon className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-display text-2xl font-bold">Let’s fill your showroom</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Add your stock and it goes live on your public showroom instantly. Import your
+              whole list from a CSV in seconds, or add a car by hand.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Button asChild className="btn-gold h-11 px-5 font-semibold">
+                <Link href="/dealer/inventory/import">
+                  <Upload className="h-4 w-4 mr-2" /> Import stock from CSV
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-11 px-5" onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Add a vehicle
+              </Button>
+            </div>
+            <p className="mt-5 text-xs text-muted-foreground">
+              Tip: aim for <span className="text-foreground font-medium">8 photos</span> per car —
+              listings with a full set sell faster.
+            </p>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((v) => {
