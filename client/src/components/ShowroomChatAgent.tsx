@@ -348,10 +348,33 @@ export function ShowroomChatAgent({
 
   const submitEnquiry = async (data: Record<string, string>) => {
     if (!vehicle) return;
+    const lang = (data.lang as ShowroomLang | undefined) ?? chatLang;
+    const clientName = (data.name || "").trim();
+    const clientEmail = (data.email || "").trim();
+    const clientPhone = (data.phone || "").trim();
+
+    // Recover from a stuck step if name/email were lost between turns
+    // (React draft not persisted) — ask again instead of spamming Zod errors.
+    if (!clientName) {
+      setStep(1);
+      addBot(getLocalizedPrompt("askName", lang));
+      return;
+    }
+    if (!clientEmail || !clientEmail.includes("@")) {
+      setStep(2);
+      addBot(getLocalizedPrompt("askEmail", lang));
+      return;
+    }
+    if (!clientPhone) {
+      setStep(3);
+      addBot(getLocalizedPrompt("askPhone", lang));
+      return;
+    }
+
     setBusy(true);
     try {
       await enquire.mutateAsync({
-        vehicleId: vehicle.id,
+        vehicleId: String(vehicle.id),
         vehicleTitle: vehicle.title,
         vehiclePrice: vehicle.price,
         vehicleYear: vehicle.year,
@@ -359,21 +382,30 @@ export function ShowroomChatAgent({
         vehicleFuel: vehicle.fuel,
         vehicleTransmission: vehicle.transmission,
         vehicleImage: vehicle.image,
-        clientName: data.name,
-        clientEmail: data.email,
-        clientPhone: data.phone,
+        clientName,
+        clientEmail,
+        clientPhone,
         clientMessage: data.notes || undefined,
         dealershipEmail: "hello@grayarx.com",
         dealershipName,
-        // notes passed via inbound - extend if API supports; question is in draft.notes
       });
-      const lang = (data.lang as ShowroomLang | undefined) ?? chatLang;
-      addBot(thanksForEnquiry(lang, data.name, dealershipName, vehicle));
+      addBot(thanksForEnquiry(lang, clientName, dealershipName, vehicle));
       setFlow("menu");
+      setStep(0);
+      setDraft({});
     } catch (e) {
+      const raw = e instanceof Error ? e.message : "could not send";
+      const friendly =
+        /clientEmail|clientName|invalid_type|expected string/i.test(raw)
+          ? "I lost your details — let's try again. What's your name?"
+          : raw;
+      if (/clientEmail|clientName|invalid_type|expected string/i.test(raw)) {
+        setStep(1);
+        setDraft({ notes: data.notes || "", lang });
+      }
       addBot(
         getFlowPrompt("errorSubmit", chatLang, {
-          message: e instanceof Error ? e.message : "could not send",
+          message: friendly,
         }),
       );
     } finally {
@@ -455,62 +487,71 @@ export function ShowroomChatAgent({
       return;
     }
 
+    // Persist every captured field into draft. Missing setDraft between steps
+    // previously dropped name/email so enquire() got undefined and Nala looped
+    // on Zod "expected string" errors after the phone step.
+    const persist = (patch: Record<string, string>) => {
+      const merged = { ...next, ...patch };
+      Object.assign(next, merged);
+      setDraft(merged);
+      return merged;
+    };
+
     if (flow === "test_drive") {
       const lang = (draft.lang as ShowroomLang | undefined) ?? chatLang;
       if (step === 0) {
-        next.name = val;
-        setDraft(next);
+        persist({ name: val });
         setStep(1);
         addBot(getFlowPrompt("testDriveContact", lang));
       } else if (step === 1) {
-        next.contact = val;
-        setDraft(next);
+        persist({ contact: val });
         setStep(2);
         addBot(getFlowPrompt("testDriveDate", lang));
       } else if (step === 2) {
         if (!isSkipReply(val)) {
-          next.date = val;
+          persist({ date: val });
           setStep(3);
           addBot(getFlowPrompt("testDriveTime", lang));
         } else {
           await submitTestDrive(next);
         }
       } else if (step === 3) {
-        if (!isSkipReply(val)) next.time = val;
-        await submitTestDrive(next);
+        const data = !isSkipReply(val) ? persist({ time: val }) : next;
+        await submitTestDrive(data);
       }
     } else if (flow === "pre_approval") {
       const lang = (draft.lang as ShowroomLang | undefined) ?? chatLang;
       if (step === 0) {
-        next.name = val;
+        persist({ name: val });
         setStep(1);
         addBot(getLocalizedPrompt("askEmail", lang));
       } else if (step === 1) {
-        next.email = val;
+        persist({ email: val });
         setStep(2);
         addBot(getLocalizedPrompt("askPhone", lang));
       } else if (step === 2) {
-        next.phone = val;
+        persist({ phone: val });
         setStep(3);
         addBot(getFlowPrompt("preApprovalIncome", lang));
       } else if (step === 3) {
-        if (!isSkipReply(val)) next.income = val;
+        if (!isSkipReply(val)) persist({ income: val });
+        else setDraft(next);
         setStep(4);
         addBot(getFlowPrompt("preApprovalDeposit", lang));
       } else if (step === 4) {
-        if (!isSkipReply(val)) next.deposit = val;
+        if (!isSkipReply(val)) persist({ deposit: val });
+        else setDraft(next);
         setStep(5);
         addBot(getFlowPrompt("preApprovalTerm", lang));
       } else if (step === 5) {
-        if (!isSkipReply(val)) next.term = val;
-        await submitPreApproval(next);
+        const data = !isSkipReply(val) ? persist({ term: val }) : next;
+        await submitPreApproval(data);
       }
     } else if (flow === "trade_in") {
       const lang = (draft.lang as ShowroomLang | undefined) ?? chatLang;
       if (step === 0) {
         const make = resolveMake(val);
-        next.make = make;
-        setDraft(next);
+        persist({ make });
         setStep(1);
         addBot(
           make !== val
@@ -519,8 +560,7 @@ export function ShowroomChatAgent({
         );
       } else if (step === 1) {
         const model = resolveModel(next.make ?? "", val);
-        next.model = model;
-        setDraft(next);
+        persist({ model });
         setStep(2);
         addBot(
           model !== val
@@ -528,42 +568,42 @@ export function ShowroomChatAgent({
             : getFlowPrompt("tradeInYear", lang),
         );
       } else if (step === 2) {
-        next.year = val;
+        persist({ year: val });
         setStep(3);
         addBot(getFlowPrompt("tradeInKm", lang));
       } else if (step === 3) {
-        next.km = val;
+        persist({ km: val });
         setStep(4);
         addBot(getFlowPrompt("tradeInCondition", lang));
       } else if (step === 4) {
-        next.condition = val.toLowerCase();
+        persist({ condition: val.toLowerCase() });
         setStep(5);
         addBot(getLocalizedPrompt("askName", lang));
       } else if (step === 5) {
-        next.name = val;
+        persist({ name: val });
         setStep(6);
         addBot(getLocalizedPrompt("askPhone", lang));
       } else if (step === 6) {
-        next.contact = val;
-        await submitTradeIn(next);
+        const data = persist({ contact: val });
+        await submitTradeIn(data);
       }
     } else if (flow === "enquiry") {
-      const lang = (draft.lang as ShowroomLang | undefined) ?? "en";
+      const lang = (draft.lang as ShowroomLang | undefined) ?? chatLang;
       if (step === 0) {
-        next.notes = val;
+        persist({ notes: val });
         setStep(1);
         addBot(getLocalizedPrompt("askName", lang));
       } else if (step === 1) {
-        next.name = val;
+        persist({ name: val });
         setStep(2);
         addBot(getLocalizedPrompt("askEmail", lang));
       } else if (step === 2) {
-        next.email = val;
+        persist({ email: val });
         setStep(3);
         addBot(getLocalizedPrompt("askPhone", lang));
       } else if (step === 3) {
-        next.phone = val;
-        await submitEnquiry(next);
+        const data = persist({ phone: val });
+        await submitEnquiry(data);
       }
     }
   };
