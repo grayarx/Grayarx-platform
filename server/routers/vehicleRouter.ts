@@ -9,7 +9,7 @@ export const vehicleRouter = router({
   list: protectedProcedure
     .input(z.object({
       dealershipId: z.number(),
-      status: z.enum(["available", "sold", "reserved"]).optional(),
+      status: z.enum(["available", "sold", "reserved", "fix"]).optional(),
       condition: z.enum(["new", "used", "demo", "certified"]).optional(),
       minPrice: z.number().optional(),
       maxPrice: z.number().optional(),
@@ -105,7 +105,7 @@ export const vehicleRouter = router({
       id: z.number(),
       updates: z.object({
         price: z.number().optional(),
-        status: z.enum(["available", "sold", "reserved"]).optional(),
+        status: z.enum(["available", "sold", "reserved", "fix"]).optional(),
         km: z.number().optional(),
         primaryPhotoUrl: z.string().optional(),
       }),
@@ -144,7 +144,7 @@ export const vehicleRouter = router({
         available: allVehicles.filter((v: any) => v.status === "available").length,
         sold: allVehicles.filter((v: any) => v.status === "sold").length,
         reserved: allVehicles.filter((v: any) => v.status === "reserved").length,
-        maintenance: allVehicles.filter((v: any) => v.status === "maintenance").length,
+        fix: allVehicles.filter((v: any) => v.status === "fix").length,
         averagePrice: allVehicles.reduce((sum: number, v: any) => sum + Number(v.price), 0) / allVehicles.length || 0,
       };
     }),

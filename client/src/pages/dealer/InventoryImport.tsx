@@ -38,7 +38,7 @@ const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,
 
 const TEMPLATE_CSV = `# GrayArx inventory template
 # Re-import any time to sync price, km, and status — rows are matched by the stock/VIN column.
-# status values: available | sold | pending | reserved
+# status values: available | sold | reserved | fix
 # Pipe-separate multiple photo URLs in the image column: url1|url2|url3 (aim for 8+ angles)
 ${SAMPLE}`;
 
@@ -593,7 +593,7 @@ export default function InventoryImportPage() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               Headers we recognise: title, make, model, year, price/price_zar, km/mileage_km, fuel,
               transmission, location, image/photos (use <strong>|</strong> for multiple angles — aim for 8+),
-              stock/vin/ref, <strong>status</strong> (available|sold|pending|reserved).
+              stock/vin/ref, <strong>status</strong> (available|sold|reserved|fix).
             </p>
           </CardContent>
         </Card>

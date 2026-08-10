@@ -22,6 +22,7 @@ const MIGRATIONS = [
   "0069_dealer_groups.sql",
   "0070_brand_logo_url_mediumtext.sql",
   "0071_stock_sync.sql",
+  "0072_vehicle_status_fix.sql",
 ];
 
 async function main() {

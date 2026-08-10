@@ -192,7 +192,7 @@ export async function getDemoDealershipId(): Promise<number | null> {
 export async function getVehicleInventoryCounts() {
   const db = await getDb();
   if (!db) {
-    return { total: 0, available: 0, reserved: 0, sold: 0, showroomCap: 2000 };
+    return { total: 0, available: 0, reserved: 0, sold: 0, fix: 0, showroomCap: 2000 };
   }
   const [row] = await db
     .select({
@@ -200,6 +200,7 @@ export async function getVehicleInventoryCounts() {
       available: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'available' THEN 1 ELSE 0 END)`,
       reserved: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'reserved' THEN 1 ELSE 0 END)`,
       sold: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'sold' THEN 1 ELSE 0 END)`,
+      fix: sql<number>`SUM(CASE WHEN ${vehicles.status} = 'fix' THEN 1 ELSE 0 END)`,
     })
     .from(vehicles);
   return {
@@ -207,6 +208,7 @@ export async function getVehicleInventoryCounts() {
     available: Number(row?.available ?? 0),
     reserved: Number(row?.reserved ?? 0),
     sold: Number(row?.sold ?? 0),
+    fix: Number(row?.fix ?? 0),
     showroomCap: 2000,
   };
 }

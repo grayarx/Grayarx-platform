@@ -1588,7 +1588,7 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number().int(),
-          status: z.enum(["available", "reserved", "sold"]).optional(),
+          status: z.enum(["available", "reserved", "sold", "fix"]).optional(),
           price: z.number().positive().optional(),
           title: z.string().min(1).max(255).optional(),
           make: z.string().max(64).optional(),

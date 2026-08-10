@@ -129,13 +129,41 @@ const EMPTY_FORM: FormState = {
   description: "",
 };
 
+type VehicleStatus = "available" | "reserved" | "sold" | "fix";
+type StatusFilter = "all" | VehicleStatus | "not_on_showroom";
+
 function statusClass(s: string) {
   const map: Record<string, string> = {
     available: "bg-green-500/15 text-green-300 border-green-500/30",
     reserved: "bg-amber-500/15 text-amber-300 border-amber-500/30",
     sold: "bg-muted text-muted-foreground border-border",
+    fix: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   };
   return map[s] ?? "";
+}
+
+function isHiddenFromShowroom(v: {
+  status?: string | null;
+  title?: string | null;
+  price?: string | number | null;
+}) {
+  if (v.status !== "available") return true;
+  if (!v.title?.trim()) return true;
+  if (isSuspiciousPrice(v.price)) return true;
+  return false;
+}
+
+function showroomHideReason(v: {
+  status?: string | null;
+  title?: string | null;
+  price?: string | number | null;
+}): string | null {
+  if (v.status === "fix") return "Marked Fix";
+  if (v.status === "reserved") return "Reserved";
+  if (v.status === "sold") return "Sold";
+  if (!v.title?.trim()) return "Missing title";
+  if (isSuspiciousPrice(v.price)) return "Price ≤ R1 / POA";
+  return null;
 }
 
 function maskVin(vin: string | null | undefined) {
@@ -286,7 +314,7 @@ export default function Inventory() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "reserved" | "sold">("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [bodyFilter, setBodyFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -361,7 +389,11 @@ export default function Inventory() {
     if (!data) return [];
     const q = search.trim().toLowerCase();
     return data.filter((v) => {
-      if (statusFilter !== "all" && v.status !== statusFilter) return false;
+      if (statusFilter === "not_on_showroom") {
+        if (!isHiddenFromShowroom(v)) return false;
+      } else if (statusFilter !== "all" && v.status !== statusFilter) {
+        return false;
+      }
       if (conditionFilter !== "all" && v.condition !== conditionFilter) return false;
       if (
         bodyFilter !== "all" &&
@@ -385,6 +417,33 @@ export default function Inventory() {
       return hay.includes(q);
     });
   }, [data, search, statusFilter, conditionFilter, bodyFilter]);
+
+  const showroomStats = useMemo(() => {
+    if (!data) {
+      return { total: 0, onShowroom: 0, hidden: 0, reserved: 0, sold: 0, fix: 0, badPrice: 0 };
+    }
+    let onShowroom = 0;
+    let reserved = 0;
+    let sold = 0;
+    let fix = 0;
+    let badPrice = 0;
+    for (const v of data) {
+      if (!isHiddenFromShowroom(v)) onShowroom += 1;
+      if (v.status === "reserved") reserved += 1;
+      if (v.status === "sold") sold += 1;
+      if (v.status === "fix") fix += 1;
+      if (v.status === "available" && isSuspiciousPrice(v.price)) badPrice += 1;
+    }
+    return {
+      total: data.length,
+      onShowroom,
+      hidden: data.length - onShowroom,
+      reserved,
+      sold,
+      fix,
+      badPrice,
+    };
+  }, [data]);
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((v) => selectedIds.has(v.id));
@@ -860,6 +919,47 @@ export default function Inventory() {
         </div>
       }
     >
+      {showroomStats.hidden > 0 ? (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <p className="font-medium">
+            {showroomStats.onShowroom} of {showroomStats.total} cars are on the public showroom
+            {" · "}
+            {showroomStats.hidden} hidden
+          </p>
+          <p className="mt-1 text-amber-100/80 text-xs">
+            {[
+              showroomStats.reserved ? `${showroomStats.reserved} reserved` : null,
+              showroomStats.fix ? `${showroomStats.fix} marked Fix` : null,
+              showroomStats.sold ? `${showroomStats.sold} sold` : null,
+              showroomStats.badPrice ? `${showroomStats.badPrice} bad/POA price` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Hidden for title/price/status reasons"}
+            . Use status <strong>Not on showroom</strong> or <strong>Fix</strong> to find them.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+              onClick={() => setStatusFilter("not_on_showroom")}
+            >
+              Show hidden cars
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-rose-500/40 text-rose-200 hover:bg-rose-500/20"
+              onClick={() => setStatusFilter("fix")}
+            >
+              Show Fix only
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-3 mb-6">
         <div className="relative flex-1">
@@ -871,14 +971,16 @@ export default function Inventory() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-          <SelectTrigger className="md:w-[160px]">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+          <SelectTrigger className="md:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="not_on_showroom">Not on showroom</SelectItem>
             <SelectItem value="available">Available</SelectItem>
             <SelectItem value="reserved">Reserved</SelectItem>
+            <SelectItem value="fix">Fix</SelectItem>
             <SelectItem value="sold">Sold</SelectItem>
           </SelectContent>
         </Select>
@@ -1055,12 +1157,17 @@ export default function Inventory() {
                   alt={v.title ?? "Vehicle"}
                   className="rounded-t-2xl"
                 />
-                <div className="absolute top-3 left-3 flex gap-2 z-[4] pointer-events-none">
+                <div className="absolute top-3 right-3 flex gap-2 z-[4] pointer-events-none">
                   <Badge
                     className={`text-[10px] uppercase tracking-wider ${statusClass(v.status)}`}
                   >
-                    {v.status}
+                    {v.status === "fix" ? "Fix" : v.status}
                   </Badge>
+                  {showroomHideReason(v) && v.status === "available" ? (
+                    <Badge className="text-[10px] uppercase tracking-wider bg-rose-500/20 text-rose-200 border-rose-500/40">
+                      Hidden
+                    </Badge>
+                  ) : null}
                   {v.condition && (
                     <Badge className="text-[10px] uppercase tracking-wider bg-black/60 text-white border-white/20">
                       {v.condition}
@@ -1085,6 +1192,11 @@ export default function Inventory() {
                         {[v.year, v.make, v.model].filter(Boolean).join(" · ") ||
                           "—"}
                       </p>
+                      {showroomHideReason(v) ? (
+                        <p className="text-[11px] text-rose-300/90 mt-1">
+                          Not on showroom · {showroomHideReason(v)}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="text-right shrink-0">
                       <div
@@ -1197,18 +1309,19 @@ export default function Inventory() {
                       onValueChange={(s) =>
                         updateV.mutate({
                           id: v.id,
-                          status: s as "available" | "reserved" | "sold",
+                          status: s as VehicleStatus,
                         })
                       }
                     >
                       <SelectTrigger
-                        className={`h-8 text-xs border w-[120px] ${statusClass(v.status)}`}
+                        className={`h-8 text-xs border w-[130px] ${statusClass(v.status)}`}
                       >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="available">Available</SelectItem>
                         <SelectItem value="reserved">Reserved</SelectItem>
+                        <SelectItem value="fix">Fix</SelectItem>
                         <SelectItem value="sold">Sold</SelectItem>
                       </SelectContent>
                     </Select>

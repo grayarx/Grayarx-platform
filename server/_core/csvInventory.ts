@@ -32,7 +32,7 @@ export type ParsedVehicleRow = {
   externalRef: string | null;
   /** Normalized VIN when a VIN column is present and valid; null otherwise. */
   vin: string | null;
-  /** Vehicle status: available | sold | pending | reserved */
+  /** Vehicle status: available | sold | reserved | fix (pending maps to fix) */
   status: string | null;
   photoScore: number;
   photoWarnings: string[];
@@ -395,18 +395,18 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     }
 
     // Parse status — normalise DMS values to our enum
-    const VALID_STATUSES = ["available", "sold", "pending", "reserved"];
+    const VALID_STATUSES = ["available", "sold", "reserved", "fix", "pending"];
     const rawStatus = get("status")?.trim().toLowerCase() || null;
     let status: string | null = null;
     if (rawStatus) {
-      if (VALID_STATUSES.includes(rawStatus)) {
-        status = rawStatus;
+      if (rawStatus === "pending" || /^(pend|hold|deposit|fix|needs.?fix|problem)/i.test(rawStatus)) {
+        status = "fix";
+      } else if (VALID_STATUSES.includes(rawStatus)) {
+        status = rawStatus === "pending" ? "fix" : rawStatus;
       } else if (/^(yes|y|true|1|sold out)$/i.test(rawStatus)) {
         status = "sold";
       } else if (/^(no|n|false|0|in stock|available|active)$/i.test(rawStatus)) {
         status = "available";
-      } else if (/^(pend|hold|deposit)/i.test(rawStatus)) {
-        status = "pending";
       } else if (/^(res|reserved)/i.test(rawStatus)) {
         status = "reserved";
       }

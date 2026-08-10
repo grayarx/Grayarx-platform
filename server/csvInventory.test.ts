@@ -126,4 +126,19 @@ describe("parseInventoryCsv", () => {
     expect(res.validRows[0].externalRef).toBe("STK-9");
     expect(res.validRows[0].dataWarnings.some((w) => /VIN/i.test(w))).toBe(true);
   });
+
+  it("maps fix/pending/problem status values to fix", () => {
+    const csv = [
+      "title,price,status",
+      "Needs work,100000,fix",
+      "On hold,100000,pending",
+      "Problem car,100000,needs_fix",
+      "Ready,100000,available",
+    ].join("\n");
+    const res = parseInventoryCsv(csv);
+    expect(res.validRows.find((r) => r.title === "Needs work")?.status).toBe("fix");
+    expect(res.validRows.find((r) => r.title === "On hold")?.status).toBe("fix");
+    expect(res.validRows.find((r) => r.title === "Problem car")?.status).toBe("fix");
+    expect(res.validRows.find((r) => r.title === "Ready")?.status).toBe("available");
+  });
 });
