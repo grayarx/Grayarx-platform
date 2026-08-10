@@ -222,6 +222,16 @@ async function startServer() {
     }
   })();
 
+  // ── One-time demo stock purge (only when PURGE_DEMO_INVENTORY is set) ──
+  (async () => {
+    try {
+      const { purgeDemoInventoryIfRequested } = await import("./purgeDemoInventory");
+      await purgeDemoInventoryIfRequested();
+    } catch (e) {
+      console.warn("[Startup] demo inventory purge skipped:", (e as Error).message);
+    }
+  })();
+
   // ── Demo showroom: fill missing year/fuel/km/transmission for pitch demos ──
   (async () => {
     try {
