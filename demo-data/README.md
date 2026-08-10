@@ -12,7 +12,7 @@ to another exterior of the **same** model (never a random different car).
 |------|------|-----|
 | `grayarx-demo-mainstream-8photos.csv` | 8 SA mainstream | Client demos |
 | `grayarx-demo-premium-8photos.csv` | 6 premium | Premium yard demos |
-| `grayarx-demo-1000-cars-8photos.csv` | 1000 | Scale / stress test (same 8-angle sets, rotated) |
+| `grayarx-demo-1000-cars-8photos.csv` | 1000 | Full yard demo — **many unique SA models** (bakkies, Chinese brands like Omoda / GWM / Haval / BYD / Jaecoo / JAC, hatches, SUVs, premium), not 8 cars on repeat |
 
 Regenerate anytime:
 

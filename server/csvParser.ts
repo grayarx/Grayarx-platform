@@ -3,6 +3,8 @@
  * Handles CSV parsing, validation, and automatic repair of common issues
  */
 
+import { MODELS_BY_MAKE, VEHICLE_MAKES } from "../shared/vehicleCatalog";
+
 interface ParseResult {
   headers: string[];
   rows: Record<string, string>[];
@@ -11,53 +13,12 @@ interface ParseResult {
   repairs: Array<{ row: number; action: string }>;
 }
 
-// Common vehicle makes (for typo detection)
-const COMMON_MAKES = [
-  "Toyota",
-  "BMW",
-  "Mercedes",
-  "Audi",
-  "Volkswagen",
-  "Ford",
-  "Chevrolet",
-  "Honda",
-  "Nissan",
-  "Hyundai",
-  "Kia",
-  "Mazda",
-  "Subaru",
-  "Volvo",
-  "Jaguar",
-  "Land Rover",
-  "Porsche",
-  "Tesla",
-  "Lexus",
-  "Infiniti",
-];
+// SA catalog (+ Mercedes shorthand for legacy CSVs)
+const COMMON_MAKES = [...VEHICLE_MAKES, "Mercedes"];
 
-// Common vehicle models
-const COMMON_MODELS = [
-  "Fortuner",
-  "Hilux",
-  "Corolla",
-  "Camry",
-  "X5",
-  "X3",
-  "3 Series",
-  "5 Series",
-  "C-Class",
-  "E-Class",
-  "A4",
-  "A6",
-  "Golf",
-  "Passat",
-  "Mustang",
-  "F-150",
-  "Civic",
-  "Accord",
-  "Altima",
-  "Qashqai",
-];
+const COMMON_MODELS = Array.from(
+  new Set(Object.values(MODELS_BY_MAKE).flat()),
+);
 
 // Common transmission types
 const TRANSMISSION_TYPES = ["Manual", "Automatic", "CVT", "Semi-Automatic"];

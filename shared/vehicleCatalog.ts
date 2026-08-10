@@ -31,6 +31,8 @@ export const VEHICLE_MAKES = [
   "Haval",
   "GWM",
   "Chery",
+  "Omoda",
+  "Jaecoo",
   "Opel",
   "Fiat",
   "Jaguar",
@@ -113,7 +115,13 @@ export const MAKE_ALIASES: Record<string, string> = {
   haval: "Haval",
   gwm: "GWM",
   greatwall: "GWM",
+  "great wall": "GWM",
+  poer: "GWM",
+  cannon: "GWM",
   chery: "Chery",
+  omoda: "Omoda",
+  jaecoo: "Jaecoo",
+  jaeco: "Jaecoo",
   opel: "Opel",
   fiat: "Fiat",
   jaguar: "Jaguar",
@@ -149,9 +157,11 @@ export const MAKE_ALIASES: Record<string, string> = {
   mg: "MG",
   proton: "Proton",
   ssangyong: "SsangYong",
+  "ssang yong": "SsangYong",
   baic: "BAIC",
   jac: "JAC",
   dfsk: "DFSK",
+  seres: "DFSK",
   ineos: "Ineos",
 };
 
@@ -243,11 +253,27 @@ export const MODELS_BY_MAKE: Record<string, string[]> = {
   Nissan: ["Navara", "NP200", "Almera", "Magnite", "Qashqai", "X-Trail", "Patrol", "Juke"],
   Honda: ["Ballade", "BR-V", "HR-V", "CR-V", "Civic", "Amaze"],
   Audi: ["A1", "A3", "A4", "A5", "Q2", "Q3", "Q5", "Q7", "Q8", "RS3", "TT"],
-  Mahindra: ["Pik Up", "Scorpio", "XUV300", "XUV500", "XUV700", "Bolero"],
-  Isuzu: ["D-Max", "MU-X"],
-  Suzuki: ["Swift", "Baleno", "Ignis", "Vitara", "Jimny", "Ertiga", "Fronx"],
+  Mahindra: [
+    "Pik Up",
+    "Scorpio",
+    "Scorpio-N",
+    "XUV300",
+    "XUV 3XO",
+    "XUV500",
+    "XUV700",
+    "Bolero",
+    "Thar",
+  ],
+  Isuzu: ["D-Max", "MU-X", "KB"],
+  Suzuki: ["Swift", "Baleno", "Ignis", "Vitara", "Jimny", "Ertiga", "Fronx", "S-Presso", "XL6"],
   Mazda: ["Mazda2", "Mazda3", "CX-3", "CX-30", "CX-5", "CX-60", "BT-50"],
-  Renault: ["Kwid", "Sandero", "Stepway", "Duster", "Koleos", "Triber"],
+  Renault: ["Kwid", "Sandero", "Stepway", "Duster", "Koleos", "Triber", "Oroch"],
+  Peugeot: ["208", "2008", "3008", "5008", "Landtrek"],
+  "Citroën": ["C3", "C3 Aircross", "C5 Aircross", "Berlingo"],
+  Opel: ["Corsa", "Crossland", "Grandland", "Mokka", "Astra"],
+  Fiat: ["500", "Panda", "Tipo", "Pulse"],
+  Subaru: ["Forester", "XV", "Outback", "WRX", "Impreza"],
+  Mitsubishi: ["Triton", "ASX", "Eclipse Cross", "Pajero Sport", "Outlander", "Xpander"],
   Chevrolet: [
     "Spark",
     "Cruze",
@@ -260,9 +286,42 @@ export const MODELS_BY_MAKE: Record<string, string[]> = {
     "Silverado",
   ],
   Jeep: ["Wrangler", "Grand Cherokee", "Compass", "Renegade", "Gladiator"],
-  "Land Rover": ["Defender", "Discovery", "Discovery Sport", "Range Rover", "Range Rover Sport", "Range Rover Evoque"],
-  Volvo: ["XC40", "XC60", "XC90", "S60", "V60"],
+  "Land Rover": ["Defender", "Discovery", "Discovery Sport", "Range Rover", "Range Rover Sport", "Range Rover Evoque", "Range Rover Velar"],
+  Volvo: ["XC40", "XC60", "XC90", "S60", "V60", "C40"],
   Tesla: ["Model 3", "Model Y", "Model X", "Model S", "Cybertruck"],
+  Haval: ["Jolion", "Jolion Pro", "H6", "H6 GT", "H1", "H2", "H9"],
+  GWM: [
+    "P-Series",
+    "Poer",
+    "Cannon",
+    "Steed",
+    "Tank 300",
+    "Tank 500",
+    "Ora 03",
+    "Ora Good Cat",
+  ],
+  Chery: [
+    "Tiggo 4 Pro",
+    "Tiggo 7 Pro",
+    "Tiggo 8 Pro",
+    "Tiggo 8 Pro Max",
+    "Arrizo 5",
+    "Arrizo 6",
+    "QQ",
+  ],
+  Omoda: ["C5", "C9", "E5"],
+  Jaecoo: ["J7", "J8"],
+  BYD: [
+    "Atto 3",
+    "Seal",
+    "Seal U",
+    "Sealion 6",
+    "Sealion 7",
+    "Dolphin",
+    "Shark",
+    "Han",
+    "Tang",
+  ],
   Lamborghini: [
     "Huracán",
     "Huracán EVO",
@@ -297,14 +356,17 @@ export const MODELS_BY_MAKE: Record<string, string[]> = {
   Infiniti: ["Q50", "Q60", "QX50", "QX60", "QX80"],
   Genesis: ["G70", "G80", "G90", "GV60", "GV70", "GV80"],
   Jaguar: ["XE", "XF", "F-Pace", "E-Pace", "I-Pace", "F-Type"],
-  Lexus: ["UX", "NX", "RX", "ES", "IS", "LX", "LC"],
+  Lexus: ["UX", "NX", "NX 300", "RX", "ES", "IS", "LX", "LC"],
   Mini: ["Cooper", "Cooper S", "Countryman", "Clubman", "Paceman"],
   Dodge: ["Challenger", "Charger", "Durango"],
   Datsun: ["Go", "Go+", "Cross"],
-  MG: ["ZS", "HS", "MG3", "MG4", "Cyberster"],
+  MG: ["ZS", "ZS EV", "HS", "MG3", "MG4", "MG5", "Cyberster"],
   SsangYong: ["Korando", "Rexton", "Musso", "Tivoli"],
-  BAIC: ["X55", "B40", "BJ40"],
-  Ineos: ["Grenadier"],
+  BAIC: ["X55", "X55 Pro", "B40", "BJ40", "X7"],
+  JAC: ["T8", "T9", "X200", "JS4", "JS6", "e-JS4"],
+  Proton: ["X50", "X70", "Saga", "Persona", "Iriz"],
+  DFSK: ["Glory 580", "Glory 580 Pro", "ix5", "Seres 3", "C31", "C32"],
+  Ineos: ["Grenadier", "Quartermaster"],
   Pagani: ["Huayra", "Zonda"],
   Bugatti: ["Chiron", "Veyron", "Mistral"],
 };
@@ -446,14 +508,14 @@ export function inferBodyType(
   if (/\b(double\s*cab|doublecab)\b/.test(hay)) return "Double Cab";
   if (/\b(single\s*cab|singlecab)\b/.test(hay)) return "Single Cab";
   if (
-    /\b(hilux|ranger|d-?max|amarok|navara|triton|bt-?50|canyon|colorado|landcruiser\s*pickup|bakkie|pickup|pick-up)\b/.test(
+    /\b(hilux|ranger|d-?max|amarok|navara|triton|bt-?50|canyon|colorado|landcruiser\s*pickup|bakkie|pickup|pick-up|pik\s*up|p-?series|poer|cannon|steed|\bt8\b|\bt9\b|landtrek|oroch|musso|shark)\b/.test(
       hay,
     )
   ) {
     return "Bakkie";
   }
   if (
-    /\b(fortuner|pajero|fortuner|everest|mu-?x|rav4|x-?trail|tucson|sportage|tucson|cx-5|q5|q3|q7|x3|x5|x1|glc|gle|glo|jolion|hs|tucson|sportage|suv|crossover|c-?hr|corolla\s*cross|urban\s*cruiser|velar|range\s*rover|land\s*rover|discovery|defender)\b/.test(
+    /\b(fortuner|pajero|everest|mu-?x|rav4|x-?trail|tucson|sportage|cx-5|q5|q3|q7|x3|x5|x1|glc|gle|jolion|h6|hs|suv|crossover|c-?hr|corolla\s*cross|urban\s*cruiser|velar|range\s*rover|land\s*rover|discovery|defender|omoda|jaecoo|\bc5\b|\bc9\b|\bj7\b|\bj8\b|tiggo|tank\s*300|tank\s*500|atto\s*3|sealion|creta|seltos|magnite|x50|x70)\b/.test(
       hay,
     )
   ) {
