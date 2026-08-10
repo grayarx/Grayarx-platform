@@ -15,7 +15,7 @@ import {
 } from "../db";
 import { parseInventoryCsv } from "./csvInventory";
 import { shouldApplyCsvStatus } from "./csvStatusGuard";
-import { downloadAndStorePhoto } from "./photoDownloader";
+import { resolveImportPhotoUrls } from "./photoDownloader";
 
 export type InventoryCommitResult = {
   created: number;
@@ -28,6 +28,9 @@ export type InventoryCommitResult = {
   failedRows: Array<{ title: string; reason: string }>;
   /** Alias for updated — older clients */
   repaired: number;
+  photosMirrored?: number;
+  photosLinked?: number;
+  photoMirrorSkippedReason?: string | null;
 };
 
 export async function commitInventoryCsv(opts: {
@@ -42,9 +45,32 @@ export async function commitInventoryCsv(opts: {
   let updated = 0;
   let unchanged = 0;
   let importedWithWarnings = 0;
+  let photosMirrored = 0;
+  let photosLinked = 0;
+  let photoMirrorSkippedReason: string | null = null;
   const failedRows: Array<{ title: string; reason: string }> = [];
   const seenRefs = new Set<string>();
   const syncedAt = new Date();
+  const startedAt = Date.now();
+  // Stay under typical Cloudflare/proxy ~100s limits for the whole request.
+  const MIRROR_DEADLINE_MS = 55_000;
+
+  const resolvePhotos = async (urls: string[], title: string, externalRef: string | null) => {
+    const res = await resolveImportPhotoUrls(urls, { title, externalRef }, {
+      skipMirror: opts.skipPhotoMirror,
+      concurrency: 4,
+      perPhotoMs: 8_000,
+      deadlineMs: MIRROR_DEADLINE_MS,
+      startedAt,
+    });
+    photosMirrored += res.mirrored;
+    photosLinked += res.linked;
+    if (res.skippedMirror && !opts.skipPhotoMirror) {
+      photoMirrorSkippedReason =
+        "Photo save needs S3/R2 storage on the server — cars imported with original image links instead.";
+    }
+    return res.urls;
+  };
 
   for (const row of preview.validRows) {
     if (row.externalRef) {
@@ -79,33 +105,27 @@ export async function commitInventoryCsv(opts: {
             (existing as { imageUrl?: string | null }).imageUrl ||
             null;
           if (csvPrimary !== prevPrimary) {
-            const storedPrimary = opts.skipPhotoMirror
-              ? null
-              : await downloadAndStorePhoto(
-                  csvPrimary,
-                  row.title,
-                  row.externalRef,
-                );
-            const primary = storedPrimary || csvPrimary;
+            const sourceUrls =
+              row.imageUrls.length > 0
+                ? row.imageUrls
+                : csvPrimary
+                  ? [csvPrimary]
+                  : [];
+            const resolved = await resolvePhotos(
+              sourceUrls,
+              row.title,
+              row.externalRef,
+            );
+            const primary = resolved[0] || csvPrimary;
             patch.imageUrl = primary;
             patch.primaryPhotoUrl = primary;
-            if (row.imageUrls.length > 0) {
+            if (resolved.length > 0) {
               const existingPhotos = await listVehiclePhotos(existing.id);
               for (const photo of existingPhotos) {
                 await deleteVehiclePhoto(photo.id);
               }
-              for (let pi = 0; pi < row.imageUrls.length; pi++) {
-                const rawUrl = row.imageUrls[pi];
-                const stored =
-                  pi === 0
-                    ? primary
-                    : opts.skipPhotoMirror
-                      ? rawUrl
-                      : (await downloadAndStorePhoto(
-                          rawUrl,
-                          row.title,
-                          row.externalRef,
-                        )) || rawUrl;
+              for (let pi = 0; pi < resolved.length; pi++) {
+                const stored = resolved[pi];
                 if (!stored) continue;
                 await addVehiclePhoto({
                   vehicleId: existing.id,
@@ -127,15 +147,14 @@ export async function commitInventoryCsv(opts: {
     }
 
     try {
-      const primaryUrl = row.imageUrls[0] ?? row.imageUrl;
-      const storedImageUrl = opts.skipPhotoMirror
-        ? null
-        : await downloadAndStorePhoto(
-            primaryUrl,
-            row.title,
-            row.externalRef,
-          );
-      const primary = storedImageUrl || primaryUrl;
+      const sourceUrls =
+        row.imageUrls.length > 0
+          ? row.imageUrls
+          : row.imageUrl
+            ? [row.imageUrl]
+            : [];
+      const resolved = await resolvePhotos(sourceUrls, row.title, row.externalRef);
+      const primary = resolved[0] ?? row.imageUrl ?? null;
       const result = await createVehicle({
         ownerUserId: opts.ownerUserId,
         dealershipId: opts.dealershipId,
@@ -161,19 +180,9 @@ export async function commitInventoryCsv(opts: {
           : {}),
       });
       const vehicleId = (result as { insertId?: number })?.insertId;
-      if (vehicleId && row.imageUrls.length > 0) {
-        for (let pi = 0; pi < row.imageUrls.length; pi++) {
-          const rawUrl = row.imageUrls[pi];
-          const stored =
-            pi === 0
-              ? primary
-              : opts.skipPhotoMirror
-                ? rawUrl
-                : (await downloadAndStorePhoto(
-                    rawUrl,
-                    row.title,
-                    row.externalRef,
-                  )) || rawUrl;
+      if (vehicleId && resolved.length > 0) {
+        for (let pi = 0; pi < resolved.length; pi++) {
+          const stored = resolved[pi];
           if (!stored) continue;
           await addVehiclePhoto({
             vehicleId,
@@ -223,6 +232,9 @@ export async function commitInventoryCsv(opts: {
       duplicatesInCsv: preview.duplicateRefs.length,
       failed: failedRows.length,
       dealershipId: opts.dealershipId,
+      photosMirrored,
+      photosLinked,
+      photoMirrorSkippedReason,
     },
   });
 
@@ -236,5 +248,8 @@ export async function commitInventoryCsv(opts: {
     duplicatesInCsv: preview.duplicateRefs,
     failedRows,
     repaired: updated,
+    photosMirrored,
+    photosLinked,
+    photoMirrorSkippedReason,
   };
 }
