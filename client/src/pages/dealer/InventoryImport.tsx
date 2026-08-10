@@ -29,11 +29,7 @@ import { cn } from "@/lib/utils";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 
 import { photoQualityLabel } from "@shared/photoStandards";
-import {
-  CSV_IMPORT_CHUNK_SIZE,
-  CSV_IMPORT_CHUNK_SIZE_FAST,
-  splitInventoryCsv,
-} from "@shared/csvChunk";
+import { CSV_IMPORT_CHUNK_SIZE, splitInventoryCsv } from "@shared/csvChunk";
 
 const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,stock,status
 2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200,STK-001,available
@@ -220,8 +216,11 @@ export default function InventoryImportPage() {
       );
     }
 
-    const chunkSize = skipMirror ? CSV_IMPORT_CHUNK_SIZE_FAST : CSV_IMPORT_CHUNK_SIZE;
-    const chunks = splitInventoryCsv(csv, chunkSize);
+    // Fast path (links only): one server request with bulk inserts.
+    // Mirror path: keep smaller batches so proxies don't time out.
+    const chunks = skipMirror
+      ? [csv]
+      : splitInventoryCsv(csv, CSV_IMPORT_CHUNK_SIZE);
     setChunkImporting(true);
     setImportProgress(2);
 
@@ -464,13 +463,13 @@ export default function InventoryImportPage() {
                 />
               </div>
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                {(preview?.validRows.length ?? 0) > CSV_IMPORT_CHUNK_SIZE
-                  ? `Large file — importing in batches of ${
-                      mirrorPhotos ? CSV_IMPORT_CHUNK_SIZE : CSV_IMPORT_CHUNK_SIZE_FAST
-                    }. Don’t close this tab.`
-                  : mirrorPhotos
-                    ? "Saving photos one-by-one can take several minutes. Don’t close this tab — or turn “Save photos” off for a fast import."
-                    : "Usually finishes in a few seconds. Don’t close this tab."}
+                {(preview?.validRows.length ?? 0) > 100 && !mirrorPhotos
+                  ? "Large file — bulk import running. Usually under a minute with Save photos OFF. Don’t close this tab."
+                  : (preview?.validRows.length ?? 0) > CSV_IMPORT_CHUNK_SIZE
+                    ? `Large file — importing in batches of ${CSV_IMPORT_CHUNK_SIZE}. Don’t close this tab.`
+                    : mirrorPhotos
+                      ? "Saving photos one-by-one can take several minutes. Don’t close this tab — or turn “Save photos” off for a fast import."
+                      : "Usually finishes in a few seconds. Don’t close this tab."}
               </p>
             </div>
           </motion.div>

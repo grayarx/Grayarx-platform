@@ -287,6 +287,45 @@ export async function createVehicle(data: InsertVehicle) {
   return result;
 }
 
+/** Multi-row vehicle insert — used by fast CSV import. */
+export async function createVehiclesBulk(rows: InsertVehicle[]): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (rows.length === 0) return 0;
+  const CHUNK = 100;
+  let total = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK);
+    await db.insert(vehicles).values(slice);
+    total += slice.length;
+  }
+  return total;
+}
+
+/** Map stock/VIN refs → vehicle ids for a dealership (post bulk-insert). */
+export async function findVehicleIdsByExternalRefs(
+  dealershipId: number,
+  refs: string[],
+): Promise<Map<string, number>> {
+  const db = await getDb();
+  const map = new Map<string, number>();
+  if (!db || refs.length === 0) return map;
+  const unique = [...new Set(refs.map((r) => r.trim()).filter(Boolean))];
+  const CHUNK = 200;
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const slice = unique.slice(i, i + CHUNK);
+    const rows = await db
+      .select({ id: vehicles.id, externalRef: vehicles.externalRef })
+      .from(vehicles)
+      .where(and(eq(vehicles.dealershipId, dealershipId), inArray(vehicles.externalRef, slice)));
+    for (const row of rows) {
+      const key = (row.externalRef ?? "").trim().toLowerCase();
+      if (key) map.set(key, row.id);
+    }
+  }
+  return map;
+}
+
 /**
  * List vehicles with tenant isolation.
  * - Pass `dealershipId` to scope results to a single dealership (dealer view / public showroom).
