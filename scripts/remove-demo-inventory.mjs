@@ -40,13 +40,36 @@ function looksLikeDemo(d) {
 }
 
 async function main() {
-  const cs = process.env.DATABASE_URL;
+  const cs = (process.env.DATABASE_URL || "").trim();
   if (!cs) {
-    console.error("DATABASE_URL is not set — aborting.");
+    console.error(
+      "DATABASE_URL is not set.\n" +
+        "Set it to your database connection string first, e.g.:\n" +
+        '  DATABASE_URL="mysql://user:pass@host:4000/dbname" node scripts/remove-demo-inventory.mjs\n' +
+        "On Railway you can inject it automatically:\n" +
+        "  railway run node scripts/remove-demo-inventory.mjs",
+    );
+    process.exit(1);
+  }
+  if (cs.includes("<") || cs.includes(">")) {
+    console.error(
+      `DATABASE_URL looks like a placeholder (${cs}). Replace <prod> with your REAL connection string, e.g.\n` +
+        '  DATABASE_URL="mysql://user:pass@host:4000/dbname" node scripts/remove-demo-inventory.mjs\n' +
+        "or, on Railway, run:  railway run node scripts/remove-demo-inventory.mjs",
+    );
     process.exit(1);
   }
 
-  const url = new URL(cs);
+  let url;
+  try {
+    url = new URL(cs);
+  } catch {
+    console.error(
+      "DATABASE_URL is not a valid connection string.\n" +
+        "Expected the form: mysql://user:password@host:port/dbname",
+    );
+    process.exit(1);
+  }
   const conn = await mysql.createConnection({
     host: url.hostname,
     port: Number(url.port) || 4000,
