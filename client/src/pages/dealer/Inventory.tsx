@@ -1181,6 +1181,20 @@ export default function Inventory() {
           <div className="card-premium rounded-2xl border border-primary/10 py-20 text-center text-muted-foreground">
             <Search className="h-10 w-10 mx-auto text-primary/40 mb-4" />
             <p className="text-lg mb-1">No vehicles match those filters.</p>
+            {statusFilter === "fix" ? (
+              <p className="text-sm mb-3 text-muted-foreground/80">
+                Nothing is marked Fix. Your hidden cars are mostly{" "}
+                <button
+                  type="button"
+                  className="text-amber-300 underline underline-offset-2"
+                  onClick={() => setStatusFilter("reserved")}
+                >
+                  Reserved
+                </button>
+                {" — "}
+                switch filter, Select all, then Set status → Available.
+              </p>
+            ) : null}
             <p className="text-sm">Try clearing the search or changing the filter.</p>
           </div>
         ) : (
