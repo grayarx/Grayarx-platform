@@ -1141,7 +1141,8 @@ function mix(i, salt = 0) {
 function buildScale(fleetWithImages, count = 1000) {
   const lines = [HEADER];
   const n = fleetWithImages.length;
-  const statuses = ["available", "available", "available", "available", "reserved"];
+  // Keep demo stock showroom-visible by default. Dealers can mark Reserved/Fix in Inventory.
+  const statuses = ["available"];
 
   for (let i = 1; i <= count; i++) {
     // Spread models evenly, then jitter so neighbours rarely match.

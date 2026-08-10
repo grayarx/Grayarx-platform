@@ -117,7 +117,13 @@ function rowToInsert(
     vin: row.vin,
     lastSyncedAt: opts.syncedAt,
     ...(row.status
-      ? { status: row.status as "available" | "sold" | "reserved" }
+      ? {
+          status: (row.status === "pending" ? "fix" : row.status) as
+            | "available"
+            | "sold"
+            | "reserved"
+            | "fix",
+        }
       : {}),
   };
 }

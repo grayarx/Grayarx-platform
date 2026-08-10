@@ -98,7 +98,7 @@ export const vehicles = mysqlTable("vehicles", {
   primaryPhotoUrl: mediumtext("primaryPhotoUrl"),
   location: varchar("location", { length: 128 }),
   description: text("description"),
-  status: mysqlEnum("status", ["available", "reserved", "sold"]).default("available").notNull(),
+  status: mysqlEnum("status", ["available", "reserved", "sold", "fix"]).default("available").notNull(),
   externalRef: varchar("externalRef", { length: 128 }), // stock/VIN/reg from CSV import; dedup key
   views: int("views").default(0).notNull(),
   leadCount: int("leadCount").default(0).notNull(),

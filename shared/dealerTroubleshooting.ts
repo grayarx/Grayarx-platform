@@ -69,7 +69,8 @@ export const DEALER_TROUBLESHOOTING: TroubleshootingEntry[] = [
     steps: [
       "Make sure you’re logged into the **same dealership** you imported to.",
       "Each car needs a **real price above R1** — R1/blank placeholders are hidden until fixed (they show amber in Inventory).",
-      "Cars marked **sold** don’t appear on the public showroom.",
+      "Cars marked **sold**, **reserved**, or **fix** don’t appear on the public showroom — only **available** with a real price does.",
+      "In **Inventory**, use status filter **Not on showroom** or **Fix** to see which cars are hidden and why.",
       "Open **Inventory** to confirm they imported; if they’re there but the public showroom looks empty, it may be excluding the demo garage.",
     ],
     links: [
