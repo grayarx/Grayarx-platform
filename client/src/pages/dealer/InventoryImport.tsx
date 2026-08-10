@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { formatVehiclePrice, isSuspiciousPrice } from "@/lib/formatPrice";
 
 import { photoQualityLabel } from "@shared/photoStandards";
+import { CSV_IMPORT_CHUNK_SIZE, splitInventoryCsv } from "@shared/csvChunk";
 
 const SAMPLE = `title,make,model,year,price,km,fuel,transmission,location,image,stock,status
 2022 Toyota Corolla 1.8 XS,Toyota,Corolla,2022,329900,42000,Petrol,Automatic,Sandton,https://images.unsplash.com/photo-1621007947382-b3763c082179?w=1200,STK-001,available
@@ -60,7 +61,7 @@ type PreviewRow = {
 };
 
 /** Proxy timeouts often return HTML — map that to a clear dealer-facing tip. */
-function friendlyImportError(message: string): string {
+function friendlyImportError(message: string, opts?: { large?: boolean }): string {
   const m = message || "";
   if (
     /Unexpected token\s+'<'/i.test(m) ||
@@ -68,6 +69,9 @@ function friendlyImportError(message: string): string {
     /is not valid JSON/i.test(m) ||
     /Failed to fetch|NetworkError|timeout|504|502|524/i.test(m)
   ) {
+    if (opts?.large) {
+      return "Import timed out on a large file. Keep “Save photos” OFF and try again — we now import in small batches.";
+    }
     return "Import timed out while saving photos. Turn OFF “Save photos to GrayArx” and import again — cars will still show with your image links.";
   }
   return m;
@@ -188,56 +192,8 @@ export default function InventoryImportPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const commitMutation = trpc.inventoryImport.commit.useMutation({
-    onSuccess: (res) => {
-      setImportProgress(100);
-      setTimeout(() => setImportProgress(null), 800);
-      const resUpdated = (res as { updated?: number }).updated ?? res.repaired ?? 0;
-      const resUnchanged = (res as { unchanged?: number }).unchanged ?? 0;
-      setLastImport({
-        created: res.created,
-        updated: resUpdated,
-        unchanged: resUnchanged,
-        importedWithWarnings: res.importedWithWarnings ?? 0,
-        failed: res.failedRows ?? [],
-      });
-      utils.dealer.listVehicles.invalidate();
-      utils.showroom.list.invalidate();
-      utils.inventoryImport.suspiciousPriceCount.invalidate();
-      utils.agent.feed.invalidate();
-      const parts = [];
-      if (res.created > 0) {
-        parts.push(`${res.created} new`);
-      }
-      if (resUpdated > 0) {
-        parts.push(`${resUpdated} updated`);
-      }
-      if (resUnchanged > 0) {
-        parts.push(`${resUnchanged} unchanged`);
-      }
-      const mirrored = (res as { photosMirrored?: number }).photosMirrored ?? 0;
-      const linked = (res as { photosLinked?: number }).photosLinked ?? 0;
-      const mirrorSkip = (res as { photoMirrorSkippedReason?: string | null })
-        .photoMirrorSkippedReason;
-      if (mirrored > 0) parts.push(`${mirrored} photos saved`);
-      else if (linked > 0 && mirrorPhotos) parts.push("photos kept as links");
-      toast.success(
-        parts.length > 0 ? "Import complete — " + parts.join(" · ") + "." : "Nothing to import.",
-      );
-      if (mirrorSkip) {
-        toast.message(mirrorSkip);
-      }
-      if (res.created > 0) {
-        setCsv("");
-        setFileName(null);
-        setPreview(null);
-      }
-    },
-    onError: (e) => {
-      setImportProgress(null);
-      toast.error(friendlyImportError(e.message));
-    },
-  });
+  const commitMutation = trpc.inventoryImport.commit.useMutation();
+  const [chunkImporting, setChunkImporting] = useState(false);
 
   const photoCount =
     preview?.validRows.reduce(
@@ -245,29 +201,94 @@ export default function InventoryImportPage() {
       0,
     ) ?? 0;
 
-  const handleImport = () => {
-    if (mirrorPhotos && photoCount > 16) {
+  const handleImport = async () => {
+    const rowCount = preview?.validRows.length ?? 0;
+    const large = rowCount > CSV_IMPORT_CHUNK_SIZE;
+    // Large files + photo save will always time out on the live proxy.
+    const skipMirror = !mirrorPhotos || large;
+    if (mirrorPhotos && large) {
+      toast.message(
+        "Save photos stays OFF for big imports (1000 cars) so the upload finishes. Links still work.",
+      );
+    } else if (mirrorPhotos && photoCount > 16) {
       toast.message(
         `Saving ${photoCount} photos can time out on the live site. Prefer turning “Save photos” off for a fast import.`,
       );
     }
-    setImportProgress(5);
-    commitMutation.mutate(
-      {
-        csv,
-        skipPhotoMirror: !mirrorPhotos,
-        markMissingAsSold,
-      },
-      {
-        onSettled: () => {
-          if (!commitMutation.isSuccess) setImportProgress(null);
-        },
-      },
-    );
-    const id = setInterval(() => {
-      setImportProgress((p) => (p === null || p >= 90 ? p : p + 4));
-    }, 350);
-    setTimeout(() => clearInterval(id), 120_000);
+
+    const chunks = splitInventoryCsv(csv, CSV_IMPORT_CHUNK_SIZE);
+    setChunkImporting(true);
+    setImportProgress(2);
+
+    let created = 0;
+    let updated = 0;
+    let unchanged = 0;
+    let importedWithWarnings = 0;
+    const failed: Array<{ title: string; reason: string }> = [];
+    let mirrorSkip: string | null = null;
+
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const isLast = i === chunks.length - 1;
+        const res = await commitMutation.mutateAsync({
+          csv: chunks[i],
+          skipPhotoMirror: skipMirror,
+          // Only on the final chunk — otherwise mid-import cars look "sold".
+          markMissingAsSold: markMissingAsSold && isLast,
+        });
+        created += res.created;
+        updated += (res as { updated?: number }).updated ?? res.repaired ?? 0;
+        unchanged += (res as { unchanged?: number }).unchanged ?? 0;
+        importedWithWarnings += res.importedWithWarnings ?? 0;
+        failed.push(...(res.failedRows ?? []));
+        const skip = (res as { photoMirrorSkippedReason?: string | null })
+          .photoMirrorSkippedReason;
+        if (skip) mirrorSkip = skip;
+        setImportProgress(Math.min(96, Math.round(((i + 1) / chunks.length) * 100)));
+      }
+
+      setImportProgress(100);
+      setTimeout(() => setImportProgress(null), 600);
+      setLastImport({
+        created,
+        updated,
+        unchanged,
+        importedWithWarnings,
+        failed,
+      });
+      utils.dealer.listVehicles.invalidate();
+      utils.showroom.list.invalidate();
+      utils.inventoryImport.suspiciousPriceCount.invalidate();
+      utils.agent.feed.invalidate();
+
+      const parts = [];
+      if (created > 0) parts.push(`${created} new`);
+      if (updated > 0) parts.push(`${updated} updated`);
+      if (unchanged > 0) parts.push(`${unchanged} unchanged`);
+      if (chunks.length > 1) parts.push(`${chunks.length} batches`);
+      toast.success(
+        parts.length > 0 ? "Import complete — " + parts.join(" · ") + "." : "Nothing to import.",
+      );
+      if (mirrorSkip) toast.message(mirrorSkip);
+      if (created > 0 || updated > 0) {
+        setCsv("");
+        setFileName(null);
+        setPreview(null);
+      }
+    } catch (e) {
+      setImportProgress(null);
+      const message = e instanceof Error ? e.message : String(e);
+      toast.error(friendlyImportError(message, { large }));
+      if (created + updated > 0) {
+        toast.message(
+          `Partial import saved: ${created} new, ${updated} updated before the error. You can re-import the same CSV to finish.`,
+        );
+        utils.dealer.listVehicles.invalidate();
+        utils.showroom.list.invalidate();
+      }
+    } finally {
+      setChunkImporting(false);
+    }
   };
 
   const downloadTemplate = () => {
@@ -280,7 +301,7 @@ export default function InventoryImportPage() {
     URL.revokeObjectURL(url);
   };
 
-  const isImporting = commitMutation.isPending || importProgress !== null;
+  const isImporting = chunkImporting || commitMutation.isPending || importProgress !== null;
 
   return (
     <DealerShell
@@ -438,9 +459,11 @@ export default function InventoryImportPage() {
                 />
               </div>
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                {mirrorPhotos
-                  ? "Saving photos one-by-one can take several minutes. Don’t close this tab — or cancel and turn “Save photos” off for a fast import."
-                  : "Usually finishes in a few seconds. Don’t close this tab."}
+                {(preview?.validRows.length ?? 0) > CSV_IMPORT_CHUNK_SIZE
+                  ? `Large file — importing in batches of ${CSV_IMPORT_CHUNK_SIZE}. Don’t close this tab.`
+                  : mirrorPhotos
+                    ? "Saving photos one-by-one can take several minutes. Don’t close this tab — or turn “Save photos” off for a fast import."
+                    : "Usually finishes in a few seconds. Don’t close this tab."}
               </p>
             </div>
           </motion.div>

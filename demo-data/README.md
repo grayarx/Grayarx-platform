@@ -23,8 +23,8 @@ node scripts/generate-demo-csvs.mjs
 ## Import on grayarx.com
 
 1. Open **CSV Import**
-2. Prefer **Save photos to GrayArx OFF** for demos (instant; Wikimedia links still work)
-3. Upload → **Preview** → **Import**
+2. Keep **Save photos to GrayArx OFF** for demos / 1000-car files
+3. Upload → **Preview** → **Import** (large files import in batches of 40)
 4. Same stock numbers update existing cars (including photos when the primary URL changes)
 
 ## Clear stock before a fresh demo

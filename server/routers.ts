@@ -1525,7 +1525,8 @@ export const appRouter = router({
       const isAdmin = isFounderOrAdmin(ctx.user);
       // Accounts with no dealership assigned see nothing (prevents cross-tenant bleed).
       if (!isAdmin && !ctx.user.dealershipId) return [];
-      return listVehicles(200, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId! });
+      // 2000 covers large demo CSVs (1000-car file) without truncating Inventory.
+      return listVehicles(2000, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId! });
     }),
     createVehicle: protectedProcedure
       .input(
