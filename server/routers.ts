@@ -276,6 +276,7 @@ import {
   findProposedPatchByFingerprint,
   listAllDealerships,
   createDealership,
+  deleteDealershipCascade,
   getDealershipById,
   getDealershipByShortcode,
   setDealershipShortcode,
@@ -4223,6 +4224,44 @@ export const appRouter = router({
           status: input.status ?? "active",
         });
         return { ok: true as const, ...created };
+      }),
+
+    /**
+     * Founder/admin: permanently delete a dealership and everything scoped to
+     * it (vehicles + photos, leads, test-drive bookings). Users pointed at it
+     * are unlinked (their accounts are kept). Requires an exact name match to
+     * guard against mis-clicks.
+     */
+    remove: protectedProcedure
+      .input(
+        z.object({
+          dealershipId: z.number().int().positive(),
+          confirmName: z.string().min(1),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const dealership = await getDealershipById(input.dealershipId);
+        if (!dealership) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Dealership not found" });
+        }
+        if (dealership.name.trim() !== input.confirmName.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Confirmation name does not match the dealership name.",
+          });
+        }
+        const removed = await deleteDealershipCascade(input.dealershipId);
+        void logAgentActivity({
+          agentId: "improvement",
+          action: "dealership_deleted",
+          subjectType: "dealership",
+          summary: `Deleted dealership "${dealership.name}" (#${input.dealershipId}) — ${removed.vehicles} vehicle(s), ${removed.leads} lead(s), ${removed.bookings} booking(s); ${removed.usersUnlinked} user(s) unlinked.`,
+          payload: { dealershipId: input.dealershipId, ...removed, by: ctx.user.id },
+        });
+        return { ok: true as const, ...removed };
       }),
 
     /** Create a dealer_groups row (or return existing by key). */
