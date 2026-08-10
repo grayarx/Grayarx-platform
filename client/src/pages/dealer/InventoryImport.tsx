@@ -215,9 +215,18 @@ export default function InventoryImportPage() {
       if (resUnchanged > 0) {
         parts.push(`${resUnchanged} unchanged`);
       }
+      const mirrored = (res as { photosMirrored?: number }).photosMirrored ?? 0;
+      const linked = (res as { photosLinked?: number }).photosLinked ?? 0;
+      const mirrorSkip = (res as { photoMirrorSkippedReason?: string | null })
+        .photoMirrorSkippedReason;
+      if (mirrored > 0) parts.push(`${mirrored} photos saved`);
+      else if (linked > 0 && mirrorPhotos) parts.push("photos kept as links");
       toast.success(
         parts.length > 0 ? "Import complete — " + parts.join(" · ") + "." : "Nothing to import.",
       );
+      if (mirrorSkip) {
+        toast.message(mirrorSkip);
+      }
       if (res.created > 0) {
         setCsv("");
         setFileName(null);
@@ -744,8 +753,9 @@ export default function InventoryImportPage() {
                           Save photos to GrayArx
                         </Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Off = fast import (keeps your image links). On = copies every photo
-                          into GrayArx so links never break — slow for multi-photo CSVs.
+                          Off = fast (keeps image links). On = copies photos into GrayArx so
+                          marketplace links never expire — needs S3/R2 on the server; otherwise
+                          links are kept automatically.
                         </p>
                       </div>
                       <Switch
