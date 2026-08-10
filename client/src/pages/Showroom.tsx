@@ -674,21 +674,28 @@ export default function Showroom() {
           {isLoading ? (
             <SkeletonLoader count={6} type="card" className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 px-4 rounded-2xl border border-primary/10 bg-card/40">
-              <p className="text-lg font-medium mb-2">
+            <div className="text-center py-16 px-6 rounded-2xl border border-primary/15 bg-card/40">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+                {fromDb.length === 0 && !import.meta.env.DEV ? (
+                  <Sparkles className="h-8 w-8 text-primary" />
+                ) : (
+                  <Search className="h-8 w-8 text-primary" />
+                )}
+              </div>
+              <p className="text-xl font-display font-bold mb-2">
                 {fromDb.length === 0 && !import.meta.env.DEV
-                  ? "Showroom inventory coming soon"
+                  ? "Fresh stock landing soon"
                   : "No vehicles match your search"}
               </p>
               <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
                 {fromDb.length === 0 && !import.meta.env.DEV
-                  ? "Our dealers are loading premium stock. Check back shortly or contact us for off-market vehicles."
-                  : "Try different keywords, remove filters, or ask our team — we may have similar stock arriving soon."}
+                  ? "New premium vehicles are being added right now. Check back shortly, or reach out and we’ll help you find the right car."
+                  : "Try different keywords or clear your filters — we may also have similar stock arriving soon."}
               </p>
               {hasActiveFilters ? (
-              <Button variant="outline" onClick={clearFilters}>
-                Show all vehicles
-              </Button>
+                <Button variant="outline" onClick={clearFilters}>
+                  Show all vehicles
+                </Button>
               ) : (
                 <Button asChild variant="outline">
                   <Link href="/">Back to home</Link>
