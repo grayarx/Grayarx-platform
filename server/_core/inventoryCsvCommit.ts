@@ -6,7 +6,9 @@
 import {
   addVehiclePhoto,
   createVehicle,
+  deleteVehiclePhoto,
   findVehicleByExternalRef,
+  listVehiclePhotos,
   listVehiclesWithExternalRef,
   logAgentActivity,
   updateVehicle,
@@ -66,6 +68,56 @@ export async function commitInventoryCsv(opts: {
         if (row.km != null && row.km !== existing.km) {
           patch.km = row.km;
         }
+
+        // Re-import can refresh listing photos when the CSV primary URL changed
+        // (e.g. fixing mismatched demo stock photos). Unchanged URLs leave the
+        // gallery alone so nightly sync does not thrash photo rows.
+        const csvPrimary = row.imageUrls[0] ?? row.imageUrl;
+        if (csvPrimary) {
+          const prevPrimary =
+            (existing as { primaryPhotoUrl?: string | null }).primaryPhotoUrl ||
+            (existing as { imageUrl?: string | null }).imageUrl ||
+            null;
+          if (csvPrimary !== prevPrimary) {
+            const storedPrimary = opts.skipPhotoMirror
+              ? null
+              : await downloadAndStorePhoto(
+                  csvPrimary,
+                  row.title,
+                  row.externalRef,
+                );
+            const primary = storedPrimary || csvPrimary;
+            patch.imageUrl = primary;
+            patch.primaryPhotoUrl = primary;
+            if (row.imageUrls.length > 0) {
+              const existingPhotos = await listVehiclePhotos(existing.id);
+              for (const photo of existingPhotos) {
+                await deleteVehiclePhoto(photo.id);
+              }
+              for (let pi = 0; pi < row.imageUrls.length; pi++) {
+                const rawUrl = row.imageUrls[pi];
+                const stored =
+                  pi === 0
+                    ? primary
+                    : opts.skipPhotoMirror
+                      ? rawUrl
+                      : (await downloadAndStorePhoto(
+                          rawUrl,
+                          row.title,
+                          row.externalRef,
+                        )) || rawUrl;
+                if (!stored) continue;
+                await addVehiclePhoto({
+                  vehicleId: existing.id,
+                  url: stored,
+                  storageKey: `import/${existing.id}/${pi}-${Date.now()}`,
+                  position: pi,
+                });
+              }
+            }
+          }
+        }
+
         const changedKeys = Object.keys(patch).filter((k) => k !== "lastSyncedAt");
         await updateVehicle(existing.id, patch as never);
         if (changedKeys.length > 0) updated++;
