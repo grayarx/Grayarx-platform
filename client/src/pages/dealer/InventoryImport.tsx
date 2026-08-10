@@ -81,7 +81,9 @@ export default function InventoryImportPage() {
     };
   } | null>(null);
 
-  const [mirrorPhotos, setMirrorPhotos] = useState(true);
+  // Default OFF — mirroring every external URL (e.g. 8 Unsplash angles × N cars)
+  // can take minutes and looks "stuck" near 90%. Links still work without mirroring.
+  const [mirrorPhotos, setMirrorPhotos] = useState(false);
   const [markMissingAsSold, setMarkMissingAsSold] = useState(false);
   const [feedUrl, setFeedUrl] = useState("");
   const [syncEnabled, setSyncEnabled] = useState(false);
@@ -387,7 +389,11 @@ export default function InventoryImportPage() {
           >
             <div className="w-full max-w-md mx-4 rounded-2xl border border-primary/20 bg-card p-8 shadow-2xl">
               <LoadingSpinner
-                text={`Importing ${preview?.validRows.length ?? ""} vehicles…`}
+                text={
+                  mirrorPhotos
+                    ? `Importing ${preview?.validRows.length ?? ""} vehicles + saving photos…`
+                    : `Importing ${preview?.validRows.length ?? ""} vehicles…`
+                }
                 size="lg"
               />
               <div className="mt-6">
@@ -398,7 +404,9 @@ export default function InventoryImportPage() {
                 />
               </div>
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                Large files may take a minute. Don&apos;t close this tab.
+                {mirrorPhotos
+                  ? "Saving photos one-by-one can take several minutes. Don’t close this tab — or cancel and turn “Save photos” off for a fast import."
+                  : "Usually finishes in a few seconds. Don’t close this tab."}
               </p>
             </div>
           </motion.div>
@@ -711,7 +719,8 @@ export default function InventoryImportPage() {
                           Save photos to GrayArx
                         </Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Recommended — copies external listing images so links never break
+                          Off = fast import (keeps your image links). On = copies every photo
+                          into GrayArx so links never break — slow for multi-photo CSVs.
                         </p>
                       </div>
                       <Switch
