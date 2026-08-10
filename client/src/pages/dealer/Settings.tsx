@@ -293,6 +293,24 @@ export default function DealerSettings() {
                 )}
 
                 <div className="rounded-xl border border-[#25D366]/25 bg-[#25D366]/5 p-4 space-y-3">
+                  <div
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                      waLinked
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : "bg-amber-500/10 text-amber-600"
+                    }`}
+                  >
+                    {waLinked ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <Clock className="h-4 w-4 shrink-0" />
+                    )}
+                    <span>
+                      {waLinked
+                        ? "WhatsApp AI is connected — Nala answers buyers 24/7."
+                        : "WhatsApp AI isn’t connected yet — follow the steps below."}
+                    </span>
+                  </div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     WhatsApp AI setup checklist
                   </p>
