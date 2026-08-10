@@ -93,6 +93,7 @@ import {
   updateLeadStatus,
   updateBookingStatus,
   listVehicles,
+  getDemoDealershipId,
   createVehicle,
   listVehiclePhotos,
   addVehiclePhoto,
@@ -666,13 +667,16 @@ export const appRouter = router({
   showroom: router({
     /**
      * Public showroom vehicle list.
-     * - With dealershipId: tenant-scoped stock for that dealer.
-     * - Without: platform marketing showroom (all available / unsold stock).
+     * - With dealershipId: tenant-scoped stock for that dealer (e.g. a shortcode preview).
+     * - A signed-in dealer with no explicit scope sees THEIR OWN stock, so the
+     *   top-nav "Showroom" never shows cars they didn't upload.
+     * - Everyone else (anonymous / admin / founder) sees the platform marketplace,
+     *   with the seeded demo dealership excluded so demo cars don't leak in.
      * Input may be omitted or null (tRPC batch clients send null).
      */
     list: publicProcedure
       .input(z.object({ dealershipId: z.number().int().optional() }).nullish())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         if (input?.dealershipId != null) {
           return listVehicles(2000, {
             dealershipId: input.dealershipId,
@@ -680,9 +684,23 @@ export const appRouter = router({
             excludePlaceholderPrices: true,
           });
         }
+        const user = ctx.user;
+        const isDealer =
+          !!user &&
+          (user.role === "dealer_owner" || user.role === "dealer_consultant") &&
+          user.dealershipId != null;
+        if (isDealer) {
+          return listVehicles(2000, {
+            dealershipId: user!.dealershipId!,
+            excludeSold: true,
+            excludePlaceholderPrices: true,
+          });
+        }
+        const demoDealershipId = await getDemoDealershipId();
         return listVehicles(2000, {
           excludeSold: true,
           excludePlaceholderPrices: true,
+          excludeDealershipId: demoDealershipId ?? undefined,
         });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),

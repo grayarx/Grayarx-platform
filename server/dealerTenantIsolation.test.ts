@@ -7,6 +7,7 @@ const {
   listLeads,
   listBookings,
   listProspects,
+  listVehicles,
 } = vi.hoisted(() => ({
   getRecentActivity: vi.fn(),
   getDashboardStats: vi.fn(),
@@ -14,6 +15,7 @@ const {
   listLeads: vi.fn(),
   listBookings: vi.fn(),
   listProspects: vi.fn(),
+  listVehicles: vi.fn(),
 }));
 
 vi.mock("./db", async (importOriginal) => {
@@ -29,7 +31,7 @@ vi.mock("./db", async (importOriginal) => {
     getLeadById: vi.fn(),
     updateLeadStatus: vi.fn(),
     updateBookingStatus: vi.fn(),
-    listVehicles: vi.fn(async () => []),
+    listVehicles,
     listTestDriveBookings: vi.fn(async () => []),
     getDealershipById: vi.fn(),
     listDealershipsByGroupKey: vi.fn(async () => []),
@@ -90,6 +92,7 @@ describe("dealer multi-tenant isolation", () => {
     listLeads.mockResolvedValue([]);
     listBookings.mockResolvedValue([]);
     listProspects.mockResolvedValue([]);
+    listVehicles.mockResolvedValue([]);
   });
 
   it("dealer.activity scopes to dealershipId and never requests prospects", async () => {
@@ -181,5 +184,45 @@ describe("dealer multi-tenant isolation", () => {
     });
     await caller.dealer.listLeads();
     expect(listLeads).toHaveBeenCalledWith(200, 55);
+  });
+
+  it("showroom.list scopes a signed-in dealer to their own stock", async () => {
+    const caller = createCaller({
+      openId: "dealer-7",
+      role: "dealer_owner",
+      dealershipId: 99,
+    });
+    await caller.showroom.list(null);
+    expect(listVehicles).toHaveBeenLastCalledWith(
+      2000,
+      expect.objectContaining({
+        dealershipId: 99,
+        excludeSold: true,
+        excludePlaceholderPrices: true,
+      }),
+    );
+  });
+
+  it("showroom.list gives anonymous visitors the marketplace, not a dealer's stock", async () => {
+    const caller = createCaller(null);
+    await caller.showroom.list(null);
+    const lastArgs = listVehicles.mock.calls.at(-1);
+    expect(lastArgs?.[1]).not.toHaveProperty("dealershipId");
+    expect(lastArgs?.[1]).toEqual(
+      expect.objectContaining({ excludeSold: true, excludePlaceholderPrices: true }),
+    );
+  });
+
+  it("showroom.list honors an explicit dealershipId (public shortcode preview)", async () => {
+    const caller = createCaller({
+      openId: "dealer-8",
+      role: "dealer_owner",
+      dealershipId: 99,
+    });
+    await caller.showroom.list({ dealershipId: 5 });
+    expect(listVehicles).toHaveBeenLastCalledWith(
+      2000,
+      expect.objectContaining({ dealershipId: 5 }),
+    );
   });
 });

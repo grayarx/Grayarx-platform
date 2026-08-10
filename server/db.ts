@@ -163,6 +163,32 @@ export async function promoteUserToFounder(id: number) {
   return updated;
 }
 
+/**
+ * Resolve the seeded "GrayArx Demo Dealership" id so it can be kept off the
+ * public marketplace showroom. Prefers DEMO_DEALERSHIP_ID, else matches the
+ * `demo` shortcode / "GrayArx demo" name. Returns null if there is no demo yard.
+ */
+export async function getDemoDealershipId(): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const envId = process.env.DEMO_DEALERSHIP_ID
+    ? Number(process.env.DEMO_DEALERSHIP_ID)
+    : null;
+  if (envId != null && Number.isFinite(envId) && envId > 0) return envId;
+  const [row] = await db
+    .select({ id: dealerships.id })
+    .from(dealerships)
+    .where(
+      or(
+        eq(dealerships.publicShortcode, "demo"),
+        sql`LOWER(${dealerships.name}) LIKE '%grayarx demo%'`,
+      ),
+    )
+    .orderBy(dealerships.id)
+    .limit(1);
+  return row?.id ?? null;
+}
+
 export async function getVehicleInventoryCounts() {
   const db = await getDb();
   if (!db) {
@@ -266,6 +292,8 @@ export async function listVehicles(
     excludeSold?: boolean;
     /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
     excludePlaceholderPrices?: boolean;
+    /** Keep a dealership's stock off the platform marketplace (e.g. the demo yard) */
+    excludeDealershipId?: number | null;
   },
 ) {
   const db = await getDb();
@@ -281,8 +309,17 @@ export async function listVehicles(
   const priceFilter = opts?.excludePlaceholderPrices
     ? sql`CAST(${vehicles.price} AS DECIMAL(12,2)) > 1`
     : undefined;
+  // Keep one dealership (e.g. the seeded demo yard) out of the platform
+  // marketplace. Null-dealership rows stay visible.
+  const excludeDealerFilter =
+    opts?.excludeDealershipId != null
+      ? or(
+          isNull(vehicles.dealershipId),
+          ne(vehicles.dealershipId, opts.excludeDealershipId),
+        )
+      : undefined;
 
-  const filters = [soldFilter, priceFilter].filter(Boolean);
+  const filters = [soldFilter, priceFilter, excludeDealerFilter].filter(Boolean);
 
   let rows;
   if (opts === undefined) {
