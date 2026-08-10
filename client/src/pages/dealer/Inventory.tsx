@@ -26,6 +26,7 @@ import {
   FUEL_TYPES,
   TRANSMISSION_TYPES,
   VEHICLE_COLORS,
+  effectiveBodyType,
   resolveMake,
   resolveModel,
 } from "@shared/vehicleCatalog";
@@ -362,7 +363,10 @@ export default function Inventory() {
     return data.filter((v) => {
       if (statusFilter !== "all" && v.status !== statusFilter) return false;
       if (conditionFilter !== "all" && v.condition !== conditionFilter) return false;
-      if (bodyFilter !== "all" && (v.bodyType ?? "").toLowerCase() !== bodyFilter.toLowerCase())
+      if (
+        bodyFilter !== "all" &&
+        (effectiveBodyType(v) ?? "").toLowerCase() !== bodyFilter.toLowerCase()
+      )
         return false;
       if (!q) return true;
       const hay = [
@@ -1115,7 +1119,7 @@ export default function Inventory() {
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CarIcon className="h-3.5 w-3.5" />
-                      {v.bodyType ?? "—"}
+                      {effectiveBodyType(v) ?? "—"}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" />

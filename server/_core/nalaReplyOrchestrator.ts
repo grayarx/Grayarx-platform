@@ -17,6 +17,7 @@ import type { LanguageCode } from "../../shared/languages";
 import { detectsBookingIntent } from "../../shared/agentIntentRouting";
 import { isQuotaError } from "./agentResilience";
 import { checkAiSessionCap } from "./usageCaps";
+import { MAKE_ALIASES, VEHICLE_MAKES } from "../../shared/vehicleCatalog";
 
 export function stripMarkdownForWhatsApp(text: string): string {
   return text
@@ -78,13 +79,17 @@ const MENU_RE      = /\b(menu|kieslys|menyu|lethathamo|emenyu|0)\b/i;
 
 // ── Multi-vehicle search helpers ─────────────────────────────────────────────
 
-const KNOWN_MAKES = [
-  "land rover", "mercedes benz", "mercedes-benz",
-  "ford", "toyota", "bmw", "mercedes", "nissan", "mazda", "kia", "hyundai",
-  "honda", "chevrolet", "opel", "renault", "peugeot", "suzuki", "mitsubishi",
-  "isuzu", "audi", "volvo", "jeep", "fiat", "subaru", "lexus", "jaguar",
-  "mini", "porsche", "vw", "volkswagen",
-];
+/** Longest-first so "land rover" / "mercedes-benz" beat shorter tokens. */
+const KNOWN_MAKES = Array.from(
+  new Set([
+    ...Object.keys(MAKE_ALIASES),
+    ...VEHICLE_MAKES.map((m) => m.toLowerCase()),
+    "mercedes",
+    "mercedes benz",
+    "vw",
+    "great wall",
+  ]),
+).sort((a, b) => b.length - a.length);
 
 const BODY_TYPE_GROUPS: Array<{ keywords: string[]; types: string[] }> = [
   {
@@ -98,9 +103,62 @@ const BODY_TYPE_GROUPS: Array<{ keywords: string[]; types: string[] }> = [
   { keywords: ["coupe", "coupé", "sports car", "sportscar"], types: ["coupe"] },
 ];
 
-// Models that imply a body type
-const BAKKIE_MODELS = ["ranger", "hilux", "amarok", "navara", "d-max", "l200", "kb", "frontier", "triton", "storm"];
-const SUV_MODELS = ["fortuner", "prado", "land cruiser", "x3", "x5", "q5", "q7", "rav4", "cr-v", "tucson", "sportage", "tiguan", "discovery", "defender"];
+// Models that imply a body type (SA + Chinese bakkies / popular SUVs)
+const BAKKIE_MODELS = [
+  "ranger",
+  "hilux",
+  "amarok",
+  "navara",
+  "d-max",
+  "dmax",
+  "l200",
+  "kb",
+  "frontier",
+  "triton",
+  "storm",
+  "pik up",
+  "p-series",
+  "poer",
+  "cannon",
+  "steed",
+  "t8",
+  "t9",
+  "bt-50",
+  "bt50",
+  "landtrek",
+  "oroch",
+  "musso",
+  "shark",
+];
+const SUV_MODELS = [
+  "fortuner",
+  "prado",
+  "land cruiser",
+  "x3",
+  "x5",
+  "q5",
+  "q7",
+  "rav4",
+  "cr-v",
+  "tucson",
+  "sportage",
+  "tiguan",
+  "discovery",
+  "defender",
+  "jolion",
+  "h6",
+  "tiggo",
+  "c5",
+  "j7",
+  "j8",
+  "tank 300",
+  "tank 500",
+  "atto 3",
+  "sealion",
+  "everest",
+  "mu-x",
+  "corolla cross",
+];
 
 export type VehicleRow = {
   id: number;
@@ -115,14 +173,22 @@ export type VehicleRow = {
   km?: number | null;
 };
 
-/** Detect make keyword in a buyer message. Returns normalised make name or null. */
+/** Detect make keyword in a buyer message. Returns normalised lowercase make or null. */
 export function detectMakeFromMessage(message: string): string | null {
-  const lower = message.toLowerCase();
-  for (const make of KNOWN_MAKES) {
-    if (lower.includes(make)) {
-      if (make === "vw") return "volkswagen";
-      return make;
-    }
+  const lower = ` ${message.toLowerCase()} `;
+  for (const token of KNOWN_MAKES) {
+    // Bound short tokens so "mg" ≠ "imaging", "byd" ≠ random substrings
+    const needle = token.length <= 3 ? ` ${token} ` : token;
+    if (!lower.includes(needle) && !(token.length > 3 && lower.includes(token))) continue;
+    if (token.length <= 3 && !lower.includes(` ${token} `)) continue;
+
+    const resolved =
+      MAKE_ALIASES[token] ??
+      VEHICLE_MAKES.find((m) => m.toLowerCase() === token);
+    if (resolved) return resolved.toLowerCase();
+    if (token === "mercedes" || token === "mercedes benz") return "mercedes-benz";
+    if (token === "vw") return "volkswagen";
+    return token;
   }
   return null;
 }
@@ -208,7 +274,10 @@ export function findVehiclesFromMessage(
     const makeVehicles = available.filter((v) => {
       const vm = (v.make ?? "").toLowerCase();
       if (detectedMake === "volkswagen") return vm.includes("volkswagen") || vm.includes("vw");
-      if (detectedMake === "mercedes") return vm.includes("mercedes") || vm.includes("merc");
+      if (detectedMake === "mercedes-benz" || detectedMake === "mercedes") {
+        return vm.includes("mercedes") || vm.includes("merc");
+      }
+      if (detectedMake === "gwm") return vm.includes("gwm") || vm.includes("great wall");
       return vm.includes(detectedMake);
     });
     // Longest-first so "ranger raptor" beats "ranger"
@@ -225,8 +294,15 @@ export function findVehiclesFromMessage(
     if (!detectedMake) return true;
     const vm = (v.make ?? "").toLowerCase();
     const vt = (v.title ?? "").toLowerCase();
-    if (detectedMake === "volkswagen") return vm.includes("volkswagen") || vm.includes("vw") || vt.includes("vw ") || vt.includes("volkswagen");
-    if (detectedMake === "mercedes") return vm.includes("mercedes") || vm.includes("merc") || vt.includes("mercedes") || vt.includes("merc");
+    if (detectedMake === "volkswagen") {
+      return vm.includes("volkswagen") || vm.includes("vw") || vt.includes("vw ") || vt.includes("volkswagen");
+    }
+    if (detectedMake === "mercedes-benz" || detectedMake === "mercedes") {
+      return vm.includes("mercedes") || vm.includes("merc") || vt.includes("mercedes") || vt.includes("merc");
+    }
+    if (detectedMake === "gwm") {
+      return vm.includes("gwm") || vm.includes("great wall") || vt.includes("gwm") || vt.includes("poer") || vt.includes("cannon");
+    }
     return vm.includes(detectedMake) || vt.includes(detectedMake);
   }
 

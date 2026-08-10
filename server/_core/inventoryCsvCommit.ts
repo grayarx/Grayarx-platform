@@ -22,6 +22,7 @@ import {
 } from "../db";
 import { parseInventoryCsv, type ParsedVehicleRow } from "./csvInventory";
 import { shouldApplyCsvStatus } from "./csvStatusGuard";
+import { inferBodyType } from "../../shared/vehicleCatalog";
 import { resolveImportPhotoUrls } from "./photoDownloader";
 
 export type InventoryCommitResult = {
@@ -107,6 +108,7 @@ function rowToInsert(
     km: row.km,
     fuel: row.fuel,
     transmission: row.transmission,
+    bodyType: row.bodyType || inferBodyType(row.make, row.model, row.title),
     location: row.location,
     imageUrl: primary,
     primaryPhotoUrl: primary,
