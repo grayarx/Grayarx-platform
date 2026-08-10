@@ -22,6 +22,7 @@ export type ParsedVehicleRow = {
   km: number | null;
   fuel: string | null;
   transmission: string | null;
+  bodyType: string | null;
   location: string | null;
   imageUrl: string | null;
   /** Pipe- or semicolon-separated photo URLs from CSV */
@@ -88,6 +89,7 @@ const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record
   ],
   km: ["km", "kms", "mileage", "mileage km", "odometer", "odometer km", "odo"],
   fuel: ["fuel", "fuel type", "fueltype"],
+  bodyType: ["body", "body type", "bodytype", "body_type", "vehicle type", "segment"],
   transmission: ["transmission", "gearbox"],
   location: ["location", "city", "branch", "dealership location"],
   imageUrl: ["image", "image url", "imageurl", "photo", "photo url", "photos", "photos url", "photo urls", "primary photo", "thumbnail", "img", "picture", "main image",
@@ -419,6 +421,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       km: toNumber(get("km")),
       fuel: get("fuel")?.trim() || null,
       transmission: get("transmission")?.trim() || null,
+      bodyType: get("bodyType")?.trim() || null,
       location: get("location")?.trim() || null,
       imageUrl,
       imageUrls,

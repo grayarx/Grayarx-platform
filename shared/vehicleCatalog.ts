@@ -430,3 +430,72 @@ export function resolveModel(make: string, input: string): string {
   // Keep custom / exotic models (Corvette C8, Huracán EVO, etc.) — never guess.
   return trimmed;
 }
+
+/**
+ * Infer SA body style from make/model/title when CSV/listing omits bodyType.
+ * Used by Inventory filters and CSV import so Sedan/Bakkie/etc. actually work.
+ */
+export function inferBodyType(
+  make?: string | null,
+  model?: string | null,
+  title?: string | null,
+): (typeof BODY_TYPES)[number] | null {
+  const hay = [make, model, title].filter(Boolean).join(" ").toLowerCase();
+  if (!hay.trim()) return null;
+
+  if (/\b(double\s*cab|doublecab)\b/.test(hay)) return "Double Cab";
+  if (/\b(single\s*cab|singlecab)\b/.test(hay)) return "Single Cab";
+  if (
+    /\b(hilux|ranger|d-?max|amarok|navara|triton|bt-?50|canyon|colorado|landcruiser\s*pickup|bakkie|pickup|pick-up)\b/.test(
+      hay,
+    )
+  ) {
+    return "Bakkie";
+  }
+  if (
+    /\b(fortuner|pajero|fortuner|everest|mu-?x|rav4|x-?trail|tucson|sportage|tucson|cx-5|q5|q3|q7|x3|x5|x1|glc|gle|glo|jolion|hs|tucson|sportage|suv|crossover|c-?hr|corolla\s*cross|urban\s*cruiser|velar|range\s*rover|land\s*rover|discovery|defender)\b/.test(
+      hay,
+    )
+  ) {
+    return "SUV";
+  }
+  if (/\b(mpv|avanza|mobilio|livina|sienna|odyssey|carnival|alphard)\b/.test(hay)) {
+    return "MPV";
+  }
+  if (/\b(coupe|911|cayman|mustang|supra|cayman|brz|tt\b|z4|c.?class\s*coupe)\b/.test(hay)) {
+    return "Coupe";
+  }
+  if (/\b(convertible|cabriolet|roadster|spider|spyder)\b/.test(hay)) {
+    return "Convertible";
+  }
+  if (/\b(wagon|touring|sportback|avant|estate)\b/.test(hay)) {
+    return "Wagon";
+  }
+  if (
+    /\b(polo|swift|fiesta|i20|i10|golf|fabia|yaris|jazz|fit|clio|sandero|hatch|hatchback)\b/.test(
+      hay,
+    )
+  ) {
+    return "Hatchback";
+  }
+  if (
+    /\b(corolla|civic|accord|camry|mazda3|mazda\s*3|sentra|elantra|jetta|passat|c.?class|3\s*series|320i|c200|a.?class|sedan|saloon)\b/.test(
+      hay,
+    )
+  ) {
+    return "Sedan";
+  }
+  return null;
+}
+
+/** Effective body type: stored value, else inferred from make/model/title. */
+export function effectiveBodyType(v: {
+  bodyType?: string | null;
+  make?: string | null;
+  model?: string | null;
+  title?: string | null;
+}): string | null {
+  const raw = (v.bodyType ?? "").trim();
+  if (raw) return raw;
+  return inferBodyType(v.make, v.model, v.title);
+}
