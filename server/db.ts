@@ -759,6 +759,43 @@ export async function deleteVehiclesByIds(
   return allowed.length;
 }
 
+export type VehicleListingStatus = "available" | "reserved" | "sold" | "fix";
+
+/** Bulk-set status for selected vehicles (dealership-scoped). */
+export async function updateVehiclesStatusByIds(
+  ids: number[],
+  status: VehicleListingStatus,
+  opts: { allPlatform?: boolean; dealershipId?: number | null },
+): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const unique = [...new Set(ids)].filter((id) => Number.isFinite(id) && id > 0);
+  if (unique.length === 0) return 0;
+
+  let allowed = unique;
+  if (!opts.allPlatform) {
+    if (opts.dealershipId == null) return 0;
+    const rows = await db
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(
+        and(inArray(vehicles.id, unique), eq(vehicles.dealershipId, opts.dealershipId)),
+      );
+    allowed = rows.map((r) => r.id);
+  }
+  if (allowed.length === 0) return 0;
+
+  const CHUNK = 150;
+  for (let i = 0; i < allowed.length; i += CHUNK) {
+    const chunk = allowed.slice(i, i + CHUNK);
+    await db
+      .update(vehicles)
+      .set({ status })
+      .where(inArray(vehicles.id, chunk));
+  }
+  return allowed.length;
+}
+
 // === Vehicle photos ===
 export async function listVehiclePhotos(vehicleId: number) {
   const db = await getDb();

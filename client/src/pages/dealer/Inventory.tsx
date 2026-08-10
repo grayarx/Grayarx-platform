@@ -379,6 +379,25 @@ export default function Inventory() {
     onError: (e) => toast.error(e.message),
   });
 
+  const bulkStatus = trpc.dealer.updateVehiclesStatus.useMutation({
+    onSuccess: (res) => {
+      setSelectedIds(new Set());
+      utils.dealer.listVehicles.invalidate();
+      utils.dealer.stats.invalidate();
+      utils.showroom.list.invalidate();
+      const label =
+        res.status === "fix"
+          ? "Fix"
+          : res.status.charAt(0).toUpperCase() + res.status.slice(1);
+      toast.success(
+        res.updated === 1
+          ? `1 vehicle set to ${label}`
+          : `${res.updated} vehicles set to ${label}`,
+      );
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setPendingGallery([]);
@@ -473,7 +492,43 @@ export default function Inventory() {
     }
   };
 
-  const bulkBusy = deleteSelected.isPending || deleteAll.isPending;
+  const bulkBusy =
+    deleteSelected.isPending || deleteAll.isPending || bulkStatus.isPending;
+
+  const applyBulkStatus = (status: VehicleStatus) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      toast.error("Select cars first (use Select all shown).");
+      return;
+    }
+    const label =
+      status === "fix" ? "Fix" : status.charAt(0).toUpperCase() + status.slice(1);
+    if (
+      !confirm(
+        `Set ${ids.length} selected vehicle${ids.length === 1 ? "" : "s"} to ${label}?`,
+      )
+    ) {
+      return;
+    }
+    bulkStatus.mutate({ ids, status });
+  };
+
+  const putReservedOnAvailable = () => {
+    const ids = (data ?? []).filter((v) => v.status === "reserved").map((v) => v.id);
+    if (ids.length === 0) {
+      toast.message("No reserved cars to update.");
+      return;
+    }
+    if (
+      !confirm(
+        `Set all ${ids.length} reserved cars to Available so they appear on the showroom?`,
+      )
+    ) {
+      return;
+    }
+    bulkStatus.mutate({ ids, status: "available" });
+  };
+
 
   const handleSave = async () => {
     const priceNum = parsePriceInput(form.price);
@@ -947,6 +1002,20 @@ export default function Inventory() {
             >
               Show hidden cars
             </Button>
+            {showroomStats.reserved > 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 btn-gold"
+                disabled={bulkBusy}
+                onClick={putReservedOnAvailable}
+              >
+                {bulkStatus.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : null}
+                Put {showroomStats.reserved} reserved → Available
+              </Button>
+            ) : null}
             <Button
               type="button"
               size="sm"
@@ -1027,7 +1096,22 @@ export default function Inventory() {
                 : `Select all ${filtered.length} shown`}
             </label>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Select
+              key={`bulk-status-${selectedIds.size}-${bulkStatus.isPending ? "busy" : "idle"}`}
+              onValueChange={(s) => applyBulkStatus(s as VehicleStatus)}
+              disabled={selectedIds.size === 0 || bulkBusy}
+            >
+              <SelectTrigger className="h-8 w-[170px] text-xs">
+                <SelectValue placeholder="Set status…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">→ Available</SelectItem>
+                <SelectItem value="reserved">→ Reserved</SelectItem>
+                <SelectItem value="fix">→ Fix</SelectItem>
+                <SelectItem value="sold">→ Sold</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               type="button"
               variant="outline"
