@@ -133,8 +133,14 @@ async function executeInventoryDeleteAll(input: {
   userId: number;
   allPlatform: boolean;
   mode: "owner" | "dealer";
+  dealershipId?: number | null;
 }): Promise<DashboardAssistantReply> {
-  const vehicleCount = await countVehiclesScoped(input.allPlatform, input.userId);
+  const scope = {
+    allPlatform: input.allPlatform,
+    dealershipId: input.allPlatform ? null : input.dealershipId ?? null,
+    ownerUserId: input.userId,
+  };
+  const vehicleCount = await countVehiclesScoped(scope);
 
   if (vehicleCount === 0) {
     return {
@@ -146,7 +152,7 @@ async function executeInventoryDeleteAll(input: {
     };
   }
 
-  const deleted = await deleteAllVehiclesScoped(input.allPlatform, input.userId);
+  const deleted = await deleteAllVehiclesScoped(scope);
 
   void logAgentActivity({
     agentId: input.mode === "owner" ? "improvement" : "fallback",
@@ -169,8 +175,13 @@ async function buildInventoryDeletePending(input: {
   userId: number;
   allPlatform: boolean;
   mode: "owner" | "dealer";
+  dealershipId?: number | null;
 }): Promise<DashboardAssistantReply> {
-  const vehicleCount = await countVehiclesScoped(input.allPlatform, input.userId);
+  const vehicleCount = await countVehiclesScoped({
+    allPlatform: input.allPlatform,
+    dealershipId: input.allPlatform ? null : input.dealershipId ?? null,
+    ownerUserId: input.userId,
+  });
   const pending = buildInventoryDeletePendingReply({ vehicleCount, mode: input.mode });
 
   return {
@@ -200,11 +211,21 @@ export async function answerDashboardAssistant(input: {
     input.confirmAction === "inventory_delete_all" ||
     classifyDashboardIntent(input.message) === "inventory_bulk_delete_confirm"
   ) {
-    return executeInventoryDeleteAll({ userId, allPlatform, mode });
+    return executeInventoryDeleteAll({
+      userId,
+      allPlatform,
+      mode,
+      dealershipId: input.dealershipId,
+    });
   }
 
   if (classifyDashboardIntent(input.message) === "inventory_bulk_delete") {
-    return buildInventoryDeletePending({ userId, allPlatform, mode });
+    return buildInventoryDeletePending({
+      userId,
+      allPlatform,
+      mode,
+      dealershipId: input.dealershipId,
+    });
   }
 
   let result: DashboardAssistantReply;
@@ -213,11 +234,21 @@ export async function answerDashboardAssistant(input: {
     const intent = classifyDealerHelpIntent(input.message);
 
     if (intent === "inventory_bulk_delete") {
-      return buildInventoryDeletePending({ userId, allPlatform: false, mode: "dealer" });
+      return buildInventoryDeletePending({
+        userId,
+        allPlatform: false,
+        mode: "dealer",
+        dealershipId: input.dealershipId,
+      });
     }
 
     if (intent === "inventory_bulk_delete_confirm") {
-      return executeInventoryDeleteAll({ userId, allPlatform: false, mode: "dealer" });
+      return executeInventoryDeleteAll({
+        userId,
+        allPlatform: false,
+        mode: "dealer",
+        dealershipId: input.dealershipId,
+      });
     }
 
     if (intent === "bug_report" && isBugDescription(input.message) && input.dealershipId) {

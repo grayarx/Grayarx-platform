@@ -612,15 +612,34 @@ export async function deleteDealershipCascade(dealershipId: number): Promise<{
   };
 }
 
-/** Count vehicles in scope for bulk-delete (platform-wide or per-owner). */
-export async function countVehiclesScoped(allPlatform: boolean, ownerUserId?: number) {
+export type VehicleDeleteScope = {
+  allPlatform?: boolean;
+  /** Prefer dealership scope for dealers (matches Inventory list). */
+  dealershipId?: number | null;
+  /** Fallback when dealershipId is missing. */
+  ownerUserId?: number | null;
+};
+
+function vehicleScopeWhere(opts: VehicleDeleteScope) {
+  if (opts.allPlatform) return undefined;
+  if (opts.dealershipId != null) return eq(vehicles.dealershipId, opts.dealershipId);
+  if (opts.ownerUserId != null) return eq(vehicles.ownerUserId, opts.ownerUserId);
+  return null;
+}
+
+/** Count vehicles in scope for bulk-delete (platform / dealership / owner). */
+export async function countVehiclesScoped(
+  allPlatformOrOpts: boolean | VehicleDeleteScope,
+  ownerUserId?: number,
+) {
+  const opts: VehicleDeleteScope =
+    typeof allPlatformOrOpts === "boolean"
+      ? { allPlatform: allPlatformOrOpts, ownerUserId }
+      : allPlatformOrOpts;
   const db = await getDb();
   if (!db) return 0;
-  const where = allPlatform
-    ? undefined
-    : ownerUserId != null
-      ? eq(vehicles.ownerUserId, ownerUserId)
-      : undefined;
+  const where = vehicleScopeWhere(opts);
+  if (where === null && !opts.allPlatform) return 0;
   const query = db.select({ total: count() }).from(vehicles);
   const [row] = where ? await query.where(where) : await query;
   return Number(row?.total ?? 0);
@@ -628,19 +647,24 @@ export async function countVehiclesScoped(allPlatform: boolean, ownerUserId?: nu
 
 /**
  * Delete all vehicles (and their photo rows) in scope.
- * Founders wipe the full platform inventory; dealers only their own stock.
+ * Founders wipe the full platform inventory; dealers wipe their dealership stock.
  */
-export async function deleteAllVehiclesScoped(allPlatform: boolean, ownerUserId?: number) {
+export async function deleteAllVehiclesScoped(
+  allPlatformOrOpts: boolean | VehicleDeleteScope,
+  ownerUserId?: number,
+) {
+  const opts: VehicleDeleteScope =
+    typeof allPlatformOrOpts === "boolean"
+      ? { allPlatform: allPlatformOrOpts, ownerUserId }
+      : allPlatformOrOpts;
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const idQuery = db.select({ id: vehicles.id }).from(vehicles);
-  const rows = allPlatform
-    ? await idQuery
-    : ownerUserId != null
-      ? await idQuery.where(eq(vehicles.ownerUserId, ownerUserId))
-      : await idQuery;
+  const where = vehicleScopeWhere(opts);
+  if (where === null && !opts.allPlatform) return 0;
 
+  const idQuery = db.select({ id: vehicles.id }).from(vehicles);
+  const rows = where ? await idQuery.where(where) : await idQuery;
   const ids = rows.map((r) => r.id);
   if (ids.length === 0) return 0;
 
@@ -650,13 +674,48 @@ export async function deleteAllVehiclesScoped(allPlatform: boolean, ownerUserId?
     await db.delete(vehiclePhotos).where(inArray(vehiclePhotos.vehicleId, chunk));
   }
 
-  if (allPlatform) {
+  if (where) {
+    await db.delete(vehicles).where(where);
+  } else {
     await db.delete(vehicles);
-  } else if (ownerUserId != null) {
-    await db.delete(vehicles).where(eq(vehicles.ownerUserId, ownerUserId));
   }
 
   return ids.length;
+}
+
+/**
+ * Delete selected vehicle ids, scoped to a dealership (or platform for founders).
+ * Ignores ids outside the caller's tenant.
+ */
+export async function deleteVehiclesByIds(
+  ids: number[],
+  opts: { allPlatform?: boolean; dealershipId?: number | null },
+): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const unique = [...new Set(ids)].filter((id) => Number.isFinite(id) && id > 0);
+  if (unique.length === 0) return 0;
+
+  let allowed = unique;
+  if (!opts.allPlatform) {
+    if (opts.dealershipId == null) return 0;
+    const rows = await db
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(
+        and(inArray(vehicles.id, unique), eq(vehicles.dealershipId, opts.dealershipId)),
+      );
+    allowed = rows.map((r) => r.id);
+  }
+  if (allowed.length === 0) return 0;
+
+  const CHUNK = 100;
+  for (let i = 0; i < allowed.length; i += CHUNK) {
+    const chunk = allowed.slice(i, i + CHUNK);
+    await db.delete(vehiclePhotos).where(inArray(vehiclePhotos.vehicleId, chunk));
+    await db.delete(vehicles).where(inArray(vehicles.id, chunk));
+  }
+  return allowed.length;
 }
 
 // === Vehicle photos ===

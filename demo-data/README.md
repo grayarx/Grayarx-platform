@@ -27,6 +27,14 @@ node scripts/generate-demo-csvs.mjs
 3. Upload → **Preview** → **Import**
 4. Same stock numbers update existing cars (including photos when the primary URL changes)
 
+## Clear stock before a fresh demo
+
+On **Inventory**:
+- Tick cars → **Delete selected**, or
+- **Delete all** (wipes your dealership’s inventory)
+
+Then re-import this CSV.
+
 ### Making “Save photos to GrayArx” work
 
 Photo save copies each URL into durable object storage. On Railway set:

@@ -1645,8 +1645,19 @@ export const appRouter = router({
         return { success: true } as const;
       }),
     deleteAllVehicles: protectedProcedure.mutation(async ({ ctx }) => {
+      assertDealerOrAdmin(ctx.user);
       const allPlatform = isFounderOrAdmin(ctx.user);
-      const deleted = await deleteAllVehiclesScoped(allPlatform, ctx.user.id);
+      if (!allPlatform && ctx.user.dealershipId == null) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No dealership linked — cannot wipe inventory.",
+        });
+      }
+      const deleted = await deleteAllVehiclesScoped({
+        allPlatform,
+        dealershipId: allPlatform ? null : ctx.user.dealershipId,
+        ownerUserId: ctx.user.id,
+      });
       void logAgentActivity({
         agentId: allPlatform ? "improvement" : "fallback",
         action: "inventory_bulk_delete",
@@ -1656,6 +1667,33 @@ export const appRouter = router({
       });
       return { success: true as const, deleted };
     }),
+
+    /** Delete selected vehicles (checkboxes on Inventory). Tenant-scoped. */
+    deleteVehicles: protectedProcedure
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500) }))
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const allPlatform = isFounderOrAdmin(ctx.user);
+        if (!allPlatform && ctx.user.dealershipId == null) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "No dealership linked — cannot delete inventory.",
+          });
+        }
+        const { deleteVehiclesByIds } = await import("./db");
+        const deleted = await deleteVehiclesByIds(input.ids, {
+          allPlatform,
+          dealershipId: allPlatform ? null : ctx.user.dealershipId,
+        });
+        void logAgentActivity({
+          agentId: allPlatform ? "improvement" : "fallback",
+          action: "inventory_bulk_delete_selected",
+          subjectType: "inventory",
+          summary: `Deleted ${deleted} selected vehicle${deleted === 1 ? "" : "s"} via dealer console.`,
+          payload: { deleted, requested: input.ids.length, userId: ctx.user.id },
+        });
+        return { success: true as const, deleted };
+      }),
 
     // Accept a base64-encoded image (from a phone camera or file picker),
     // upload it to S3 storage, and return the public URL.

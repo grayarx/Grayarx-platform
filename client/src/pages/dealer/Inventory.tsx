@@ -16,6 +16,7 @@ import {
   Upload,
   Pencil,
   ShoppingBag,
+  CheckSquare,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import SearchableSelect from "@/components/SearchableSelect";
@@ -37,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -286,6 +288,7 @@ export default function Inventory() {
   const [statusFilter, setStatusFilter] = useState<"all" | "available" | "reserved" | "sold">("all");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [bodyFilter, setBodyFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const [pendingGallery, setPendingGallery] = useState<PendingGalleryPhoto[]>([]);
 
@@ -315,6 +318,36 @@ export default function Inventory() {
       utils.showroom.list.invalidate();
       toast.success("Vehicle removed");
     },
+  });
+
+  const deleteSelected = trpc.dealer.deleteVehicles.useMutation({
+    onSuccess: (res) => {
+      setSelectedIds(new Set());
+      utils.dealer.listVehicles.invalidate();
+      utils.dealer.stats.invalidate();
+      utils.showroom.list.invalidate();
+      toast.success(
+        res.deleted === 1
+          ? "1 vehicle deleted"
+          : `${res.deleted} vehicles deleted`,
+      );
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteAll = trpc.dealer.deleteAllVehicles.useMutation({
+    onSuccess: (res) => {
+      setSelectedIds(new Set());
+      utils.dealer.listVehicles.invalidate();
+      utils.dealer.stats.invalidate();
+      utils.showroom.list.invalidate();
+      toast.success(
+        res.deleted === 0
+          ? "Inventory already empty"
+          : `Deleted all ${res.deleted} vehicles`,
+      );
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const resetForm = () => {
@@ -348,6 +381,36 @@ export default function Inventory() {
       return hay.includes(q);
     });
   }, [data, search, statusFilter, conditionFilter, bodyFilter]);
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((v) => selectedIds.has(v.id));
+
+  const toggleSelect = (id: number, on: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const v of filtered) next.delete(v.id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const v of filtered) next.add(v.id);
+        return next;
+      });
+    }
+  };
+
+  const bulkBusy = deleteSelected.isPending || deleteAll.isPending;
 
   const handleSave = async () => {
     const priceNum = parsePriceInput(form.price);
@@ -843,6 +906,81 @@ export default function Inventory() {
         </Select>
       </div>
 
+      {filtered.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-primary/15 bg-card/40 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 text-sm">
+            <Checkbox
+              id="select-all-inventory"
+              checked={allFilteredSelected}
+              onCheckedChange={() => toggleSelectAllFiltered()}
+              disabled={bulkBusy}
+            />
+            <label htmlFor="select-all-inventory" className="cursor-pointer text-muted-foreground">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : `Select all ${filtered.length} shown`}
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selectedIds.size === 0 || bulkBusy}
+              onClick={() => {
+                const n = selectedIds.size;
+                if (
+                  !confirm(
+                    `Delete ${n} selected vehicle${n === 1 ? "" : "s"}? This cannot be undone.`,
+                  )
+                ) {
+                  return;
+                }
+                deleteSelected.mutate({ ids: [...selectedIds] });
+              }}
+            >
+              {deleteSelected.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1.5" />
+              )}
+              Delete selected
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+              disabled={!data?.length || bulkBusy}
+              onClick={() => {
+                const n = data?.length ?? 0;
+                if (
+                  !confirm(
+                    `Delete ALL ${n} vehicles in your inventory? This cannot be undone.`,
+                  )
+                ) {
+                  return;
+                }
+                if (
+                  n >= 20 &&
+                  !confirm(`Really wipe all ${n} cars? Type OK in your head, then confirm.`)
+                ) {
+                  return;
+                }
+                deleteAll.mutate();
+              }}
+            >
+              {deleteAll.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <CheckSquare className="h-4 w-4 mr-1.5" />
+              )}
+              Delete all
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Cards */}
       {isLoading ? (
         <div className="py-20 text-center">
@@ -892,8 +1030,21 @@ export default function Inventory() {
             return (
               <div
                 key={v.id}
-                className="relative card-premium rounded-2xl border border-primary/10 overflow-hidden group flex flex-col"
+                className={`relative card-premium rounded-2xl border overflow-hidden group flex flex-col ${
+                  selectedIds.has(v.id)
+                    ? "border-primary/50 ring-1 ring-primary/30"
+                    : "border-primary/10"
+                }`}
               >
+                <div className="absolute top-3 left-3 z-10">
+                  <Checkbox
+                    checked={selectedIds.has(v.id)}
+                    onCheckedChange={(c) => toggleSelect(v.id, c === true)}
+                    disabled={bulkBusy}
+                    aria-label={`Select ${v.title}`}
+                    className="bg-background/80 border-primary/40"
+                  />
+                </div>
                 {/* Photo — studio frame composites any upload onto premium backdrop */}
                 <VehicleShowroomFrame
                   src={photo ?? null}
