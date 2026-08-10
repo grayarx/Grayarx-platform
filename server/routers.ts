@@ -834,7 +834,8 @@ export const appRouter = router({
     enquire: publicProcedure
       .input(
         z.object({
-          vehicleId: z.string().min(1),
+          // Coerce — chat/UI sometimes send numeric ids from the DB row.
+          vehicleId: z.coerce.string().min(1),
           vehicleTitle: z.string().min(1),
           vehiclePrice: z.number().int().positive(),
           vehicleYear: z.number().int(),
@@ -842,9 +843,9 @@ export const appRouter = router({
           vehicleFuel: z.string(),
           vehicleTransmission: z.string(),
           vehicleImage: z.string().optional(),
-          clientEmail: z.string().email(),
-          clientName: z.string().min(1),
-          clientPhone: z.string().min(1),
+          clientEmail: z.string().trim().email("Please enter a valid email"),
+          clientName: z.string().trim().min(1, "Name is required"),
+          clientPhone: z.string().trim().min(1, "Phone is required"),
           clientMessage: z.string().optional(),
           dealershipEmail: z.string().email(),
           dealershipName: z.string().min(1),
