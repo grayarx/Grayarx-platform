@@ -59,6 +59,20 @@ type PreviewRow = {
   dataWarnings?: string[];
 };
 
+/** Proxy timeouts often return HTML — map that to a clear dealer-facing tip. */
+function friendlyImportError(message: string): string {
+  const m = message || "";
+  if (
+    /Unexpected token\s+'<'/i.test(m) ||
+    /<!DOCTYPE/i.test(m) ||
+    /is not valid JSON/i.test(m) ||
+    /Failed to fetch|NetworkError|timeout|504|502|524/i.test(m)
+  ) {
+    return "Import timed out while saving photos. Turn OFF “Save photos to GrayArx” and import again — cars will still show with your image links.";
+  }
+  return m;
+}
+
 
 export default function InventoryImportPage() {
   const [csv, setCsv] = useState("");
@@ -212,11 +226,22 @@ export default function InventoryImportPage() {
     },
     onError: (e) => {
       setImportProgress(null);
-      toast.error(e.message);
+      toast.error(friendlyImportError(e.message));
     },
   });
 
+  const photoCount =
+    preview?.validRows.reduce(
+      (n, r) => n + (r.imageUrls?.length || (r.imageUrl ? 1 : 0)),
+      0,
+    ) ?? 0;
+
   const handleImport = () => {
+    if (mirrorPhotos && photoCount > 16) {
+      toast.message(
+        `Saving ${photoCount} photos can time out on the live site. Prefer turning “Save photos” off for a fast import.`,
+      );
+    }
     setImportProgress(5);
     commitMutation.mutate(
       {
