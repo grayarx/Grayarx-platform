@@ -27,6 +27,7 @@ import { getLoginUrl } from "@/const";
 import { PhotoGuideHint, PhotoGuideRestoreLink } from "@/components/PhotoGuide";
 import DashboardChatAgent from "@/components/DashboardChatAgent";
 import BranchSwitcher from "@/components/BranchSwitcher";
+import SetupDealershipBanner from "@/components/SetupDealershipBanner";
 
 const PHOTO_HINT_ROUTES = [
   "/dealer/inventory",
@@ -201,6 +202,8 @@ export default function DealerShell({
           </div>
 
           {showPhotoHint && <PhotoGuideHint />}
+
+          <SetupDealershipBanner />
 
           {children}
 

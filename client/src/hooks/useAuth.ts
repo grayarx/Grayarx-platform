@@ -9,6 +9,7 @@ export interface AuthUser {
   passwordHash: string | null;
   loginMethod: string | null;
   role: "user" | "admin" | "founder" | "dealer_owner" | "dealer_consultant";
+  dealershipId?: number | null;
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   createdAt: Date;

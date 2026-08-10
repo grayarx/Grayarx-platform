@@ -374,4 +374,98 @@ export const authEnhancedRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Signup failed. Please try again." });
       }
     }),
+
+  /**
+   * One-click heal for legacy logins that signed up as role "user" with no
+   * dealership (CSV import shows "Dealer or admin access required").
+   * Creates a dealership and promotes the account to dealer_owner.
+   * Idempotent if already linked.
+   */
+  setupMyDealership: protectedProcedure
+    .input(
+      z
+        .object({
+          dealershipName: z.string().min(2).max(255).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      }
+
+      const user = ctx.user;
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in required" });
+      }
+
+      if (user.role === "founder" || user.role === "admin") {
+        return {
+          success: true,
+          alreadyReady: true,
+          role: user.role as string,
+          dealershipId: user.dealershipId ?? null,
+          message: "Founder/admin accounts already have console access.",
+        };
+      }
+
+      if (
+        (user.role === "dealer_owner" || user.role === "dealer_consultant") &&
+        user.dealershipId != null
+      ) {
+        return {
+          success: true,
+          alreadyReady: true,
+          role: user.role as string,
+          dealershipId: user.dealershipId,
+          message: "Your account is already linked to a dealership.",
+        };
+      }
+
+      if (user.role === "dealer_consultant" && user.dealershipId == null) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "This staff login isn’t linked to a garage yet. Ask the dealership owner to invite you again from Team.",
+        });
+      }
+
+      // dealer_owner missing dealershipId, or plain "user" — create + link.
+      const email = user.email ? normalizeEmail(user.email) : null;
+      const name =
+        input?.dealershipName?.trim() ||
+        deriveDealershipName(user.name, email || "dealer@grayarx.com");
+
+      let dealershipId = user.dealershipId ?? null;
+      if (dealershipId == null) {
+        try {
+          const created = await createDealership({
+            name,
+            contactEmail: email,
+            status: "active",
+          });
+          dealershipId = created.id;
+        } catch (err) {
+          console.error("[setupMyDealership] createDealership failed:", err);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Could not create your dealership. Please try again.",
+          });
+        }
+      }
+
+      await db
+        .update(users)
+        .set({ role: "dealer_owner", dealershipId })
+        .where(eq(users.id, user.id));
+
+      return {
+        success: true,
+        alreadyReady: false,
+        role: "dealer_owner" as const,
+        dealershipId,
+        message: "Dealership ready — you can import stock now.",
+      };
+    }),
 });
