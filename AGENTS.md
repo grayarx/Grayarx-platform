@@ -22,6 +22,13 @@
 - Auto-sends via Resend when `RESEND_API_KEY` is set. Force draft-only with `LEAD_DRIP_AUTO_SEND=0`. Force send with `LEAD_DRIP_AUTO_SEND=1`.
 - Dealer Leads: overdue banner, drafts, **Followed up**, **Email this draft** (`dealer.sendLeadFollowup`).
 
+### Inbound email (critical)
+- Outbound (pilot/prospector/Mia) uses Resend + SPF — works without MX.
+- **Inbound replies need MX.** Probe: `curl -s https://www.grayarx.com/api/webhooks/health | jq .inboundEmail`
+- Webhook `/api/webhooks/resend-inbound` is active; bodies are fetched via Resend Receiving API (`RESEND_API_KEY`).
+- If `inboundEmail.hasMx` is false, replies to hello@ never arrive. Fix in Cloudflare + Resend Receiving (see `docs/COMPLIANCE_MAILBOX_SETUP.md`).
+- Founder console `/admin/compliance` shows a red banner when inbound is not ready.
+
 ### WhatsApp (production)
 - Callback URL must be `https://www.grayarx.com/api/webhooks/whatsapp` (not a trycloudflare tunnel; not SPA HTML).
 - Health: `GET /api/webhooks/health` must return JSON. See `docs/PRODUCTION_WEBHOOK_SETUP.md`.

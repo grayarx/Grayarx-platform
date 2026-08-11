@@ -256,11 +256,20 @@ export function registerWebhookRoutes(app: Express): void {
     const tokenConfigured = !!process.env.WHATSAPP_ACCESS_TOKEN;
     const { getPlatformHealth } = await import("./platformHealth");
     const { getResilienceStatus } = await import("./agentResilience");
+    const { checkInboundMxHealth } = await import("./complianceMailbox");
     const platform = await getPlatformHealth();
+    const inboundMx = await checkInboundMxHealth("grayarx.com");
     res.status(200).json({
       status: "ok",
       openai: platform.openai,
       resilience: getResilienceStatus(),
+      inboundEmail: {
+        domain: inboundMx.domain,
+        hasMx: inboundMx.hasMx,
+        canReceiveMail: inboundMx.canReceiveMail,
+        mxRecords: inboundMx.records,
+        detail: inboundMx.detail,
+      },
       webhooks: {
         whatsapp: {
           url: "/api/webhooks/whatsapp",
@@ -279,7 +288,7 @@ export function registerWebhookRoutes(app: Express): void {
             : process.env.NODE_ENV === "production"
               ? "missing — set RESEND_INBOUND_WEBHOOK_SECRET"
               : "optional_dev",
-          note: "Receives privacy@ / legal@ via Resend inbound — alerts founder Gmail. Signing secret comes from Resend → Webhooks → your endpoint.",
+          note: "Receives hello@ / privacy@ / legal@ / mia@ / prospector@ / pilot@ when Resend Receiving MX is configured. Fetches email body via Receiving API. Alerts FOUNDER_ALERT_EMAIL.",
         },
       },
     });
