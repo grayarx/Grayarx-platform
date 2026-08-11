@@ -104,13 +104,14 @@ async function runProspectorScout(region: string, count = 5): Promise<number> {
     }>;
     if (items.length === 0) return 0;
     const { sanitizeScoutEmail } = await import("../../shared/prospectEmailQuality");
-    await createProspects(
-      items.map((p) => {
+    const readyRows = items
+      .map((p) => {
         const sanitized = sanitizeScoutEmail({
           email: p.email,
           dealershipName: p.dealershipName,
           city: p.city,
         });
+        if (!sanitized.outreachReady || !sanitized.email) return null;
         return {
           dealershipName: p.dealershipName,
           region: p.region,
@@ -125,9 +126,16 @@ async function runProspectorScout(region: string, count = 5): Promise<number> {
           status: "scouted" as const,
           sourceNotes: `Nightly Prospector — ${region} | ${sanitized.sourceNoteExtra}`,
         };
-      }),
-    );
-    return items.length;
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+    if (readyRows.length === 0) {
+      console.log(
+        `[Scheduled Prospector] skipped ${items.length} prospects in ${region} — no named/principal emails`,
+      );
+      return 0;
+    }
+    await createProspects(readyRows);
+    return readyRows.length;
   } catch (err) {
     console.error("[Scheduled Prospector] LLM error", err);
     return 0;

@@ -31,8 +31,9 @@
 
 ### Outbound prospect email
 - Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` bounce on Resend — `mailableProspects` skips them by default.
-- Sipho scout prompts must not invent `info@dealership-slug.co.za`. Empty email + `needs_principal_enrichment` + LinkedIn search in `sourceNotes` when unknown.
-- Kagiso audit flags high generic-mailbox share and lists LinkedIn Dealer Principal search links on the roadmap.
+- Sipho scout / `createProspects` **only inserts outreach-ready emails**. Empty and `info@` are dropped.
+- Boot migration one-shot `0073_purge_all_prospects_for_email_quality` wipes old bounce-bait rows once (see `scripts/apply-pending-migrations.mjs`).
+- Founder UI: Admin → Prospector → **Clear all** (`prospects.purgeAll`).
 - Quality helpers: `shared/prospectEmailQuality.ts`, enrichment list via `prospectsNeedingPrincipalEnrichment()`.
 
 ### WhatsApp (production)

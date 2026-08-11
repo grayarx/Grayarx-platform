@@ -4,12 +4,14 @@ import {
   isGenericMailbox,
   linkedInPrincipalSearchUrl,
   sanitizeScoutEmail,
+  filterOutreachReadyProspectInserts,
 } from "../shared/prospectEmailQuality";
 import {
   mailableProspects,
   prospectsNeedingPrincipalEnrichment,
   PILOT_PROSPECTS,
 } from "../shared/pilotProspectSegments";
+import { pickNextProspects } from "./_core/saProspectPool";
 import { runAudit, type AuditInput } from "./_core/improvementAgent";
 
 describe("prospect email quality", () => {
@@ -33,13 +35,15 @@ describe("prospect email quality", () => {
     expect(url).toContain(encodeURIComponent("Jubilee Motors"));
   });
 
-  it("sanitizes scout emails and tags enrichment notes", () => {
+  it("sanitizes scout emails and drops generic mailboxes", () => {
     const generic = sanitizeScoutEmail({
       email: "info@fakededaler.co.za",
       dealershipName: "Fake Dealer",
       city: "Sandton",
     });
-    expect(generic.sourceNoteExtra).toContain("needs_principal_enrichment");
+    expect(generic.email).toBeNull();
+    expect(generic.outreachReady).toBe(false);
+    expect(generic.sourceNoteExtra).toContain("skipped_not_outreach_ready");
     expect(generic.sourceNoteExtra).toContain("linkedin=");
 
     const named = sanitizeScoutEmail({
@@ -47,6 +51,7 @@ describe("prospect email quality", () => {
       dealershipName: "Fake Dealer",
     });
     expect(named.email).toBe("lerato@fakededaler.co.za");
+    expect(named.outreachReady).toBe(true);
     expect(named.sourceNoteExtra).toContain("email_quality=named");
   });
 
@@ -59,6 +64,24 @@ describe("prospect email quality", () => {
     }
     // Jubilee named contact must remain sendable
     expect(mailable.some((p) => p.id === "jubilee-springs")).toBe(true);
+  });
+
+  it("filterOutreachReadyProspectInserts drops info@", () => {
+    const kept = filterOutreachReadyProspectInserts([
+      { dealershipName: "A", email: "info@a.co.za" },
+      { dealershipName: "B", email: "darius@jubileemotors.co.za" },
+      { dealershipName: "C", email: "" },
+    ]);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]!.email).toBe("darius@jubileemotors.co.za");
+  });
+
+  it("SA pool picker only returns named/principal emails", () => {
+    const { batch, poolRemaining } = pickNextProspects([], 20);
+    expect(batch.length).toBeGreaterThanOrEqual(1);
+    expect(batch.every((p) => assessProspectEmail(p.email).outreachReady)).toBe(true);
+    expect(batch.some((p) => p.email.toLowerCase().startsWith("info@"))).toBe(false);
+    expect(poolRemaining).toBe(0);
   });
 
   it("lists enrichment targets with LinkedIn links for Kagiso", () => {

@@ -220,42 +220,48 @@ export function buildEnrichmentTarget(input: {
 
 /** Prompt fragment shared by Sipho scout (manual + nightly). */
 export const PRINCIPAL_EMAIL_SCOUT_RULES = `EMAIL RULES (critical — generic mailboxes bounce):
-- Prefer dealer principal / managing director / owner / named sales manager emails (e.g. darius@…, thabo.m@…, principal@…).
-- NEVER invent info@ / sales@ / enquiries@ from a dealership slug — those bounce and waste Resend quota.
-- If you do not know a real named contact email, set email to "" (empty string) and put "needs_principal_enrichment" in rationale/source notes.
-- Also provide contactName (person) and contactRole (e.g. "Dealer Principal", "Managing Director", "Sales Manager").
-- When inventing FICTIONAL practice prospects, still use a plausible named local-part (firstname@dealership-slug.co.za), never info@.`;
+- ONLY include a prospect if you have a named person or dealer-principal email (e.g. darius@…, thabo.m@…, principal@…, owner@…).
+- NEVER invent info@ / sales@ / enquiries@ / admin@ from a dealership slug — those bounce and waste Resend quota.
+- NEVER invent emails for fictional dealerships. If the email is not a real named/principal address, omit the prospect entirely (do not return it).
+- Prefer real public contacts from official websites / directories over guesses.
+- Also provide contactName (person) and contactRole (e.g. "Dealer Principal", "Managing Director", "Sales Manager").`;
 
 /**
- * Strip generic / invalid scout emails so we never store bounce-bait info@.
- * Returns sanitized email + notes to append to sourceNotes.
+ * Only keep outreach-ready (named / principal) emails.
+ * Generic info@ etc. are dropped — we do not store bounce-bait.
  */
 export function sanitizeScoutEmail(input: {
   email?: string | null;
   dealershipName: string;
   city?: string | null;
-}): { email: string | null; sourceNoteExtra: string } {
+}): { email: string | null; sourceNoteExtra: string; outreachReady: boolean } {
   const assessment = assessProspectEmail(input.email);
   if (assessment.outreachReady && assessment.email) {
-    return { email: assessment.email, sourceNoteExtra: `email_quality=${assessment.quality}` };
+    return {
+      email: assessment.email,
+      sourceNoteExtra: `email_quality=${assessment.quality}`,
+      outreachReady: true,
+    };
   }
   const target = buildEnrichmentTarget({
     dealershipName: input.dealershipName,
     city: input.city,
     email: input.email,
   });
-  const kept =
-    assessment.quality === "generic" || assessment.quality === "role"
-      ? assessment.email
-      : null;
   return {
-    // Keep generic on file for enrichment UI, but tag clearly — callers should
-    // not send until upgraded. Empty/invalid → null.
-    email: kept,
+    email: null,
+    outreachReady: false,
     sourceNoteExtra: [
-      "needs_principal_enrichment",
+      "skipped_not_outreach_ready",
       `email_quality=${assessment.quality}`,
       `linkedin=${target.linkedInPeopleSearch}`,
     ].join(" | "),
   };
+}
+
+/** Filter insert rows to those with named/principal emails only. */
+export function filterOutreachReadyProspectInserts<
+  T extends { email?: string | null; dealershipName?: string },
+>(rows: T[]): T[] {
+  return rows.filter((row) => assessProspectEmail(row.email).outreachReady);
 }

@@ -1,3 +1,5 @@
+import { assessProspectEmail } from "../../shared/prospectEmailQuality";
+
 export interface SAProspectEntry {
   name: string;
   city: string;
@@ -11,6 +13,19 @@ export interface SAProspectEntry {
 }
 
 export const SA_PROSPECT_POOL: SAProspectEntry[] = [
+  // Named / principal contacts only get picked by pickNextProspects.
+  // Seed with the one verified named email from the pilot list.
+  {
+    name: "Jubilee Motors",
+    city: "Springs",
+    province: "Gauteng",
+    email: "darius@jubileemotors.co.za",
+    phone: "0118114008",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 40,
+    website: "https://jubileemotors.co.za",
+  },
   // ─── Gauteng – Johannesburg ───────────────────────────────────────────────
   {
     name: "Northgate Motor Village",
@@ -796,6 +811,7 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
 /**
  * Returns a shuffled copy of the prospect pool with entries whose names appear
  * in `existingNames` removed. Takes up to `batchSize` items from the front.
+ * Only returns rows with named/principal emails (info@ filtered out).
  */
 export function pickNextProspects(
   existingNames: string[],
@@ -803,7 +819,9 @@ export function pickNextProspects(
 ): { batch: SAProspectEntry[]; poolRemaining: number } {
   const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
   const available = SA_PROSPECT_POOL.filter(
-    (p) => !existing.has(p.name.toLowerCase().trim()),
+    (p) =>
+      !existing.has(p.name.toLowerCase().trim()) &&
+      assessProspectEmail(p.email).outreachReady,
   );
 
   // Fisher-Yates shuffle

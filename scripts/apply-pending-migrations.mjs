@@ -23,7 +23,28 @@ const MIGRATIONS = [
   "0070_brand_logo_url_mediumtext.sql",
   "0071_stock_sync.sql",
   "0072_vehicle_status_fix.sql",
+  "0073_purge_bounce_prospects.sql",
 ];
+
+/** Run once: wipe Sipho prospects so only named/principal emails are re-added. */
+async function purgeBounceProspectsOnce(conn) {
+  const shot = "0073_purge_all_prospects_for_email_quality";
+  const [rows] = await conn.query(
+    "SELECT `name` FROM `_grayarx_one_shots` WHERE `name` = ? LIMIT 1",
+    [shot],
+  );
+  if (Array.isArray(rows) && rows.length > 0) {
+    console.log(`[migrate] ~ ${shot} (already applied)`);
+    return;
+  }
+  console.log(`[migrate] applying ${shot}…`);
+  // Call attempts reference prospect ids (no FK) — clear both.
+  await conn.query("DELETE FROM `call_attempts`");
+  const [result] = await conn.query("DELETE FROM `prospects`");
+  const deleted = result?.affectedRows ?? 0;
+  await conn.query("INSERT INTO `_grayarx_one_shots` (`name`) VALUES (?)", [shot]);
+  console.log(`[migrate] ✓ ${shot} (deleted ${deleted} prospects)`);
+}
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;
@@ -69,6 +90,9 @@ async function main() {
       }
     }
   }
+
+  // After schema one-shots table exists, purge bounce-bait prospects once.
+  await purgeBounceProspectsOnce(conn);
 
   await conn.end();
   console.log("[migrate] done");

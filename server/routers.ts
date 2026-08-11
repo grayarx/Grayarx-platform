@@ -2179,20 +2179,14 @@ export const appRouter = router({
             (p) => !existingSet.has(p.dealershipName.toLowerCase().trim()),
           );
           if (items.length === 0) return { created: 0, poolRemaining: null } as const;
-          await logAgentActivity({
-            agentId: "prospector",
-            action: "scouted_batch",
-            subjectType: "prospect",
-            summary: `Sipho scouted ${items.length} dealership${items.length === 1 ? "" : "s"} in ${input.region}${input.city ? ", " + input.city : ""}.`,
-            payload: { region: input.region, city: input.city, names: items.map((p) => p.dealershipName) },
-          });
-          await createProspects(
-            items.map((p) => {
+          const readyRows = items
+            .map((p) => {
               const sanitized = sanitizeScoutEmail({
                 email: p.email,
                 dealershipName: p.dealershipName,
                 city: p.city,
               });
+              if (!sanitized.outreachReady || !sanitized.email) return null;
               return {
                 dealershipName: p.dealershipName,
                 region: p.region,
@@ -2207,9 +2201,39 @@ export const appRouter = router({
                 status: "scouted" as const,
                 sourceNotes: `AI Prospector — ${input.region}${input.city ? ", " + input.city : ""} | ${sanitized.sourceNoteExtra}`,
               };
-            }),
-          );
-          return { created: items.length, poolRemaining: null } as const;
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+          const skipped = items.length - readyRows.length;
+          if (readyRows.length === 0) {
+            await logAgentActivity({
+              agentId: "prospector",
+              action: "scouted_batch_skipped",
+              subjectType: "prospect",
+              summary: `Sipho skipped ${skipped} prospect${skipped === 1 ? "" : "s"} in ${input.region} — no named/principal emails (info@ blocked).`,
+              payload: { region: input.region, city: input.city, skipped },
+            });
+            return {
+              created: 0,
+              skipped,
+              poolRemaining: null,
+              message:
+                "No prospects had a named/principal email. Sipho will not add info@ or empty contacts.",
+            } as const;
+          }
+          await logAgentActivity({
+            agentId: "prospector",
+            action: "scouted_batch",
+            subjectType: "prospect",
+            summary: `Sipho scouted ${readyRows.length} dealership${readyRows.length === 1 ? "" : "s"} with named emails in ${input.region}${input.city ? ", " + input.city : ""}${skipped ? ` (skipped ${skipped} without principal email)` : ""}.`,
+            payload: {
+              region: input.region,
+              city: input.city,
+              names: readyRows.map((p) => p.dealershipName),
+              skipped,
+            },
+          });
+          await createProspects(readyRows);
+          return { created: readyRows.length, skipped, poolRemaining: null } as const;
         } catch (err) {
           console.error("[Prospector] LLM unavailable — using rotating SA prospect pool", err);
           const region = input.region || "Gauteng";
@@ -2225,33 +2249,45 @@ export const appRouter = router({
             } as const;
           }
 
-          const fallbackProspects: Parameters<typeof createProspects>[0] = batch.map((p) => {
-            const sanitized = sanitizeScoutEmail({
-              email: p.email,
-              dealershipName: p.name,
-              city: p.city,
-            });
+          const fallbackProspects: Parameters<typeof createProspects>[0] = batch
+            .map((p) => {
+              const sanitized = sanitizeScoutEmail({
+                email: p.email,
+                dealershipName: p.name,
+                city: p.city,
+              });
+              if (!sanitized.outreachReady || !sanitized.email) return null;
+              return {
+                dealershipName: p.name,
+                region: p.province,
+                city: p.city,
+                phone: p.phone,
+                email: sanitized.email,
+                website: p.website ?? "",
+                estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+                brandsCarried: p.brands.join(", "),
+                score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
+                rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
+                status: "scouted" as const,
+                sourceNotes: `${sourceNotes} | ${sanitized.sourceNoteExtra}`,
+              };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+
+          if (fallbackProspects.length === 0) {
             return {
-              dealershipName: p.name,
-              region: p.province,
-              city: p.city,
-              phone: p.phone,
-              email: sanitized.email,
-              website: p.website ?? "",
-              estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-              brandsCarried: p.brands.join(", "),
-              score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
-              rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
-              status: "scouted" as const,
-              sourceNotes: `${sourceNotes} | ${sanitized.sourceNoteExtra}`,
-            };
-          });
+              created: 0,
+              poolRemaining,
+              message:
+                "Pool has no named/principal emails left (info@ blocked). Add verified dealer-principal contacts, then scout again.",
+            } as const;
+          }
 
           await logAgentActivity({
             agentId: "prospector",
             action: "scouted_batch",
             subjectType: "prospect",
-            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (pool fallback, ${poolRemaining} remaining).`,
+            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (pool fallback, named emails only, ${poolRemaining} remaining).`,
             payload: { region, city: input.city, fallback: true, poolRemaining, names: fallbackProspects.map((p) => p.dealershipName) },
           });
           await createProspects(fallbackProspects);
@@ -2504,6 +2540,26 @@ export const appRouter = router({
         await deleteProspect(input.id);
         return { success: true } as const;
       }),
+
+    /**
+     * Wipe every prospect (and call attempts). Sipho will only re-add rows
+     * that have named / dealer-principal emails — not info@.
+     */
+    purgeAll: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+      }
+      const { deleteAllProspects } = await import("./db");
+      const result = await deleteAllProspects();
+      await logAgentActivity({
+        agentId: "prospector",
+        action: "purged_all_prospects",
+        subjectType: "prospect",
+        summary: `Sipho cleared ${result.deletedProspects} prospect${result.deletedProspects === 1 ? "" : "s"} (and ${result.deletedCalls} call attempt${result.deletedCalls === 1 ? "" : "s"}). Next scout only keeps named/principal emails.`,
+        payload: result,
+      });
+      return { success: true as const, ...result };
+    }),
   }),
 
   agent: router({
