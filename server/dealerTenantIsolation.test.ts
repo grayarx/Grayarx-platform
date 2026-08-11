@@ -194,10 +194,11 @@ describe("dealer multi-tenant isolation", () => {
     });
     await caller.showroom.list(null);
     expect(listVehicles).toHaveBeenLastCalledWith(
-      2000,
+      49, // default page 48 + 1 for hasMore probe
       expect.objectContaining({
         dealershipId: 99,
         excludeSold: true,
+        availableOnly: true,
         excludePlaceholderPrices: true,
         includeGallery: false,
       }),
@@ -212,6 +213,7 @@ describe("dealer multi-tenant isolation", () => {
     expect(lastArgs?.[1]).toEqual(
       expect.objectContaining({
         excludeSold: true,
+        availableOnly: true,
         excludePlaceholderPrices: true,
         includeGallery: false,
       }),
@@ -226,8 +228,8 @@ describe("dealer multi-tenant isolation", () => {
     });
     await caller.showroom.list({ dealershipId: 5 });
     expect(listVehicles).toHaveBeenLastCalledWith(
-      2000,
-      expect.objectContaining({ dealershipId: 5 }),
+      49,
+      expect.objectContaining({ dealershipId: 5, availableOnly: true }),
     );
   });
 
@@ -239,10 +241,11 @@ describe("dealer multi-tenant isolation", () => {
     });
     await caller.showroom.list(null);
     expect(listVehicles).toHaveBeenLastCalledWith(
-      2000,
+      49,
       expect.objectContaining({
         dealershipId: 42,
         excludeSold: true,
+        availableOnly: true,
         excludePlaceholderPrices: true,
         includeGallery: false,
       }),

@@ -23,7 +23,8 @@ import DealScoreBadge from "@/components/DealScoreBadge";
  */
 export default function Compare() {
   const [location, setLocation] = useLocation();
-  const { data: vehicles } = trpc.showroom.list.useQuery({});
+  const { data: listPage } = trpc.showroom.list.useQuery({ limit: 200 });
+  const vehicles = listPage?.items;
 
   // Parse comma-separated ids from search string.
   const initialIds = useMemo(() => {

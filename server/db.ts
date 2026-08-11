@@ -374,6 +374,8 @@ export async function listVehicles(
   opts?: {
     dealershipId?: number | null;
     excludeSold?: boolean;
+    /** Only return status=available (public showroom cards). */
+    availableOnly?: boolean;
     /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
     excludePlaceholderPrices?: boolean;
     /** Keep a dealership's stock off the platform marketplace (e.g. the demo yard) */
@@ -385,6 +387,16 @@ export async function listVehicles(
     includeGallery?: boolean;
     /** Optional SQL OFFSET for additive pagination (default 0). */
     offset?: number;
+    /** Case-insensitive make contains */
+    make?: string | null;
+    /** Case-insensitive body type contains (sedan, suv, bakkie, …) */
+    bodyType?: string | null;
+    fuel?: string | null;
+    transmission?: string | null;
+    /** Max price inclusive (ZAR) */
+    maxPrice?: number | null;
+    /** Free-text search across title/make/model/location */
+    search?: string | null;
   },
 ) {
   const db = await getDb();
@@ -396,6 +408,9 @@ export async function listVehicles(
   // (null/undefined status is treated as available)
   const soldFilter = opts?.excludeSold
     ? or(isNull(vehicles.status), ne(vehicles.status, "sold"))
+    : undefined;
+  const availableFilter = opts?.availableOnly
+    ? or(isNull(vehicles.status), eq(vehicles.status, "available"))
     : undefined;
   // R1 / nullish junk from CSV import must not go live on public surfaces
   const priceFilter = opts?.excludePlaceholderPrices
@@ -411,7 +426,55 @@ export async function listVehicles(
         )
       : undefined;
 
-  const filters = [soldFilter, priceFilter, excludeDealerFilter].filter(Boolean);
+  const makeQ = opts?.make?.trim().toLowerCase();
+  const makeFilter = makeQ
+    ? sql`LOWER(COALESCE(${vehicles.make}, '')) LIKE ${`%${makeQ}%`}`
+    : undefined;
+  const bodyQ = opts?.bodyType?.trim().toLowerCase();
+  const bodyFilter = bodyQ
+    ? sql`LOWER(COALESCE(${vehicles.bodyType}, '')) LIKE ${`%${bodyQ}%`}`
+    : undefined;
+  const fuelQ = opts?.fuel?.trim().toLowerCase();
+  const fuelFilter = fuelQ
+    ? sql`LOWER(COALESCE(${vehicles.fuel}, '')) = ${fuelQ}`
+    : undefined;
+  const transQ = opts?.transmission?.trim().toLowerCase();
+  const transmissionFilter = transQ
+    ? sql`LOWER(COALESCE(${vehicles.transmission}, '')) LIKE ${`%${transQ}%`}`
+    : undefined;
+  const maxPrice =
+    opts?.maxPrice != null && Number.isFinite(opts.maxPrice) && opts.maxPrice > 0
+      ? opts.maxPrice
+      : undefined;
+  const maxPriceFilter =
+    maxPrice != null
+      ? sql`CAST(${vehicles.price} AS DECIMAL(12,2)) <= ${maxPrice}`
+      : undefined;
+  const searchQ = opts?.search?.trim().toLowerCase();
+  const searchFilter = searchQ
+    ? sql`LOWER(CONCAT(
+        COALESCE(${vehicles.title}, ''), ' ',
+        COALESCE(${vehicles.make}, ''), ' ',
+        COALESCE(${vehicles.model}, ''), ' ',
+        COALESCE(${vehicles.location}, ''), ' ',
+        COALESCE(${vehicles.bodyType}, ''), ' ',
+        COALESCE(${vehicles.fuel}, ''), ' ',
+        COALESCE(${vehicles.transmission}, '')
+      )) LIKE ${`%${searchQ}%`}`
+    : undefined;
+
+  const filters = [
+    soldFilter,
+    availableFilter,
+    priceFilter,
+    excludeDealerFilter,
+    makeFilter,
+    bodyFilter,
+    fuelFilter,
+    transmissionFilter,
+    maxPriceFilter,
+    searchFilter,
+  ].filter(Boolean);
 
   let rows;
   if (opts === undefined) {
@@ -446,10 +509,34 @@ export async function listVehicles(
 
   const includeGallery = opts?.includeGallery !== false;
   if (!includeGallery) {
-    return rows.map((r) => ({
-      ...r,
-      images: [] as string[],
-    }));
+    // Cards only need one URL — if primary is blank, borrow the first gallery photo
+    // without shipping the full 8-angle set (keeps large yards fast).
+    const missingPrimaryIds = rows
+      .filter((r) => !(r.primaryPhotoUrl || r.imageUrl)?.trim())
+      .map((r) => r.id);
+    const firstPhotoByVehicle: Record<number, string> = {};
+    if (missingPrimaryIds.length > 0) {
+      const photos = await db
+        .select()
+        .from(vehiclePhotos)
+        .where(inArray(vehiclePhotos.vehicleId, missingPrimaryIds))
+        .orderBy(vehiclePhotos.position);
+      for (const p of photos) {
+        if (!firstPhotoByVehicle[p.vehicleId] && p.url?.trim()) {
+          firstPhotoByVehicle[p.vehicleId] = p.url;
+        }
+      }
+    }
+    return rows.map((r) => {
+      const fallback = firstPhotoByVehicle[r.id] ?? null;
+      const primary = r.primaryPhotoUrl || r.imageUrl || fallback;
+      return {
+        ...r,
+        primaryPhotoUrl: primary,
+        imageUrl: r.imageUrl || primary,
+        images: [] as string[],
+      };
+    });
   }
 
   const vehicleIds = rows.map((r) => r.id);
@@ -945,6 +1032,65 @@ export async function setVehiclePrimaryPhoto(vehicleId: number, photoUrl: string
     .update(vehicles)
     .set({ primaryPhotoUrl: photoUrl })
     .where(eq(vehicles.id, vehicleId));
+}
+
+/**
+ * Backfill blank primaryPhotoUrl / imageUrl from the first gallery row.
+ * Idempotent — only touches vehicles that are missing a primary URL.
+ */
+export async function healPrimaryFromGallery(opts?: {
+  dealershipId?: number | null;
+  limit?: number;
+}): Promise<{ healed: number }> {
+  const db = await getDb();
+  if (!db) return { healed: 0 };
+
+  const limit = Math.min(Math.max(opts?.limit ?? 500, 1), 2000);
+  const missing = await db
+    .select({ id: vehicles.id })
+    .from(vehicles)
+    .where(
+      and(
+        ...(opts?.dealershipId != null
+          ? [eq(vehicles.dealershipId, opts.dealershipId)]
+          : []),
+        or(isNull(vehicles.primaryPhotoUrl), eq(vehicles.primaryPhotoUrl, "")),
+        or(isNull(vehicles.imageUrl), eq(vehicles.imageUrl, "")),
+      ),
+    )
+    .limit(limit);
+
+  if (missing.length === 0) return { healed: 0 };
+
+  const ids = missing.map((m) => m.id);
+  const photos = await db
+    .select()
+    .from(vehiclePhotos)
+    .where(inArray(vehiclePhotos.vehicleId, ids))
+    .orderBy(vehiclePhotos.position);
+
+  const firstByVehicle = new Map<number, string>();
+  for (const p of photos) {
+    if (!firstByVehicle.has(p.vehicleId) && p.url?.trim()) {
+      firstByVehicle.set(p.vehicleId, p.url.trim());
+    }
+  }
+
+  let healed = 0;
+  for (const [vehicleId, url] of firstByVehicle) {
+    await db
+      .update(vehicles)
+      .set({ primaryPhotoUrl: url, imageUrl: url })
+      .where(eq(vehicles.id, vehicleId));
+    healed++;
+  }
+  return { healed };
+}
+
+export async function updateVehiclePhotoUrl(photoId: number, url: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(vehiclePhotos).set({ url }).where(eq(vehiclePhotos.id, photoId));
 }
 
 // === Conversations ===

@@ -179,7 +179,7 @@ import { isShowroomThemeId, resolveShowroomTheme } from "../shared/showroomTheme
 import { parseInventoryCsv } from "./_core/csvInventory";
 import { isR1Price, repairPricesFromRows } from "./_core/csvPriceRepair";
 import { commitInventoryCsv } from "./_core/inventoryCsvCommit";
-import { downloadAndStorePhoto, mirrorExternalPhoto, shouldMirrorPhoto } from "./_core/photoDownloader";
+import { downloadAndStorePhoto, mirrorExternalPhoto, shouldMirrorPhoto, isDurablePhotoStorageConfigured } from "./_core/photoDownloader";
 import { buildHtmlEmail, buildPlainTextSignature } from "./_core/emailSignature";
 import { billingRouter } from "./_core/billingRouter";
 import { emailRouter as coreEmailRouter } from "./_core/emailRouter"; // Renamed to avoid conflict
@@ -689,49 +689,76 @@ export const appRouter = router({
         z
           .object({
             dealershipId: z.number().int().optional(),
-            /** Optional page size (default keeps prior full-list behaviour). */
+            /** Page size. Default 48 for infinite scroll; pass up to 200. */
             limit: z.number().int().min(1).max(200).optional(),
+            /** Offset alias — prefer `cursor` for useInfiniteQuery. */
             offset: z.number().int().min(0).optional(),
+            /** tRPC infinite-query cursor (= offset). */
+            cursor: z.number().int().min(0).nullish(),
+            search: z.string().max(120).optional(),
+            make: z.string().max(64).optional(),
+            bodyType: z.string().max(64).optional(),
+            fuel: z.string().max(32).optional(),
+            transmission: z.string().max(32).optional(),
+            maxPrice: z.number().positive().optional(),
           })
           .nullish(),
       )
       .query(async ({ input, ctx }) => {
-        const pageLimit = input?.limit ?? 2000;
-        const pageOffset = input?.offset ?? 0;
-        if (input?.dealershipId != null) {
-          return listVehicles(pageLimit, {
-            dealershipId: input.dealershipId,
-            excludeSold: true,
-            excludePlaceholderPrices: true,
-            includeGallery: false,
-            offset: pageOffset,
-          });
-        }
-        const user = ctx.user;
-        const yardId = user?.dealershipId ?? null;
-        const isYardScoped =
-          !!user &&
-          yardId != null &&
-          (user.role === "dealer_owner" ||
-            user.role === "dealer_consultant" ||
-            isFounderOrAdmin(user));
-        if (isYardScoped) {
-          return listVehicles(pageLimit, {
-            dealershipId: yardId!,
-            excludeSold: true,
-            excludePlaceholderPrices: true,
-            includeGallery: false,
-            offset: pageOffset,
-          });
-        }
-        const demoDealershipId = await getDemoDealershipId();
-        return listVehicles(pageLimit, {
-          excludeSold: true,
-          excludePlaceholderPrices: true,
-          excludeDealershipId: demoDealershipId ?? undefined,
-          includeGallery: false,
+        const pageLimit = input?.limit ?? 48;
+        const pageOffset = input?.cursor ?? input?.offset ?? 0;
+        const filterOpts = {
+          excludeSold: true as const,
+          availableOnly: true as const,
+          excludePlaceholderPrices: true as const,
+          includeGallery: false as const,
           offset: pageOffset,
-        });
+          search: input?.search || undefined,
+          make: input?.make || undefined,
+          bodyType: input?.bodyType || undefined,
+          fuel: input?.fuel || undefined,
+          transmission: input?.transmission || undefined,
+          maxPrice: input?.maxPrice || undefined,
+        };
+        // Fetch one extra row to detect hasMore without a COUNT(*)
+        const fetchLimit = pageLimit + 1;
+        let rows;
+        if (input?.dealershipId != null) {
+          rows = await listVehicles(fetchLimit, {
+            ...filterOpts,
+            dealershipId: input.dealershipId,
+          });
+        } else {
+          const user = ctx.user;
+          const yardId = user?.dealershipId ?? null;
+          const isYardScoped =
+            !!user &&
+            yardId != null &&
+            (user.role === "dealer_owner" ||
+              user.role === "dealer_consultant" ||
+              isFounderOrAdmin(user));
+          if (isYardScoped) {
+            rows = await listVehicles(fetchLimit, {
+              ...filterOpts,
+              dealershipId: yardId!,
+            });
+          } else {
+            const demoDealershipId = await getDemoDealershipId();
+            rows = await listVehicles(fetchLimit, {
+              ...filterOpts,
+              excludeDealershipId: demoDealershipId ?? undefined,
+            });
+          }
+        }
+        const hasMore = rows.length > pageLimit;
+        const items = hasMore ? rows.slice(0, pageLimit) : rows;
+        return {
+          items,
+          hasMore,
+          nextOffset: pageOffset + items.length,
+          /** Alias for tRPC useInfiniteQuery getNextPageParam */
+          nextCursor: hasMore ? pageOffset + items.length : undefined,
+        };
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
     get: publicProcedure
@@ -1540,6 +1567,34 @@ export const appRouter = router({
           await cancelFollowupsForLead(input.id);
         } catch (e) {
           console.error("[leads.markLeadFollowedUp] cancelFollowupsForLead failed", e);
+        }
+        return { success: true as const };
+      }),
+
+    /** Email a Mia drip draft via Resend (one-tap send from Leads). */
+    sendLeadFollowup: protectedProcedure
+      .input(z.object({ followupId: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const { sendFollowupNow } = await import("./_core/leadDrip");
+        const { listLeadFollowupsForDealership } = await import("./db");
+        if (ctx.user.dealershipId != null) {
+          const rows = await listLeadFollowupsForDealership(ctx.user.dealershipId, 500);
+          if (!rows.some((r) => r.id === input.followupId) && !isFounderOrAdmin(ctx.user)) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "This follow-up belongs to another dealership.",
+            });
+          }
+        } else if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Dealership required" });
+        }
+        const result = await sendFollowupNow(input.followupId);
+        if (!result.ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.error ?? "Could not send follow-up",
+          });
         }
         return { success: true as const };
       }),
@@ -2901,6 +2956,17 @@ export const appRouter = router({
           ownerUserId: ctx.user.id,
           skipPhotoMirror: input.skipPhotoMirror,
           markMissingAsSold: input.markMissingAsSold,
+        }).then(async (result) => {
+          try {
+            const { healPrimaryFromGallery } = await import("./db");
+            const heal = await healPrimaryFromGallery({
+              dealershipId: importDealershipId,
+              limit: 2000,
+            });
+            return { ...result, primariesHealed: heal.healed };
+          } catch {
+            return result;
+          }
         });
       }),
 
@@ -2970,49 +3036,101 @@ export const appRouter = router({
     }),
 
     /** Copy external listing photos into GrayArx storage so links never break. */
-    mirrorMissingPhotos: protectedProcedure.mutation(async () => {
-      const all = await listVehicles(500);
+    mirrorMissingPhotos: protectedProcedure.mutation(async ({ ctx }) => {
+      assertDealerOrAdmin(ctx.user);
+      const dealershipId = ctx.user.dealershipId ?? null;
+      const { healPrimaryFromGallery, updateVehiclePhotoUrl } = await import("./db");
+      const heal = await healPrimaryFromGallery({
+        dealershipId: dealershipId ?? undefined,
+        limit: 1000,
+      });
+
+      const all = dealershipId
+        ? await listVehicles(1000, { dealershipId, includeGallery: false })
+        : isFounderOrAdmin(ctx.user)
+          ? await listVehicles(1000, { includeGallery: false })
+          : [];
       let mirrored = 0;
       let skipped = 0;
       let failed = 0;
+      let galleryMirrored = 0;
+
+      if (!isDurablePhotoStorageConfigured()) {
+        return {
+          mirrored: 0,
+          galleryMirrored: 0,
+          healed: heal.healed,
+          skipped: all.length,
+          failed: 0,
+          needsS3: true as const,
+        };
+      }
 
       for (const v of all) {
-        const primary = v.primaryPhotoUrl || v.imageUrl;
-        if (!shouldMirrorPhoto(primary)) {
+        let primary = v.primaryPhotoUrl || v.imageUrl;
+        if (shouldMirrorPhoto(primary)) {
+          const stored = await mirrorExternalPhoto(primary!, v.title, v.externalRef);
+          if (!stored) {
+            failed++;
+          } else {
+            await updateVehicle(v.id, {
+              imageUrl: stored,
+              primaryPhotoUrl: stored,
+            });
+            primary = stored;
+            mirrored++;
+          }
+        } else if (primary) {
           skipped++;
-          continue;
         }
-        const stored = await mirrorExternalPhoto(primary, v.title, v.externalRef);
-        if (!stored) {
-          failed++;
-          continue;
-        }
-        await updateVehicle(v.id, {
-          imageUrl: stored,
-          primaryPhotoUrl: stored,
-        });
+
         const gallery = await listVehiclePhotos(v.id);
-        if (gallery.length === 0) {
+        if (gallery.length === 0 && primary && !shouldMirrorPhoto(primary)) {
           await addVehiclePhoto({
             vehicleId: v.id,
-            url: stored,
+            url: primary,
             storageKey: `mirror/${v.id}/${Date.now()}`,
             position: 0,
             caption: "front_3_4",
           });
         }
-        mirrored++;
+
+        for (let i = 0; i < gallery.length; i++) {
+          const g = gallery[i];
+          if (!shouldMirrorPhoto(g.url)) continue;
+          const stored = await mirrorExternalPhoto(g.url, v.title, v.externalRef);
+          if (!stored) {
+            failed++;
+            continue;
+          }
+          await updateVehiclePhotoUrl(g.id, stored);
+          galleryMirrored++;
+          if (i === 0 && !primary) {
+            await updateVehicle(v.id, {
+              imageUrl: stored,
+              primaryPhotoUrl: stored,
+            });
+            primary = stored;
+          }
+        }
       }
 
       await logAgentActivity({
         agentId: "improvement",
         action: "photos_mirrored",
         subjectType: null,
-        summary: `Mirrored ${mirrored} external photo${mirrored === 1 ? "" : "s"} into GrayArx storage (${failed} failed, ${skipped} already hosted).`,
-        payload: { mirrored, failed, skipped },
+        summary: `Mirrored ${mirrored} primary + ${galleryMirrored} gallery photo(s); healed ${heal.healed} primaries (${failed} failed, ${skipped} already hosted).`,
+        payload: { mirrored, galleryMirrored, healed: heal.healed, failed, skipped },
       });
 
-      return { mirrored, skipped, failed };
+      return {
+        mirrored,
+        galleryMirrored,
+        healed: heal.healed,
+        skipped,
+        failed,
+        needsS3: false as const,
+      };
     }),
 
     sendEmail: protectedProcedure

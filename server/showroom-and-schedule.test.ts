@@ -29,10 +29,16 @@ describe("public showroom + scheduling", () => {
     expect(result === null || result === undefined).toBe(true);
   });
 
-  it("showroom.list is public and returns an array", async () => {
+  it("showroom.list is public and returns a paginated page object", async () => {
     const caller = createCaller(null);
     const result = await caller.showroom.list();
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual(
+      expect.objectContaining({
+        items: expect.any(Array),
+        hasMore: expect.any(Boolean),
+        nextOffset: expect.any(Number),
+      }),
+    );
   });
 
   it("prospects.listSchedules requires authentication", async () => {

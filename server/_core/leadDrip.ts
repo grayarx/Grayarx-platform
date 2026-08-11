@@ -6,20 +6,13 @@
  *      into `lead_followups` with future `dueAt` timestamps.
  *   2. A scheduled endpoint (`/api/scheduled/lead-followup-tick`) runs hourly
  *      and processes every `pending` row whose `dueAt <= now()`.
- *   3. For each due row, we look up the lead, ask Mia (the Email Agent) to
- *      draft a stage-appropriate message in the lead's language, persist a
- *      preview, and mark the row `sent`.
- *   4. If the lead's status moves to `converted`, all remaining `pending`
- *      rows for that lead are flipped to `cancelled` — we never spam buyers
- *      who already converted.
+ *   3. For each due row, Mia drafts a stage-appropriate message, emails it via
+ *      Resend when `RESEND_API_KEY` is set (or when `LEAD_DRIP_AUTO_SEND=1`),
+ *      stores a preview, and marks the row `sent`.
+ *   4. If the lead's status moves to converted/lost/contacted/qualified,
+ *      remaining `pending` rows are cancelled.
  *
- * Why we store a draft preview instead of actually sending right now:
- *   - The platform does not have outbound SMTP wired yet. When Resend outbound is wired for drip,
- *     the only change is to swap the
- *     "preview-only" branch in `dispatchFollowup` for an actual send.
- *   - In the meantime, the dealer sees Mia's drafted follow-ups in the Leads
- *     view and can ship them with one tap, which is also useful behaviour for
- *     POPIA-cautious dealerships that want a human review pass.
+ * Override: set `LEAD_DRIP_AUTO_SEND=0` to keep draft-only mode (human review).
  */
 
 import { getDb } from "../db";
@@ -31,6 +24,9 @@ import type { LanguageCode } from "@shared/languages";
 import { LANGUAGES } from "@shared/languages";
 import { isQuotaError } from "./agentResilience";
 import { alertFounder } from "./founderAlert";
+import { sendEmailViaResend } from "./resendEmailService";
+import { buildHtmlEmail } from "./emailSignature";
+import { ENV } from "./env";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -40,6 +36,12 @@ const STEP_DELAYS: Record<DripStep, number> = {
   day_1: 1 * DAY_MS,
   day_3: 3 * DAY_MS,
   day_7: 7 * DAY_MS,
+};
+
+const STEP_SUBJECTS: Record<DripStep, string> = {
+  day_1: "Quick follow-up from GrayArx",
+  day_3: "Still here if you need us — GrayArx",
+  day_7: "Last check-in from GrayArx",
 };
 
 /** Fallback drip text when the LLM is unavailable (English template — always safe). */
@@ -60,6 +62,38 @@ const STEP_PROMPTS: Record<DripStep, string> = {
   day_7:
     "You are Mia, the GrayArx Email Agent. This is the final check-in seven days after the enquiry. Be warm, low-pressure, and explicit that you will pause emails after this one unless they reply. Offer to keep them on the quarterly newsletter. Under 90 words.",
 };
+
+/** True when Resend is configured and auto-send is not explicitly disabled. */
+export function shouldAutoSendDrip(): boolean {
+  if (process.env.LEAD_DRIP_AUTO_SEND === "0") return false;
+  if (process.env.LEAD_DRIP_AUTO_SEND === "1") return Boolean(ENV.resendApiKey);
+  // Default: send when Resend key exists
+  return Boolean(ENV.resendApiKey);
+}
+
+async function dispatchFollowupEmail(opts: {
+  to: string;
+  contactName: string;
+  step: DripStep;
+  body: string;
+  language: LanguageCode;
+}): Promise<{ ok: boolean; error?: string; id?: string }> {
+  const subject = STEP_SUBJECTS[opts.step];
+  const html = buildHtmlEmail({
+    agentId: "email",
+    bodyPlainText: opts.body,
+    language: opts.language,
+    subject,
+  });
+  const result = await sendEmailViaResend({
+    to: opts.to,
+    subject,
+    html,
+    from: "Mia at GrayArx <mia@grayarx.com>",
+    replyTo: "hello@grayarx.com",
+  });
+  return { ok: result.success, error: result.error, id: result.id };
+}
 
 /** Insert three pending rows for a fresh lead. */
 export async function scheduleFollowups(
@@ -99,14 +133,18 @@ export async function cancelFollowupsForLead(leadId: number): Promise<number> {
 export async function tickFollowups(now: Date = new Date()): Promise<{
   processed: number;
   sent: number;
+  drafted: number;
   failed: number;
   cancelled: number;
+  autoSend: boolean;
 }> {
   const db = await getDb();
   if (!db) {
     console.error("[Mia/leadDrip] DB unavailable — tickFollowups returning zero counts (silent success risk)");
-    return { processed: 0, sent: 0, failed: 0, cancelled: 0 };
+    return { processed: 0, sent: 0, drafted: 0, failed: 0, cancelled: 0, autoSend: false };
   }
+
+  const autoSend = shouldAutoSendDrip();
 
   const due = await db
     .select()
@@ -116,6 +154,7 @@ export async function tickFollowups(now: Date = new Date()): Promise<{
     .limit(100);
 
   let sent = 0;
+  let drafted = 0;
   let failed = 0;
   let cancelled = 0;
 
@@ -127,7 +166,6 @@ export async function tickFollowups(now: Date = new Date()): Promise<{
       .limit(1);
     const leadRow = lead[0];
     if (!leadRow) {
-      // Lead deleted — cancel.
       await db
         .update(leadFollowups)
         .set({ status: "cancelled", errorMessage: "lead_deleted" })
@@ -157,53 +195,26 @@ export async function tickFollowups(now: Date = new Date()): Promise<{
 
 Compose the ${row.step.replace("_", " ")} follow-up.`;
 
+    let bodyText = "";
     try {
-      const drafted = await generateAgentReply({
+      const draftedReply = await generateAgentReply({
         agentId: "email",
         language: lang,
         customerMessage,
         context: systemPrompt,
       });
-      await db
-        .update(leadFollowups)
-        .set({
-          status: "sent",
-          sentAt: new Date(),
-          draftPreview: drafted.reply.slice(0, 4000),
-        })
-        .where(eq(leadFollowups.id, row.id));
-      await logAgentActivity({
-        agentId: "email",
-        action: `followup_${row.step}_drafted`,
-        subjectType: "lead",
-        subjectId: row.leadId,
-        summary: `Mia drafted the ${row.step.replace("_", " ")} follow-up for ${leadRow.contactName} in ${langName}.`,
-        payload: { followupId: row.id, language: lang },
-      });
-      sent++;
+      bodyText = draftedReply.reply.slice(0, 4000);
     } catch (err) {
       const step = row.step as DripStep;
       const quota = isQuotaError(err);
 
       if (quota) {
-        // Quota exhausted — use template immediately, mark sent so we don't block this lead forever
-        const template = STEP_TEMPLATES[step];
+        bodyText = STEP_TEMPLATES[step];
         console.warn(
           `[Mia] Quota error on lead ${row.leadId} step ${step} — using template fallback`,
           err instanceof Error ? err.message : String(err),
         );
-        await db
-          .update(leadFollowups)
-          .set({
-            status: "sent",
-            sentAt: new Date(),
-            draftPreview: template.slice(0, 4000),
-            errorMessage: `template_fallback:quota:${String(err).slice(0, 200)}`,
-          })
-          .where(eq(leadFollowups.id, row.id));
-        sent++;
       } else {
-        // Transient LLM failure — push dueAt forward by 2 hours for a retry window
         const retryAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
         console.warn(
           `[Mia] LLM failed for lead ${row.leadId} step ${step} — rescheduling in 2h`,
@@ -217,18 +228,132 @@ Compose the ${row.step.replace("_", " ")} follow-up.`;
           })
           .where(eq(leadFollowups.id, row.id));
         failed++;
+        continue;
       }
+    }
+
+    if (autoSend && leadRow.email?.includes("@")) {
+      const mail = await dispatchFollowupEmail({
+        to: leadRow.email,
+        contactName: leadRow.contactName,
+        step: row.step as DripStep,
+        body: bodyText,
+        language: lang,
+      });
+      if (!mail.ok) {
+        const retryAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        await db
+          .update(leadFollowups)
+          .set({
+            dueAt: retryAt,
+            draftPreview: bodyText,
+            errorMessage: `resend_failed:${(mail.error ?? "unknown").slice(0, 200)}`,
+          })
+          .where(eq(leadFollowups.id, row.id));
+        failed++;
+        continue;
+      }
+      await db
+        .update(leadFollowups)
+        .set({
+          status: "sent",
+          sentAt: new Date(),
+          draftPreview: bodyText,
+          errorMessage: mail.id ? `resend:${mail.id}` : null,
+        })
+        .where(eq(leadFollowups.id, row.id));
+      await logAgentActivity({
+        agentId: "email",
+        action: `followup_${row.step}_sent`,
+        subjectType: "lead",
+        subjectId: row.leadId,
+        summary: `Mia emailed the ${row.step.replace("_", " ")} follow-up to ${leadRow.contactName} in ${langName}.`,
+        payload: { followupId: row.id, language: lang, resendId: mail.id },
+      });
+      sent++;
+    } else {
+      await db
+        .update(leadFollowups)
+        .set({
+          status: "sent",
+          sentAt: new Date(),
+          draftPreview: bodyText,
+          errorMessage: autoSend ? "no_email" : "draft_only",
+        })
+        .where(eq(leadFollowups.id, row.id));
+      await logAgentActivity({
+        agentId: "email",
+        action: `followup_${row.step}_drafted`,
+        subjectType: "lead",
+        subjectId: row.leadId,
+        summary: `Mia drafted the ${row.step.replace("_", " ")} follow-up for ${leadRow.contactName} in ${langName}${autoSend ? "" : " (auto-send off)"}.`,
+        payload: { followupId: row.id, language: lang, autoSend },
+      });
+      drafted++;
+      sent++; // keep "sent" counter meaning "processed successfully" for cron dashboards
     }
   }
 
   if (failed >= 3) {
     alertFounder({
-      title: "Mia drip: systemic LLM failures",
-      content: `tickFollowups processed ${due.length} rows and encountered ${failed} LLM failures in a single tick — possible OpenAI outage or quota issue.`,
+      title: "Mia drip: systemic failures",
+      content: `tickFollowups processed ${due.length} rows and encountered ${failed} failures in a single tick — check OpenAI quota or Resend.`,
       category: "ops",
       actionUrl: "https://www.grayarx.com/admin/ops",
     }).catch(() => {});
   }
 
-  return { processed: due.length, sent, failed, cancelled };
+  return { processed: due.length, sent, drafted, failed, cancelled, autoSend };
+}
+
+/** Manually email a drafted follow-up (dealer one-tap send). */
+export async function sendFollowupNow(followupId: number): Promise<{ ok: boolean; error?: string }> {
+  const db = await getDb();
+  if (!db) return { ok: false, error: "Database unavailable" };
+
+  const rows = await db
+    .select()
+    .from(leadFollowups)
+    .where(eq(leadFollowups.id, followupId))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return { ok: false, error: "Follow-up not found" };
+
+  const lead = await db
+    .select()
+    .from(leadsTable)
+    .where(eq(leadsTable.id, row.leadId))
+    .limit(1);
+  const leadRow = lead[0];
+  if (!leadRow?.email) return { ok: false, error: "Lead has no email" };
+
+  const body =
+    row.draftPreview?.trim() ||
+    STEP_TEMPLATES[(row.step as DripStep) ?? "day_1"];
+  const lang = (row.language as LanguageCode) ?? "en";
+
+  if (!ENV.resendApiKey) {
+    return { ok: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  const mail = await dispatchFollowupEmail({
+    to: leadRow.email,
+    contactName: leadRow.contactName,
+    step: row.step as DripStep,
+    body,
+    language: lang,
+  });
+  if (!mail.ok) return { ok: false, error: mail.error ?? "Send failed" };
+
+  await db
+    .update(leadFollowups)
+    .set({
+      status: "sent",
+      sentAt: new Date(),
+      draftPreview: body.slice(0, 4000),
+      errorMessage: mail.id ? `resend:${mail.id}` : "manual_send",
+    })
+    .where(eq(leadFollowups.id, row.id));
+
+  return { ok: true };
 }

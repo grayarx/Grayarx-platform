@@ -49,7 +49,12 @@ Webhook routes are registered at line 60 **before** static files.
 | Verify token | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` from `.env` |
 | Subscribe | `messages` |
 
-Phone Number ID: `1236174859569229` (+27 82 053 2685)
+Phone Number ID: set `WHATSAPP_PHONE_NUMBER_ID` in Railway to the live Meta Phone Number ID
+(confirm in Meta → WhatsApp → API Setup; historically used with +27 82 053 2685).
+
+Subscribe **messages** webhooks for that phone number (Subscribe toggle ON).
+
+Do **not** use trycloudflare / ephemeral tunnels for production — Meta must call `https://www.grayarx.com/api/webhooks/whatsapp`.
 
 ### D) Env vars required on production
 
@@ -57,10 +62,12 @@ Phone Number ID: `1236174859569229` (+27 82 053 2685)
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=
 WHATSAPP_APP_SECRET=
 WHATSAPP_ACCESS_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=1236174859569229
+WHATSAPP_PHONE_NUMBER_ID=<live Meta Phone Number ID>
 WHATSAPP_DEALERSHIP_ID=1
 APP_URL=https://www.grayarx.com
-```
+# Optional: LEAD_DRIP_AUTO_SEND=0 to keep Mia drafts human-reviewed only
+RESEND_API_KEY=
+SCHEDULED_TASK_SECRET=```
 
 ## Local simulate (no Meta)
 
