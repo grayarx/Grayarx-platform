@@ -1202,7 +1202,23 @@ export default function Inventory() {
                   Reserved
                 </button>
                 {" — "}
-                switch filter, Select all, then Set status → Available.
+                switch filter, or use <span className="text-amber-200">Put reserved → Available</span> above.
+              </p>
+            ) : statusFilter === "reserved" && showroomStats.reserved === 0 ? (
+              <p className="text-sm mb-3 text-muted-foreground/80">
+                No reserved cars right now. Try{" "}
+                <button
+                  type="button"
+                  className="text-primary underline underline-offset-2"
+                  onClick={() => setStatusFilter("not_on_showroom")}
+                >
+                  Not on showroom
+                </button>{" "}
+                to see anything still hidden.
+              </p>
+            ) : statusFilter === "not_on_showroom" ? (
+              <p className="text-sm mb-3 text-muted-foreground/80">
+                Everything matching this view is already on the showroom — nice.
               </p>
             ) : null}
             <p className="text-sm">Try clearing the search or changing the filter.</p>

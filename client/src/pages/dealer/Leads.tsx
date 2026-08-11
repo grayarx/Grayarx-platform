@@ -104,6 +104,14 @@ export default function Leads() {
     onError: (e) => toast.error(e.message),
   });
 
+  const sendFollowup = trpc.dealer.sendLeadFollowup.useMutation({
+    onSuccess: () => {
+      utils.dealer.listLeadFollowups.invalidate();
+      toast.success("Mia follow-up emailed");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const now = Date.now();
   const followupByLead = useMemo(() => {
     const map = new Map<
@@ -382,6 +390,18 @@ export default function Leads() {
                               Mia draft · {stepLabel(fu.step)}
                             </span>
                             {fu.draftPreview}
+                            <div className="mt-3">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 text-xs btn-gold"
+                                disabled={sendFollowup.isPending}
+                                onClick={() => sendFollowup.mutate({ followupId: fu.id })}
+                              >
+                                <Mail className="h-3.5 w-3.5 mr-1" />
+                                Email this draft
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : null}

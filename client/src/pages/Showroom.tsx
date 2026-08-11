@@ -285,13 +285,6 @@ export default function Showroom() {
   const needsDealerScope = Boolean(
     showroomScope.dealershipId || showroomScope.shortcode,
   );
-  const { data: dbVehicles, isLoading } = trpc.showroom.list.useQuery(
-    { dealershipId: scopedDealershipId },
-    {
-      // Don't flash platform-wide stock while resolving a dealer-scoped preview.
-      enabled: !needsDealerScope || scopedDealershipId != null,
-    },
-  );
   const { data: contactOptions } = trpc.showroom.contactOptions.useQuery({
     dealershipId: scopedDealershipId,
     shortcode: showroomScope.shortcode,
@@ -320,6 +313,8 @@ export default function Showroom() {
   const [transmissionFilter, setTransmissionFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "best_deals">("default");
   const [maxPriceFilter, setMaxPriceFilter] = useState<number | null>(null);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [accumulated, setAccumulated] = useState<ShowroomVehicle[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch);
@@ -330,25 +325,95 @@ export default function Showroom() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<ShowroomVehicle | null>(null);
-  const [visibleCount, setVisibleCount] = useState(24);
 
-  const fromDb = useMemo(
-    () =>
-      (dbVehicles ?? [])
-        .filter((v) => v.status === "available" && v.title?.trim())
-        .map(dbToShowroom),
-    [dbVehicles],
+  const serverSearch = useMemo(() => {
+    const parts = [
+      search.trim(),
+      ...(aiFilters?.searchTerms ?? []),
+    ].filter(Boolean);
+    return parts.join(" ") || undefined;
+  }, [search, aiFilters]);
+
+  const listFilters = useMemo(
+    () => ({
+      dealershipId: scopedDealershipId,
+      limit: 48 as const,
+      offset: pageOffset,
+      search: serverSearch,
+      fuel: fuelFilter !== "all" ? fuelFilter : aiFilters?.fuel || undefined,
+      transmission:
+        transmissionFilter !== "all" ? transmissionFilter : undefined,
+      bodyType: aiFilters?.bodyHint || undefined,
+      maxPrice: maxPriceFilter ?? aiFilters?.maxPrice ?? undefined,
+    }),
+    [
+      scopedDealershipId,
+      pageOffset,
+      serverSearch,
+      fuelFilter,
+      transmissionFilter,
+      aiFilters,
+      maxPriceFilter,
+    ],
   );
 
+  // Reset accumulated pages when filters change (not when loading more).
+  const filterKey = useMemo(
+    () =>
+      JSON.stringify({
+        dealershipId: scopedDealershipId,
+        search: serverSearch,
+        fuel: listFilters.fuel,
+        transmission: listFilters.transmission,
+        bodyType: listFilters.bodyType,
+        maxPrice: listFilters.maxPrice,
+      }),
+    [scopedDealershipId, serverSearch, listFilters.fuel, listFilters.transmission, listFilters.bodyType, listFilters.maxPrice],
+  );
+
+  useEffect(() => {
+    setPageOffset(0);
+    setAccumulated([]);
+  }, [filterKey]);
+
+  const {
+    data: listPage,
+    isLoading,
+    isFetching,
+  } = trpc.showroom.list.useQuery(listFilters, {
+    enabled: !needsDealerScope || scopedDealershipId != null,
+  });
+
+  useEffect(() => {
+    if (!listPage) return;
+    const mapped = listPage.items
+      .filter((v) => v.title?.trim())
+      .map(dbToShowroom);
+    setAccumulated((prev) => {
+      if (pageOffset === 0) return mapped;
+      const seen = new Set(prev.map((p) => p.id));
+      return [...prev, ...mapped.filter((m) => !seen.has(m.id))];
+    });
+  }, [listPage, pageOffset]);
+
+  const fromDb = accumulated;
+  const hasNextPage = Boolean(listPage?.hasMore);
+  const isFetchingNextPage = isFetching && pageOffset > 0;
+
   const allVehicles: ShowroomVehicle[] = useMemo(() => {
-    return fromDb.length > 0 ? fromDb : (DEV_SAMPLE_VEHICLES as ShowroomVehicle[]);
-  }, [fromDb]);
+    if (fromDb.length > 0) return fromDb;
+    if (import.meta.env.DEV && !isLoading) {
+      return DEV_SAMPLE_VEHICLES as ShowroomVehicle[];
+    }
+    return [];
+  }, [fromDb, isLoading]);
 
   const hasActiveFilters =
     search.trim().length > 0 ||
     fuelFilter !== "all" ||
     transmissionFilter !== "all" ||
-    aiFilters !== null;
+    aiFilters !== null ||
+    maxPriceFilter != null;
 
   const clearFilters = () => {
     setSearch("");
@@ -357,59 +422,43 @@ export default function Showroom() {
     setAiFilters(null);
     setAiResult(null);
     setAiQuery("");
+    setMaxPriceFilter(null);
   };
 
   const filtered = useMemo(() => {
-    const list = allVehicles.filter((v) => {
-      const q = search.trim();
-      const matchSearch = !q || matchesQuery(v, q);
-      const matchFuel =
-        fuelFilter === "all" ||
-        v.fuel.toLowerCase() === fuelFilter.toLowerCase();
-      const matchTrans =
-        transmissionFilter === "all" ||
-        v.transmission.toLowerCase().includes(transmissionFilter.toLowerCase());
-      const matchAiPrice =
-        !aiFilters?.maxPrice || v.price <= aiFilters.maxPrice;
-      const matchAiFuel =
-        !aiFilters?.fuel ||
-        v.fuel.toLowerCase() === aiFilters.fuel.toLowerCase();
-      const matchAiBody =
-        !aiFilters?.bodyHint ||
-        (v.bodyType ?? v.title).toLowerCase().includes(aiFilters.bodyHint);
-      const matchAiTerms =
-        !aiFilters?.searchTerms.length ||
-        aiFilters.searchTerms.some((t) => matchesQuery(v, t));
-      const matchMaxPrice = !maxPriceFilter || v.price <= maxPriceFilter;
-      return (
-        matchSearch &&
-        matchFuel &&
-        matchTrans &&
-        matchAiPrice &&
-        matchAiFuel &&
-        matchAiBody &&
-        matchAiTerms &&
-        matchMaxPrice
+    let list = allVehicles;
+    if (aiFilters?.searchTerms?.length) {
+      list = list.filter((v) =>
+        aiFilters.searchTerms.some((t) => matchesQuery(v, t)),
       );
-    });
+    }
     if (sortBy === "best_deals") {
       return [...list].sort((a, b) => {
-        const sa = scoreListingDeal(a.price, { make: a.make, model: a.model, year: a.year, mileageKm: a.km, title: a.title });
-        const sb = scoreListingDeal(b.price, { make: b.make, model: b.model, year: b.year, mileageKm: b.km, title: b.title });
+        const sa = scoreListingDeal(a.price, {
+          make: a.make,
+          model: a.model,
+          year: a.year,
+          mileageKm: a.km,
+          title: a.title,
+        });
+        const sb = scoreListingDeal(b.price, {
+          make: b.make,
+          model: b.model,
+          year: b.year,
+          mileageKm: b.km,
+          title: b.title,
+        });
         return (sb?.deltaPct ?? 0) - (sa?.deltaPct ?? 0);
       });
     }
     return list;
-  }, [allVehicles, search, fuelFilter, transmissionFilter, aiFilters, sortBy, maxPriceFilter]);
+  }, [allVehicles, aiFilters, sortBy]);
 
-  useEffect(() => {
-    setVisibleCount(24);
-  }, [search, fuelFilter, transmissionFilter, aiFilters, sortBy, maxPriceFilter]);
-
-  const visibleVehicles = useMemo(
-    () => filtered.slice(0, visibleCount),
-    [filtered, visibleCount],
-  );
+  const visibleVehicles = filtered;
+  const fetchNextPage = () => {
+    if (!listPage?.hasMore) return;
+    setPageOffset(listPage.nextOffset);
+  };
 
   const aiSearch = trpc.showroom.aiSearch.useMutation({
     onSuccess: (data) => {
@@ -881,23 +930,25 @@ export default function Showroom() {
             );
             })}
           </div>
-          {filtered.length > visibleCount ? (
+          {hasNextPage ? (
             <div className="mt-10 flex flex-col items-center gap-3">
               <p className="text-sm text-muted-foreground">
-                Showing {visibleCount} of {filtered.length} vehicles
+                Showing {visibleVehicles.length} vehicles
+                {hasActiveFilters ? " matching your filters" : ""}
               </p>
               <Button
                 type="button"
                 variant="outline"
                 className="min-w-[200px]"
-                onClick={() => setVisibleCount((n) => Math.min(n + 24, filtered.length))}
+                disabled={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
               >
-                Load more vehicles
+                {isFetchingNextPage ? "Loading…" : "Load more vehicles"}
               </Button>
             </div>
-          ) : filtered.length > 24 ? (
+          ) : visibleVehicles.length > 48 ? (
             <p className="mt-8 text-center text-sm text-muted-foreground">
-              Showing all {filtered.length} vehicles
+              Showing all {visibleVehicles.length} vehicles
             </p>
           ) : null}
           </>
