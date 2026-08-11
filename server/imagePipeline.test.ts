@@ -49,4 +49,21 @@ describe("imagePipeline", () => {
     ]);
     expect(merged).toEqual(["https://a.com/1.jpg", "https://a.com/2.jpg"]);
   });
+
+  it("rewrites Wikimedia Commons thumbs to the requested width", () => {
+    const url = optimizeImageUrl(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Example.jpg/1280px-Example.jpg",
+      480,
+    );
+    expect(url).toContain("/480px-Example.jpg");
+    expect(url).not.toContain("1280px");
+  });
+
+  it("builds Wikimedia thumbs from original Commons paths", () => {
+    const url = optimizeImageUrl(
+      "https://upload.wikimedia.org/wikipedia/commons/d/d5/Example.jpg",
+      768,
+    );
+    expect(url).toContain("/wikipedia/commons/thumb/d/d5/Example.jpg/768px-Example.jpg");
+  });
 });

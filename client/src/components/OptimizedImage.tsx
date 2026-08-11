@@ -45,7 +45,7 @@ export default function OptimizedImage({
 
   const displaySrc = failed ? fallbackSrc : src;
   const optimized = useMemo(
-    () => (staticAsset || failed ? displaySrc : optimizeImageUrl(displaySrc, 1200, 88)),
+    () => (staticAsset || failed ? displaySrc : optimizeImageUrl(displaySrc, 768, 82)),
     [displaySrc, staticAsset, failed],
   );
   const srcSet = useMemo(
