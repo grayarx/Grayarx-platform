@@ -17,6 +17,8 @@ import {
   Pencil,
   ShoppingBag,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import SearchableSelect from "@/components/SearchableSelect";
@@ -174,6 +176,27 @@ function maskVin(vin: string | null | undefined) {
 
 const SERVICE_SELECT_OPTIONS = ["Not specified", "Full", "Partial", "None"] as const;
 
+const SHOWROOM_STRIP_KEY = "grayarx.inventoryShowroomStripMinimized";
+
+function loadShowroomStripMinimized(preferMinimized: boolean): boolean {
+  try {
+    const raw = localStorage.getItem(SHOWROOM_STRIP_KEY);
+    if (raw === "1") return true;
+    if (raw === "0") return false;
+  } catch {
+    /* ignore */
+  }
+  return preferMinimized;
+}
+
+function saveShowroomStripMinimized(minimized: boolean) {
+  try {
+    localStorage.setItem(SHOWROOM_STRIP_KEY, minimized ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
 function normalizeCondition(value: string | null | undefined): FormState["condition"] {
   const lower = (value ?? "used").toLowerCase();
   return CONDITION_OPTIONS.includes(lower as FormState["condition"]) ? (lower as FormState["condition"]) : "used";
@@ -319,6 +342,8 @@ export default function Inventory() {
   const [bodyFilter, setBodyFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [visibleCount, setVisibleCount] = useState(24);
+  const [showroomStripMinimized, setShowroomStripMinimized] = useState(false);
+  const [showroomStripReady, setShowroomStripReady] = useState(false);
 
   const [pendingGallery, setPendingGallery] = useState<PendingGalleryPhoto[]>([]);
 
@@ -473,6 +498,20 @@ export default function Inventory() {
       badPrice,
     };
   }, [data]);
+
+  // Default: minimize when everything is on the showroom; remember the dealer’s choice.
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    if (showroomStripReady) return;
+    const preferMinimized = showroomStats.hidden === 0;
+    setShowroomStripMinimized(loadShowroomStripMinimized(preferMinimized));
+    setShowroomStripReady(true);
+  }, [data, showroomStats.hidden, showroomStripReady]);
+
+  const setStripMinimized = (minimized: boolean) => {
+    setShowroomStripMinimized(minimized);
+    saveShowroomStripMinimized(minimized);
+  };
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((v) => selectedIds.has(v.id));
@@ -984,7 +1023,7 @@ export default function Inventory() {
         </div>
       }
     >
-      {/* Always show showroom health so Reserved / Fix actions stay discoverable */}
+      {/* Showroom health — minimizable (remembers choice like Photo tip) */}
       {data && data.length > 0 ? (
         <div
           className={`mb-4 rounded-lg px-4 py-3 text-sm ${
@@ -993,104 +1032,158 @@ export default function Inventory() {
               : "border border-primary/15 bg-card/40 text-foreground"
           }`}
         >
-          <p className="font-medium">
-            {showroomStats.onShowroom} of {showroomStats.total} cars are on the public showroom
-            {showroomStats.hidden > 0 ? (
-              <>
-                {" · "}
-                <span className="text-amber-200">{showroomStats.hidden} hidden</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground font-normal"> · all live</span>
-            )}
-          </p>
-          <p
-            className={`mt-1 text-xs ${
-              showroomStats.hidden > 0 ? "text-amber-100/80" : "text-muted-foreground"
-            }`}
-          >
-            {[
-              `${showroomStats.reserved} reserved`,
-              `${showroomStats.fix} marked Fix`,
-              showroomStats.sold ? `${showroomStats.sold} sold` : null,
-              showroomStats.badPrice ? `${showroomStats.badPrice} bad/POA price` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            {showroomStats.hidden > 0
-              ? ". Use the buttons below (or status → Not on showroom / Fix) to find and fix them."
-              : ". Reserved cars stay off the showroom until you set them Available."}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-medium">
+              {showroomStats.onShowroom} of {showroomStats.total} cars are on the public showroom
+              {showroomStats.hidden > 0 ? (
+                <>
+                  {" · "}
+                  <span className="text-amber-200">{showroomStats.hidden} hidden</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground font-normal"> · all live</span>
+              )}
+            </p>
+            <button
               type="button"
-              size="sm"
-              variant="outline"
-              className={`h-7 ${
-                showroomStats.hidden > 0
-                  ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
-                  : ""
+              className={`shrink-0 inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline ${
+                showroomStats.hidden > 0 ? "text-amber-100/80" : "text-muted-foreground"
               }`}
-              onClick={() => setStatusFilter("not_on_showroom")}
-              disabled={showroomStats.hidden === 0}
+              onClick={() => setStripMinimized(!showroomStripMinimized)}
             >
-              Show hidden cars
-              {showroomStats.hidden > 0 ? ` (${showroomStats.hidden})` : ""}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className={`h-7 ${
-                showroomStats.reserved > 0
-                  ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
-                  : ""
-              }`}
-              onClick={() => setStatusFilter("reserved")}
-            >
-              Show reserved
-              {showroomStats.reserved > 0 ? ` (${showroomStats.reserved})` : ""}
-            </Button>
-            {showroomStats.reserved > 0 ? (
-              <Button
-                type="button"
-                size="sm"
-                className="h-7 btn-gold"
-                disabled={bulkBusy}
-                onClick={putReservedOnAvailable}
-              >
-                {bulkStatus.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : null}
-                Put {showroomStats.reserved} reserved → Available
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className={`h-7 ${
-                showroomStats.fix > 0
-                  ? "border-rose-500/40 text-rose-200 hover:bg-rose-500/20"
-                  : ""
-              }`}
-              onClick={() => setStatusFilter("fix")}
-            >
-              Show Fix only
-              {showroomStats.fix > 0 ? ` (${showroomStats.fix})` : ""}
-            </Button>
-            {showroomStats.badPrice > 0 ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
-                onClick={() => setStatusFilter("not_on_showroom")}
-              >
-                Fix bad prices ({showroomStats.badPrice})
-              </Button>
-            ) : null}
+              {showroomStripMinimized ? (
+                <>
+                  Expand <ChevronDown className="h-3.5 w-3.5" />
+                </>
+              ) : (
+                <>
+                  Minimize <ChevronUp className="h-3.5 w-3.5" />
+                </>
+              )}
+            </button>
           </div>
+
+          {showroomStripMinimized ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p
+                className={`text-xs ${
+                  showroomStats.hidden > 0 ? "text-amber-100/80" : "text-muted-foreground"
+                }`}
+              >
+                {[
+                  `${showroomStats.reserved} reserved`,
+                  `${showroomStats.fix} Fix`,
+                  showroomStats.badPrice ? `${showroomStats.badPrice} bad price` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {showroomStats.reserved > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 btn-gold"
+                  disabled={bulkBusy}
+                  onClick={putReservedOnAvailable}
+                >
+                  {bulkStatus.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : null}
+                  Put {showroomStats.reserved} reserved → Available
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <p
+                className={`mt-1 text-xs ${
+                  showroomStats.hidden > 0 ? "text-amber-100/80" : "text-muted-foreground"
+                }`}
+              >
+                {[
+                  `${showroomStats.reserved} reserved`,
+                  `${showroomStats.fix} marked Fix`,
+                  showroomStats.sold ? `${showroomStats.sold} sold` : null,
+                  showroomStats.badPrice ? `${showroomStats.badPrice} bad/POA price` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {showroomStats.hidden > 0
+                  ? ". Use the buttons below (or status → Not on showroom / Fix) to find and fix them."
+                  : ". Reserved cars stay off the showroom until you set them Available."}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 ${
+                    showroomStats.hidden > 0
+                      ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                      : ""
+                  }`}
+                  onClick={() => setStatusFilter("not_on_showroom")}
+                  disabled={showroomStats.hidden === 0}
+                >
+                  Show hidden cars
+                  {showroomStats.hidden > 0 ? ` (${showroomStats.hidden})` : ""}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 ${
+                    showroomStats.reserved > 0
+                      ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                      : ""
+                  }`}
+                  onClick={() => setStatusFilter("reserved")}
+                >
+                  Show reserved
+                  {showroomStats.reserved > 0 ? ` (${showroomStats.reserved})` : ""}
+                </Button>
+                {showroomStats.reserved > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 btn-gold"
+                    disabled={bulkBusy}
+                    onClick={putReservedOnAvailable}
+                  >
+                    {bulkStatus.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : null}
+                    Put {showroomStats.reserved} reserved → Available
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 ${
+                    showroomStats.fix > 0
+                      ? "border-rose-500/40 text-rose-200 hover:bg-rose-500/20"
+                      : ""
+                  }`}
+                  onClick={() => setStatusFilter("fix")}
+                >
+                  Show Fix only
+                  {showroomStats.fix > 0 ? ` (${showroomStats.fix})` : ""}
+                </Button>
+                {showroomStats.badPrice > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                    onClick={() => setStatusFilter("not_on_showroom")}
+                  >
+                    Fix bad prices ({showroomStats.badPrice})
+                  </Button>
+                ) : null}
+              </div>
+            </>
+          )}
         </div>
       ) : null}
 
