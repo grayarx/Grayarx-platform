@@ -678,9 +678,9 @@ export const appRouter = router({
     /**
      * Public showroom vehicle list.
      * - With dealershipId: tenant-scoped stock for that dealer (e.g. a shortcode preview).
-     * - A signed-in dealer with no explicit scope sees THEIR OWN stock, so the
-     *   top-nav "Showroom" never shows cars they didn't upload.
-     * - Everyone else (anonymous / admin / founder) sees the platform marketplace,
+     * - A signed-in dealer OR founder/admin linked to a dealership sees THEIR OWN stock,
+     *   so the top-nav "Showroom" never mixes other yards' cars with theirs.
+     * - Anonymous buyers (and staff with no dealership linked) see the platform marketplace,
      *   with the seeded demo dealership excluded so demo cars don't leak in.
      * Input may be omitted or null (tRPC batch clients send null).
      */
@@ -695,13 +695,16 @@ export const appRouter = router({
           });
         }
         const user = ctx.user;
-        const isDealer =
+        const yardId = user?.dealershipId ?? null;
+        const isYardScoped =
           !!user &&
-          (user.role === "dealer_owner" || user.role === "dealer_consultant") &&
-          user.dealershipId != null;
-        if (isDealer) {
+          yardId != null &&
+          (user.role === "dealer_owner" ||
+            user.role === "dealer_consultant" ||
+            isFounderOrAdmin(user));
+        if (isYardScoped) {
           return listVehicles(2000, {
-            dealershipId: user!.dealershipId!,
+            dealershipId: yardId!,
             excludeSold: true,
             excludePlaceholderPrices: true,
           });
@@ -1525,8 +1528,14 @@ export const appRouter = router({
       const isAdmin = isFounderOrAdmin(ctx.user);
       // Accounts with no dealership assigned see nothing (prevents cross-tenant bleed).
       if (!isAdmin && !ctx.user.dealershipId) return [];
-      // 2000 covers large demo CSVs (1000-car file) without truncating Inventory.
-      return listVehicles(2000, isAdmin ? undefined : { dealershipId: ctx.user.dealershipId! });
+      // Founders/admins linked to a yard see that yard only — same as dealers.
+      // Platform-wide stock stays in Admin tools, so onboarding dealers never
+      // share inventory with founder demo CSVs in the dealer console.
+      if (ctx.user.dealershipId != null) {
+        return listVehicles(2000, { dealershipId: ctx.user.dealershipId });
+      }
+      // Founder with no dealership linked: platform overview (admin only).
+      return listVehicles(2000);
     }),
     createVehicle: protectedProcedure
       .input(

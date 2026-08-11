@@ -225,4 +225,41 @@ describe("dealer multi-tenant isolation", () => {
       expect.objectContaining({ dealershipId: 5 }),
     );
   });
+
+  it("showroom.list scopes a founder with a linked yard to that yard only", async () => {
+    const caller = createCaller({
+      openId: "founder-yard",
+      role: "founder",
+      dealershipId: 42,
+    });
+    await caller.showroom.list(null);
+    expect(listVehicles).toHaveBeenLastCalledWith(
+      2000,
+      expect.objectContaining({
+        dealershipId: 42,
+        excludeSold: true,
+        excludePlaceholderPrices: true,
+      }),
+    );
+  });
+
+  it("dealer.listVehicles scopes a founder with a linked yard to that yard", async () => {
+    const caller = createCaller({
+      openId: "founder-yard-2",
+      role: "founder",
+      dealershipId: 77,
+    });
+    await caller.dealer.listVehicles();
+    expect(listVehicles).toHaveBeenLastCalledWith(2000, { dealershipId: 77 });
+  });
+
+  it("dealer.listVehicles scopes a dealer to their dealership only", async () => {
+    const caller = createCaller({
+      openId: "dealer-9",
+      role: "dealer_owner",
+      dealershipId: 88,
+    });
+    await caller.dealer.listVehicles();
+    expect(listVehicles).toHaveBeenLastCalledWith(2000, { dealershipId: 88 });
+  });
 });

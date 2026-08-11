@@ -2,9 +2,11 @@ import { Link } from "wouter";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-/** Sticky pilot CTA — converts showroom browsers into pilot applications. */
+/** Sticky pilot CTA — converts anonymous showroom browsers into pilot applications. */
 export default function FloatingPilotCTA() {
+  const { user, loading } = useAuth();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -13,7 +15,8 @@ export default function FloatingPilotCTA() {
     }
   }, []);
 
-  if (dismissed) return null;
+  // Never pitch the pilot to people who are already signed in (dealers, founders, staff).
+  if (loading || user || dismissed) return null;
 
   return (
     <div
