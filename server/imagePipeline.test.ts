@@ -50,20 +50,31 @@ describe("imagePipeline", () => {
     expect(merged).toEqual(["https://a.com/1.jpg", "https://a.com/2.jpg"]);
   });
 
-  it("rewrites Wikimedia Commons thumbs to the requested width", () => {
+  it("snaps Wikimedia Commons thumbs to an allowed MediaWiki width", () => {
     const url = optimizeImageUrl(
       "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Example.jpg/1280px-Example.jpg",
       480,
     );
-    expect(url).toContain("/480px-Example.jpg");
+    // 480 is not in $wgThumbLimits — snap to 500
+    expect(url).toContain("/500px-Example.jpg");
     expect(url).not.toContain("1280px");
+    expect(url).not.toContain("480px");
   });
 
-  it("builds Wikimedia thumbs from original Commons paths", () => {
+  it("leaves a Wikimedia thumb alone when it already matches the snapped width", () => {
+    const url = optimizeImageUrl(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Example.jpg/960px-Example.jpg",
+      768,
+    );
+    // 768 snaps to 960 — already there
+    expect(url).toContain("/960px-Example.jpg");
+  });
+
+  it("builds Wikimedia thumbs from original Commons paths using allowed widths", () => {
     const url = optimizeImageUrl(
       "https://upload.wikimedia.org/wikipedia/commons/d/d5/Example.jpg",
       768,
     );
-    expect(url).toContain("/wikipedia/commons/thumb/d/d5/Example.jpg/768px-Example.jpg");
+    expect(url).toContain("/wikipedia/commons/thumb/d/d5/Example.jpg/960px-Example.jpg");
   });
 });

@@ -14,6 +14,7 @@
 - Durable photo mirror needs `S3_BUCKET_NAME`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` (optional `S3_REGION`).
 - Without S3, CSV import keeps external image URLs (no timeout). Demo tip: keep **Save photos to GrayArx OFF** for large CSVs.
 - Uploads set long-lived `Cache-Control` when S3 is configured. Remirror skips already-hosted GrayArx URLs.
+- Wikimedia Commons only serves fixed thumb widths (`WIKIMEDIA_THUMB_WIDTHS` in `shared/imagePipeline.ts`). Arbitrary sizes like 768px return HTTP 400 — always snap via `optimizeImageUrl`.
 
 ### Leads follow-ups
 - Mia schedules Day 1 / 3 / 7 drip rows in `lead_followups`. Cron: `POST /api/scheduled/lead-followup-tick`.

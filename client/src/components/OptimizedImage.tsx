@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   buildSrcSet,
@@ -41,21 +41,32 @@ export default function OptimizedImage({
   ...rest
 }: OptimizedImageProps) {
   const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
+  /** 0 = try optimized, 1 = raw URL, 2 = placeholder */
+  const [stage, setStage] = useState<0 | 1 | 2>(0);
 
-  const displaySrc = failed ? fallbackSrc : src;
+  useEffect(() => {
+    setLoaded(false);
+    setStage(0);
+  }, [src]);
+
   const optimized = useMemo(
-    () => (staticAsset || failed ? displaySrc : optimizeImageUrl(displaySrc, 768, 82)),
-    [displaySrc, staticAsset, failed],
+    () => (staticAsset ? src : optimizeImageUrl(src, 768, 82)),
+    [src, staticAsset],
   );
   const srcSet = useMemo(
-    () => (staticAsset || failed ? undefined : buildSrcSet(displaySrc, undefined, 88) || undefined),
-    [displaySrc, staticAsset, failed],
+    () =>
+      staticAsset || stage > 0
+        ? undefined
+        : buildSrcSet(src, undefined, 88) || undefined,
+    [src, staticAsset, stage],
   );
+
+  const displaySrc =
+    stage === 2 ? fallbackSrc : stage === 1 ? src : optimized;
 
   const img = (
     <>
-      {!loaded && !failed && (
+      {!loaded && stage < 2 && (
         <div
           className="absolute inset-0 animate-pulse bg-gradient-to-br from-muted/80 via-muted/40 to-muted/80"
           aria-hidden
@@ -63,7 +74,8 @@ export default function OptimizedImage({
       )}
       <img
         {...rest}
-        src={optimized}
+        key={`${stage}:${displaySrc}`}
+        src={displaySrc}
         srcSet={srcSet}
         sizes={srcSet ? (sizes ?? defaultSizes()) : undefined}
         alt={alt}
@@ -72,12 +84,20 @@ export default function OptimizedImage({
         fetchPriority={priority ? "high" : undefined}
         onLoad={() => setLoaded(true)}
         onError={() => {
-          if (!failed) setFailed(true);
+          if (stage === 0 && optimized !== src) {
+            setLoaded(false);
+            setStage(1);
+            return;
+          }
+          if (stage < 2) {
+            setLoaded(true);
+            setStage(2);
+          }
         }}
         className={cn(
           "h-full w-full transition-opacity duration-500",
           fit === "contain" ? "object-contain" : "object-cover",
-          loaded || failed ? "opacity-100" : "opacity-0",
+          loaded || stage === 2 ? "opacity-100" : "opacity-0",
           className,
         )}
         style={{ objectPosition, ...rest.style }}
