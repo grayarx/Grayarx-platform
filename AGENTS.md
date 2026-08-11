@@ -29,6 +29,12 @@
 - If Resend UI still shows Receiving MX “Pending”, wait/refresh until Verified; DNS can already be live.
 - Secrets live on **Railway**, not required in the Cursor agent lockbox for production.
 
+### Outbound prospect email
+- Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` bounce on Resend — `mailableProspects` skips them by default.
+- Sipho scout prompts must not invent `info@dealership-slug.co.za`. Empty email + `needs_principal_enrichment` + LinkedIn search in `sourceNotes` when unknown.
+- Kagiso audit flags high generic-mailbox share and lists LinkedIn Dealer Principal search links on the roadmap.
+- Quality helpers: `shared/prospectEmailQuality.ts`, enrichment list via `prospectsNeedingPrincipalEnrichment()`.
+
 ### WhatsApp (production)
 - Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.
 - Secrets on Railway. See `docs/PRODUCTION_WEBHOOK_SETUP.md`.

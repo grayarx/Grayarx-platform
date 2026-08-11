@@ -44,6 +44,8 @@ describe("pilot email campaign", () => {
     for (const p of mailable) {
       expect(p.emailVerified).toBe(true);
       expect(p.email).toBeTruthy();
+      // Generic info@ must not be in the default send list
+      expect(p.email!.toLowerCase().startsWith("info@")).toBe(false);
     }
   });
 
@@ -93,18 +95,21 @@ describe("pilot email campaign", () => {
     const preview = await previewPilotCampaign();
     expect(preview.length).toBe(4);
     const basic = preview.find((p) => p.segment === "basic_website_no_showroom");
-    expect(basic?.mailable).toBeGreaterThanOrEqual(3);
+    // Only named/principal emails are mailable — Jubilee darius@ remains
+    expect(basic?.mailable).toBeGreaterThanOrEqual(1);
     expect(basic?.sampleHtml).toContain("<img");
-    // UI list is verified emails only — never "no verified email" rows
     const allEmails: string[] = [];
     for (const row of preview) {
-      expect(row.mailable).toBe(3);
+      expect(row.needsEnrichment).toBeGreaterThanOrEqual(0);
       for (const p of row.prospects) {
         expect(p.emailVerified).toBe(true);
         expect(p.email).toBeTruthy();
+        expect(p.email!.toLowerCase().startsWith("info@")).toBe(false);
         allEmails.push(p.email!.toLowerCase());
       }
     }
     expect(new Set(allEmails).size).toBe(allEmails.length);
+    // Most curated rows need principal enrichment after demoting info@
+    expect(preview.some((r) => r.enrichmentNeededTotal > 5)).toBe(true);
   });
 });

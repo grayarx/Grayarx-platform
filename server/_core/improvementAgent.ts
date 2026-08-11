@@ -70,6 +70,21 @@ export type AuditInput = {
    */
   staleVehicleCount: number;
   /**
+   * Prospect email quality snapshot (pilot list + DB).
+   * Kagiso uses this to push LinkedIn dealer-principal enrichment when
+   * too many contacts are generic info@ / sales@ (high bounce risk).
+   */
+  prospectEmailStats?: {
+    totalWithEmail: number;
+    genericMailboxCount: number;
+    outreachReadyCount: number;
+    enrichmentTargets: Array<{
+      dealershipName: string;
+      currentEmail?: string | null;
+      linkedInPeopleSearch: string;
+    }>;
+  };
+  /**
    * Reference timestamp \u2014 lets tests be deterministic.
    */
   now?: number;
@@ -330,7 +345,46 @@ export function runAudit(input: AuditInput): Finding[] {
     }
   }
 
-  // ---- 8. Agent inactivity ----
+  // ---- 8. Prospect email quality (dealer principals vs info@) ----
+  const emailStats = input.prospectEmailStats;
+  if (emailStats && emailStats.totalWithEmail >= 3) {
+    const genericShare =
+      emailStats.genericMailboxCount / Math.max(1, emailStats.totalWithEmail);
+    if (genericShare >= 0.4 || emailStats.enrichmentTargets.length >= 3) {
+      const sample = emailStats.enrichmentTargets.slice(0, 5);
+      const linkLines = sample
+        .map(
+          (t) =>
+            `• ${t.dealershipName}${t.currentEmail ? ` (${t.currentEmail})` : ""} → ${t.linkedInPeopleSearch}`,
+        )
+        .join("\n");
+      findings.push({
+        category: "prospect_cadence",
+        severity: genericShare >= 0.7 ? "high" : "medium",
+        title: "Replace bounced info@ emails with dealer principals",
+        finding: `${emailStats.genericMailboxCount}/${emailStats.totalWithEmail} prospect emails are generic mailboxes (info@/sales@/enquiries@). Resend shows those bounce. Only ${emailStats.outreachReadyCount} are named/principal-ready. Kagiso should enrich via LinkedIn Dealer Principal / MD / Owner searches before the next pilot blast.`,
+        suggestedFix: `For each target: (1) open the LinkedIn people search, (2) find Dealer Principal / Managing Director / Owner, (3) confirm a named email on the site Contact/Team page or ask via WhatsApp, (4) update the prospect and set emailVerified only then.\n\nPriority targets:\n${linkLines || "• (see pilot enrichment list)"}`,
+        impactEstimate:
+          "Expected deliverability lift: bounce rate down sharply; replies more likely from decision-makers.",
+        autoApplicable: 0,
+        confidence: "0.90",
+        evidence: JSON.stringify({
+          metric: "generic_mailbox_share",
+          value: Number(genericShare.toFixed(2)),
+          threshold: 0.4,
+          genericMailboxCount: emailStats.genericMailboxCount,
+          outreachReadyCount: emailStats.outreachReadyCount,
+          enrichmentCount: emailStats.enrichmentTargets.length,
+        }),
+        payload: JSON.stringify({
+          enrichmentTargets: sample,
+          action: "principal_email_enrichment",
+        }),
+      });
+    }
+  }
+
+  // ---- 9. Agent inactivity ----
   for (const [agentId, stats] of Object.entries(input.agents)) {
     if (agentId === "improvement") continue;
     if (stats.actionCount === 0) {

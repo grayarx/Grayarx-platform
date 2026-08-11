@@ -2102,8 +2102,11 @@ export const appRouter = router({
         const existingRows = await listProspects(1000);
         const existingNames = existingRows.map((r) => r.dealershipName);
 
-        const system = `You are GrayArx Prospector, an AI scout for a South African dealership SaaS. Generate ${input.count} REALISTIC potential dealership prospects in ${input.city ? input.city + ", " : ""}${input.region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email (use info@dealership-slug.co.za style), website, estimatedMonthlyVolume (10-200), brandsCarried (comma list of 2-4 brands), score (0-100 based on fit), rationale (1 sentence why they're a good fit for GrayArx AI agents). Return JSON only.`;
-        const userMsg = `Region: ${input.region}\nCity: ${input.city ?? "any"}\nTarget monthly volume: ${input.targetVolume ?? "any"}\nBrand focus: ${input.brandFocus ?? "any"}\nGenerate ${input.count} prospects.`;
+        const { PRINCIPAL_EMAIL_SCOUT_RULES, sanitizeScoutEmail } = await import(
+          "../shared/prospectEmailQuality"
+        );
+        const system = `You are GrayArx Prospector, an AI scout for a South African dealership SaaS. Generate ${input.count} REALISTIC potential dealership prospects in ${input.city ? input.city + ", " : ""}${input.region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email, website, estimatedMonthlyVolume (10-200), brandsCarried (comma list of 2-4 brands), score (0-100 based on fit), rationale (1 sentence why they're a good fit for GrayArx AI agents). ${PRINCIPAL_EMAIL_SCOUT_RULES} Return JSON only.`;
+        const userMsg = `Region: ${input.region}\nCity: ${input.city ?? "any"}\nTarget monthly volume: ${input.targetVolume ?? "any"}\nBrand focus: ${input.brandFocus ?? "any"}\nGenerate ${input.count} prospects. Prefer named dealer-principal emails; leave email empty if unknown — never invent info@.`;
         try {
           const response = await invokeLLM({
             messages: [
@@ -2184,20 +2187,27 @@ export const appRouter = router({
             payload: { region: input.region, city: input.city, names: items.map((p) => p.dealershipName) },
           });
           await createProspects(
-            items.map((p) => ({
-              dealershipName: p.dealershipName,
-              region: p.region,
-              city: p.city,
-              phone: p.phone,
-              email: p.email,
-              website: p.website,
-              estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-              brandsCarried: p.brandsCarried,
-              score: Math.max(0, Math.min(100, p.score)),
-              rationale: p.rationale,
-              status: "scouted" as const,
-              sourceNotes: `AI Prospector — ${input.region}${input.city ? ", " + input.city : ""}`,
-            })),
+            items.map((p) => {
+              const sanitized = sanitizeScoutEmail({
+                email: p.email,
+                dealershipName: p.dealershipName,
+                city: p.city,
+              });
+              return {
+                dealershipName: p.dealershipName,
+                region: p.region,
+                city: p.city,
+                phone: p.phone,
+                email: sanitized.email,
+                website: p.website,
+                estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+                brandsCarried: p.brandsCarried,
+                score: Math.max(0, Math.min(100, p.score)),
+                rationale: p.rationale,
+                status: "scouted" as const,
+                sourceNotes: `AI Prospector — ${input.region}${input.city ? ", " + input.city : ""} | ${sanitized.sourceNoteExtra}`,
+              };
+            }),
           );
           return { created: items.length, poolRemaining: null } as const;
         } catch (err) {
@@ -2215,20 +2225,27 @@ export const appRouter = router({
             } as const;
           }
 
-          const fallbackProspects: Parameters<typeof createProspects>[0] = batch.map((p) => ({
-            dealershipName: p.name,
-            region: p.province,
-            city: p.city,
-            phone: p.phone,
-            email: p.email,
-            website: p.website ?? "",
-            estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-            brandsCarried: p.brands.join(", "),
-            score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
-            rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
-            status: "scouted" as const,
-            sourceNotes,
-          }));
+          const fallbackProspects: Parameters<typeof createProspects>[0] = batch.map((p) => {
+            const sanitized = sanitizeScoutEmail({
+              email: p.email,
+              dealershipName: p.name,
+              city: p.city,
+            });
+            return {
+              dealershipName: p.name,
+              region: p.province,
+              city: p.city,
+              phone: p.phone,
+              email: sanitized.email,
+              website: p.website ?? "",
+              estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+              brandsCarried: p.brands.join(", "),
+              score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
+              rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
+              status: "scouted" as const,
+              sourceNotes: `${sourceNotes} | ${sanitized.sourceNoteExtra}`,
+            };
+          });
 
           await logAgentActivity({
             agentId: "prospector",
@@ -2659,6 +2676,53 @@ export const appRouter = router({
           v.createdAt.getTime() < sixtyDaysAgo,
       ).length;
 
+      const {
+        assessProspectEmail,
+        buildEnrichmentTarget,
+      } = await import("../shared/prospectEmailQuality");
+      const {
+        PILOT_PROSPECTS,
+        prospectsNeedingPrincipalEnrichment,
+      } = await import("../shared/pilotProspectSegments");
+
+      const dbProspectEmails = (await listProspects(500))
+        .map((p) => ({
+          dealershipName: p.dealershipName,
+          city: p.city,
+          email: p.email,
+        }))
+        .concat(
+          PILOT_PROSPECTS.map((p) => ({
+            dealershipName: p.dealershipName,
+            city: p.city,
+            email: p.email ?? null,
+          })),
+        );
+
+      const withEmail = dbProspectEmails.filter((p) => (p.email ?? "").trim());
+      const assessments = withEmail.map((p) => assessProspectEmail(p.email));
+      const genericMailboxCount = assessments.filter((a) => a.quality === "generic").length;
+      const outreachReadyCount = assessments.filter((a) => a.outreachReady).length;
+      const enrichmentFromPilot = prospectsNeedingPrincipalEnrichment().slice(0, 8);
+      const enrichmentFromDb = withEmail
+        .filter((p) => !assessProspectEmail(p.email).outreachReady)
+        .slice(0, 5)
+        .map((p) =>
+          buildEnrichmentTarget({
+            dealershipName: p.dealershipName,
+            city: p.city,
+            email: p.email,
+          }),
+        );
+
+      const enrichmentTargets = [...enrichmentFromPilot, ...enrichmentFromDb]
+        .slice(0, 10)
+        .map((t) => ({
+          dealershipName: t.dealershipName,
+          currentEmail: t.currentEmail,
+          linkedInPeopleSearch: t.linkedInPeopleSearch,
+        }));
+
       const auditInput: AuditInput = {
         kpis: {
           totalLeads: Number(kpis.totalLeads),
@@ -2691,6 +2755,12 @@ export const appRouter = router({
         })),
         recentLeadLanguages: recentLeads.map((l) => l.language ?? "en"),
         staleVehicleCount,
+        prospectEmailStats: {
+          totalWithEmail: withEmail.length,
+          genericMailboxCount,
+          outreachReadyCount,
+          enrichmentTargets,
+        },
       };
 
       const findings = runAudit(auditInput);

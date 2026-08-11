@@ -30,8 +30,11 @@ function nextRegion(lastRegion: string | null | undefined): string {
 }
 
 async function runProspectorScout(region: string, count = 5): Promise<number> {
-  const system = `You are GrayArx Prospector. Generate ${count} REALISTIC potential dealership prospects in ${region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email, website, estimatedMonthlyVolume (10-200), brandsCarried (comma list), score (0-100 fit), rationale (1 sentence). Return JSON only.`;
-  const userMsg = `Region: ${region}. Generate ${count} prospects.`;
+  const { PRINCIPAL_EMAIL_SCOUT_RULES } = await import(
+    "../../shared/prospectEmailQuality"
+  );
+  const system = `You are GrayArx Prospector. Generate ${count} REALISTIC potential dealership prospects in ${region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email, website, estimatedMonthlyVolume (10-200), brandsCarried (comma list), score (0-100 fit), rationale (1 sentence). ${PRINCIPAL_EMAIL_SCOUT_RULES} Return JSON only.`;
+  const userMsg = `Region: ${region}. Generate ${count} prospects. Prefer named dealer-principal emails; leave email empty if unknown.`;
 
   try {
     const response = await invokeLLM({
@@ -100,21 +103,29 @@ async function runProspectorScout(region: string, count = 5): Promise<number> {
       rationale: string;
     }>;
     if (items.length === 0) return 0;
+    const { sanitizeScoutEmail } = await import("../../shared/prospectEmailQuality");
     await createProspects(
-      items.map((p) => ({
-        dealershipName: p.dealershipName,
-        region: p.region,
-        city: p.city,
-        phone: p.phone,
-        email: p.email,
-        website: p.website,
-        estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-        brandsCarried: p.brandsCarried,
-        score: Math.max(0, Math.min(100, p.score)),
-        rationale: p.rationale,
-        status: "scouted" as const,
-        sourceNotes: `Nightly Prospector — ${region}`,
-      })),
+      items.map((p) => {
+        const sanitized = sanitizeScoutEmail({
+          email: p.email,
+          dealershipName: p.dealershipName,
+          city: p.city,
+        });
+        return {
+          dealershipName: p.dealershipName,
+          region: p.region,
+          city: p.city,
+          phone: p.phone,
+          email: sanitized.email,
+          website: p.website,
+          estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+          brandsCarried: p.brandsCarried,
+          score: Math.max(0, Math.min(100, p.score)),
+          rationale: p.rationale,
+          status: "scouted" as const,
+          sourceNotes: `Nightly Prospector — ${region} | ${sanitized.sourceNoteExtra}`,
+        };
+      }),
     );
     return items.length;
   } catch (err) {
