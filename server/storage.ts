@@ -46,7 +46,7 @@ export async function storagePut(
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      // Optional: Set to public-read if your bucket policy allows it, or rely on public bucket config
+      CacheControl: "public, max-age=31536000, immutable",
     }));
     
     // If public bucket URL is provided, return that, otherwise fallback to serving via presigned/proxy
@@ -125,6 +125,7 @@ export async function storagePutRaw(
       Key: key,
       Body: data,
       ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
     }));
     const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
     const url = publicUrlBase ? `${publicUrlBase}/${key}` : `/manus-storage/${key}`;

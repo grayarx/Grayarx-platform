@@ -1,4 +1,4 @@
-import { eq, desc, sql, gte, lte, and, count, inArray, ne, or, isNull, isNotNull } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, lte, and, count, inArray, ne, or, isNull, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
@@ -8,6 +8,7 @@ import {
   bookings,
   vehicles,
   vehiclePhotos,
+  leadFollowups,
   conversations,
   prospects,
   agentActivity,
@@ -252,6 +253,41 @@ export async function updateLeadStatus(
   await db.update(leads).set({ status }).where(eq(leads.id, id));
 }
 
+/** Follow-up drip rows for a dealership's open leads (Mia day 1/3/7). */
+export async function listLeadFollowupsForDealership(
+  dealershipId: number,
+  limit = 200,
+) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: leadFollowups.id,
+      leadId: leadFollowups.leadId,
+      step: leadFollowups.step,
+      dueAt: leadFollowups.dueAt,
+      status: leadFollowups.status,
+      draftPreview: leadFollowups.draftPreview,
+      sentAt: leadFollowups.sentAt,
+      contactName: leads.contactName,
+      email: leads.email,
+      phone: leads.phone,
+      leadStatus: leads.status,
+      dealershipName: leads.dealershipName,
+    })
+    .from(leadFollowups)
+    .innerJoin(leads, eq(leadFollowups.leadId, leads.id))
+    .where(
+      and(
+        eq(leads.dealershipId, dealershipId),
+        inArray(leadFollowups.status, ["pending", "sent"]),
+        inArray(leads.status, ["new", "contacted", "qualified"]),
+      ),
+    )
+    .orderBy(asc(leadFollowups.dueAt))
+    .limit(limit);
+}
+
 // === Bookings ===
 export async function createBooking(data: InsertBooking) {
   const db = await getDb();
@@ -337,8 +373,8 @@ export async function listVehicles(
   limit = 2000,
   opts?: {
     dealershipId?: number | null;
-    /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
     excludeSold?: boolean;
+    /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
     excludePlaceholderPrices?: boolean;
     /** Keep a dealership's stock off the platform marketplace (e.g. the demo yard) */
     excludeDealershipId?: number | null;
@@ -347,11 +383,14 @@ export async function listVehicles(
      * Public showroom grid should pass false — cards only need primaryPhotoUrl.
      */
     includeGallery?: boolean;
+    /** Optional SQL OFFSET for additive pagination (default 0). */
+    offset?: number;
   },
 ) {
   const db = await getDb();
   if (!db) return [];
 
+  const offset = Math.max(0, opts?.offset ?? 0);
   const baseQuery = db.select().from(vehicles);
   // When excludeSold is true, only return vehicles where status is not 'sold'
   // (null/undefined status is treated as available)
@@ -377,7 +416,7 @@ export async function listVehicles(
   let rows;
   if (opts === undefined) {
     // No filter at all — admin/founder full-access path only
-    rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit);
+    rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit).offset(offset);
   } else if (opts.dealershipId != null) {
     const whereClause =
       filters.length > 0
@@ -386,15 +425,20 @@ export async function listVehicles(
     rows = await baseQuery
       .where(whereClause)
       .orderBy(desc(vehicles.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
   } else if (filters.length > 0) {
     // No dealership scoping but public filters active (e.g. platform marketing showroom)
     rows = await baseQuery
       .where(and(...filters))
       .orderBy(desc(vehicles.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
+  } else if (opts.dealershipId === undefined) {
+    // Soft opts only (e.g. includeGallery / offset) — founder/admin full-access path
+    rows = await baseQuery.orderBy(desc(vehicles.createdAt)).limit(limit).offset(offset);
   } else {
-    // opts provided but dealershipId is null/undefined → no dealership assigned, return nothing
+    // dealershipId explicitly null → no yard assigned, return nothing
     return [];
   }
 
