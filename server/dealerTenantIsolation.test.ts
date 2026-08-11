@@ -256,7 +256,10 @@ describe("dealer multi-tenant isolation", () => {
       dealershipId: 77,
     });
     await caller.dealer.listVehicles();
-    expect(listVehicles).toHaveBeenLastCalledWith(2000, { dealershipId: 77 });
+    expect(listVehicles).toHaveBeenLastCalledWith(2000, {
+      dealershipId: 77,
+      includeGallery: false,
+    });
   });
 
   it("dealer.listVehicles scopes a dealer to their dealership only", async () => {
@@ -266,6 +269,9 @@ describe("dealer multi-tenant isolation", () => {
       dealershipId: 88,
     });
     await caller.dealer.listVehicles();
-    expect(listVehicles).toHaveBeenLastCalledWith(2000, { dealershipId: 88 });
+    expect(listVehicles).toHaveBeenLastCalledWith(2000, {
+      dealershipId: 88,
+      includeGallery: false,
+    });
   });
 });

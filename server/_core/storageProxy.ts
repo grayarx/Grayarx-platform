@@ -26,6 +26,7 @@ export function registerStorageProxy(app: Express) {
         // If public bucket URL is provided, redirect to that directly
         const publicUrlBase = process.env.S3_PUBLIC_URL?.replace(/\/+$/, "");
         if (publicUrlBase) {
+          res.set("Cache-Control", "public, max-age=86400");
           res.redirect(301, `${publicUrlBase}/${key}`);
           return;
         }

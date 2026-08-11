@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "wouter";
 import {
   Loader2,
@@ -318,6 +318,7 @@ export default function Inventory() {
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [bodyFilter, setBodyFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const [pendingGallery, setPendingGallery] = useState<PendingGalleryPhoto[]>([]);
 
@@ -436,6 +437,15 @@ export default function Inventory() {
       return hay.includes(q);
     });
   }, [data, search, statusFilter, conditionFilter, bodyFilter]);
+
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [search, statusFilter, conditionFilter, bodyFilter]);
+
+  const visibleVehicles = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  );
 
   const showroomStats = useMemo(() => {
     if (!data) {
@@ -1224,10 +1234,10 @@ export default function Inventory() {
           </div>
         )
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.map((v) => {
-            const vImages = (v as unknown as { images?: string[] }).images;
-            const photo = v.primaryPhotoUrl || v.imageUrl || vImages?.[0];
+          {visibleVehicles.map((v, i) => {
+            const photo = v.primaryPhotoUrl || v.imageUrl || null;
             const features = Array.isArray(v.features)
               ? (v.features as string[])
               : [];
@@ -1239,6 +1249,7 @@ export default function Inventory() {
                     ? "border-primary/50 ring-1 ring-primary/30"
                     : "border-primary/10"
                 }`}
+                style={{ contentVisibility: "auto", containIntrinsicSize: "440px" }}
               >
                 <div className="absolute top-3 left-3 z-10">
                   <Checkbox
@@ -1251,9 +1262,11 @@ export default function Inventory() {
                 </div>
                 {/* Photo — studio frame composites any upload onto premium backdrop */}
                 <VehicleShowroomFrame
-                  src={photo ?? null}
+                  src={photo}
                   alt={v.title ?? "Vehicle"}
                   className="rounded-t-2xl"
+                  autoRotate={false}
+                  priority={i < 3}
                 />
                 <div className="absolute top-3 right-3 flex gap-2 z-[4] pointer-events-none">
                   <Badge
@@ -1480,6 +1493,26 @@ export default function Inventory() {
             );
           })}
         </div>
+        {filtered.length > visibleCount ? (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Showing {visibleCount} of {filtered.length} vehicles
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-w-[200px]"
+              onClick={() => setVisibleCount((n) => Math.min(n + 24, filtered.length))}
+            >
+              Load more vehicles
+            </Button>
+          </div>
+        ) : filtered.length > 24 ? (
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Showing all {filtered.length} vehicles
+          </p>
+        ) : null}
+        </>
       )}
     </DealerShell>
   );

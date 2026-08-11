@@ -685,14 +685,26 @@ export const appRouter = router({
      * Input may be omitted or null (tRPC batch clients send null).
      */
     list: publicProcedure
-      .input(z.object({ dealershipId: z.number().int().optional() }).nullish())
+      .input(
+        z
+          .object({
+            dealershipId: z.number().int().optional(),
+            /** Optional page size (default keeps prior full-list behaviour). */
+            limit: z.number().int().min(1).max(200).optional(),
+            offset: z.number().int().min(0).optional(),
+          })
+          .nullish(),
+      )
       .query(async ({ input, ctx }) => {
+        const pageLimit = input?.limit ?? 2000;
+        const pageOffset = input?.offset ?? 0;
         if (input?.dealershipId != null) {
-          return listVehicles(2000, {
+          return listVehicles(pageLimit, {
             dealershipId: input.dealershipId,
             excludeSold: true,
             excludePlaceholderPrices: true,
             includeGallery: false,
+            offset: pageOffset,
           });
         }
         const user = ctx.user;
@@ -704,19 +716,21 @@ export const appRouter = router({
             user.role === "dealer_consultant" ||
             isFounderOrAdmin(user));
         if (isYardScoped) {
-          return listVehicles(2000, {
+          return listVehicles(pageLimit, {
             dealershipId: yardId!,
             excludeSold: true,
             excludePlaceholderPrices: true,
             includeGallery: false,
+            offset: pageOffset,
           });
         }
         const demoDealershipId = await getDemoDealershipId();
-        return listVehicles(2000, {
+        return listVehicles(pageLimit, {
           excludeSold: true,
           excludePlaceholderPrices: true,
           excludeDealershipId: demoDealershipId ?? undefined,
           includeGallery: false,
+          offset: pageOffset,
         });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),
@@ -1477,7 +1491,12 @@ export const appRouter = router({
           });
         }
         await updateLeadStatus(input.id, input.status);
-        if (input.status === "converted" || input.status === "lost") {
+        if (
+          input.status === "converted" ||
+          input.status === "lost" ||
+          input.status === "contacted" ||
+          input.status === "qualified"
+        ) {
           try {
             await cancelFollowupsForLead(input.id);
           } catch (e) {
@@ -1485,6 +1504,44 @@ export const appRouter = router({
           }
         }
         return { success: true } as const;
+      }),
+
+    /** Mia drip follow-ups for this dealership (pending + drafted). */
+    listLeadFollowups: protectedProcedure.query(async ({ ctx }) => {
+      assertDealerOrAdmin(ctx.user);
+      if (isFounderOrAdmin(ctx.user) && ctx.user.dealershipId == null) {
+        return [];
+      }
+      if (ctx.user.dealershipId == null) return [];
+      const { listLeadFollowupsForDealership } = await import("./db");
+      return listLeadFollowupsForDealership(ctx.user.dealershipId);
+    }),
+
+    /** Mark a lead as contacted and cancel remaining drip reminders. */
+    markLeadFollowedUp: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        assertDealerOrAdmin(ctx.user);
+        const lead = await getLeadById(input.id);
+        if (!lead) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" });
+        }
+        if (
+          !isFounderOrAdmin(ctx.user) &&
+          (!ctx.user.dealershipId || lead.dealershipId !== ctx.user.dealershipId)
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This lead belongs to another dealership.",
+          });
+        }
+        await updateLeadStatus(input.id, "contacted");
+        try {
+          await cancelFollowupsForLead(input.id);
+        } catch (e) {
+          console.error("[leads.markLeadFollowedUp] cancelFollowupsForLead failed", e);
+        }
+        return { success: true as const };
       }),
 
     /** Platform SaaS demo bookings — founder/admin only (not dealer customer test drives). */
@@ -1535,10 +1592,13 @@ export const appRouter = router({
       // Platform-wide stock stays in Admin tools, so onboarding dealers never
       // share inventory with founder demo CSVs in the dealer console.
       if (ctx.user.dealershipId != null) {
-        return listVehicles(2000, { dealershipId: ctx.user.dealershipId });
+        return listVehicles(2000, {
+          dealershipId: ctx.user.dealershipId,
+          includeGallery: false,
+        });
       }
       // Founder with no dealership linked: platform overview (admin only).
-      return listVehicles(2000);
+      return listVehicles(2000, { includeGallery: false });
     }),
     createVehicle: protectedProcedure
       .input(
