@@ -214,8 +214,8 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Click &ldquo;Generate prospects&rdquo; — Sipho only keeps dealerships with
-            named/principal emails (info@ is blocked).
+            Sipho auto-scrapes dealer websites for principal emails (every few hours).
+            You can also click &ldquo;Generate prospects&rdquo; — only named emails are kept.
           </p>
         </div>
       )}

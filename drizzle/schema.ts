@@ -171,6 +171,14 @@ export const prospects = mysqlTable("prospects", {
     "rejected",
   ]).default("new").notNull(),
   sourceNotes: text("sourceNotes"),
+  /** Named contact Sipho found (dealer principal / MD / owner / sales). */
+  contactName: varchar("contactName", { length: 255 }),
+  contactRole: varchar("contactRole", { length: 128 }),
+  /** 1 when email came from an official page / verified enrichment. */
+  emailVerified: int("emailVerified").default(0).notNull(),
+  emailSource: varchar("emailSource", { length: 64 }),
+  enrichedAt: timestamp("enrichedAt"),
+  enrichmentNotes: text("enrichmentNotes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

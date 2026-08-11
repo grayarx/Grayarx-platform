@@ -32,9 +32,10 @@
 ### Outbound prospect email
 - Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` bounce on Resend — `mailableProspects` skips them by default.
 - Sipho scout / `createProspects` **only inserts outreach-ready emails**. Empty and `info@` are dropped.
-- Boot migration one-shot `0073_purge_all_prospects_for_email_quality` wipes old bounce-bait rows once (see `scripts/apply-pending-migrations.mjs`).
-- Founder UI: Admin → Prospector → **Clear all** (`prospects.purgeAll`).
-- Quality helpers: `shared/prospectEmailQuality.ts`, enrichment list via `prospectsNeedingPrincipalEnrichment()`.
+- **Auto enrichment:** Sipho scrapes dealer websites for principal emails via `prospect-enrich-tick` (also self-runs on traffic every ~4h — `attachPrincipalEnrichmentMiddleware`). No founder action required.
+- Boot migration one-shot `0073_purge_all_prospects_for_email_quality` wipes old bounce-bait rows once.
+- Founder UI: Admin → Prospector → **Clear all** (`prospects.purgeAll`) if a manual reset is ever needed.
+- Quality helpers: `shared/prospectEmailQuality.ts`, enricher: `server/_core/prospectPrincipalEnrichment.ts`.
 
 ### WhatsApp (production)
 - Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.

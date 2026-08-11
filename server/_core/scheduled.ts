@@ -247,8 +247,8 @@ export function registerScheduledRoutes(app: Express) {
     }
   });
 
-  // Nightly Prospector: rotates through SA provinces, dropping 5 fresh
-  // qualified prospects into the DB every run.
+  // Nightly Prospector: rotates through SA provinces, then Sipho enriches
+  // dealer-principal emails from real websites (named contacts only).
   app.post("/api/scheduled/prospect-nightly", async (req: Request, res: Response) => {
     try {
       if (!(await isAuthorizedScheduledTask(req)) && process.env.NODE_ENV === "production") {
@@ -258,12 +258,56 @@ export function registerScheduledRoutes(app: Express) {
       const region = nextRegion(schedule?.lastRegion);
       const count = typeof req.body?.count === "number" ? Math.max(1, Math.min(10, req.body.count)) : 5;
       const created = await runProspectorScout(region, count);
-      res.json({ ok: true, region, created });
+      const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
+      const enrich = await runPrincipalEnrichmentTick({ limit: 10 });
+      res.json({
+        ok: true,
+        region,
+        created,
+        enrich: {
+          examined: enrich.examined,
+          enriched: enrich.enriched,
+          created: enrich.created,
+          updated: enrich.updated,
+        },
+      });
     } catch (err) {
       console.error("[Scheduled] prospect-nightly failed", err);
       alertFounder({
         title: "Scheduled job failed: prospect-nightly",
         content: `Error: ${err instanceof Error ? err.message : String(err)}\nStack: ${err instanceof Error ? err.stack?.slice(0, 500) : ""}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  /**
+   * Sipho principal-email enrich tick — fetches dealer websites, extracts
+   * named/principal emails, updates or creates prospects. Safe to call often.
+   */
+  app.post("/api/scheduled/prospect-enrich-tick", async (req: Request, res: Response) => {
+    try {
+      if (!(await isAuthorizedScheduledTask(req))) {
+        return res.status(403).json({ error: "cron-only" });
+      }
+      const limit =
+        typeof req.body?.limit === "number" ? Math.max(1, Math.min(20, req.body.limit)) : 8;
+      const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
+      const result = await runPrincipalEnrichmentTick({ limit });
+      console.log("[Scheduled] prospect-enrich-tick", {
+        examined: result.examined,
+        enriched: result.enriched,
+        created: result.created,
+        updated: result.updated,
+      });
+      res.json({ ok: true, ...result, results: result.results.slice(0, 20) });
+    } catch (err) {
+      console.error("[Scheduled] prospect-enrich-tick failed", err);
+      alertFounder({
+        title: "Scheduled job failed: prospect-enrich-tick",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}`,
         category: "ops",
         actionUrl: "https://www.grayarx.com/admin/ops",
       }).catch(() => {});

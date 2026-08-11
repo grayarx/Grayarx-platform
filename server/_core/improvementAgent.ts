@@ -362,11 +362,11 @@ export function runAudit(input: AuditInput): Finding[] {
         category: "prospect_cadence",
         severity: genericShare >= 0.7 ? "high" : "medium",
         title: "Replace bounced info@ emails with dealer principals",
-        finding: `${emailStats.genericMailboxCount}/${emailStats.totalWithEmail} prospect emails are generic mailboxes (info@/sales@/enquiries@). Resend shows those bounce. Only ${emailStats.outreachReadyCount} are named/principal-ready. Kagiso should enrich via LinkedIn Dealer Principal / MD / Owner searches before the next pilot blast.`,
-        suggestedFix: `For each target: (1) open the LinkedIn people search, (2) find Dealer Principal / Managing Director / Owner, (3) confirm a named email on the site Contact/Team page or ask via WhatsApp, (4) update the prospect and set emailVerified only then.\n\nPriority targets:\n${linkLines || "• (see pilot enrichment list)"}`,
+        finding: `${emailStats.genericMailboxCount}/${emailStats.totalWithEmail} prospect emails are generic mailboxes (info@/sales@/enquiries@). Resend shows those bounce. Only ${emailStats.outreachReadyCount} are named/principal-ready. Sipho's autonomous enrich tick scrapes dealer websites for principal emails; backlog will drain as named contacts are found.`,
+        suggestedFix: `No founder action required — Sipho runs prospect-enrich-tick (traffic + cron). Priority targets still outstanding:\n${linkLines || "• (enrich queue empty)"}`,
         impactEstimate:
           "Expected deliverability lift: bounce rate down sharply; replies more likely from decision-makers.",
-        autoApplicable: 0,
+        autoApplicable: 1,
         confidence: "0.90",
         evidence: JSON.stringify({
           metric: "generic_mailbox_share",
@@ -462,7 +462,12 @@ export function applyFindingToSettings(
       return { emailAutoMarkContacted: true };
     case "prospect_cadence":
       // Wake the Prospector and run it daily at 05:00 SAST.
-      return { prospectorEnabled: true, prospectorCron: "0 0 3 * * *" };
+      // Also nudge principal-email enrichment (handled by autonomous middleware).
+      return {
+        prospectorEnabled: true,
+        prospectorCron: "0 0 3 * * *",
+        principalEnrichEnabled: true,
+      };
     case "calling_followup":
       // Narrow the calling window to peak SA business hours, where
       // connection rates historically improve.

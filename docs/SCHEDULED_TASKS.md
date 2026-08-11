@@ -56,7 +56,8 @@ options:
 |---|---|---|
 | `POST /api/scheduled/whatsapp-queue` | every 5 minutes | Drains the WhatsApp outbound message queue with retry/backoff. Without this, queued WhatsApp replies never send. |
 | `POST /api/scheduled/lead-followup-tick` | every hour (or daily, minimum) | Sends Day 1/3/7 lead follow-ups whose `dueAt` has passed. |
-| `POST /api/scheduled/prospect-nightly` | daily (e.g. 03:00 UTC / 05:00 SAST) | Generates 5 fresh dealership prospects, rotating through SA provinces. |
+| `POST /api/scheduled/prospect-nightly` | daily (e.g. 03:00 UTC / 05:00 SAST) | Generates fresh dealership prospects, then runs Sipho principal-email enrichment. |
+| `POST /api/scheduled/prospect-enrich-tick` | every 4 hours (or with site traffic) | Sipho fetches dealer websites and stores **named/principal** emails only. Also self-runs on HTTP traffic (~every 4h) without external cron. |
 | `POST /api/scheduled/market-guide-weekly` | weekly, Monday (e.g. 04:00 UTC / 06:00 SAST) | Refreshes the live SA market guide used by Tumi valuations. |
 | `POST /api/scheduled/db-backup` | daily (e.g. 02:00 UTC / 04:00 SAST) | **New** — exports core tables to gzip'd JSON and uploads to S3/R2 (see `docs/BACKUP_RESTORE.md`). |
 | `POST /api/scheduled/inventory-sync` | daily (e.g. 03:00 UTC / 05:00 SAST) | **Live stock sync** — for each dealership with sync enabled, fetches their CSV feed URL and create/update/sold-marks inventory. Configure per dealer under Import Inventory → Live stock sync. |
