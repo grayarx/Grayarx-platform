@@ -12,6 +12,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { registerScheduledRoutes } from "./scheduled";
 import { attachAutonomousAuditMiddleware } from "./autonomousAudit";
 import { attachMarketGuideRefreshMiddleware } from "./marketGuideScheduler";
+import { attachPrincipalEnrichmentMiddleware } from "./principalEnrichmentScheduler";
 import { registerSitemapRoutes } from "./sitemap";
 import { registerWebhookRoutes } from "./webhookRoutes";
 import { registerEmbedRoutes } from "./embedRoutes";
@@ -124,6 +125,8 @@ async function startServer() {
   attachAutonomousAuditMiddleware(app);
   // Weekly market guide live refresh — self-scheduling on first request after boot
   attachMarketGuideRefreshMiddleware(app);
+  // Sipho principal-email enrichment — self-scheduling every ~4h on traffic
+  attachPrincipalEnrichmentMiddleware(app);
   // Public SEO: /robots.txt + /sitemap.xml
   registerSitemapRoutes(app);
   // Founder business plan — standalone HTML at repo root

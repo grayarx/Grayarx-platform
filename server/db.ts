@@ -1165,6 +1165,57 @@ export async function deleteAllProspects(): Promise<{ deletedProspects: number; 
   return { deletedProspects, deletedCalls };
 }
 
+export type UpdateProspectContactInput = {
+  email?: string | null;
+  contactName?: string | null;
+  contactRole?: string | null;
+  emailVerified?: number;
+  emailSource?: string | null;
+  enrichedAt?: Date | null;
+  enrichmentNotes?: string | null;
+  /** Appended to existing sourceNotes */
+  sourceNotesAppend?: string | null;
+};
+
+export async function updateProspectContact(
+  id: number,
+  patch: UpdateProspectContactInput,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (patch.email != null && patch.email !== "") {
+    const { assessProspectEmail } = await import("../shared/prospectEmailQuality");
+    if (!assessProspectEmail(patch.email).outreachReady) {
+      throw new Error("Refusing to store non-outreach-ready prospect email");
+    }
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (patch.email !== undefined) updates.email = patch.email;
+  if (patch.contactName !== undefined) updates.contactName = patch.contactName;
+  if (patch.contactRole !== undefined) updates.contactRole = patch.contactRole;
+  if (patch.emailVerified !== undefined) updates.emailVerified = patch.emailVerified;
+  if (patch.emailSource !== undefined) updates.emailSource = patch.emailSource;
+  if (patch.enrichedAt !== undefined) updates.enrichedAt = patch.enrichedAt;
+  if (patch.enrichmentNotes !== undefined) updates.enrichmentNotes = patch.enrichmentNotes;
+
+  if (patch.sourceNotesAppend) {
+    const [row] = await db
+      .select({ sourceNotes: prospects.sourceNotes })
+      .from(prospects)
+      .where(eq(prospects.id, id))
+      .limit(1);
+    const prev = row?.sourceNotes?.trim() ?? "";
+    updates.sourceNotes = prev
+      ? `${prev} | ${patch.sourceNotesAppend}`
+      : patch.sourceNotesAppend;
+  }
+
+  if (Object.keys(updates).length === 0) return;
+  await db.update(prospects).set(updates).where(eq(prospects.id, id));
+}
+
 // === Aggregates / KPIs ===
 
 const EMPTY_DASHBOARD_STATS = {

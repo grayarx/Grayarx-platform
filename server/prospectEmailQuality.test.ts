@@ -137,7 +137,7 @@ describe("prospect email quality", () => {
     const bounce = findings.find((f) => /dealer principals/i.test(f.title));
     expect(bounce).toBeDefined();
     expect(bounce?.severity).toBe("high");
-    expect(bounce?.suggestedFix).toContain("LinkedIn");
-    expect(bounce?.autoApplicable).toBe(0);
+    expect(bounce?.suggestedFix).toMatch(/Sipho|enrich/i);
+    expect(bounce?.autoApplicable).toBe(1);
   });
 });
