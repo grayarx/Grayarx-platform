@@ -2,10 +2,16 @@
  * Pilot outreach segments + curated Gauteng dealership research.
  * Dealers in the same segment receive the same email template (personalised header only).
  *
- * IMPORTANT: Only send bulk email to rows with emailVerified=true (public contact email found).
- * Each verified email appears in exactly ONE segment (no cross-segment duplicates).
- * Target: 3 mailable addresses per segment.
+ * IMPORTANT: Only send bulk email to rows with emailVerified=true AND outreach-ready
+ * quality (named / principal). Generic info@ / sales@ bounce on Resend — Kagiso flags
+ * those for LinkedIn dealer-principal enrichment instead.
  */
+
+import {
+  assessProspectEmail,
+  buildEnrichmentTarget,
+  type EnrichmentTarget,
+} from "./prospectEmailQuality";
 
 export type PilotOutreachSegment =
   | "no_website_social_only"
@@ -20,8 +26,10 @@ export type PilotProspect = {
   region: string;
   segment: PilotOutreachSegment;
   contactName: string;
+  /** Dealer Principal / MD / Sales Manager / Owner when known */
+  contactRole?: string;
   email?: string;
-  /** True when email was found on official site / listing — safe for Resend bulk */
+  /** True when email was found on official site / listing — still must pass quality gate */
   emailVerified: boolean;
   phone?: string;
   website?: string;
@@ -49,24 +57,30 @@ export const PILOT_SEGMENT_SUBJECTS: Record<PilotOutreachSegment, string> = {
     "Your WhatsApp can book test drives automatically — pilot invite",
 };
 
-/** Curated research — Gauteng & surrounds. 3 unique verified emails per segment. */
+/**
+ * Curated research — Gauteng & surrounds.
+ * Most public info@ addresses bounce; keep them unverified until a principal/
+ * named inbox is found (LinkedIn / site team page). Named contacts stay mailable.
+ */
 export const PILOT_PROSPECTS: PilotProspect[] = [
-  // ── Segment: no_website_social_only (3 mailable) ────────────────────────
+  // ── Segment: no_website_social_only ─────────────────────────────────────
   {
     id: "gauteng-motor-fb-heavy",
     dealershipName: "Gauteng Motor Centre",
     city: "Pretoria CBD",
     region: "Gauteng",
     segment: "no_website_social_only",
-    contactName: "Sales Manager",
+    contactName: "Dealer Principal (TBD)",
+    contactRole: "Dealer Principal",
     email: "info@gautengmotors.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "012 321 0033",
     website: "https://gautengmotors.co.za",
     facebook: "https://www.facebook.com/gautengmotorcentre",
     inventoryEstimate: "30–80 units",
     painPoint: "Heavy Facebook promotion but showroom UX is dated vs competitors.",
-    researchNotes: "Public contact: info@gautengmotors.co.za — social-first engagement.",
+    researchNotes:
+      "info@ listed publicly but generic mailboxes bounce — enrich via LinkedIn Dealer Principal search before send.",
   },
   {
     id: "jangdas-robertsham",
@@ -74,14 +88,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     city: "Robertsham, Johannesburg",
     region: "Gauteng",
     segment: "no_website_social_only",
-    contactName: "Sales",
+    contactName: "Dealer Principal (TBD)",
+    contactRole: "Dealer Principal",
     email: "info@jangdasmotors.com",
-    emailVerified: true,
+    emailVerified: false,
     phone: "081 436 0666",
     website: "https://jangdasmotors.com",
     inventoryEstimate: "20–60 units",
     painPoint: "Buyers still find stock via social / walk-ins more than the website.",
-    researchNotes: "Contact page lists info@jangdasmotors.com.",
+    researchNotes: "Generic info@ only — find named principal before Resend outreach.",
   },
   {
     id: "sd-auto-wychwood",
@@ -90,15 +105,16 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     region: "Gauteng",
     segment: "no_website_social_only",
     contactName: "Donoven",
+    contactRole: "Owner / Sales",
     email: "info@sdautocc.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "011 615 0228",
     website: "https://sdautocc.co.za",
     inventoryEstimate: "15–40 units",
     painPoint: "Phone/WhatsApp heavy — no AI showroom capturing overnight interest.",
-    researchNotes: "Contact page: info@sdautocc.co.za.",
+    researchNotes:
+      "Contact name Donoven known; need donoven@ or similar — do not send to info@.",
   },
-  // Research-only (no verified email) — hidden from send list
   {
     id: "koos-mike-pretoria",
     dealershipName: "Koos and Mike Cars",
@@ -106,14 +122,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     region: "Gauteng",
     segment: "no_website_social_only",
     contactName: "Owner",
+    contactRole: "Owner",
     emailVerified: false,
     facebook: "https://www.facebook.com/profile.php?id=100083618730489",
     inventoryEstimate: "15–40 units",
     painPoint: "Stock lives on Facebook only — no searchable showroom or lead capture.",
-    researchNotes: "WhatsApp/Facebook follow-up only until a public email is verified.",
+    researchNotes: "WhatsApp/Facebook follow-up only until a public named email is verified.",
   },
 
-  // ── Segment: basic_website_no_showroom (3 mailable) ─────────────────────
+  // ── Segment: basic_website_no_showroom ──────────────────────────────────
   {
     id: "jubilee-springs",
     dealershipName: "Jubilee Motors",
@@ -121,13 +138,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     region: "Gauteng",
     segment: "basic_website_no_showroom",
     contactName: "Darius",
+    contactRole: "Sales / Contact",
     email: "darius@jubileemotors.co.za",
     emailVerified: true,
     phone: "011 811 4008",
     website: "https://jubileemotors.co.za",
     inventoryEstimate: "20–50 units",
     painPoint: "Static WordPress site — no AI chat, WhatsApp routing, or instant booking.",
-    researchNotes: "Public contact page lists darius@jubileemotors.co.za.",
+    researchNotes:
+      "Named contact on site: darius@jubileemotors.co.za (also julia@ on directories). Prefer named over info@ which bounced.",
   },
   {
     id: "iands-de-deur",
@@ -135,14 +154,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     city: "De Deur",
     region: "Gauteng",
     segment: "basic_website_no_showroom",
-    contactName: "Owner",
+    contactName: "Owner (TBD)",
+    contactRole: "Owner",
     email: "info@iandsmotors.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "016 590 2896",
     website: "https://www.iandsmotors.co.za",
     inventoryEstimate: "15–40 units",
     painPoint: "Listings page only — buyers still phone instead of self-serving online.",
-    researchNotes: "info@ on homepage footer.",
+    researchNotes: "Generic info@ — LinkedIn principal enrichment required.",
   },
   {
     id: "omcmotors-lyndhurst",
@@ -150,31 +170,33 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     city: "Lyndhurst",
     region: "Gauteng",
     segment: "basic_website_no_showroom",
-    contactName: "Sales Manager",
+    contactName: "Sales Manager (TBD)",
+    contactRole: "Sales Manager",
     email: "info@omcmotors.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "011 776 9964",
     website: "https://www.omcmotors.co.za",
     inventoryEstimate: "40–100 units",
     painPoint: "Live chat widget but no AI qualification or after-hours specialist agents.",
-    researchNotes: "info@omcmotors.co.za on contact page.",
+    researchNotes: "Generic info@ — find named GM / principal before send.",
   },
 
-  // ── Segment: after_hours_leak (3 mailable) ──────────────────────────────
+  // ── Segment: after_hours_leak ───────────────────────────────────────────
   {
     id: "voncal-wonderboom",
     dealershipName: "Voncal Auto",
     city: "Wonderboom South, Pretoria",
     region: "Gauteng",
     segment: "after_hours_leak",
-    contactName: "Sales",
+    contactName: "Dealer Principal (TBD)",
+    contactRole: "Dealer Principal",
     email: "info@voncalauto.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "010 000 6150",
     website: "https://voncalauto.co.za",
     inventoryEstimate: "30–70 units",
     painPoint: "Hours end mid-evening — after-hours browsers get no reply until morning.",
-    researchNotes: "Contact: info@voncalauto.co.za. Mon–Fri closes 17:30.",
+    researchNotes: "Generic info@ — enrich via LinkedIn before Resend.",
   },
   {
     id: "corona-gezina",
@@ -183,13 +205,14 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     region: "Gauteng",
     segment: "after_hours_leak",
     contactName: "Jan",
+    contactRole: "Contact",
     email: "info@coronamotors.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "012 335 8359",
     website: "https://coronamotors.co.za",
     inventoryEstimate: "40–80 units",
     painPoint: "Strong local reputation but Sundays/late nights lose warm leads.",
-    researchNotes: "Contact: info@coronamotors.co.za.",
+    researchNotes: "Contact name Jan known — find jan@…; do not send to info@.",
   },
   {
     id: "m5-boksburg",
@@ -198,30 +221,32 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     region: "Gauteng",
     segment: "after_hours_leak",
     contactName: "Ammaar",
+    contactRole: "Contact",
     email: "info@m5auto.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "011 230 5220",
     website: "https://m5auto.co.za",
     inventoryEstimate: "50–120 units",
     painPoint: "High volume stock — after-hours enquiries need an always-on qualifier.",
-    researchNotes: "Contact: info@m5auto.co.za.",
+    researchNotes: "Contact name Ammaar known — find ammaar@… before outreach.",
   },
 
-  // ── Segment: whatsapp_manual (3 mailable) ───────────────────────────────
+  // ── Segment: whatsapp_manual ────────────────────────────────────────────
   {
     id: "preowned-motorland",
     dealershipName: "Pre-Owned Motorland",
     city: "Vanderbijlpark",
     region: "Gauteng",
     segment: "whatsapp_manual",
-    contactName: "Sales",
+    contactName: "Dealer Principal (TBD)",
+    contactRole: "Dealer Principal",
     email: "info@preownedmotorland.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "016 932 4212",
     website: "https://preownedmotorland.co.za",
     inventoryEstimate: "Luxury / exotic focus",
     painPoint: "High-value buyers message after hours — manual WhatsApp can't keep up.",
-    researchNotes: "Contact: info@preownedmotorland.co.za.",
+    researchNotes: "Generic info@ — LinkedIn principal enrichment required.",
   },
   {
     id: "southgate-wheels",
@@ -229,14 +254,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     city: "Roodepoort",
     region: "Gauteng",
     segment: "whatsapp_manual",
-    contactName: "Sales",
+    contactName: "Dealer Principal (TBD)",
+    contactRole: "Dealer Principal",
     email: "info@southgatewheels.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "011 326 0812",
     website: "https://southgatewheels.co.za",
     inventoryEstimate: "20–50 units",
     painPoint: "WhatsApp is the sales desk — no automated booking or routing.",
-    researchNotes: "Public contact email listed as info@southgatewheels.co.za.",
+    researchNotes: "Generic info@ — do not bulk-send until named contact verified.",
   },
   {
     id: "jooste-montana",
@@ -244,14 +270,15 @@ export const PILOT_PROSPECTS: PilotProspect[] = [
     city: "Montana, Pretoria",
     region: "Gauteng",
     segment: "whatsapp_manual",
-    contactName: "Owner",
+    contactName: "Owner (TBD)",
+    contactRole: "Owner",
     email: "info@joostemotors.co.za",
-    emailVerified: true,
+    emailVerified: false,
     phone: "082 448 7569",
     website: "https://joostemotors.co.za",
     inventoryEstimate: "50+ units",
     painPoint: "Staff answer WhatsApp manually — Lerato could pencil test drives 24/7.",
-    researchNotes: "Click-to-WhatsApp on site; info@ used for pilot invite.",
+    researchNotes: "Generic info@ — enrich owner email via LinkedIn / site.",
   },
 ];
 
@@ -270,17 +297,47 @@ export function groupProspectsBySegment(
   return groups;
 }
 
+export type MailableOptions = {
+  /**
+   * When true, also include verified generic mailboxes (info@ etc.).
+   * Default false — Resend bounce rate on those is too high.
+   */
+  includeGenericMailboxes?: boolean;
+};
+
+/** Verified + outreach-ready (named/principal) emails only, unless includeGenericMailboxes. */
 export function mailableProspects(
   prospects: PilotProspect[] = PILOT_PROSPECTS,
   segment?: PilotOutreachSegment,
+  opts: MailableOptions = {},
 ): PilotProspect[] {
   const filtered = segment ? prospects.filter((p) => p.segment === segment) : prospects;
   const seen = new Set<string>();
   return filtered.filter((p) => {
     if (!p.emailVerified || !p.email?.trim()) return false;
+    const assessment = assessProspectEmail(p.email);
+    if (!opts.includeGenericMailboxes && !assessment.outreachReady) return false;
     const key = p.email.trim().toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+/** Prospects that need dealer-principal / LinkedIn enrichment before cold email. */
+export function prospectsNeedingPrincipalEnrichment(
+  prospects: PilotProspect[] = PILOT_PROSPECTS,
+): EnrichmentTarget[] {
+  return prospects
+    .filter((p) => {
+      const a = assessProspectEmail(p.email);
+      return !p.emailVerified || !a.outreachReady;
+    })
+    .map((p) =>
+      buildEnrichmentTarget({
+        dealershipName: p.dealershipName,
+        city: p.city,
+        email: p.email,
+      }),
+    );
 }

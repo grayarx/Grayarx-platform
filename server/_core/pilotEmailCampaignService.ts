@@ -177,8 +177,17 @@ export async function sendPilotBulkCampaign(input?: {
 export async function previewPilotCampaign() {
   const sentMap = await refreshPilotEmailSendMap();
   const groups = groupProspectsBySegment();
+  const { prospectsNeedingPrincipalEnrichment } = await import(
+    "../../shared/pilotProspectSegments"
+  );
+  const enrichmentNeeded = prospectsNeedingPrincipalEnrichment().length;
   return (Object.keys(groups) as PilotOutreachSegment[]).map((segment) => {
     const mailable = mailableProspects(PILOT_PROSPECTS, segment);
+    const needsEnrichment = groups[segment].filter((p) => {
+      if (!p.emailVerified) return true;
+      // verified but not outreach-ready still counts
+      return !mailable.some((m) => m.id === p.id);
+    }).length;
     const prospects = mailable.map((p) => {
       const prior = sentMap.get(p.email!.trim().toLowerCase());
       return {
@@ -214,9 +223,11 @@ export async function previewPilotCampaign() {
       mailable: mailable.length,
       remaining,
       alreadyEmailed,
+      needsEnrichment,
+      enrichmentNeededTotal: enrichmentNeeded,
       /** Research total (includes unverified) — for internal stats only */
       totalResearched: groups[segment].length,
-      /** UI list: verified emails only */
+      /** UI list: outreach-ready verified emails only */
       total: mailable.length,
       prospects,
       sampleHtml,
