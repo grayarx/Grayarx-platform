@@ -9,12 +9,12 @@ export default function ScrollToTop() {
   const [location] = useLocation();
 
   useLayoutEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    // Some layouts use a scrollable main pane instead of the window.
-    const main = document.querySelector("main");
-    if (main instanceof HTMLElement) {
-      main.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    }
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.querySelectorAll("main, [data-scroll-root]").forEach((el) => {
+      if (el instanceof HTMLElement) el.scrollTop = 0;
+    });
   }, [location]);
 
   return null;
