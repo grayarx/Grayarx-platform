@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Shield, Scale, Inbox, Trash2, UserCheck } from "lucide-react";
-import { GRAYARX_LEGAL } from "@shared/companyLegal";
 
 const MAILBOX_ICONS = {
   privacy: Shield,
