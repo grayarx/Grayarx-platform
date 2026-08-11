@@ -984,33 +984,72 @@ export default function Inventory() {
         </div>
       }
     >
-      {showroomStats.hidden > 0 ? (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+      {/* Always show showroom health so Reserved / Fix actions stay discoverable */}
+      {data && data.length > 0 ? (
+        <div
+          className={`mb-4 rounded-lg px-4 py-3 text-sm ${
+            showroomStats.hidden > 0
+              ? "border border-amber-500/30 bg-amber-500/10 text-amber-100"
+              : "border border-primary/15 bg-card/40 text-foreground"
+          }`}
+        >
           <p className="font-medium">
             {showroomStats.onShowroom} of {showroomStats.total} cars are on the public showroom
-            {" · "}
-            {showroomStats.hidden} hidden
+            {showroomStats.hidden > 0 ? (
+              <>
+                {" · "}
+                <span className="text-amber-200">{showroomStats.hidden} hidden</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground font-normal"> · all live</span>
+            )}
           </p>
-          <p className="mt-1 text-amber-100/80 text-xs">
+          <p
+            className={`mt-1 text-xs ${
+              showroomStats.hidden > 0 ? "text-amber-100/80" : "text-muted-foreground"
+            }`}
+          >
             {[
-              showroomStats.reserved ? `${showroomStats.reserved} reserved` : null,
-              showroomStats.fix ? `${showroomStats.fix} marked Fix` : null,
+              `${showroomStats.reserved} reserved`,
+              `${showroomStats.fix} marked Fix`,
               showroomStats.sold ? `${showroomStats.sold} sold` : null,
               showroomStats.badPrice ? `${showroomStats.badPrice} bad/POA price` : null,
             ]
               .filter(Boolean)
-              .join(" · ") || "Hidden for title/price/status reasons"}
-            . Use status <strong>Not on showroom</strong> or <strong>Fix</strong> to find them.
+              .join(" · ")}
+            {showroomStats.hidden > 0
+              ? ". Use the buttons below (or status → Not on showroom / Fix) to find and fix them."
+              : ". Reserved cars stay off the showroom until you set them Available."}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+              className={`h-7 ${
+                showroomStats.hidden > 0
+                  ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                  : ""
+              }`}
               onClick={() => setStatusFilter("not_on_showroom")}
+              disabled={showroomStats.hidden === 0}
             >
               Show hidden cars
+              {showroomStats.hidden > 0 ? ` (${showroomStats.hidden})` : ""}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className={`h-7 ${
+                showroomStats.reserved > 0
+                  ? "border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                  : ""
+              }`}
+              onClick={() => setStatusFilter("reserved")}
+            >
+              Show reserved
+              {showroomStats.reserved > 0 ? ` (${showroomStats.reserved})` : ""}
             </Button>
             {showroomStats.reserved > 0 ? (
               <Button
@@ -1030,11 +1069,27 @@ export default function Inventory() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 border-rose-500/40 text-rose-200 hover:bg-rose-500/20"
+              className={`h-7 ${
+                showroomStats.fix > 0
+                  ? "border-rose-500/40 text-rose-200 hover:bg-rose-500/20"
+                  : ""
+              }`}
               onClick={() => setStatusFilter("fix")}
             >
               Show Fix only
+              {showroomStats.fix > 0 ? ` (${showroomStats.fix})` : ""}
             </Button>
+            {showroomStats.badPrice > 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 border-amber-500/40 text-amber-100 hover:bg-amber-500/20"
+                onClick={() => setStatusFilter("not_on_showroom")}
+              >
+                Fix bad prices ({showroomStats.badPrice})
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}
