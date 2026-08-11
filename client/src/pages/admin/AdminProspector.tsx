@@ -90,6 +90,15 @@ export default function AdminProspector() {
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+  const purgeAll = trpc.prospects.purgeAll.useMutation({
+    onSuccess: (result) => {
+      utils.prospects.list.invalidate();
+      toast.success(
+        `Cleared ${result.deletedProspects} prospect${result.deletedProspects === 1 ? "" : "s"}. Scout will only add named/principal emails.`,
+      );
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
   const [removingId, setRemovingId] = useState<number | null>(null);
 
   async function handleSendEmail(p: {
@@ -163,18 +172,41 @@ export default function AdminProspector() {
       title="Prospector"
       subtitle="Dealerships our outreach team should target. AI-scored and refreshed daily. NOT visible to current dealerships."
       actions={
-        <Button
-          className="btn-gold"
-          onClick={() => scout.mutate({ region: "Gauteng", count: 5 })}
-          disabled={scout.isPending}
-        >
-          {scout.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4 mr-2" />
-          )}
-          Generate prospects
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Remove ALL prospects? Sipho will only re-add dealerships with named/principal emails (not info@).",
+                )
+              ) {
+                return;
+              }
+              purgeAll.mutate();
+            }}
+            disabled={purgeAll.isPending || !(data && data.length > 0)}
+          >
+            {purgeAll.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Clear all
+          </Button>
+          <Button
+            className="btn-gold"
+            onClick={() => scout.mutate({ region: "Gauteng", count: 5 })}
+            disabled={scout.isPending}
+          >
+            {scout.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Generate prospects
+          </Button>
+        </div>
       }
     >
       {isLoading && <p className="text-muted-foreground">Loading prospects…</p>}
@@ -182,7 +214,8 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Click &ldquo;Generate prospects&rdquo; to have Sipho scout dealerships.
+            Click &ldquo;Generate prospects&rdquo; — Sipho only keeps dealerships with
+            named/principal emails (info@ is blocked).
           </p>
         </div>
       )}

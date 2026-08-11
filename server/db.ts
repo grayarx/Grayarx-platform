@@ -50,6 +50,7 @@ import {
   InsertConversation,
   InsertProspect,
   InsertAgentActivity,
+  callAttempts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1109,9 +1110,15 @@ export async function createProspect(data: InsertProspect) {
 
 export async function createProspects(data: InsertProspect[]) {
   if (data.length === 0) return;
+  const { filterOutreachReadyProspectInserts } = await import(
+    "../shared/prospectEmailQuality"
+  );
+  // Hard gate: never persist info@ / sales@ / empty — only named/principal.
+  const ready = filterOutreachReadyProspectInserts(data);
+  if (ready.length === 0) return;
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(prospects).values(data);
+  await db.insert(prospects).values(ready);
 }
 
 export async function listProspects(limit = 200) {
@@ -1133,6 +1140,29 @@ export async function deleteProspect(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(prospects).where(eq(prospects.id, id));
+}
+
+/**
+ * Wipe all Sipho prospects (and their call attempts).
+ * Used after the info@ bounce incident so we only re-add named/principal emails.
+ */
+export async function deleteAllProspects(): Promise<{ deletedProspects: number; deletedCalls: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db.select({ id: prospects.id }).from(prospects);
+  const ids = existing.map((r) => r.id);
+  let deletedCalls = 0;
+  if (ids.length > 0) {
+    const callResult = await db
+      .delete(callAttempts)
+      .where(inArray(callAttempts.prospectId, ids));
+    deletedCalls = Number((callResult as { rowsAffected?: number }).rowsAffected ?? 0);
+  }
+  const prospectResult = await db.delete(prospects);
+  const deletedProspects = Number(
+    (prospectResult as { rowsAffected?: number }).rowsAffected ?? existing.length,
+  );
+  return { deletedProspects, deletedCalls };
 }
 
 // === Aggregates / KPIs ===
@@ -1434,7 +1464,7 @@ export async function getProspect(id: number) {
 }
 
 // === Call attempts ===
-import { callAttempts, InsertCallAttempt } from "../drizzle/schema";
+import { type InsertCallAttempt } from "../drizzle/schema";
 
 export async function createCallAttempt(data: InsertCallAttempt) {
   const db = await getDb();
