@@ -11,6 +11,13 @@ describe("resolveMailboxFromAddress", () => {
     expect(resolveMailboxFromAddress("legal@grayarx.com")).toBe("legal");
   });
 
+  it("maps hello / agent reply targets", () => {
+    expect(resolveMailboxFromAddress("hello@grayarx.com")).toBe("hello");
+    expect(resolveMailboxFromAddress("mia@grayarx.com")).toBe("hello");
+    expect(resolveMailboxFromAddress("prospector@grayarx.com")).toBe("hello");
+    expect(resolveMailboxFromAddress("pilot@grayarx.com")).toBe("hello");
+  });
+
   it("defaults to other", () => {
     expect(resolveMailboxFromAddress("unknown@test.com")).toBe("other");
   });

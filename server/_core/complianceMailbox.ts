@@ -3,6 +3,7 @@ import { complianceInquiries, type InsertComplianceInquiry } from "../../drizzle
 import { getDb } from "../db";
 import { alertFounder } from "./founderAlert";
 import { GRAYARX_LEGAL } from "../../shared/companyLegal";
+import { ENV } from "./env";
 
 export type ComplianceMailbox = "privacy" | "legal" | "hello" | "other";
 
@@ -13,12 +14,25 @@ const MAILBOX_LABELS: Record<ComplianceMailbox, string> = {
   other: "hello@grayarx.com",
 };
 
+/**
+ * Map inbound To: addresses to a mailbox label.
+ * Pilot / Mia / Prospector reply targets all land under hello/other so founder
+ * alerts and /admin/compliance stay useful.
+ */
 export function resolveMailboxFromAddress(to: string | string[] | undefined): ComplianceMailbox {
   const addrs = Array.isArray(to) ? to : to ? [to] : [];
   const joined = addrs.join(" ").toLowerCase();
   if (joined.includes("privacy@")) return "privacy";
-  if (joined.includes("legal@")) return "legal";
-  if (joined.includes("hello@")) return "hello";
+  if (joined.includes("legal@") || joined.includes("compliance@")) return "legal";
+  if (
+    joined.includes("hello@") ||
+    joined.includes("pilot@") ||
+    joined.includes("mia@") ||
+    joined.includes("prospector@") ||
+    joined.includes("support@")
+  ) {
+    return "hello";
+  }
   return "other";
 }
 
@@ -144,6 +158,83 @@ export async function markComplianceInquiryFollowUp(id: number): Promise<void> {
     .where(eq(complianceInquiries.id, id));
 }
 
+/** Resend webhooks only send metadata — fetch body via Receiving API. */
+export async function fetchResendReceivedEmailContent(emailId: string): Promise<{
+  text?: string | null;
+  html?: string | null;
+  subject?: string | null;
+  from?: string | null;
+  to?: string | string[] | null;
+} | null> {
+  const apiKey = ENV.resendApiKey;
+  if (!apiKey || !emailId) return null;
+  try {
+    const res = await fetch(
+      `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`,
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      },
+    );
+    if (!res.ok) {
+      console.warn(
+        `[complianceMailbox] Resend receiving.get ${emailId} → HTTP ${res.status}`,
+      );
+      return null;
+    }
+    return (await res.json()) as {
+      text?: string | null;
+      html?: string | null;
+      subject?: string | null;
+      from?: string | null;
+      to?: string | string[] | null;
+    };
+  } catch (err) {
+    console.error("[complianceMailbox] Resend receiving.get failed", err);
+    return null;
+  }
+}
+
+/** Public DNS check — grayarx.com must have MX for inbound to work. */
+export async function checkInboundMxHealth(domain = "grayarx.com"): Promise<{
+  domain: string;
+  hasMx: boolean;
+  records: string[];
+  canReceiveMail: boolean;
+  detail: string;
+}> {
+  try {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    const data = (await res.json()) as {
+      Answer?: Array<{ data?: string }>;
+      Status?: number;
+    };
+    const records = (data.Answer ?? [])
+      .map((a) => a.data?.trim())
+      .filter((x): x is string => Boolean(x));
+    const hasMx = records.length > 0;
+    return {
+      domain,
+      hasMx,
+      records,
+      canReceiveMail: hasMx,
+      detail: hasMx
+        ? `MX OK (${records.length} record${records.length === 1 ? "" : "s"})`
+        : "No MX records — the internet cannot deliver mail to @" +
+          domain +
+          ". Enable Resend Receiving and add the MX Resend shows (Cloudflare DNS).",
+    };
+  } catch (err) {
+    return {
+      domain,
+      hasMx: false,
+      records: [],
+      canReceiveMail: false,
+      detail: `DNS lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
 export async function processResendInboundEmail(payload: {
   type?: string;
   data?: {
@@ -163,10 +254,24 @@ export async function processResendInboundEmail(payload: {
     return { ok: false, reason: "missing_fields" };
   }
 
+  // Webhook payload is metadata-only — pull body from Receiving API when needed.
+  let text = data.text;
+  let html = data.html;
+  if ((!text || !text.trim()) && (!html || !html.trim()) && data.email_id) {
+    const full = await fetchResendReceivedEmailContent(data.email_id);
+    if (full) {
+      text = full.text ?? text;
+      html = full.html ?? html;
+    }
+  }
+
   const fromMatch = data.from.match(/^(.+?)\s*<([^>]+)>$/) ?? null;
   const senderName = fromMatch ? fromMatch[1].replace(/"/g, "").trim() : undefined;
   const senderEmail = fromMatch ? fromMatch[2].trim() : data.from.trim();
-  const body = (data.text || stripHtml(data.html ?? "") || "(no body)").slice(0, 8000);
+  const body = (text || stripHtml(html ?? "") || "(no body — open Resend Receiving dashboard)").slice(
+    0,
+    8000,
+  );
   const mailbox = resolveMailboxFromAddress(data.to);
 
   await recordComplianceInquiry({

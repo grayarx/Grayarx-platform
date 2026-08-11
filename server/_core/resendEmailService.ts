@@ -141,6 +141,7 @@ export async function sendLeadAcknowledgmentEmail(
     subject: `Thank you for your interest - ${dealershipName}`,
     html,
     from: "noreply@grayarx.com",
+    replyTo: "hello@grayarx.com",
   });
 }
 

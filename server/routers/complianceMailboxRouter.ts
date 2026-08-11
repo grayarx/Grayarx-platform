@@ -60,6 +60,32 @@ export const complianceMailboxRouter = router({
     return listComplianceInquiries(100);
   }),
 
+  /** Live inbound readiness: MX + webhook secret (founder console). */
+  inboundStatus: protectedProcedure.query(async ({ ctx }) => {
+    if (!isFounderOrAdmin(ctx.user)) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+    const { checkInboundMxHealth } = await import("../_core/complianceMailbox");
+    const mx = await checkInboundMxHealth("grayarx.com");
+    const webhookSecret = Boolean(process.env.RESEND_INBOUND_WEBHOOK_SECRET);
+    const resendKey = Boolean(process.env.RESEND_API_KEY);
+    return {
+      ...mx,
+      webhookSecretConfigured: webhookSecret,
+      resendApiKeyConfigured: resendKey,
+      webhookUrl: "https://www.grayarx.com/api/webhooks/resend-inbound",
+      replyTargets: [
+        "hello@grayarx.com",
+        "privacy@grayarx.com",
+        "legal@grayarx.com",
+        "mia@grayarx.com",
+        "prospector@grayarx.com",
+        "pilot@grayarx.com",
+      ],
+      ready: mx.canReceiveMail && webhookSecret && resendKey,
+    };
+  }),
+
   unreadCount: protectedProcedure.query(async ({ ctx }) => {
     if (!isFounderOrAdmin(ctx.user)) {
       throw new TRPCError({ code: "FORBIDDEN" });

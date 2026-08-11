@@ -18,6 +18,9 @@ export default function AdminCompliance() {
   const { data, isLoading } = trpc.complianceMailbox.list.useQuery(undefined, {
     refetchInterval: 30_000,
   });
+  const { data: inbound } = trpc.complianceMailbox.inboundStatus.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
   const markRead = trpc.complianceMailbox.markRead.useMutation({
     onSuccess: () => utils.complianceMailbox.list.invalidate(),
   });
@@ -33,7 +36,7 @@ export default function AdminCompliance() {
   return (
     <AdminShell
       title="Compliance inbox"
-      subtitle="Privacy, legal, and support messages — web forms and Resend inbound (privacy@ / legal@)."
+      subtitle="Privacy, legal, support, and replies to hello@ / Mia / pilot / prospector — web forms + Resend inbound."
       actions={
         unread > 0 ? (
           <Badge className="bg-amber-500/20 text-amber-200 border-amber-500/30">
@@ -42,21 +45,43 @@ export default function AdminCompliance() {
         ) : undefined
       }
     >
+      {inbound && !inbound.ready ? (
+        <Card className="card-premium mb-6 border-rose-500/40 bg-rose-500/10">
+          <CardContent className="p-5 text-sm text-rose-100 space-y-2">
+            <p className="font-semibold text-rose-50">Inbound email is not reachable yet</p>
+            <p>
+              {inbound.detail} Outbound (pilot / prospector / Mia) can still send. Replies to{" "}
+              <strong>hello@</strong> / privacy@ / legal@ will not arrive until Cloudflare has the
+              Resend Receiving <strong>MX</strong> record.
+            </p>
+            <p className="text-xs text-rose-100/80">
+              Fix: Resend → Domains → grayarx.com → enable Receiving → copy MX into Cloudflare DNS →
+              webhook already points at{" "}
+              <code className="bg-black/30 px-1 rounded">{inbound.webhookUrl}</code>.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="card-premium mb-6 border-primary/15">
         <CardContent className="p-5 text-sm text-muted-foreground space-y-2">
           <p>
-            <strong className="text-foreground">Founder alerts</strong> go to{" "}
-            {process.env.NODE_ENV === "development" ? "FOUNDER_ALERT_EMAIL / grayarx@gmail.com" : "your Gmail"} via
-            Resend whenever a message arrives.
+            <strong className="text-foreground">Founder alerts</strong> go to your Gmail via Resend
+            when a web-form or inbound message is stored.
           </p>
           <p>
-            To receive real emails sent to{" "}
-            <strong className="text-primary">{GRAYARX_LEGAL.informationOfficerEmail}</strong> and{" "}
-            <strong className="text-primary">{GRAYARX_LEGAL.legalEmail}</strong>, enable{" "}
-            <strong>Resend Inbound</strong> on grayarx.com and point the webhook to{" "}
-            <code className="text-xs bg-black/40 px-1 rounded">/api/webhooks/resend-inbound</code>.
-            See <code className="text-xs">docs/COMPLIANCE_MAILBOX_SETUP.md</code>.
+            <strong className="text-foreground">Web form</strong> on /legal works now (no MX needed).
+            <strong className="text-foreground"> Direct email replies</strong> need Resend Receiving
+            MX. Reply-To on pilot / Mia / prospector is{" "}
+            <strong className="text-primary">hello@grayarx.com</strong>.
           </p>
+          {inbound ? (
+            <p className="text-xs">
+              Status: MX {inbound.hasMx ? "OK" : "missing"} · webhook secret{" "}
+              {inbound.webhookSecretConfigured ? "OK" : "missing"} · Resend key{" "}
+              {inbound.resendApiKeyConfigured ? "OK" : "missing"}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
