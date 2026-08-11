@@ -7,34 +7,37 @@
 - **DB:** MySQL/TiDB via `DATABASE_URL`. Pending SQL under `drizzle/migrations/` is applied on boot by `scripts/apply-pending-migrations.mjs`.
 
 ### Showroom / Inventory performance
-- Public `showroom.list` returns `{ items, hasMore, nextOffset, nextCursor }` with server filters (`search`, `make`, `bodyType`, `fuel`, `transmission`, `maxPrice`) and `availableOnly`. Default page size is 48; Showroom uses `useInfiniteQuery`.
+- Public `showroom.list` returns `{ items, hasMore, nextOffset, nextCursor }` with server filters (`search`, `make`, `bodyType`, `fuel`, `transmission`, `maxPrice`) and `availableOnly`. Default page size is 48; Showroom accumulates pages via offset Load more.
 - Cards use `includeGallery: false` — primary URL only. If primary is blank, listVehicles borrows the first gallery photo for the response (and `healPrimaryFromGallery` can persist that).
-- Inventory grid still paginates client-side (Load more, 24).
+- Inventory grid paginates client-side (Load more, 24). Showroom status strip can be Minimized (localStorage).
 
 ### Photos / S3
-- Durable photo mirror needs `S3_BUCKET_NAME`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` (optional `S3_REGION`).
+- Durable photo mirror needs `S3_BUCKET_NAME`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` (optional `S3_REGION`) — set on **Railway** (production). Cloud agent pods do not need copies unless testing mirror locally.
 - Without S3, CSV import keeps external image URLs. `inventoryImport.mirrorMissingPhotos` returns `needsS3: true` and still runs primary heal.
 - Uploads set long-lived `Cache-Control` when S3 is configured.
 - Wikimedia Commons only serves fixed thumb widths (`WIKIMEDIA_THUMB_WIDTHS` in `shared/imagePipeline.ts`). Arbitrary sizes like 768px return HTTP 400 — always snap via `optimizeImageUrl`.
 
 ### Leads follow-ups
-- Mia Day 1 / 3 / 7 drip: cron `POST /api/scheduled/lead-followup-tick` (needs `SCHEDULED_TASK_SECRET`).
-- Auto-sends via Resend when `RESEND_API_KEY` is set. Force draft-only with `LEAD_DRIP_AUTO_SEND=0`. Force send with `LEAD_DRIP_AUTO_SEND=1`.
+- Mia Day 1 / 3 / 7 drip: cron `POST /api/scheduled/lead-followup-tick` (needs `SCHEDULED_TASK_SECRET` on Railway).
+- Auto-sends via Resend when `RESEND_API_KEY` is set. Force draft-only with `LEAD_DRIP_AUTO_SEND=0`.
 - Dealer Leads: overdue banner, drafts, **Followed up**, **Email this draft** (`dealer.sendLeadFollowup`).
 
-### Inbound email (critical)
-- Outbound (pilot/prospector/Mia) uses Resend + SPF — works without MX.
-- **Inbound replies need MX.** Probe: `curl -s https://www.grayarx.com/api/webhooks/health | jq .inboundEmail`
-- Webhook `/api/webhooks/resend-inbound` is active; bodies are fetched via Resend Receiving API (`RESEND_API_KEY`).
-- If `inboundEmail.hasMx` is false, replies to hello@ never arrive. Fix in Cloudflare + Resend Receiving (see `docs/COMPLIANCE_MAILBOX_SETUP.md`).
-- Founder console `/admin/compliance` shows a red banner when inbound is not ready.
+### Inbound email
+- Outbound (pilot/prospector/Mia) uses Resend + SPF.
+- Inbound MX for `grayarx.com` → `inbound-smtp.us-east-1.amazonaws.com` (Resend Receiving). Probe: `curl -s https://www.grayarx.com/api/webhooks/health | jq .inboundEmail` — expect `hasMx: true`.
+- Webhook `/api/webhooks/resend-inbound` fetches bodies via Receiving API. Reply-To on outreach is `hello@grayarx.com`.
+- If Resend UI still shows Receiving MX “Pending”, wait/refresh until Verified; DNS can already be live.
+- Secrets live on **Railway**, not required in the Cursor agent lockbox for production.
 
 ### WhatsApp (production)
-- Callback URL must be `https://www.grayarx.com/api/webhooks/whatsapp` (not a trycloudflare tunnel; not SPA HTML).
-- Health: `GET /api/webhooks/health` must return JSON. See `docs/PRODUCTION_WEBHOOK_SETUP.md`.
-- Env: `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_DEALERSHIP_ID`, `APP_URL`.
-- Meta: Subscribe webhooks ON for the live Phone Number ID; keep OpenAI billed so Nala is not stuck on templates.
+- Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.
+- Secrets on Railway. See `docs/PRODUCTION_WEBHOOK_SETUP.md`.
 
 ### Tenant isolation
 - Dealers (and founders linked to a dealership) only see their `dealershipId` stock on Showroom + Inventory.
 - Anonymous `/showroom` is the marketplace (demo yard excluded).
+
+### Cloud agent bootstrap
+- Repo `.cursor/environment.json`: `install` = `pnpm install`, `start` = brand assets script.
+- Update script for sessions: `pnpm install` only (no service start in update script).
+- `pnpm dev` for local app; production is Railway.
