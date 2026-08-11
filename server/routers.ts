@@ -692,6 +692,7 @@ export const appRouter = router({
             dealershipId: input.dealershipId,
             excludeSold: true,
             excludePlaceholderPrices: true,
+            includeGallery: false,
           });
         }
         const user = ctx.user;
@@ -707,6 +708,7 @@ export const appRouter = router({
             dealershipId: yardId!,
             excludeSold: true,
             excludePlaceholderPrices: true,
+            includeGallery: false,
           });
         }
         const demoDealershipId = await getDemoDealershipId();
@@ -714,6 +716,7 @@ export const appRouter = router({
           excludeSold: true,
           excludePlaceholderPrices: true,
           excludeDealershipId: demoDealershipId ?? undefined,
+          includeGallery: false,
         });
       }),
     stats: publicProcedure.query(async () => getVehicleInventoryCounts()),

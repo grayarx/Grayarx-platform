@@ -3,7 +3,7 @@
  * Keeps showroom photography sharp on retina displays without a separate CDN vendor.
  */
 
-export const IMAGE_WIDTHS = [480, 768, 1200, 1600, 1920] as const;
+export const IMAGE_WIDTHS = [320, 480, 768, 1200] as const;
 
 export const LUXURY_HERO_FALLBACK = "/corvette-exterior.jpg";
 
@@ -85,7 +85,7 @@ export function isLocalAsset(url: string): boolean {
   return url.startsWith("/") && !url.startsWith("//");
 }
 
-/** Build an optimized fetch URL for known hosts (Unsplash, Cloudinary-style params). */
+/** Build an optimized fetch URL for known hosts (Unsplash, Cloudinary, Wikimedia). */
 export function optimizeImageUrl(
   url: string,
   width: number,
@@ -95,9 +95,18 @@ export function optimizeImageUrl(
 
   try {
     const parsed = new URL(url);
+    const w = Math.max(160, Math.round(width));
+
+    // Wikimedia Commons — rewrite to a real thumbnail width (query params are ignored).
+    if (
+      parsed.hostname.includes("wikimedia.org") ||
+      parsed.hostname.includes("wikipedia.org")
+    ) {
+      return rewriteWikimediaThumb(parsed, w);
+    }
 
     if (parsed.hostname.includes("unsplash.com")) {
-      parsed.searchParams.set("w", String(width));
+      parsed.searchParams.set("w", String(w));
       parsed.searchParams.set("q", String(quality));
       parsed.searchParams.set("auto", "format");
       parsed.searchParams.set("fit", "crop");
@@ -110,19 +119,45 @@ export function optimizeImageUrl(
       parsed.searchParams.has("w") ||
       parsed.searchParams.has("width")
     ) {
-      parsed.searchParams.set("w", String(width));
+      parsed.searchParams.set("w", String(w));
       parsed.searchParams.set("q", String(quality));
       return parsed.toString();
     }
 
-    if (!parsed.searchParams.has("w")) {
-      parsed.searchParams.set("w", String(width));
-      parsed.searchParams.set("q", String(quality));
-    }
+    // Unknown hosts: leave URL alone — fake ?w= params just break caching.
     return parsed.toString();
   } catch {
     return url;
   }
+}
+
+/**
+ * Convert Commons original / oversized thumbs to a sized thumb URL.
+ * Examples:
+ *  /wikipedia/commons/a/ab/File.jpg → /wikipedia/commons/thumb/a/ab/File.jpg/768px-File.jpg
+ *  /wikipedia/commons/thumb/a/ab/File.jpg/1280px-File.jpg → .../768px-File.jpg
+ */
+export function rewriteWikimediaThumb(parsed: URL, width: number): string {
+  const w = Math.min(1920, Math.max(160, Math.round(width)));
+  const path = parsed.pathname;
+  const thumbMatch = path.match(
+    /^(\/wikipedia\/commons\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/[^/]+\/)(\d+)px-(.+)$/i,
+  );
+  if (thumbMatch) {
+    parsed.pathname = `${thumbMatch[1]}${w}px-${thumbMatch[3]}`;
+    parsed.search = "";
+    return parsed.toString();
+  }
+  const originalMatch = path.match(
+    /^(\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/([^/]+)$/i,
+  );
+  if (originalMatch) {
+    const [, root, a, ab, file] = originalMatch;
+    parsed.pathname = `${root}/thumb/${a}/${ab}/${file}/${w}px-${file}`;
+    parsed.search = "";
+    return parsed.toString();
+  }
+  return parsed.toString();
 }
 
 export function buildSrcSet(

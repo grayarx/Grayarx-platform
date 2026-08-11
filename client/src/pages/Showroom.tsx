@@ -330,6 +330,7 @@ export default function Showroom() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<ShowroomVehicle | null>(null);
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const fromDb = useMemo(
     () =>
@@ -400,6 +401,15 @@ export default function Showroom() {
     }
     return list;
   }, [allVehicles, search, fuelFilter, transmissionFilter, aiFilters, sortBy, maxPriceFilter]);
+
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [search, fuelFilter, transmissionFilter, aiFilters, sortBy, maxPriceFilter]);
+
+  const visibleVehicles = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  );
 
   const aiSearch = trpc.showroom.aiSearch.useMutation({
     onSuccess: (data) => {
@@ -704,7 +714,7 @@ export default function Showroom() {
             </div>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((v, i) => {
+            {visibleVehicles.map((v, i) => {
               const dealScore = !isSuspiciousPrice(v.price)
                 ? scoreListingDeal(v.price, {
                     make: v.make,
@@ -714,19 +724,31 @@ export default function Showroom() {
                     title: v.title,
                   })
                 : null;
+              const cardPhoto =
+                (v.image && v.image !== PLACEHOLDER_IMAGE ? v.image : null) ||
+                v.images?.[0] ||
+                null;
+              const animateCard = visibleVehicles.length <= 36;
               return (
               <motion.div
                 key={v.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4), ease: [0.16, 1, 0.3, 1] }}
+                initial={animateCard ? { opacity: 0, y: 20 } : false}
+                animate={animateCard ? { opacity: 1, y: 0 } : undefined}
+                transition={
+                  animateCard
+                    ? { duration: 0.35, delay: Math.min(i * 0.03, 0.3), ease: [0.16, 1, 0.3, 1] }
+                    : undefined
+                }
                 className="card-premium vehicle-card glass rounded-2xl overflow-hidden group flex flex-col"
+                style={{ contentVisibility: "auto", containIntrinsicSize: "420px" }}
               >
                 <div className="relative">
                   <VehicleShowroomFrame
-                    src={v.images && v.images.length > 0 ? v.images : [v.image && v.image !== PLACEHOLDER_IMAGE ? v.image : null].filter(Boolean) as string[]}
+                    src={cardPhoto}
                     alt={v.title}
                     className="rounded-t-2xl"
+                    autoRotate={false}
+                    priority={i < 3}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500 pointer-events-none z-[3]" />
                   {v.badge && (
@@ -858,6 +880,25 @@ export default function Showroom() {
             );
             })}
           </div>
+          {filtered.length > visibleCount ? (
+            <div className="mt-10 flex flex-col items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Showing {visibleCount} of {filtered.length} vehicles
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-w-[200px]"
+                onClick={() => setVisibleCount((n) => Math.min(n + 24, filtered.length))}
+              >
+                Load more vehicles
+              </Button>
+            </div>
+          ) : filtered.length > 24 ? (
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Showing all {filtered.length} vehicles
+            </p>
+          ) : null}
           )}
         </div>
       </section>

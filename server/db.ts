@@ -337,11 +337,16 @@ export async function listVehicles(
   limit = 2000,
   opts?: {
     dealershipId?: number | null;
-    excludeSold?: boolean;
     /** Hide R1 / ≤R1 CSV placeholders from public showroom & buyer channels */
+    excludeSold?: boolean;
     excludePlaceholderPrices?: boolean;
     /** Keep a dealership's stock off the platform marketplace (e.g. the demo yard) */
     excludeDealershipId?: number | null;
+    /**
+     * Join vehicle_photos into `images[]`. Default true for dealer console / chat.
+     * Public showroom grid should pass false — cards only need primaryPhotoUrl.
+     */
+    includeGallery?: boolean;
   },
 ) {
   const db = await getDb();
@@ -395,20 +400,31 @@ export async function listVehicles(
 
   if (rows.length === 0) return [];
 
-  const vehicleIds = rows.map(r => r.id);
+  const includeGallery = opts?.includeGallery !== false;
+  if (!includeGallery) {
+    return rows.map((r) => ({
+      ...r,
+      images: [] as string[],
+    }));
+  }
+
+  const vehicleIds = rows.map((r) => r.id);
   const photos = await db
     .select()
     .from(vehiclePhotos)
     .where(inArray(vehiclePhotos.vehicleId, vehicleIds))
     .orderBy(vehiclePhotos.position);
 
-  const photosByVehicle = photos.reduce((acc, p) => {
-    if (!acc[p.vehicleId]) acc[p.vehicleId] = [];
-    acc[p.vehicleId].push(p.url);
-    return acc;
-  }, {} as Record<number, string[]>);
+  const photosByVehicle = photos.reduce(
+    (acc, p) => {
+      if (!acc[p.vehicleId]) acc[p.vehicleId] = [];
+      acc[p.vehicleId].push(p.url);
+      return acc;
+    },
+    {} as Record<number, string[]>,
+  );
 
-  return rows.map(r => ({
+  return rows.map((r) => ({
     ...r,
     images: photosByVehicle[r.id] || [],
   }));

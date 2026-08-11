@@ -199,6 +199,7 @@ describe("dealer multi-tenant isolation", () => {
         dealershipId: 99,
         excludeSold: true,
         excludePlaceholderPrices: true,
+        includeGallery: false,
       }),
     );
   });
@@ -209,7 +210,11 @@ describe("dealer multi-tenant isolation", () => {
     const lastArgs = listVehicles.mock.calls.at(-1);
     expect(lastArgs?.[1]).not.toHaveProperty("dealershipId");
     expect(lastArgs?.[1]).toEqual(
-      expect.objectContaining({ excludeSold: true, excludePlaceholderPrices: true }),
+      expect.objectContaining({
+        excludeSold: true,
+        excludePlaceholderPrices: true,
+        includeGallery: false,
+      }),
     );
   });
 
@@ -239,6 +244,7 @@ describe("dealer multi-tenant isolation", () => {
         dealershipId: 42,
         excludeSold: true,
         excludePlaceholderPrices: true,
+        includeGallery: false,
       }),
     );
   });

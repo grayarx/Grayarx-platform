@@ -19,12 +19,13 @@ export interface VehicleShowroomFrameProps {
   children?: ReactNode;
   /** Slight zoom on card hover (parent needs `group`) */
   hoverZoom?: boolean;
+  /** Auto-rotate through gallery (default true when multiple images) */
+  autoRotate?: boolean;
 }
 
 /**
  * Premium dark-studio frame for vehicle photos.
- * Any uploaded image is composited on a consistent showroom background
- * so listings look uniform — cutouts, DMS exports, and API renders alike.
+ * Only the active slide is mounted so grid cards do not download every angle.
  */
 export default function VehicleShowroomFrame({
   src,
@@ -37,6 +38,7 @@ export default function VehicleShowroomFrame({
   emptyLabel = "No photo yet",
   children,
   hoverZoom = true,
+  autoRotate = true,
 }: VehicleShowroomFrameProps) {
   const images = useMemo(() => {
     if (Array.isArray(src)) {
@@ -46,7 +48,7 @@ export default function VehicleShowroomFrame({
     return [];
   }, [src]);
   const hasPhoto = images.length > 0;
-  
+
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -54,12 +56,14 @@ export default function VehicleShowroomFrame({
   }, [images.length, images[0]]);
 
   useEffect(() => {
-    if (images.length <= 1) return;
+    if (!autoRotate || images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % images.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [autoRotate, images.length]);
+
+  const activeSrc = hasPhoto ? images[Math.min(currentIndex, images.length - 1)] : null;
 
   return (
     <div
@@ -69,7 +73,6 @@ export default function VehicleShowroomFrame({
         className,
       )}
     >
-      {/* Ambient spotlight on studio floor */}
       <div
         className="absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_95%,rgba(212,175,55,0.14)_0%,transparent_58%)]"
         aria-hidden
@@ -78,45 +81,34 @@ export default function VehicleShowroomFrame({
         className="absolute inset-0 bg-[radial-gradient(ellipse_55%_35%_at_50%_88%,rgba(255,255,255,0.07)_0%,transparent_50%)]"
         aria-hidden
       />
-      {/* Floor horizon line */}
       <div className="vehicle-studio-floor" aria-hidden />
 
-      {!hasPhoto ? (
+      {!hasPhoto || !activeSrc ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/55 z-[1]">
           <Car className="h-10 w-10 mb-2 opacity-70" />
           <span className="text-xs">{emptyLabel}</span>
         </div>
       ) : (
         <div className="absolute inset-0 z-[1]">
-          {images.map((img, idx) => (
-            <div
-              key={`${img}-${idx}`}
-              className={cn(
-                "absolute inset-0 transition-opacity duration-1000 ease-in-out",
-                idx === currentIndex ? "opacity-100" : "opacity-0"
-              )}
-            >
-              <OptimizedImage
-                src={img}
-                alt={alt}
-                sizes={sizes ?? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
-                staticAsset={staticAsset}
-                priority={priority && idx === 0}
-                fit="cover"
-                objectPosition="center"
-                className={cn(
-                  "h-full w-full max-h-full img-premium",
-                  hoverZoom &&
-                    "transition-transform duration-700 ease-out group-hover:scale-[1.04]",
-                )}
-                fallbackSrc={PLACEHOLDER_SVG}
-              />
-            </div>
-          ))}
+          <OptimizedImage
+            key={activeSrc}
+            src={activeSrc}
+            alt={alt}
+            sizes={sizes ?? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
+            staticAsset={staticAsset}
+            priority={priority}
+            fit="cover"
+            objectPosition="center"
+            className={cn(
+              "h-full w-full max-h-full img-premium animate-in fade-in duration-500",
+              hoverZoom &&
+                "transition-transform duration-700 ease-out group-hover:scale-[1.04]",
+            )}
+            fallbackSrc={PLACEHOLDER_SVG}
+          />
         </div>
       )}
 
-      {/* Edge vignette for depth */}
       <div
         className="absolute inset-0 bg-gradient-to-t from-background/55 via-transparent to-background/15 pointer-events-none z-[2]"
         aria-hidden

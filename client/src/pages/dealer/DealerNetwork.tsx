@@ -3,6 +3,7 @@ import { Lock, Network, Images, Car as CarIcon } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
+import OptimizedImage from "@/components/OptimizedImage";
 
 /**
  * Peer-network vehicle card. Renders the photo, but if the URL 404s or is
@@ -20,12 +21,12 @@ function PeerVehicleCard({ src }: { src: string }) {
           <span className="text-[11px] uppercase tracking-wider">No photo yet</span>
         </div>
       ) : (
-        <img
+        <OptimizedImage
           src={src}
           alt="Peer dealer vehicle"
-          loading="lazy"
-          onError={() => setErrored(true)}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={() => setErrored(true)}
         />
       )}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
