@@ -132,18 +132,42 @@ export function optimizeImageUrl(
 }
 
 /**
+ * MediaWiki Commons only serves a fixed set of thumbnail widths.
+ * Arbitrary sizes (e.g. 320 / 480 / 768 / 1200) return HTTP 400 and break cards.
+ * @see https://www.mediawiki.org/wiki/Manual:$wgThumbLimits
+ */
+export const WIKIMEDIA_THUMB_WIDTHS = [
+  20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920,
+] as const;
+
+/** Snap to the smallest allowed Commons thumb width ≥ requested (or max). */
+export function snapWikimediaThumbWidth(width: number): number {
+  const w = Math.max(1, Math.round(width));
+  for (const allowed of WIKIMEDIA_THUMB_WIDTHS) {
+    if (allowed >= w) return allowed;
+  }
+  return WIKIMEDIA_THUMB_WIDTHS[WIKIMEDIA_THUMB_WIDTHS.length - 1];
+}
+
+/**
  * Convert Commons original / oversized thumbs to a sized thumb URL.
  * Examples:
- *  /wikipedia/commons/a/ab/File.jpg → /wikipedia/commons/thumb/a/ab/File.jpg/768px-File.jpg
- *  /wikipedia/commons/thumb/a/ab/File.jpg/1280px-File.jpg → .../768px-File.jpg
+ *  /wikipedia/commons/a/ab/File.jpg → /wikipedia/commons/thumb/a/ab/File.jpg/960px-File.jpg
+ *  /wikipedia/commons/thumb/a/ab/File.jpg/1280px-File.jpg → .../960px-File.jpg (when requesting ~768)
  */
 export function rewriteWikimediaThumb(parsed: URL, width: number): string {
-  const w = Math.min(1920, Math.max(160, Math.round(width)));
+  const w = snapWikimediaThumbWidth(width);
   const path = parsed.pathname;
   const thumbMatch = path.match(
     /^(\/wikipedia\/commons\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/[^/]+\/)(\d+)px-(.+)$/i,
   );
   if (thumbMatch) {
+    const existing = Number(thumbMatch[2]);
+    // Already the exact allowed size we want — leave path alone.
+    if (existing === w) {
+      parsed.search = "";
+      return parsed.toString();
+    }
     parsed.pathname = `${thumbMatch[1]}${w}px-${thumbMatch[3]}`;
     parsed.search = "";
     return parsed.toString();
