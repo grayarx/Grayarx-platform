@@ -5,6 +5,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import { Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollToTop from "./components/ScrollToTop";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
 
@@ -457,6 +458,7 @@ function AppContent() {
       )}
       <OfflineIndicator />
       <PWAInstallPrompt />
+      <ScrollToTop />
       <Router />
     </>
   );
