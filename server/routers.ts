@@ -2103,16 +2103,28 @@ export const appRouter = router({
         const { deleteProspect } = await import("./db");
         const existingRows = await listProspects(1000);
 
-        // Purge filler + unverified LLM-invented contacts (no website evidence)
+        // Purge filler + domain-mismatch + unverified invented contacts
         let purgedFiller = 0;
         let purgedUnverified = 0;
+        let purgedDomainMismatch = 0;
         for (const row of existingRows) {
           if (row.email && isFillerEmail(row.email)) {
             await deleteProspect(row.id);
             purgedFiller += 1;
             continue;
           }
-          // Invented named emails never verified from a real site
+          const { isOutreachReadyForDealership } = await import(
+            "../shared/prospectEmailQuality"
+          );
+          if (
+            row.email &&
+            row.website &&
+            !isOutreachReadyForDealership(row.email, row.website)
+          ) {
+            await deleteProspect(row.id);
+            purgedDomainMismatch += 1;
+            continue;
+          }
           if (
             row.email &&
             Number(row.emailVerified ?? 0) !== 1 &&
@@ -2156,13 +2168,14 @@ export const appRouter = router({
           agentId: "prospector",
           action: "scout_research_started",
           subjectType: "prospect",
-          summary: `Sipho started background website research for ${input.count} principal contact${input.count === 1 ? "" : "s"} (${researchRemaining} in queue)${purgedFiller || purgedUnverified ? ` — removed ${purgedFiller + purgedUnverified} bad contacts` : ""}.`,
+          summary: `Sipho started background website research for ${input.count} principal contact${input.count === 1 ? "" : "s"} (${researchRemaining} in queue)${purgedFiller || purgedUnverified || purgedDomainMismatch ? ` — removed ${purgedFiller + purgedUnverified + purgedDomainMismatch} bad contacts` : ""}.`,
           payload: {
             region: input.region,
             count: input.count,
             researchRemaining,
             purgedFiller,
             purgedUnverified,
+            purgedDomainMismatch,
           },
         });
 
@@ -2172,9 +2185,10 @@ export const appRouter = router({
           alreadyRunning: false as const,
           purgedFiller,
           purgedUnverified,
+          purgedDomainMismatch,
           poolRemaining: researchRemaining,
           researchRemaining,
-          message: `Sipho is researching dealer websites now. Refresh in ~30–60s — fake filler/unverified contacts were cleared${purgedFiller + purgedUnverified ? ` (${purgedFiller + purgedUnverified} removed)` : ""}.`,
+          message: `Sipho is researching dealer websites now (named emails on the dealer domain only). Refresh in ~30–60s${purgedFiller + purgedUnverified + purgedDomainMismatch ? ` — cleared ${purgedFiller + purgedUnverified + purgedDomainMismatch} bad contacts` : ""}.`,
         } as const;
       }),
 

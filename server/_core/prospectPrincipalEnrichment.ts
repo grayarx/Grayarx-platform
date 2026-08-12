@@ -10,8 +10,23 @@
 import { invokeLLM } from "./llm";
 import {
   assessProspectEmail,
+  emailDomain,
+  emailMatchesWebsiteDomain,
+  isOutreachReadyForDealership,
   type ProspectEmailAssessment,
 } from "../../shared/prospectEmailQuality";
+import dns from "node:dns/promises";
+
+async function domainHasMx(email: string): Promise<boolean> {
+  const domain = emailDomain(email);
+  if (!domain) return false;
+  try {
+    const mx = await dns.resolveMx(domain);
+    return Array.isArray(mx) && mx.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 const FETCH_TIMEOUT_MS = 4_000;
 const FETCH_TIMEOUT_FAST_MS = 3_000;
@@ -287,8 +302,8 @@ export async function enrichDealershipPrincipal(
     anyOk = true;
     const emails = extractEmailsFromHtml(page.html);
     for (const e of emails) allEmails.add(e);
-    const ranked = rankEmails(emails);
-    if (ranked.some((r) => r.outreachReady)) {
+    const ranked = rankEmails(emails.filter((e) => emailMatchesWebsiteDomain(e, base)));
+    if (ranked.some((r) => r.email && isOutreachReadyForDealership(r.email, base))) {
       bestPageUrl = page.finalUrl;
       bestPageText = htmlToRoughText(page.html);
       break;
@@ -308,17 +323,22 @@ export async function enrichDealershipPrincipal(
     };
   }
 
-  const emailList = [...allEmails];
+  const emailList = [...allEmails].filter((e) =>
+    emailMatchesWebsiteDomain(e, base),
+  );
   const ranked = rankEmails(emailList);
-  const outreach = ranked.filter((r) => r.outreachReady);
+  const outreach = ranked.filter(
+    (r) => r.email && isOutreachReadyForDealership(r.email, base),
+  );
 
   if (outreach.length === 0) {
+    const onPage = [...allEmails];
     return {
       dealershipName: candidate.dealershipName,
       prospectId: candidate.prospectId,
       status: "no_named_email",
       pagesTried,
-      notes: `Found ${emailList.length} email(s) on site but none named/principal: ${emailList.slice(0, 5).join(", ") || "none"}`,
+      notes: `No named email on dealer domain ${websiteHostSafe(base)}. On page: ${onPage.slice(0, 5).join(", ") || "none"}`,
     };
   }
 
@@ -339,6 +359,27 @@ export async function enrichDealershipPrincipal(
   }
 
   const chosenEmail = llmPick?.email ?? outreach[0]!.email!;
+  if (!isOutreachReadyForDealership(chosenEmail, base)) {
+    return {
+      dealershipName: candidate.dealershipName,
+      prospectId: candidate.prospectId,
+      status: "no_named_email",
+      pagesTried,
+      notes: "Pick was not outreach-ready on dealer domain",
+    };
+  }
+
+  const hasMx = await domainHasMx(chosenEmail);
+  if (!hasMx) {
+    return {
+      dealershipName: candidate.dealershipName,
+      prospectId: candidate.prospectId,
+      status: "no_named_email",
+      pagesTried,
+      notes: `Domain for ${chosenEmail} has no MX — would bounce`,
+    };
+  }
+
   const assessment = assessProspectEmail(chosenEmail);
   if (!assessment.outreachReady || !assessment.email) {
     return {
@@ -372,6 +413,14 @@ export async function enrichDealershipPrincipal(
     status: "enriched",
     hit,
     pagesTried,
-    notes: `Found ${hit.email} (${hit.quality}) on ${hit.evidenceUrl}`,
+    notes: `Found ${hit.email} (${hit.quality}) on ${hit.evidenceUrl} (domain+MX ok)`,
   };
+}
+
+function websiteHostSafe(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }

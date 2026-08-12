@@ -1185,8 +1185,21 @@ export async function updateProspectContact(
   if (!db) throw new Error("Database not available");
 
   if (patch.email != null && patch.email !== "") {
-    const { assessProspectEmail } = await import("../shared/prospectEmailQuality");
-    if (!assessProspectEmail(patch.email).outreachReady) {
+    const { isOutreachReadyForDealership, assessProspectEmail } = await import(
+      "../shared/prospectEmailQuality"
+    );
+    // Prefer domain match when we know the website; fall back to quality-only
+    const [row] = await db
+      .select({ website: prospects.website })
+      .from(prospects)
+      .where(eq(prospects.id, id))
+      .limit(1);
+    const site = row?.website;
+    if (site) {
+      if (!isOutreachReadyForDealership(patch.email, site)) {
+        throw new Error("Refusing to store email that is not on the dealership website domain");
+      }
+    } else if (!assessProspectEmail(patch.email).outreachReady) {
       throw new Error("Refusing to store non-outreach-ready prospect email");
     }
   }

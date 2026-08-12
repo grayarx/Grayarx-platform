@@ -33,6 +33,7 @@ export const GENERIC_MAILBOX_LOCAL_PARTS = new Set([
   "inquiries",
   "inquiry",
   "admin",
+  "administrator",
   "contact",
   "hello",
   "support",
@@ -41,35 +42,51 @@ export const GENERIC_MAILBOX_LOCAL_PARTS = new Set([
   "mail",
   "emails",
   "webmaster",
+  "webadmin",
+  "webmaster",
+  "postmaster",
+  "hostmaster",
+  "sysadmin",
+  "root",
   "noreply",
   "no-reply",
+  "donotreply",
   "dealership",
   "general",
+  "it",
+  "tech",
+  "developer",
+  "design",
+  "designer",
+  "studio",
+  "agency",
 ]);
 
 /** Role inboxes that are better than info@ but still not a principal. */
 const ROLE_LOCAL_PARTS = new Set([
   "marketing",
-  "md",
-  "ceo",
   "gm",
   "manager",
   "accounts",
   "finance",
+  "hr",
+  "jobs",
+  "careers",
 ]);
 
-/** Local-parts that usually mean owner / dealer principal / MD. */
+/**
+ * Only treat as principal when local-part is clearly that role.
+ * Bare "md"/"ceo" stay here; "principal@" alone is often invented and bounces —
+ * prefer a real firstname@ on the dealership domain.
+ */
 const PRINCIPAL_LOCAL_PARTS = new Set([
-  "principal",
   "dealerprincipal",
   "dealer-principal",
-  "owner",
-  "proprietor",
-  "director",
+  "dealer_principal",
   "managingdirector",
   "managing-director",
-  "md",
-  "ceo",
+  "managing_director",
+  "proprietor",
 ]);
 
 /**
@@ -195,13 +212,30 @@ export function assessProspectEmail(email: string | null | undefined): ProspectE
       outreachReady: false,
     };
   }
-  if (PRINCIPAL_LOCAL_PARTS.has(local) || local.includes("principal") || local.includes("owner")) {
+  // Bare principal@ / owner@ / md@ / ceo@ / director@ — often invented; treat as role not ready
+  if (
+    local === "principal" ||
+    local === "owner" ||
+    local === "md" ||
+    local === "ceo" ||
+    local === "director"
+  ) {
+    return {
+      email: raw,
+      localPart: local,
+      quality: "role",
+      score: 45,
+      reason: `${local}@ without a person name is often wrong — prefer firstname@ on the dealer domain.`,
+      outreachReady: false,
+    };
+  }
+  if (PRINCIPAL_LOCAL_PARTS.has(local) || local.includes("dealerprincipal") || local.includes("managingdirector")) {
     return {
       email: raw,
       localPart: local,
       quality: "principal",
       score: 95,
-      reason: "Looks like a dealer principal / owner / MD inbox.",
+      reason: "Looks like a dealer principal / managing director inbox.",
       outreachReady: true,
     };
   }
@@ -238,6 +272,55 @@ export function assessProspectEmail(email: string | null | undefined): ProspectE
 export function isGenericMailbox(email: string | null | undefined): boolean {
   return assessProspectEmail(email).quality === "generic";
 }
+
+/** Extract registrable-ish host from a website URL (strip www.). */
+export function websiteHost(website: string | null | undefined): string | null {
+  const raw = (website ?? "").trim();
+  if (!raw) return null;
+  try {
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const host = new URL(withProto).hostname.toLowerCase().replace(/^www\./, "");
+    return host || null;
+  } catch {
+    return null;
+  }
+}
+
+export function emailDomain(email: string | null | undefined): string | null {
+  const d = (email ?? "").trim().toLowerCase().split("@")[1] ?? "";
+  return d || null;
+}
+
+/**
+ * Email must belong to the dealership site domain (or a close parent/child).
+ * Rejects site-builder addresses like webadmin@vmgsoftware.co.za on voncalauto.co.za.
+ */
+export function emailMatchesWebsiteDomain(
+  email: string | null | undefined,
+  website: string | null | undefined,
+): boolean {
+  const ed = emailDomain(email);
+  const host = websiteHost(website);
+  if (!ed || !host) return false;
+  if (ed === host) return true;
+  if (ed.endsWith(`.${host}`) || host.endsWith(`.${ed}`)) return true;
+  return false;
+}
+
+/**
+ * Final gate before store/send: named/principal local-part AND email domain
+ * matches the dealership website (when a website is known).
+ */
+export function isOutreachReadyForDealership(
+  email: string | null | undefined,
+  website: string | null | undefined,
+): boolean {
+  const a = assessProspectEmail(email);
+  if (!a.outreachReady) return false;
+  if (!website?.trim()) return false; // require a website to prove domain ownership
+  return emailMatchesWebsiteDomain(email, website);
+}
+
 
 /** LinkedIn people search for dealer principal / MD at a dealership. */
 export function linkedInPrincipalSearchUrl(
@@ -292,12 +375,12 @@ export function buildEnrichmentTarget(input: {
 }
 
 /** Prompt fragment shared by Sipho scout (manual + nightly). */
-/** Prompt fragment shared by Sipho scout (manual + nightly). */
 export const PRINCIPAL_EMAIL_SCOUT_RULES = `EMAIL RULES (critical — generic and filler emails bounce):
 - NEVER invent emails. Do not use jane.doe@, john.doe@, john.smith@, test@, demo@, or any placeholder.
-- NEVER invent info@ / sales@ / enquiries@ / admin@ from a dealership slug.
-- ONLY return an email if it is a real named person or dealer-principal address found on a public page.
-- If you do not have a verified named/principal email, set email to "" (empty) — Sipho will scrape the website later.
+- NEVER invent info@ / sales@ / enquiries@ / admin@ / webadmin@ from a dealership slug.
+- ONLY return an email if it is a real named person on the dealership's OWN domain (same as the website).
+- Reject site-builder emails (e.g. webadmin@vmgsoftware.co.za on a dealer site).
+- If you do not have a verified named email on the dealer domain, set email to "" (empty).
 - Prefer real public dealerships with real websites over fictional ones.`;
 
 
@@ -309,12 +392,14 @@ export function sanitizeScoutEmail(input: {
   email?: string | null;
   dealershipName: string;
   city?: string | null;
+  website?: string | null;
 }): { email: string | null; sourceNoteExtra: string; outreachReady: boolean } {
+  const ready = isOutreachReadyForDealership(input.email, input.website);
   const assessment = assessProspectEmail(input.email);
-  if (assessment.outreachReady && assessment.email) {
+  if (ready && assessment.email) {
     return {
       email: assessment.email,
-      sourceNoteExtra: `email_quality=${assessment.quality}`,
+      sourceNoteExtra: `email_quality=${assessment.quality}|domain_match=1`,
       outreachReady: true,
     };
   }
@@ -329,14 +414,19 @@ export function sanitizeScoutEmail(input: {
     sourceNoteExtra: [
       "skipped_not_outreach_ready",
       `email_quality=${assessment.quality}`,
+      input.website && assessment.email && !emailMatchesWebsiteDomain(input.email, input.website)
+        ? "domain_mismatch"
+        : null,
       `linkedin=${target.linkedInPeopleSearch}`,
-    ].join(" | "),
+    ]
+      .filter(Boolean)
+      .join(" | "),
   };
 }
 
-/** Filter insert rows to those with named/principal emails only. */
+/** Filter insert rows to named/principal emails on the dealership's own domain. */
 export function filterOutreachReadyProspectInserts<
-  T extends { email?: string | null; dealershipName?: string },
+  T extends { email?: string | null; dealershipName?: string; website?: string | null },
 >(rows: T[]): T[] {
-  return rows.filter((row) => assessProspectEmail(row.email).outreachReady);
+  return rows.filter((row) => isOutreachReadyForDealership(row.email, row.website));
 }

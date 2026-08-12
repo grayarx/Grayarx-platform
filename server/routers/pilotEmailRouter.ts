@@ -90,6 +90,7 @@ export const pilotEmailRouter = router({
         dealershipName: z.string().min(1).max(255),
         contactName: z.string().max(255).default("there"),
         city: z.string().max(128).optional(),
+        website: z.string().max(500).optional(),
         brands: z.string().max(500).optional(),
         estimatedVolume: z.number().int().min(0).optional(),
         segment: segmentSchema.default("basic_website_no_showroom"),
@@ -97,6 +98,19 @@ export const pilotEmailRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
+      const { isOutreachReadyForDealership, assessProspectEmail, isFillerEmail } =
+        await import("../../shared/prospectEmailQuality");
+      if (
+        isFillerEmail(input.email) ||
+        (input.website && !isOutreachReadyForDealership(input.email, input.website)) ||
+        (!input.website && !assessProspectEmail(input.email).outreachReady)
+      ) {
+        return {
+          success: false,
+          error:
+            "Blocked: email is filler, generic, or not on the dealership website domain (would bounce).",
+        };
+      }
       const seg = input.segment as PilotOutreachSegment;
       if (input.dryRun) {
         return { success: true, dryRun: true, email: input.email };
