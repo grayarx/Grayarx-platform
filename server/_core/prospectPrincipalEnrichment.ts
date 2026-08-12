@@ -40,13 +40,28 @@ const CONTACT_PATHS = [
   "/contactus",
   "/about",
   "/about-us",
+  "/who-we-are",
   "/team",
   "/our-team",
   "/meet-the-team",
+  "/meet-us",
+  "/staff",
+  "/management",
+  "/leadership",
+  "/directors",
+  "/our-people",
+  "/people",
 ];
 
 /** Fewer pages for interactive / budgeted runs */
-const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us"];
+const CONTACT_PATHS_FAST = [
+  "",
+  "/contact",
+  "/contact-us",
+  "/about",
+  "/team",
+  "/our-team",
+];
 
 /** Domains / locals that are never outreach contacts. */
 const BLOCKED_EMAIL_SUBSTRINGS = [
@@ -332,8 +347,8 @@ export async function enrichDealershipPrincipal(
   );
 
   if (outreach.length === 0) {
-    // LinkedIn-style path: discover principal *names*, guess firstname@dealer-domain,
-    // SMTP-verify (skip catch-all domains).
+    // Broad public search (site + open web + LinkedIn/Facebook + SA directories + press),
+    // then map names → named@dealer-domain without inventing filler.
     const pageTexts = [bestPageText].filter(Boolean);
     try {
       const {
@@ -345,11 +360,13 @@ export async function enrichDealershipPrincipal(
         website: base,
         city: candidate.city,
         pageTexts,
+        fast,
       });
       const guessed = await verifyGuessedPrincipalEmail({
         people,
         website: base,
         dealershipName: candidate.dealershipName,
+        fast,
       });
       if (guessed) {
         const assessment = assessProspectEmail(guessed.email);
@@ -376,7 +393,7 @@ export async function enrichDealershipPrincipal(
         prospectId: candidate.prospectId,
         status: "no_named_email",
         pagesTried,
-        notes: `No public named email on dealer domain ${websiteHostSafe(base)} yet (sites often only list info@). People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}. Sipho will retry via web directories / optional Hunter / SMTP.`,
+        notes: `No public named email on dealer domain ${websiteHostSafe(base)} yet (sites often only list info@). People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}. Sipho keeps searching dealer sites, directories, Facebook/LinkedIn snippets, and press — not LinkedIn-only.`,
       };
     } catch (err) {
       console.warn("[PrincipalEnrich] name/email guess failed", err);

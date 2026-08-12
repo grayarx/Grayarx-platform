@@ -174,7 +174,7 @@ export function assessProspectEmail(email: string | null | undefined): ProspectE
       localPart: null,
       quality: "missing",
       score: 0,
-      reason: "No email on file — find the dealer principal on LinkedIn or the site contact page.",
+      reason: "No email on file — find the dealer principal on the site, directories, or public web (not LinkedIn-only).",
       outreachReady: false,
     };
   }
@@ -366,9 +366,9 @@ export function buildEnrichmentTarget(input: {
     linkedInPeopleSearch: linkedInPrincipalSearchUrl(input.dealershipName, input.city),
     linkedInCompanySearch: linkedInCompanySearchUrl(input.dealershipName),
     suggestedActions: [
-      "Search LinkedIn for Dealer Principal / Managing Director / Owner",
-      "Check dealership website Contact / About / Team pages for a named email",
-      "Prefer firstname@ or principal@ over info@ / sales@ / enquiries@",
+      "Search public web + directories (Brabys/Cylex) + Facebook/LinkedIn for Dealer Principal / MD / Owner",
+      "Check dealership website Contact / About / Team / Management pages for a named email",
+      "Prefer firstname@ or first.last@ on the dealer domain over info@ / sales@ / enquiries@",
       "Only mark emailVerified after confirming the address on an official page or conversation",
     ],
   };

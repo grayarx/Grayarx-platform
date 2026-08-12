@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPrincipalNameSearchQueries,
+  buildPublishedEmailSearchQueries,
   extractEmailsFromText,
   extractPrincipalNamesFromText,
+  extractSearchResultUrls,
   guessEmailsForPerson,
   pickBestPublishedEmail,
 } from "./_core/principalNameEmailGuess";
@@ -73,5 +76,46 @@ describe("principal name → email guess", () => {
       "https://www.voncalauto.co.za",
     );
     expect(picked).toBeNull();
+  });
+
+  it("builds multi-source name queries (not LinkedIn-only)", () => {
+    const qs = buildPrincipalNameSearchQueries("Voncal Auto", "Pretoria");
+    expect(qs.some((q) => q.includes("site:linkedin.com"))).toBe(true);
+    expect(qs.some((q) => q.includes("site:facebook.com"))).toBe(true);
+    expect(qs.some((q) => q.includes("site:brabys.com"))).toBe(true);
+    expect(qs.some((q) => q.includes("site:cylex.co.za"))).toBe(true);
+    expect(qs.some((q) => /appointed|promoted/.test(q))).toBe(true);
+    expect(qs.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("builds published-email queries across directories and social", () => {
+    const qs = buildPublishedEmailSearchQueries({
+      host: "voncalauto.co.za",
+      dealershipName: "Voncal Auto",
+      people: [
+        {
+          fullName: "Thabo Molefe",
+          firstName: "Thabo",
+          lastName: "Molefe",
+          role: "Dealer Principal",
+          source: "website",
+        },
+      ],
+    });
+    expect(qs.some((q) => q.includes("@voncalauto.co.za"))).toBe(true);
+    expect(qs.some((q) => q.includes("site:hotfrog.co.za"))).toBe(true);
+    expect(qs.some((q) => q.includes("Thabo Molefe"))).toBe(true);
+  });
+
+  it("extracts result URLs from DuckDuckGo-style HTML", () => {
+    const html = `
+      <a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fbrabys.com%2Fvoncal">x</a>
+      <a href="https://example.com/about">y</a>
+      <a href="https://duckduckgo.com/foo">skip</a>
+    `;
+    const urls = extractSearchResultUrls(html);
+    expect(urls).toContain("https://brabys.com/voncal");
+    expect(urls).toContain("https://example.com/about");
+    expect(urls.every((u) => !u.includes("duckduckgo.com"))).toBe(true);
   });
 });
