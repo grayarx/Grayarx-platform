@@ -1,5 +1,4 @@
 import type { Express, Request, Response } from "express";
-import { invokeLLM } from "./llm";
 import { createProspects, getProspectsSchedule } from "../db";
 import { sendScheduledReportHandler } from "./scheduledReportHandler";
 import { alertFounder } from "./founderAlert";
@@ -30,116 +29,67 @@ function nextRegion(lastRegion: string | null | undefined): string {
 }
 
 async function runProspectorScout(region: string, count = 5): Promise<number> {
-  const { PRINCIPAL_EMAIL_SCOUT_RULES } = await import(
-    "../../shared/prospectEmailQuality"
-  );
-  const system = `You are GrayArx Prospector. Generate ${count} REALISTIC potential dealership prospects in ${region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email, website, estimatedMonthlyVolume (10-200), brandsCarried (comma list), score (0-100 fit), rationale (1 sentence). ${PRINCIPAL_EMAIL_SCOUT_RULES} Return JSON only.`;
-  const userMsg = `Region: ${region}. Generate ${count} prospects. Prefer named dealer-principal emails; leave email empty if unknown.`;
+  // Nightly path: research real dealer websites — never invent jane.doe / info@.
+  const { listProspects } = await import("../db");
+  const { isFillerEmail } = await import("../../shared/prospectEmailQuality");
+  const { deleteProspect } = await import("../db");
+  const {
+    pickNextProspectsForResearch,
+  } = await import("./saProspectPool");
+  const { enrichDealershipPrincipal } = await import("./prospectPrincipalEnrichment");
+  const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
 
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMsg },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "prospects",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              prospects: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    dealershipName: { type: "string" },
-                    region: { type: "string" },
-                    city: { type: "string" },
-                    phone: { type: "string" },
-                    email: { type: "string" },
-                    website: { type: "string" },
-                    estimatedMonthlyVolume: { type: "integer" },
-                    brandsCarried: { type: "string" },
-                    score: { type: "integer" },
-                    rationale: { type: "string" },
-                  },
-                  required: [
-                    "dealershipName",
-                    "region",
-                    "city",
-                    "phone",
-                    "email",
-                    "website",
-                    "estimatedMonthlyVolume",
-                    "brandsCarried",
-                    "score",
-                    "rationale",
-                  ],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["prospects"],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-    const raw = response.choices?.[0]?.message?.content ?? "{\"prospects\":[]}";
-    const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
-    const items = (parsed.prospects ?? []) as Array<{
-      dealershipName: string;
-      region: string;
-      city: string;
-      phone: string;
-      email: string;
-      website: string;
-      estimatedMonthlyVolume: number;
-      brandsCarried: string;
-      score: number;
-      rationale: string;
-    }>;
-    if (items.length === 0) return 0;
-    const { sanitizeScoutEmail } = await import("../../shared/prospectEmailQuality");
-    const readyRows = items
-      .map((p) => {
-        const sanitized = sanitizeScoutEmail({
-          email: p.email,
-          dealershipName: p.dealershipName,
-          city: p.city,
-        });
-        if (!sanitized.outreachReady || !sanitized.email) return null;
-        return {
-          dealershipName: p.dealershipName,
-          region: p.region,
-          city: p.city,
-          phone: p.phone,
-          email: sanitized.email,
-          website: p.website,
-          estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-          brandsCarried: p.brandsCarried,
-          score: Math.max(0, Math.min(100, p.score)),
-          rationale: p.rationale,
-          status: "scouted" as const,
-          sourceNotes: `Nightly Prospector — ${region} | ${sanitized.sourceNoteExtra}`,
-        };
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null);
-    if (readyRows.length === 0) {
-      console.log(
-        `[Scheduled Prospector] skipped ${items.length} prospects in ${region} — no named/principal emails`,
-      );
-      return 0;
+  const existingRows = await listProspects(1000);
+  for (const row of existingRows) {
+    if (row.email && isFillerEmail(row.email)) {
+      await deleteProspect(row.id);
     }
-    await createProspects(readyRows);
-    return readyRows.length;
-  } catch (err) {
-    console.error("[Scheduled Prospector] LLM error", err);
-    return 0;
   }
+  const names = (await listProspects(1000)).map((r) => r.dealershipName);
+
+  const retry = await runPrincipalEnrichmentTick({ limit: count });
+  let created = retry.created;
+
+  const { batch } = pickNextProspectsForResearch(names, count);
+  for (const p of batch) {
+    const result = await enrichDealershipPrincipal({
+      dealershipName: p.name,
+      website: p.website,
+      city: p.city,
+      region: p.province,
+      phone: p.phone,
+      brandsCarried: p.brands.join(", "),
+      estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+    });
+    if (result.status !== "enriched" || !result.hit) continue;
+    const hit = result.hit;
+    await createProspects([
+      {
+        dealershipName: p.name,
+        region: p.province,
+        city: p.city,
+        phone: p.phone,
+        email: hit.email,
+        website: p.website ?? "",
+        estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+        brandsCarried: p.brands.join(", "),
+        score: 80,
+        rationale: `Nightly website research — principal contact from ${hit.evidenceUrl}`,
+        status: "scouted" as const,
+        sourceNotes: `Nightly Prospector — ${region} | email_quality=${hit.quality}`,
+        contactName: hit.contactName,
+        contactRole: hit.contactRole,
+        emailVerified: 1,
+        emailSource: hit.source,
+        enrichedAt: new Date(),
+        enrichmentNotes: result.notes,
+      },
+    ]);
+    created += 1;
+  }
+
+  console.log(`[Scheduled Prospector] region=${region} created=${created} researched=${batch.length}`);
+  return created;
 }
 
 export function registerScheduledRoutes(app: Express) {

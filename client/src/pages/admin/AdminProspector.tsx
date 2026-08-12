@@ -62,17 +62,29 @@ export default function AdminProspector() {
     onSuccess: (result) => {
       utils.prospects.list.invalidate();
       if (result.created === 0 && "message" in result) {
-        setPoolExhausted(true);
-        setPoolRemaining(0);
-        toast.warning(result.message as string);
+        setPoolExhausted(false);
+        if ("researchRemaining" in result && typeof result.researchRemaining === "number") {
+          setPoolRemaining(result.researchRemaining);
+        }
+        toast.message(result.message as string);
       } else {
         setPoolExhausted(false);
-        if ("poolRemaining" in result && typeof result.poolRemaining === "number") {
-          setPoolRemaining(result.poolRemaining);
-          toast.success(`${result.created} new prospect${result.created === 1 ? "" : "s"} added — ${result.poolRemaining} more in pool`);
-        } else {
-          toast.success(`${result.created} new prospect${result.created === 1 ? "" : "s"} added`);
-        }
+        const remaining =
+          "researchRemaining" in result && typeof result.researchRemaining === "number"
+            ? result.researchRemaining
+            : "poolRemaining" in result && typeof result.poolRemaining === "number"
+              ? result.poolRemaining
+              : null;
+        if (remaining !== null) setPoolRemaining(remaining);
+        const purged =
+          "purgedFiller" in result && typeof result.purgedFiller === "number"
+            ? result.purgedFiller
+            : 0;
+        toast.success(
+          `${result.created} principal contact${result.created === 1 ? "" : "s"} found from dealer websites${
+            remaining !== null ? ` — ${remaining} still to research` : ""
+          }${purged ? ` (removed ${purged} fake filler emails)` : ""}`,
+        );
       }
     },
     onError: (e: { message: string }) => toast.error(e.message),
@@ -221,12 +233,13 @@ export default function AdminProspector() {
       )}
       {poolExhausted && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 mb-4">
-          All dealerships in the local prospect pool have been added. Expand the pool or wait until next month.
+          Research queue paused. Sipho retries dealer websites that had no public named email after a cooldown.
         </div>
       )}
       {!poolExhausted && poolRemaining !== null && (
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground mb-4">
-          <span className="font-medium text-foreground">{poolRemaining}</span> dealership{poolRemaining === 1 ? "" : "s"} remaining in the local prospect pool
+          <span className="font-medium text-foreground">{poolRemaining}</span> dealership
+          {poolRemaining === 1 ? "" : "s"} left in the website research queue (named emails only — no filler like jane.doe)
         </div>
       )}
       {(recentSends?.length ?? 0) > 0 && (

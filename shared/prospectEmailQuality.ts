@@ -72,6 +72,48 @@ const PRINCIPAL_LOCAL_PARTS = new Set([
   "ceo",
 ]);
 
+/**
+ * LLM filler / demo locals that look "named" but are not real people.
+ * jane.doe@ and john.doe@ bounced in production — treat as invalid.
+ */
+export const FILLER_EMAIL_LOCAL_PARTS = new Set([
+  "jane.doe",
+  "john.doe",
+  "jane_doe",
+  "john_doe",
+  "janedoe",
+  "johndoe",
+  "jane.smith",
+  "john.smith",
+  "joe.bloggs",
+  "jo.bloggs",
+  "foo.bar",
+  "foo.baz",
+  "first.last",
+  "firstname.lastname",
+  "name.surname",
+  "test.user",
+  "test.dealer",
+  "demo.user",
+  "sample.user",
+  "user.name",
+  "dummy.user",
+  "fake.user",
+  "example.user",
+  "test",
+  "testing",
+  "demo",
+  "sample",
+  "dummy",
+  "fake",
+  "placeholder",
+  "asdf",
+  "qwerty",
+]);
+
+const FILLER_LOCAL_RE =
+  /^(jane|john|joe|jo|foo|bar|test|demo|sample|dummy|fake|example|user|name|firstname|lastname)[._-]?(doe|smith|bloggs|bar|baz|user|dealer|test|demo|sample|surname|lastname)?$/i;
+
 function parseLocalPart(email: string): string | null {
   const trimmed = email.trim().toLowerCase();
   const at = trimmed.indexOf("@");
@@ -79,10 +121,29 @@ function parseLocalPart(email: string): string | null {
   return trimmed.slice(0, at);
 }
 
+export function isFillerEmail(email: string | null | undefined): boolean {
+  const local = parseLocalPart(email ?? "");
+  if (!local) return false;
+  if (FILLER_EMAIL_LOCAL_PARTS.has(local)) return true;
+  if (FILLER_LOCAL_RE.test(local)) return true;
+  // Obvious placeholder domains
+  const domain = (email ?? "").trim().toLowerCase().split("@")[1] ?? "";
+  if (
+    /^(example|test|fake|dummy|placeholder|localhost|email|domain)\./.test(domain) ||
+    domain.endsWith(".example") ||
+    domain === "example.com" ||
+    domain === "test.com"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function looksLikePersonName(local: string): boolean {
   // firstname, first.last, first_last, first-last — not a single generic word
   if (GENERIC_MAILBOX_LOCAL_PARTS.has(local)) return false;
   if (ROLE_LOCAL_PARTS.has(local) || PRINCIPAL_LOCAL_PARTS.has(local)) return false;
+  if (FILLER_EMAIL_LOCAL_PARTS.has(local) || FILLER_LOCAL_RE.test(local)) return false;
   if (/^[a-z]{2,20}$/.test(local)) return true;
   if (/^[a-z]{2,20}[._-][a-z]{2,20}$/.test(local)) return true;
   return false;
@@ -107,6 +168,18 @@ export function assessProspectEmail(email: string | null | undefined): ProspectE
       quality: "invalid",
       score: 0,
       reason: "Email format looks invalid.",
+      outreachReady: false,
+    };
+  }
+
+  if (isFillerEmail(raw)) {
+    const local = parseLocalPart(raw);
+    return {
+      email: raw,
+      localPart: local,
+      quality: "invalid",
+      score: 0,
+      reason: "Filler/demo email (e.g. jane.doe / john.doe) — not a real contact.",
       outreachReady: false,
     };
   }
@@ -219,12 +292,14 @@ export function buildEnrichmentTarget(input: {
 }
 
 /** Prompt fragment shared by Sipho scout (manual + nightly). */
-export const PRINCIPAL_EMAIL_SCOUT_RULES = `EMAIL RULES (critical — generic mailboxes bounce):
-- ONLY include a prospect if you have a named person or dealer-principal email (e.g. darius@…, thabo.m@…, principal@…, owner@…).
-- NEVER invent info@ / sales@ / enquiries@ / admin@ from a dealership slug — those bounce and waste Resend quota.
-- NEVER invent emails for fictional dealerships. If the email is not a real named/principal address, omit the prospect entirely (do not return it).
-- Prefer real public contacts from official websites / directories over guesses.
-- Also provide contactName (person) and contactRole (e.g. "Dealer Principal", "Managing Director", "Sales Manager").`;
+/** Prompt fragment shared by Sipho scout (manual + nightly). */
+export const PRINCIPAL_EMAIL_SCOUT_RULES = `EMAIL RULES (critical — generic and filler emails bounce):
+- NEVER invent emails. Do not use jane.doe@, john.doe@, john.smith@, test@, demo@, or any placeholder.
+- NEVER invent info@ / sales@ / enquiries@ / admin@ from a dealership slug.
+- ONLY return an email if it is a real named person or dealer-principal address found on a public page.
+- If you do not have a verified named/principal email, set email to "" (empty) — Sipho will scrape the website later.
+- Prefer real public dealerships with real websites over fictional ones.`;
+
 
 /**
  * Only keep outreach-ready (named / principal) emails.

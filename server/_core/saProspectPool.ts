@@ -809,9 +809,32 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
 ];
 
 /**
- * Returns a shuffled copy of the prospect pool with entries whose names appear
- * in `existingNames` removed. Takes up to `batchSize` items from the front.
- * Only returns rows with named/principal emails (info@ filtered out).
+ * Returns pool entries not yet in DB that have a website to research.
+ * Does NOT require a pre-known named email — Sipho enriches from the site.
+ */
+export function pickNextProspectsForResearch(
+  existingNames: string[],
+  batchSize = 8,
+): { batch: SAProspectEntry[]; researchRemaining: number } {
+  const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
+  const available = SA_PROSPECT_POOL.filter(
+    (p) => !existing.has(p.name.toLowerCase().trim()) && Boolean(p.website?.trim()),
+  );
+
+  const shuffled = [...available];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const batch = shuffled.slice(0, batchSize);
+  const researchRemaining = Math.max(0, available.length - batch.length);
+  return { batch, researchRemaining };
+}
+
+/**
+ * @deprecated Prefer pickNextProspectsForResearch + website enrichment.
+ * Only returns rows that already have named/principal emails.
  */
 export function pickNextProspects(
   existingNames: string[],
@@ -824,7 +847,6 @@ export function pickNextProspects(
       assessProspectEmail(p.email).outreachReady,
   );
 
-  // Fisher-Yates shuffle
   const shuffled = [...available];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -834,4 +856,12 @@ export function pickNextProspects(
   const batch = shuffled.slice(0, batchSize);
   const poolRemaining = Math.max(0, available.length - batch.length);
   return { batch, poolRemaining };
+}
+
+/** How many pool dealerships still have a website and are not in the DB. */
+export function countResearchableProspects(existingNames: string[]): number {
+  const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
+  return SA_PROSPECT_POOL.filter(
+    (p) => !existing.has(p.name.toLowerCase().trim()) && Boolean(p.website?.trim()),
+  ).length;
 }

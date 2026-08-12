@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assessProspectEmail,
   isGenericMailbox,
+  isFillerEmail,
   linkedInPrincipalSearchUrl,
   sanitizeScoutEmail,
   filterOutreachReadyProspectInserts,
@@ -11,7 +12,11 @@ import {
   prospectsNeedingPrincipalEnrichment,
   PILOT_PROSPECTS,
 } from "../shared/pilotProspectSegments";
-import { pickNextProspects } from "./_core/saProspectPool";
+import {
+  pickNextProspects,
+  pickNextProspectsForResearch,
+  countResearchableProspects,
+} from "./_core/saProspectPool";
 import { runAudit, type AuditInput } from "./_core/improvementAgent";
 
 describe("prospect email quality", () => {
@@ -25,7 +30,7 @@ describe("prospect email quality", () => {
     expect(assessProspectEmail("darius@jubileemotors.co.za").outreachReady).toBe(true);
     expect(assessProspectEmail("darius@jubileemotors.co.za").quality).toBe("named");
     expect(assessProspectEmail("principal@omcmotors.co.za").quality).toBe("principal");
-    expect(assessProspectEmail("thabo.mokoena@example.co.za").outreachReady).toBe(true);
+    expect(assessProspectEmail("thabo.mokoena@sandtonautos.co.za").outreachReady).toBe(true);
   });
 
   it("builds LinkedIn dealer-principal search URLs", () => {
@@ -76,12 +81,24 @@ describe("prospect email quality", () => {
     expect(kept[0]!.email).toBe("darius@jubileemotors.co.za");
   });
 
-  it("SA pool picker only returns named/principal emails", () => {
-    const { batch, poolRemaining } = pickNextProspects([], 20);
-    expect(batch.length).toBeGreaterThanOrEqual(1);
+  it("blocks jane.doe / john.doe filler emails", () => {
+    expect(isFillerEmail("jane.doe@fakededaler.co.za")).toBe(true);
+    expect(isFillerEmail("john.doe@something.co.za")).toBe(true);
+    expect(assessProspectEmail("jane.doe@x.co.za").outreachReady).toBe(false);
+    expect(assessProspectEmail("john.doe@x.co.za").quality).toBe("invalid");
+    expect(assessProspectEmail("darius@jubileemotors.co.za").outreachReady).toBe(true);
+  });
+
+  it("SA research pool has many websites left (not 'expired' after named-only filter)", () => {
+    const { batch, researchRemaining } = pickNextProspectsForResearch([], 8);
+    expect(batch.length).toBe(8);
+    expect(researchRemaining).toBeGreaterThan(20);
+    expect(countResearchableProspects([])).toBeGreaterThan(30);
+  });
+
+  it("SA pool named-email picker only returns outreach-ready", () => {
+    const { batch } = pickNextProspects([], 20);
     expect(batch.every((p) => assessProspectEmail(p.email).outreachReady)).toBe(true);
-    expect(batch.some((p) => p.email.toLowerCase().startsWith("info@"))).toBe(false);
-    expect(poolRemaining).toBe(0);
   });
 
   it("lists enrichment targets with LinkedIn links for Kagiso", () => {

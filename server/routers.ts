@@ -306,7 +306,10 @@ import { getChatbotDeployment } from "./_core/chatbotDeploymentService";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { prospects } from "../drizzle/schema";
-import { pickNextProspects } from "./_core/saProspectPool";
+import {
+  pickNextProspectsForResearch,
+  countResearchableProspects,
+} from "./_core/saProspectPool";
 // import { founderProfileRouter } from "./_core/founderProfileRouter";
 // import { stagingEnvironmentRouter } from "./_core/stagingEnvironmentRouter";
 import { tier2Router } from "./_core/tier2Improvements";
@@ -2098,201 +2101,128 @@ export const appRouter = router({
         if (!isFounderOrAdmin(ctx.user)) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
         }
-        // Fetch names already in the DB so we can deduplicate both paths
+
+        const { isFillerEmail } = await import("../shared/prospectEmailQuality");
+        const { deleteProspect } = await import("./db");
         const existingRows = await listProspects(1000);
-        const existingNames = existingRows.map((r) => r.dealershipName);
 
-        const { PRINCIPAL_EMAIL_SCOUT_RULES, sanitizeScoutEmail } = await import(
-          "../shared/prospectEmailQuality"
-        );
-        const system = `You are GrayArx Prospector, an AI scout for a South African dealership SaaS. Generate ${input.count} REALISTIC potential dealership prospects in ${input.city ? input.city + ", " : ""}${input.region}, South Africa. Use plausible but FICTIONAL dealership names (do not impersonate real businesses). For each, provide: dealershipName, region, city, phone (SA format starting with 0), email, website, estimatedMonthlyVolume (10-200), brandsCarried (comma list of 2-4 brands), score (0-100 based on fit), rationale (1 sentence why they're a good fit for GrayArx AI agents). ${PRINCIPAL_EMAIL_SCOUT_RULES} Return JSON only.`;
-        const userMsg = `Region: ${input.region}\nCity: ${input.city ?? "any"}\nTarget monthly volume: ${input.targetVolume ?? "any"}\nBrand focus: ${input.brandFocus ?? "any"}\nGenerate ${input.count} prospects. Prefer named dealer-principal emails; leave email empty if unknown — never invent info@.`;
-        try {
-          const response = await invokeLLM({
-            messages: [
-              { role: "system", content: system },
-              { role: "user", content: userMsg },
-            ],
-            response_format: {
-              type: "json_schema",
-              json_schema: {
-                name: "prospects",
-                strict: true,
-                schema: {
-                  type: "object",
-                  properties: {
-                    prospects: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          dealershipName: { type: "string" },
-                          region: { type: "string" },
-                          city: { type: "string" },
-                          phone: { type: "string" },
-                          email: { type: "string" },
-                          website: { type: "string" },
-                          estimatedMonthlyVolume: { type: "integer" },
-                          brandsCarried: { type: "string" },
-                          score: { type: "integer" },
-                          rationale: { type: "string" },
-                        },
-                        required: [
-                          "dealershipName",
-                          "region",
-                          "city",
-                          "phone",
-                          "email",
-                          "website",
-                          "estimatedMonthlyVolume",
-                          "brandsCarried",
-                          "score",
-                          "rationale",
-                        ],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["prospects"],
-                  additionalProperties: false,
-                },
-              },
-            },
-          });
-          const raw = response.choices?.[0]?.message?.content ?? "{\"prospects\":[]}";
-          const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
-          const allItems = (parsed.prospects ?? []) as Array<{
-            dealershipName: string;
-            region: string;
-            city: string;
-            phone: string;
-            email: string;
-            website: string;
-            estimatedMonthlyVolume: number;
-            brandsCarried: string;
-            score: number;
-            rationale: string;
-          }>;
-          // Deduplicate against existing DB records
-          const existingSet = new Set(existingNames.map((n) => n.toLowerCase().trim()));
-          const items = allItems.filter(
-            (p) => !existingSet.has(p.dealershipName.toLowerCase().trim()),
-          );
-          if (items.length === 0) return { created: 0, poolRemaining: null } as const;
-          const readyRows = items
-            .map((p) => {
-              const sanitized = sanitizeScoutEmail({
-                email: p.email,
-                dealershipName: p.dealershipName,
-                city: p.city,
-              });
-              if (!sanitized.outreachReady || !sanitized.email) return null;
-              return {
-                dealershipName: p.dealershipName,
-                region: p.region,
-                city: p.city,
-                phone: p.phone,
-                email: sanitized.email,
-                website: p.website,
-                estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-                brandsCarried: p.brandsCarried,
-                score: Math.max(0, Math.min(100, p.score)),
-                rationale: p.rationale,
-                status: "scouted" as const,
-                sourceNotes: `AI Prospector — ${input.region}${input.city ? ", " + input.city : ""} | ${sanitized.sourceNoteExtra}`,
-              };
-            })
-            .filter((p): p is NonNullable<typeof p> => p !== null);
-          const skipped = items.length - readyRows.length;
-          if (readyRows.length === 0) {
-            await logAgentActivity({
-              agentId: "prospector",
-              action: "scouted_batch_skipped",
-              subjectType: "prospect",
-              summary: `Sipho skipped ${skipped} prospect${skipped === 1 ? "" : "s"} in ${input.region} — no named/principal emails (info@ blocked).`,
-              payload: { region: input.region, city: input.city, skipped },
-            });
-            return {
-              created: 0,
-              skipped,
-              poolRemaining: null,
-              message:
-                "No prospects had a named/principal email. Sipho will not add info@ or empty contacts.",
-            } as const;
+        // Purge bounced filler contacts (jane.doe / john.doe etc.) immediately
+        let purgedFiller = 0;
+        for (const row of existingRows) {
+          if (row.email && isFillerEmail(row.email)) {
+            await deleteProspect(row.id);
+            purgedFiller += 1;
           }
-          await logAgentActivity({
-            agentId: "prospector",
-            action: "scouted_batch",
-            subjectType: "prospect",
-            summary: `Sipho scouted ${readyRows.length} dealership${readyRows.length === 1 ? "" : "s"} with named emails in ${input.region}${input.city ? ", " + input.city : ""}${skipped ? ` (skipped ${skipped} without principal email)` : ""}.`,
-            payload: {
-              region: input.region,
-              city: input.city,
-              names: readyRows.map((p) => p.dealershipName),
-              skipped,
-            },
-          });
-          await createProspects(readyRows);
-          return { created: readyRows.length, skipped, poolRemaining: null } as const;
-        } catch (err) {
-          console.error("[Prospector] LLM unavailable — using rotating SA prospect pool", err);
-          const region = input.region || "Gauteng";
-          const sourceNotes = `Pool fallback — ${region}${input.city ? ", " + input.city : ""}`;
-
-          const { batch, poolRemaining } = pickNextProspects(existingNames, 8);
-
-          if (batch.length === 0) {
-            return {
-              created: 0,
-              poolRemaining: 0,
-              message: "All prospects in pool have been added — expand the pool or try again next month",
-            } as const;
-          }
-
-          const fallbackProspects: Parameters<typeof createProspects>[0] = batch
-            .map((p) => {
-              const sanitized = sanitizeScoutEmail({
-                email: p.email,
-                dealershipName: p.name,
-                city: p.city,
-              });
-              if (!sanitized.outreachReady || !sanitized.email) return null;
-              return {
-                dealershipName: p.name,
-                region: p.province,
-                city: p.city,
-                phone: p.phone,
-                email: sanitized.email,
-                website: p.website ?? "",
-                estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-                brandsCarried: p.brands.join(", "),
-                score: p.segment === "luxury" || p.segment === "exotic" ? 88 : p.segment === "volume" ? 82 : 72,
-                rationale: `${p.segment.charAt(0).toUpperCase() + p.segment.slice(1)} dealership in ${p.city} (${p.province}) — GrayArx agents would accelerate their lead capture and conversion pipeline.`,
-                status: "scouted" as const,
-                sourceNotes: `${sourceNotes} | ${sanitized.sourceNoteExtra}`,
-              };
-            })
-            .filter((p): p is NonNullable<typeof p> => p !== null);
-
-          if (fallbackProspects.length === 0) {
-            return {
-              created: 0,
-              poolRemaining,
-              message:
-                "Pool has no named/principal emails left (info@ blocked). Add verified dealer-principal contacts, then scout again.",
-            } as const;
-          }
-
-          await logAgentActivity({
-            agentId: "prospector",
-            action: "scouted_batch",
-            subjectType: "prospect",
-            summary: `Sipho scouted ${fallbackProspects.length} dealerships in ${region}${input.city ? ", " + input.city : ""} (pool fallback, named emails only, ${poolRemaining} remaining).`,
-            payload: { region, city: input.city, fallback: true, poolRemaining, names: fallbackProspects.map((p) => p.dealershipName) },
-          });
-          await createProspects(fallbackProspects);
-          return { created: fallbackProspects.length, fallback: true, poolRemaining } as const;
         }
+
+        const afterPurge = purgedFiller > 0 ? await listProspects(1000) : existingRows;
+        const existingNames = afterPurge.map((r) => r.dealershipName);
+
+        // 1) Research real dealer websites from the SA pool (never invent emails)
+        const { batch, researchRemaining } = pickNextProspectsForResearch(
+          existingNames,
+          Math.max(input.count, 5),
+        );
+
+        const { enrichDealershipPrincipal } = await import(
+          "./_core/prospectPrincipalEnrichment"
+        );
+        const { runPrincipalEnrichmentTick } = await import(
+          "./_core/principalEnrichmentRunner"
+        );
+
+        // Also retry enrichment on any existing DB rows still missing named emails
+        const retry = await runPrincipalEnrichmentTick({ limit: input.count });
+
+        let created = retry.created + retry.updated;
+        const foundNames: string[] = retry.results
+          .filter((r) => r.status === "enriched")
+          .map((r) => r.dealershipName);
+
+        for (const p of batch) {
+          if (foundNames.length >= input.count && created >= input.count) break;
+          const result = await enrichDealershipPrincipal({
+            dealershipName: p.name,
+            website: p.website,
+            city: p.city,
+            region: p.province,
+            phone: p.phone,
+            brandsCarried: p.brands.join(", "),
+            estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+          });
+          if (result.status !== "enriched" || !result.hit) continue;
+          const hit = result.hit;
+          await createProspects([
+            {
+              dealershipName: p.name,
+              region: p.province,
+              city: p.city,
+              phone: p.phone,
+              email: hit.email,
+              website: p.website ?? "",
+              estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+              brandsCarried: p.brands.join(", "),
+              score:
+                p.segment === "luxury" || p.segment === "exotic"
+                  ? 88
+                  : p.segment === "volume"
+                    ? 82
+                    : 72,
+              rationale: `Auto-researched principal contact from ${hit.evidenceUrl}`,
+              status: "scouted" as const,
+              sourceNotes: `Sipho website research — ${input.region} | email_quality=${hit.quality} | source=${hit.source}`,
+              contactName: hit.contactName,
+              contactRole: hit.contactRole,
+              emailVerified: 1,
+              emailSource: hit.source,
+              enrichedAt: new Date(),
+              enrichmentNotes: result.notes,
+            },
+          ]);
+          created += 1;
+          foundNames.push(p.name);
+        }
+
+        const stillResearchable = countResearchableProspects([
+          ...existingNames,
+          ...foundNames,
+        ]);
+
+        await logAgentActivity({
+          agentId: "prospector",
+          action: "scouted_batch_research",
+          subjectType: "prospect",
+          summary: `Sipho researched dealer websites and added/updated ${created} named/principal contact${created === 1 ? "" : "s"}${purgedFiller ? ` (removed ${purgedFiller} filler emails)` : ""}. ${stillResearchable} dealerships left to research.`,
+          payload: {
+            region: input.region,
+            created,
+            purgedFiller,
+            researched: batch.length + retry.examined,
+            researchRemaining: stillResearchable,
+            names: foundNames,
+          },
+        });
+
+        if (created === 0) {
+          return {
+            created: 0,
+            purgedFiller,
+            poolRemaining: stillResearchable,
+            researchRemaining: stillResearchable,
+            message:
+              stillResearchable > 0
+                ? `Researched ${batch.length} sites but no new named/principal emails were public yet. ${stillResearchable} dealerships still in the research queue — try again (Sipho keeps scraping).`
+                : "Research queue caught up for now. Sipho will retry sites that previously had no public named email after a cooldown.",
+          } as const;
+        }
+
+        return {
+          created,
+          purgedFiller,
+          poolRemaining: stillResearchable,
+          researchRemaining: stillResearchable,
+          names: foundNames,
+        } as const;
       }),
 
     handoff: protectedProcedure
