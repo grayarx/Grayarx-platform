@@ -332,14 +332,62 @@ export async function enrichDealershipPrincipal(
   );
 
   if (outreach.length === 0) {
-    const onPage = [...allEmails];
-    return {
-      dealershipName: candidate.dealershipName,
-      prospectId: candidate.prospectId,
-      status: "no_named_email",
-      pagesTried,
-      notes: `No named email on dealer domain ${websiteHostSafe(base)}. On page: ${onPage.slice(0, 5).join(", ") || "none"}`,
-    };
+    // LinkedIn-style path: discover principal *names*, guess firstname@dealer-domain,
+    // SMTP-verify (skip catch-all domains).
+    const pageTexts = [bestPageText].filter(Boolean);
+    try {
+      const {
+        discoverPrincipalPeople,
+        verifyGuessedPrincipalEmail,
+      } = await import("./principalNameEmailGuess");
+      const people = await discoverPrincipalPeople({
+        dealershipName: candidate.dealershipName,
+        website: base,
+        city: candidate.city,
+        pageTexts,
+      });
+      const guessed = await verifyGuessedPrincipalEmail({ people, website: base });
+      if (guessed) {
+        const assessment = assessProspectEmail(guessed.email);
+        return {
+          dealershipName: candidate.dealershipName,
+          prospectId: candidate.prospectId,
+          status: "enriched",
+          hit: {
+            email: guessed.email,
+            contactName: guessed.person.fullName,
+            contactRole: guessed.person.role,
+            quality: assessment.quality,
+            source: "website_text",
+            evidenceUrl: bestPageUrl,
+            score: assessment.score,
+          },
+          pagesTried,
+          notes: `Verified ${guessed.email} for ${guessed.person.fullName} (${guessed.person.role ?? "principal"}) via ${guessed.method} + name discovery on dealer domain`,
+        };
+      }
+      const onPage = [...allEmails];
+      const hunterHint = process.env.HUNTER_API_KEY?.trim()
+        ? ""
+        : " Tip: set HUNTER_API_KEY on Railway to find emails from LinkedIn-style names (SMTP:25 is often blocked in cloud).";
+      return {
+        dealershipName: candidate.dealershipName,
+        prospectId: candidate.prospectId,
+        status: "no_named_email",
+        pagesTried,
+        notes: `No named email on dealer domain ${websiteHostSafe(base)}. People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}.${hunterHint}`,
+      };
+    } catch (err) {
+      console.warn("[PrincipalEnrich] name/email guess failed", err);
+      const onPage = [...allEmails];
+      return {
+        dealershipName: candidate.dealershipName,
+        prospectId: candidate.prospectId,
+        status: "no_named_email",
+        pagesTried,
+        notes: `No named email on dealer domain ${websiteHostSafe(base)}. On page: ${onPage.slice(0, 5).join(", ") || "none"}`,
+      };
+    }
   }
 
   // Fast path: take best outreach-ready email without LLM
