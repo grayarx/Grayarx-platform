@@ -30,12 +30,9 @@
 - Secrets live on **Railway**, not required in the Cursor agent lockbox for production.
 
 ### Outbound prospect email
-- Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` bounce on Resend — `mailableProspects` skips them by default.
-- Sipho scout / `createProspects` **only inserts outreach-ready emails**. Empty and `info@` are dropped.
-- **Auto enrichment:** Sipho scrapes dealer websites for principal emails via `prospect-enrich-tick` (also self-runs on traffic every ~4h — `attachPrincipalEnrichmentMiddleware`). No founder action required.
-- Boot migration one-shot `0073_purge_all_prospects_for_email_quality` wipes old bounce-bait rows once.
-- Founder UI: Admin → Prospector → **Clear all** (`prospects.purgeAll`) if a manual reset is ever needed.
-- Quality helpers: `shared/prospectEmailQuality.ts`, enricher: `server/_core/prospectPrincipalEnrichment.ts`.
+- Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` and filler `jane.doe@` / `john.doe@` are blocked.
+- **Generate prospects** = website research from the SA pool (dozens of dealerships), not a tiny named-email pool that "expires".
+- Sipho auto-scrapes sites via enrich tick (~4h) + scout + nightly. No founder email hunting required.
 
 ### WhatsApp (production)
 - Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.

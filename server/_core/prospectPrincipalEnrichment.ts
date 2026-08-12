@@ -113,7 +113,11 @@ export function extractEmailsFromHtml(html: string): string[] {
   for (const e of plain) {
     found.add(e.toLowerCase());
   }
-  return [...found].filter((e) => !isBlockedEmail(e) && assessProspectEmail(e).quality !== "invalid");
+  return [...found].filter((e) => {
+    if (isBlockedEmail(e)) return false;
+    const a = assessProspectEmail(e);
+    return a.quality !== "invalid";
+  });
 }
 
 function htmlToRoughText(html: string): string {

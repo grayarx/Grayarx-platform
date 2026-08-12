@@ -128,6 +128,17 @@ export async function runPrincipalEnrichmentTick(
   opts?: { limit?: number },
 ): Promise<PrincipalEnrichTickResult> {
   const limit = opts?.limit ?? DEFAULT_LIMIT;
+
+  // Drop fake filler contacts that bounced (jane.doe / john.doe)
+  const { isFillerEmail } = await import("../../shared/prospectEmailQuality");
+  const { deleteProspect } = await import("../db");
+  const existingForPurge = await listProspects(1000);
+  for (const row of existingForPurge) {
+    if (row.email && isFillerEmail(row.email)) {
+      await deleteProspect(row.id);
+    }
+  }
+
   const targets = await collectPrincipalEnrichmentTargets(limit);
   const results: EnrichmentAttemptResult[] = [];
   let enriched = 0;
