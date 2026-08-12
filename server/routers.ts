@@ -306,10 +306,7 @@ import { getChatbotDeployment } from "./_core/chatbotDeploymentService";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { prospects } from "../drizzle/schema";
-import {
-  pickNextProspectsForResearch,
-  countResearchableProspects,
-} from "./_core/saProspectPool";
+import { countResearchableProspects } from "./_core/saProspectPool";
 // import { founderProfileRouter } from "./_core/founderProfileRouter";
 // import { stagingEnvironmentRouter } from "./_core/stagingEnvironmentRouter";
 import { tier2Router } from "./_core/tier2Improvements";

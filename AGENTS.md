@@ -31,8 +31,7 @@
 
 ### Outbound prospect email
 - Prefer **dealer principal / named** inboxes. Generic `info@` / `sales@` and filler `jane.doe@` / `john.doe@` are blocked.
-- **Generate prospects** = website research from the SA pool (dozens of dealerships), not a tiny named-email pool that "expires".
-- Sipho auto-scrapes sites via enrich tick (~4h) + scout + nightly. No founder email hunting required.
+- **Generate prospects** returns immediately and researches in the background (avoids Railway HTML timeouts / JSON parse errors). Poll `prospects.scoutJobStatus`. Unverified invented contacts are purged on generate.
 
 ### WhatsApp (production)
 - Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.
