@@ -49,7 +49,12 @@ export default function AdminProspector() {
   const [handoffPack, setHandoffPack] = useState<HandoffPack | null>(null);
   const [segments, setSegments] = useState<Record<number, string>>({});
 
-  const { data, isLoading } = trpc.prospects.list.useQuery();
+  const { data: scoutJob } = trpc.prospects.scoutJobStatus.useQuery(undefined, {
+    refetchInterval: (q) => (q.state.data?.running ? 3000 : 15_000),
+  });
+  const { data, isLoading } = trpc.prospects.list.useQuery(undefined, {
+    refetchInterval: scoutJob?.running ? 4000 : false,
+  });
   const { data: recentSends } = trpc.pilotEmail.recentSends.useQuery({ limit: 100 });
   const [poolRemaining, setPoolRemaining] = useState<number | null>(null);
   const [poolExhausted, setPoolExhausted] = useState(false);
@@ -61,33 +66,43 @@ export default function AdminProspector() {
   const scout = trpc.prospects.scout.useMutation({
     onSuccess: (result) => {
       utils.prospects.list.invalidate();
+      utils.prospects.scoutJobStatus.invalidate();
+      if ("researchRemaining" in result && typeof result.researchRemaining === "number") {
+        setPoolRemaining(result.researchRemaining);
+      }
+      setPoolExhausted(false);
+      if ("started" in result && result.started) {
+        toast.success(
+          "message" in result && result.message
+            ? String(result.message)
+            : "Sipho is researching dealer websites — refresh shortly",
+        );
+        return;
+      }
       if (result.created === 0 && "message" in result) {
-        setPoolExhausted(false);
-        if ("researchRemaining" in result && typeof result.researchRemaining === "number") {
-          setPoolRemaining(result.researchRemaining);
-        }
         toast.message(result.message as string);
       } else {
-        setPoolExhausted(false);
         const remaining =
           "researchRemaining" in result && typeof result.researchRemaining === "number"
             ? result.researchRemaining
-            : "poolRemaining" in result && typeof result.poolRemaining === "number"
-              ? result.poolRemaining
-              : null;
-        if (remaining !== null) setPoolRemaining(remaining);
-        const purged =
-          "purgedFiller" in result && typeof result.purgedFiller === "number"
-            ? result.purgedFiller
-            : 0;
+            : null;
         toast.success(
-          `${result.created} principal contact${result.created === 1 ? "" : "s"} found from dealer websites${
+          `${result.created} principal contact${result.created === 1 ? "" : "s"} found${
             remaining !== null ? ` — ${remaining} still to research` : ""
-          }${purged ? ` (removed ${purged} fake filler emails)` : ""}`,
+          }`,
         );
       }
     },
-    onError: (e: { message: string }) => toast.error(e.message),
+    onError: (e: { message: string }) => {
+      const msg = e.message || "";
+      if (/Unexpected token|<!DOCTYPE|is not valid JSON/i.test(msg)) {
+        toast.error(
+          "Server timed out mid-research. Try Generate again — Sipho now runs in the background so this should not happen.",
+        );
+        return;
+      }
+      toast.error(msg);
+    },
   });
   const sendEmail = trpc.pilotEmail.sendToDbProspect.useMutation({
     onError: (e: { message: string }) => toast.error(e.message),
@@ -222,13 +237,36 @@ export default function AdminProspector() {
       }
     >
       {isLoading && <p className="text-muted-foreground">Loading prospects…</p>}
-      {!isLoading && (!data || data.length === 0) && (
+      {!isLoading && (!data || data.length === 0) && !scoutJob?.running && (
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Sipho auto-scrapes dealer websites for principal emails (every few hours).
-            You can also click &ldquo;Generate prospects&rdquo; — only named emails are kept.
+            Click &ldquo;Generate prospects&rdquo; — Sipho researches real dealer websites
+            in the background (named emails only).
           </p>
+        </div>
+      )}
+      {scoutJob?.running && (
+        <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm mb-4 flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>
+            Sipho is researching dealer websites for principal emails…
+            {typeof scoutJob.researchRemaining === "number"
+              ? ` ${scoutJob.researchRemaining} left in queue.`
+              : ""}
+          </span>
+        </div>
+      )}
+      {!scoutJob?.running && scoutJob?.lastResult && (
+        <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground mb-4">
+          Last research:{" "}
+          <span className="text-foreground font-medium">
+            {scoutJob.lastResult.created}
+          </span>{" "}
+          principal contact{scoutJob.lastResult.created === 1 ? "" : "s"} found
+          {scoutJob.lastResult.names?.length
+            ? ` (${scoutJob.lastResult.names.slice(0, 3).join(", ")}${scoutJob.lastResult.names.length > 3 ? "…" : ""})`
+            : ""}
         </div>
       )}
       {poolExhausted && (

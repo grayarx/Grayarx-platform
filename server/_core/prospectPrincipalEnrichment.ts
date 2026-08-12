@@ -13,7 +13,8 @@ import {
   type ProspectEmailAssessment,
 } from "../../shared/prospectEmailQuality";
 
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 4_000;
+const FETCH_TIMEOUT_FAST_MS = 3_000;
 const MAX_HTML_CHARS = 80_000;
 const MAX_TEXT_FOR_LLM = 12_000;
 
@@ -28,6 +29,9 @@ const CONTACT_PATHS = [
   "/our-team",
   "/meet-the-team",
 ];
+
+/** Fewer pages for interactive / budgeted runs */
+const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us"];
 
 /** Domains / locals that are never outreach contacts. */
 const BLOCKED_EMAIL_SUBSTRINGS = [
@@ -132,12 +136,15 @@ function htmlToRoughText(html: string): string {
     .slice(0, MAX_TEXT_FOR_LLM);
 }
 
-async function fetchPage(url: string): Promise<{ ok: boolean; html: string; finalUrl: string }> {
+async function fetchPage(
+  url: string,
+  timeoutMs = FETCH_TIMEOUT_MS,
+): Promise<{ ok: boolean; html: string; finalUrl: string }> {
   try {
     const res = await fetch(url, {
       method: "GET",
       redirect: "follow",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         "User-Agent":
           "GrayArxBot/1.0 (+https://www.grayarx.com; prospect research; contact hello@grayarx.com)",
@@ -147,7 +154,6 @@ async function fetchPage(url: string): Promise<{ ok: boolean; html: string; fina
     if (!res.ok) return { ok: false, html: "", finalUrl: url };
     const ctype = res.headers.get("content-type") ?? "";
     if (!ctype.includes("text/html") && !ctype.includes("application/xhtml")) {
-      // Some SA dealer sites omit content-type — still try body if small
       const buf = await res.text();
       if (buf.length < 200 || !buf.includes("<")) {
         return { ok: false, html: "", finalUrl: res.url || url };
@@ -246,10 +252,16 @@ ${input.pageText.slice(0, 8000)}`,
 
 /**
  * Research one dealership website for a named/principal email.
+ * Pass `{ fast: true }` for interactive/budgeted runs (fewer pages, shorter timeout, skip LLM if one named email).
  */
 export async function enrichDealershipPrincipal(
   candidate: EnrichmentCandidate,
+  opts?: { fast?: boolean },
 ): Promise<EnrichmentAttemptResult> {
+  const fast = opts?.fast === true;
+  const paths = fast ? CONTACT_PATHS_FAST : CONTACT_PATHS;
+  const timeoutMs = fast ? FETCH_TIMEOUT_FAST_MS : FETCH_TIMEOUT_MS;
+
   const base = normalizeWebsite(candidate.website);
   if (!base) {
     return {
@@ -267,10 +279,10 @@ export async function enrichDealershipPrincipal(
   let pagesTried = 0;
   let anyOk = false;
 
-  for (const path of CONTACT_PATHS) {
+  for (const path of paths) {
     const url = `${base}${path}`;
     pagesTried += 1;
-    const page = await fetchPage(url);
+    const page = await fetchPage(url, timeoutMs);
     if (!page.ok || !page.html) continue;
     anyOk = true;
     const emails = extractEmailsFromHtml(page.html);
@@ -279,8 +291,7 @@ export async function enrichDealershipPrincipal(
     if (ranked.some((r) => r.outreachReady)) {
       bestPageUrl = page.finalUrl;
       bestPageText = htmlToRoughText(page.html);
-      // Keep scanning a couple more contact paths for better names, but we have signal
-      if (path === "/contact" || path === "/contact-us" || path === "/team") break;
+      break;
     } else if (!bestPageText) {
       bestPageUrl = page.finalUrl;
       bestPageText = htmlToRoughText(page.html);
@@ -311,13 +322,21 @@ export async function enrichDealershipPrincipal(
     };
   }
 
-  const llmPick = await pickBestWithLlm({
-    dealershipName: candidate.dealershipName,
-    city: candidate.city,
-    pageText: bestPageText,
-    emails: emailList,
-    pageUrl: bestPageUrl,
-  });
+  // Fast path: take best outreach-ready email without LLM
+  let llmPick: {
+    email: string;
+    contactName: string | null;
+    contactRole: string | null;
+  } | null = null;
+  if (!fast || outreach.length > 1) {
+    llmPick = await pickBestWithLlm({
+      dealershipName: candidate.dealershipName,
+      city: candidate.city,
+      pageText: bestPageText,
+      emails: emailList,
+      pageUrl: bestPageUrl,
+    });
+  }
 
   const chosenEmail = llmPick?.email ?? outreach[0]!.email!;
   const assessment = assessProspectEmail(chosenEmail);
@@ -334,9 +353,15 @@ export async function enrichDealershipPrincipal(
   const hit: EnrichmentHit = {
     email: assessment.email,
     contactName: llmPick?.contactName ?? null,
-    contactRole: llmPick?.contactRole ?? (assessment.quality === "principal" ? "Dealer Principal" : null),
+    contactRole:
+      llmPick?.contactRole ??
+      (assessment.quality === "principal" ? "Dealer Principal" : null),
     quality: assessment.quality,
-    source: llmPick ? "llm_from_page" : outreach[0]!.email === assessment.email ? "website_mailto" : "website_text",
+    source: llmPick
+      ? "llm_from_page"
+      : outreach[0]!.email === assessment.email
+        ? "website_mailto"
+        : "website_text",
     evidenceUrl: bestPageUrl,
     score: assessment.score,
   };
