@@ -3,6 +3,8 @@ import {
   assessProspectEmail,
   isGenericMailbox,
   isFillerEmail,
+  isOutreachReadyForDealership,
+  emailMatchesWebsiteDomain,
   linkedInPrincipalSearchUrl,
   sanitizeScoutEmail,
   filterOutreachReadyProspectInserts,
@@ -29,8 +31,25 @@ describe("prospect email quality", () => {
   it("treats named and principal inboxes as outreach-ready", () => {
     expect(assessProspectEmail("darius@jubileemotors.co.za").outreachReady).toBe(true);
     expect(assessProspectEmail("darius@jubileemotors.co.za").quality).toBe("named");
-    expect(assessProspectEmail("principal@omcmotors.co.za").quality).toBe("principal");
+    expect(assessProspectEmail("dealerprincipal@omcmotors.co.za").quality).toBe("principal");
     expect(assessProspectEmail("thabo.mokoena@sandtonautos.co.za").outreachReady).toBe(true);
+    expect(assessProspectEmail("principal@prestigeautos.co.za").outreachReady).toBe(false);
+    expect(assessProspectEmail("webadmin@vmgsoftware.co.za").outreachReady).toBe(false);
+  });
+
+  it("requires email domain to match dealership website", () => {
+    expect(
+      emailMatchesWebsiteDomain("darius@jubileemotors.co.za", "https://jubileemotors.co.za"),
+    ).toBe(true);
+    expect(
+      emailMatchesWebsiteDomain("webadmin@vmgsoftware.co.za", "https://voncalauto.co.za"),
+    ).toBe(false);
+    expect(
+      isOutreachReadyForDealership("darius@jubileemotors.co.za", "https://jubileemotors.co.za"),
+    ).toBe(true);
+    expect(
+      isOutreachReadyForDealership("webadmin@vmgsoftware.co.za", "https://voncalauto.co.za"),
+    ).toBe(false);
   });
 
   it("builds LinkedIn dealer-principal search URLs", () => {
@@ -40,24 +59,32 @@ describe("prospect email quality", () => {
     expect(url).toContain(encodeURIComponent("Jubilee Motors"));
   });
 
-  it("sanitizes scout emails and drops generic mailboxes", () => {
+  it("sanitizes scout emails and drops generic / domain-mismatch mailboxes", () => {
     const generic = sanitizeScoutEmail({
       email: "info@fakededaler.co.za",
       dealershipName: "Fake Dealer",
       city: "Sandton",
+      website: "https://fakededaler.co.za",
     });
     expect(generic.email).toBeNull();
     expect(generic.outreachReady).toBe(false);
     expect(generic.sourceNoteExtra).toContain("skipped_not_outreach_ready");
-    expect(generic.sourceNoteExtra).toContain("linkedin=");
+
+    const mismatch = sanitizeScoutEmail({
+      email: "webadmin@vmgsoftware.co.za",
+      dealershipName: "Voncal Auto",
+      website: "https://voncalauto.co.za",
+    });
+    expect(mismatch.outreachReady).toBe(false);
+    expect(mismatch.sourceNoteExtra).toContain("domain_mismatch");
 
     const named = sanitizeScoutEmail({
       email: "lerato@fakededaler.co.za",
       dealershipName: "Fake Dealer",
+      website: "https://fakededaler.co.za",
     });
     expect(named.email).toBe("lerato@fakededaler.co.za");
     expect(named.outreachReady).toBe(true);
-    expect(named.sourceNoteExtra).toContain("email_quality=named");
   });
 
   it("pilot mailable list excludes generic info@ by default", () => {
@@ -65,17 +92,24 @@ describe("prospect email quality", () => {
     expect(mailable.length).toBeGreaterThanOrEqual(1);
     expect(mailable.every((p) => p.emailVerified)).toBe(true);
     for (const p of mailable) {
-      expect(assessProspectEmail(p.email).outreachReady).toBe(true);
+      expect(isOutreachReadyForDealership(p.email, p.website)).toBe(true);
     }
-    // Jubilee named contact must remain sendable
     expect(mailable.some((p) => p.id === "jubilee-springs")).toBe(true);
   });
 
-  it("filterOutreachReadyProspectInserts drops info@", () => {
+  it("filterOutreachReadyProspectInserts drops info@ and domain mismatches", () => {
     const kept = filterOutreachReadyProspectInserts([
-      { dealershipName: "A", email: "info@a.co.za" },
-      { dealershipName: "B", email: "darius@jubileemotors.co.za" },
-      { dealershipName: "C", email: "" },
+      { dealershipName: "A", email: "info@a.co.za", website: "https://a.co.za" },
+      {
+        dealershipName: "B",
+        email: "darius@jubileemotors.co.za",
+        website: "https://jubileemotors.co.za",
+      },
+      {
+        dealershipName: "C",
+        email: "webadmin@vmgsoftware.co.za",
+        website: "https://voncalauto.co.za",
+      },
     ]);
     expect(kept).toHaveLength(1);
     expect(kept[0]!.email).toBe("darius@jubileemotors.co.za");

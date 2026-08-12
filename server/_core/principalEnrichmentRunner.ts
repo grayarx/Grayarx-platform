@@ -11,7 +11,7 @@ import {
 } from "../db";
 import { SA_PROSPECT_POOL } from "./saProspectPool";
 import { PILOT_PROSPECTS } from "../../shared/pilotProspectSegments";
-import { assessProspectEmail } from "../../shared/prospectEmailQuality";
+import { assessProspectEmail, isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
 import {
   enrichDealershipPrincipal,
   type EnrichmentCandidate,
@@ -31,8 +31,12 @@ export type PrincipalEnrichTickResult = {
   results: EnrichmentAttemptResult[];
 };
 
-function needsEnrichmentEmail(email: string | null | undefined): boolean {
-  return !assessProspectEmail(email).outreachReady;
+function needsEnrichmentEmail(
+  email: string | null | undefined,
+  website?: string | null,
+): boolean {
+  if (!website?.trim()) return true;
+  return !isOutreachReadyForDealership(email, website);
 }
 
 function staleEnrichment(enrichedAt: Date | null | undefined, now: number): boolean {
@@ -57,7 +61,7 @@ export async function collectPrincipalEnrichmentTargets(
 
   for (const p of existing) {
     if (targets.length >= limit) break;
-    if (!needsEnrichmentEmail(p.email)) continue;
+    if (!needsEnrichmentEmail(p.email, p.website)) continue;
     const enrichedAt =
       "enrichedAt" in p && p.enrichedAt instanceof Date
         ? p.enrichedAt
@@ -101,7 +105,7 @@ export async function collectPrincipalEnrichmentTargets(
   // SA pool — only those with websites and non-ready emails, not already good in DB
   for (const p of SA_PROSPECT_POOL) {
     if (targets.length >= limit) break;
-    if (!needsEnrichmentEmail(p.email)) continue;
+    if (!needsEnrichmentEmail(p.email, p.website)) continue;
     if (!p.website?.trim()) continue;
     const existingRow = byName.get(p.name.toLowerCase().trim());
     if (existingRow && !needsEnrichmentEmail(existingRow.email)) continue;

@@ -1,4 +1,4 @@
-import { assessProspectEmail } from "../../shared/prospectEmailQuality";
+import { assessProspectEmail, isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
 
 export interface SAProspectEntry {
   name: string;
@@ -844,7 +844,7 @@ export function pickNextProspects(
   const available = SA_PROSPECT_POOL.filter(
     (p) =>
       !existing.has(p.name.toLowerCase().trim()) &&
-      assessProspectEmail(p.email).outreachReady,
+      isOutreachReadyForDealership(p.email, p.website),
   );
 
   const shuffled = [...available];

@@ -133,6 +133,7 @@ export default function AdminProspector() {
     email?: string | null;
     dealershipName: string;
     city?: string | null;
+    website?: string | null;
     brandsCarried?: string | null;
     estimatedMonthlyVolume?: number | null;
   }) {
@@ -148,6 +149,7 @@ export default function AdminProspector() {
         dealershipName: p.dealershipName,
         contactName: "there",
         city: p.city ?? undefined,
+        website: p.website ?? undefined,
         brands: p.brandsCarried ?? undefined,
         estimatedVolume: p.estimatedMonthlyVolume ?? undefined,
         segment: (segments[p.id] ?? "basic_website_no_showroom") as

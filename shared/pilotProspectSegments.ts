@@ -10,6 +10,7 @@
 import {
   assessProspectEmail,
   buildEnrichmentTarget,
+  isOutreachReadyForDealership,
   type EnrichmentTarget,
 } from "./prospectEmailQuality";
 
@@ -315,8 +316,9 @@ export function mailableProspects(
   const seen = new Set<string>();
   return filtered.filter((p) => {
     if (!p.emailVerified || !p.email?.trim()) return false;
-    const assessment = assessProspectEmail(p.email);
-    if (!opts.includeGenericMailboxes && !assessment.outreachReady) return false;
+    if (!opts.includeGenericMailboxes && !isOutreachReadyForDealership(p.email, p.website)) {
+      return false;
+    }
     const key = p.email.trim().toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
