@@ -1,15 +1,16 @@
 /**
- * Find dealer-principal *names* (like you would on LinkedIn), then find a
- * real firstname@dealer-domain inbox without inventing filler.
+ * Find dealer-principal *names* anywhere public, then find a real
+ * firstname@dealer-domain inbox without inventing filler.
  *
- * Why websites alone fail: most SA dealer sites only publish info@/sales@.
- * LinkedIn shows people/titles but rarely emails — so we discover names,
- * then (in order):
- *   1) Optional Hunter.io if HUNTER_API_KEY works (many free accounts get gated)
- *   2) Public web / directory snippets that already publish named@dealer-domain
- *   3) SMTP RCPT verify of pattern guesses when outbound :25 is open
+ * Sipho searches broadly — not LinkedIn-only:
+ *   dealer site team/about pages, DuckDuckGo open web, LinkedIn/Facebook
+ *   public snippets, SA directories (Brabys, Cylex, Hotfrog), news/press,
+ *   then follows top result pages for names + published emails.
  *
- * Do not pay for Hunter Starter just for Sipho — web publish + SMTP cover the free path.
+ * Email order (no paid Hunter required):
+ *   1) Optional Hunter.io if HUNTER_API_KEY actually works
+ *   2) Public web / directory pages publishing named@dealer-domain
+ *   3) SMTP RCPT of pattern guesses when outbound :25 is open
  */
 
 import dns from "node:dns/promises";
@@ -111,65 +112,147 @@ export function extractPrincipalNamesFromText(text: string): DiscoveredPerson[] 
   return found.slice(0, 8);
 }
 
-/** DuckDuckGo HTML search for LinkedIn-style principal mentions. */
-export async function searchWebForPrincipalNames(
+/** Queries spanning open web, LinkedIn, Facebook, SA directories, and press — not LinkedIn-only. */
+export function buildPrincipalNameSearchQueries(
   dealershipName: string,
   city?: string | null,
-): Promise<DiscoveredPerson[]> {
-  const q = [
-    `"${dealershipName}"`,
-    city ? `"${city}"` : "",
-    `"Dealer Principal" OR "Managing Director" OR "Owner"`,
-    "South Africa",
-  ]
-    .filter(Boolean)
-    .join(" ");
+): string[] {
+  const name = `"${dealershipName}"`;
+  const loc = city ? `"${city}"` : `"South Africa"`;
+  const roles =
+    '("Dealer Principal" OR "Managing Director" OR "General Manager" OR Owner OR Director OR Proprietor)';
+  return [
+    `${name} ${loc} ${roles}`,
+    `${name} ${roles} (email OR contact OR "@")`,
+    `site:linkedin.com ${name} ${roles}`,
+    `site:facebook.com ${name} (owner OR "dealer principal" OR director OR manager)`,
+    `site:brabys.com ${name}`,
+    `site:cylex.co.za ${name}`,
+    `site:hotfrog.co.za ${name}`,
+    `site:yellosa.co.za ${name}`,
+    `${name} ("appointed" OR "promoted" OR "takes over" OR "dealer principal") ${loc}`,
+    `${name} (staff OR team OR management OR directors) ${loc}`,
+  ];
+}
 
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
+/** Pull absolute result URLs out of DuckDuckGo HTML (uddg= + plain hrefs). */
+export function extractSearchResultUrls(html: string): string[] {
+  const urls = new Set<string>();
+  const uddgRe = /uddg=([^&"']+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = uddgRe.exec(html)) !== null) {
+    try {
+      const u = decodeURIComponent(m[1]!).replace(/&amp;/g, "&");
+      if (/^https?:\/\//i.test(u) && !/duckduckgo\.com/i.test(u)) {
+        urls.add(u.split("#")[0]!);
+      }
+    } catch {
+      /* ignore bad encoding */
+    }
+  }
+  const hrefRe = /href="(https?:\/\/[^"]+)"/gi;
+  while ((m = hrefRe.exec(html)) !== null) {
+    const u = m[1]!.replace(/&amp;/g, "&");
+    if (/duckduckgo\.com|google\.[^/]+\/search|bing\.com\/search/i.test(u)) continue;
+    urls.add(u.split("#")[0]!);
+  }
+  return [...urls].slice(0, 16);
+}
+
+function peopleFromSearchText(
+  text: string,
+  dealershipName: string,
+): DiscoveredPerson[] {
+  const people = extractPrincipalNamesFromText(text).map((p) => ({
+    ...p,
+    source: "web_search" as const,
+  }));
+  const escaped = dealershipName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 40);
+  const atRe = new RegExp(
+    `([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){1,2})\\s*[-–—|]\\s*(Dealer\\s*Principal|Managing\\s*Director|Owner|Director|General\\s*Manager)[^.]{0,50}${escaped}`,
+    "gi",
+  );
+  let m: RegExpExecArray | null;
+  const seen = new Set(people.map((p) => p.fullName.toLowerCase()));
+  while ((m = atRe.exec(text)) !== null) {
+    const fullName = m[1]!.replace(/\s+/g, " ").trim();
+    if (!looksLikePersonFullName(fullName) || seen.has(fullName.toLowerCase())) continue;
+    seen.add(fullName.toLowerCase());
+    const { firstName, lastName } = splitName(fullName);
+    people.push({
+      fullName,
+      firstName,
+      lastName,
+      role: m[2]!,
+      source: "web_search",
+    });
+  }
+  return people;
+}
+
+async function fetchPageText(url: string, timeoutMs = 5_000): Promise<string> {
   try {
     const res = await fetch(url, {
       method: "GET",
       redirect: "follow",
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         "User-Agent":
           "GrayArxBot/1.0 (+https://www.grayarx.com; prospect research)",
-        Accept: "text/html",
+        Accept: "text/html,application/xhtml+xml",
       },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return "";
     const html = await res.text();
-    const text = stripHtml(html);
-    // Prefer snippets that mention the dealership
-    const people = extractPrincipalNamesFromText(text).map((p) => ({
-      ...p,
-      source: "web_search" as const,
-    }));
-    // Also catch "Name - Dealer Principal at Dealership" in DDG titles
-    const atRe = new RegExp(
-      `([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){1,2})\\s*[-–—|]\\s*(Dealer\\s*Principal|Managing\\s*Director|Owner)[^.]{0,40}${dealershipName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 40)}`,
-      "gi",
-    );
-    let m: RegExpExecArray | null;
-    const seen = new Set(people.map((p) => p.fullName.toLowerCase()));
-    while ((m = atRe.exec(text)) !== null) {
-      const fullName = m[1]!.replace(/\s+/g, " ").trim();
-      if (!looksLikePersonFullName(fullName) || seen.has(fullName.toLowerCase())) continue;
-      seen.add(fullName.toLowerCase());
-      const { firstName, lastName } = splitName(fullName);
-      people.push({
-        fullName,
-        firstName,
-        lastName,
-        role: m[2]!,
-        source: "web_search",
-      });
-    }
-    return people.slice(0, 6);
-  } catch (err) {
-    console.warn("[PrincipalNames] web search failed", err);
-    return [];
+    return stripHtml(html).slice(0, 40_000);
+  } catch {
+    return "";
   }
+}
+
+/**
+ * Multi-source web search for principal names (open web + LinkedIn + Facebook +
+ * directories + press). Follows top result pages — not LinkedIn-only.
+ */
+export async function searchWebForPrincipalNames(
+  dealershipName: string,
+  city?: string | null,
+  opts?: { fast?: boolean },
+): Promise<DiscoveredPerson[]> {
+  const fast = opts?.fast === true;
+  const queries = buildPrincipalNameSearchQueries(dealershipName, city).slice(
+    0,
+    fast ? 4 : 8,
+  );
+  const merged: DiscoveredPerson[] = [];
+  const seen = new Set<string>();
+  const addPeople = (people: DiscoveredPerson[]) => {
+    for (const p of people) {
+      const key = p.fullName.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(p);
+    }
+  };
+
+  for (const q of queries) {
+    if (merged.length >= 8) break;
+    try {
+      const html = await fetchDuckDuckGoHtml(q);
+      if (!html) continue;
+      addPeople(peopleFromSearchText(stripHtml(html), dealershipName));
+      const followUrls = extractSearchResultUrls(html).slice(0, fast ? 2 : 4);
+      await Promise.all(
+        followUrls.map(async (url) => {
+          const text = await fetchPageText(url, fast ? 4_000 : 5_000);
+          if (text) addPeople(peopleFromSearchText(text, dealershipName));
+        }),
+      );
+    } catch (err) {
+      console.warn("[PrincipalNames] web search failed", q, err);
+    }
+  }
+  return merged.slice(0, 8);
 }
 
 export function guessEmailsForPerson(
@@ -355,45 +438,77 @@ async function fetchDuckDuckGoHtml(query: string): Promise<string> {
   return await res.text();
 }
 
+export function buildPublishedEmailSearchQueries(input: {
+  host: string;
+  dealershipName: string;
+  people?: DiscoveredPerson[];
+}): string[] {
+  const name = `"${input.dealershipName}"`;
+  const queries: string[] = [
+    `"@${input.host}" (email OR contact OR "dealer principal" OR director OR manager)`,
+    `${name} "@${input.host}"`,
+    `${name} (email OR mailto OR contact) -info@${input.host}`,
+    `site:brabys.com ${name}`,
+    `site:cylex.co.za ${name}`,
+    `site:hotfrog.co.za ${name}`,
+    `site:yellosa.co.za ${name}`,
+    `site:facebook.com ${name} (@${input.host} OR email OR contact)`,
+    `site:linkedin.com ${name} (@${input.host} OR email)`,
+    `"${input.host}" ("dealer principal" OR "managing director") email`,
+  ];
+  for (const person of (input.people ?? []).slice(0, 4)) {
+    const nameQ = person.lastName
+      ? `"${person.firstName} ${person.lastName}" ("@${input.host}" OR "${input.host}")`
+      : `"${person.firstName}" "@${input.host}" ${name}`;
+    queries.push(nameQ);
+  }
+  return queries;
+}
+
 /**
- * Search public web/directory snippets for named emails already published
- * on the dealership domain (no paid Hunter needed).
+ * Search public web/directories (and follow result pages) for named emails
+ * already published on the dealership domain — not LinkedIn-only.
  */
 export async function searchWebForPublishedEmails(input: {
   website: string;
   dealershipName: string;
   people?: DiscoveredPerson[];
+  fast?: boolean;
 }): Promise<string[]> {
   const host = websiteHost(input.website);
   if (!host) return [];
-
-  const queries: string[] = [
-    `"@${host}" (email OR contact OR "dealer principal" OR director)`,
-    `"${input.dealershipName}" "@${host}"`,
-    `site:brabys.com "${input.dealershipName}"`,
-    `site:cylex.co.za "${input.dealershipName}"`,
-  ];
-  for (const person of (input.people ?? []).slice(0, 3)) {
-    const nameQ = person.lastName
-      ? `"${person.firstName} ${person.lastName}" "@${host}"`
-      : `"${person.firstName}" "@${host}" "${input.dealershipName}"`;
-    queries.push(nameQ);
-  }
+  const fast = input.fast === true;
+  const queries = buildPublishedEmailSearchQueries({
+    host,
+    dealershipName: input.dealershipName,
+    people: input.people,
+  }).slice(0, fast ? 5 : 10);
 
   const found = new Set<string>();
+  const ingest = (text: string) => {
+    for (const email of extractEmailsFromText(text)) {
+      if (
+        isOutreachReadyForDealership(email, input.website) &&
+        emailMatchesWebsiteDomain(email, input.website)
+      ) {
+        found.add(email);
+      }
+    }
+  };
+
   for (const q of queries) {
+    if (found.size >= 6) break;
     try {
       const html = await fetchDuckDuckGoHtml(q);
       if (!html) continue;
-      const text = stripHtml(html);
-      for (const email of extractEmailsFromText(text)) {
-        if (
-          isOutreachReadyForDealership(email, input.website) &&
-          emailMatchesWebsiteDomain(email, input.website)
-        ) {
-          found.add(email);
-        }
-      }
+      ingest(stripHtml(html));
+      const followUrls = extractSearchResultUrls(html).slice(0, fast ? 2 : 4);
+      await Promise.all(
+        followUrls.map(async (url) => {
+          const text = await fetchPageText(url, fast ? 4_000 : 5_000);
+          if (text) ingest(text);
+        }),
+      );
     } catch (err) {
       console.warn("[PrincipalNames] published-email search failed", q, err);
     }
@@ -457,6 +572,7 @@ export async function verifyGuessedPrincipalEmail(input: {
   people: DiscoveredPerson[];
   website: string;
   dealershipName?: string;
+  fast?: boolean;
 }): Promise<{
   email: string;
   person: DiscoveredPerson;
@@ -486,11 +602,12 @@ export async function verifyGuessedPrincipalEmail(input: {
     }
   }
 
-  // 2) Public web / directories already publishing named@dealer-domain
+  // 2) Public web / directories / social / press already publishing named@dealer-domain
   const published = await searchWebForPublishedEmails({
     website: input.website,
     dealershipName,
     people,
+    fast: input.fast,
   });
   const fromWeb = pickBestPublishedEmail(published, people, input.website);
   if (fromWeb) {
@@ -525,6 +642,7 @@ export async function discoverPrincipalPeople(input: {
   website: string;
   city?: string | null;
   pageTexts?: string[];
+  fast?: boolean;
 }): Promise<DiscoveredPerson[]> {
   const fromPages: DiscoveredPerson[] = [];
   for (const text of input.pageTexts ?? []) {
@@ -533,6 +651,7 @@ export async function discoverPrincipalPeople(input: {
   const fromSearch = await searchWebForPrincipalNames(
     input.dealershipName,
     input.city,
+    { fast: input.fast },
   );
   const seen = new Set<string>();
   const merged: DiscoveredPerson[] = [];

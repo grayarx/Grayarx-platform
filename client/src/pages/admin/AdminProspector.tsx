@@ -243,10 +243,10 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Click &ldquo;Generate prospects&rdquo; — Sipho finds principal <em>names</em>
-            (like on LinkedIn), then looks for a real firstname@dealer-domain inbox
-            on the public web / directories (Hunter paid plan not required). Sites that
-            only publish info@ stay out until a named inbox is confirmed.
+            Click &ldquo;Generate prospects&rdquo; — Sipho searches dealer sites,
+            directories, Facebook/LinkedIn public pages, press, and the open web for
+            principal names and a real firstname@dealer-domain inbox (no paid Hunter).
+            Sites that only publish info@ stay out until a named inbox is confirmed.
           </p>
         </div>
       )}
@@ -280,7 +280,8 @@ export default function AdminProspector() {
           {scoutJob.lastResult.created === 0 ? (
             <span className="block mt-1 opacity-90">
               Not broken — most dealer sites only list info@. Sipho keeps searching
-              public pages/directories for named@dealer-domain and retries after cooldown.
+              dealer sites, directories, Facebook/LinkedIn, press, and the open web for
+              named@dealer-domain and retries after cooldown.
             </span>
           ) : null}
         </div>

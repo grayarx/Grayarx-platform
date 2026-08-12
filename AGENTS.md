@@ -31,7 +31,7 @@
 
 ### Outbound prospect email
 - Emails must be **named + on the dealership’s own domain + MX**. Site-builder addresses (`webadmin@vmgsoftware…`) and invented `principal@` / `jane.doe@` are blocked and purged.
-- LinkedIn shows **people**, not inboxes. Sipho discovers principal *names* (site + web search), then finds emails in order: optional Hunter (`HUNTER_API_KEY`) → **public web/directory snippets** for named@dealer-domain → SMTP RCPT if :25 is open. See `principalNameEmailGuess.ts`. Hunter free accounts often hit `upgrade-required` — **do not buy Starter** for Sipho; paid Hunter is optional.
+- Sipho searches **everywhere public** for principals — dealer site team/about pages, open web, LinkedIn/Facebook snippets, SA directories (Brabys/Cylex/Hotfrog), press — then finds emails: optional Hunter (`HUNTER_API_KEY`) → **published named@dealer-domain** → SMTP if :25 is open. Not LinkedIn-only. See `principalNameEmailGuess.ts`. Hunter free often hits `upgrade-required` — **do not buy Starter**; paid Hunter is optional.
 - **Generate prospects** returns immediately and researches in the background. Poll `prospects.scoutJobStatus`.
 - Helpers: `shared/prospectEmailQuality.ts` (`isOutreachReadyForDealership`), enricher: `server/_core/prospectPrincipalEnrichment.ts`.
 
