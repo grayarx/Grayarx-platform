@@ -2106,124 +2106,94 @@ export const appRouter = router({
         const { deleteProspect } = await import("./db");
         const existingRows = await listProspects(1000);
 
-        // Purge bounced filler contacts (jane.doe / john.doe etc.) immediately
+        // Purge filler + unverified LLM-invented contacts (no website evidence)
         let purgedFiller = 0;
+        let purgedUnverified = 0;
         for (const row of existingRows) {
           if (row.email && isFillerEmail(row.email)) {
             await deleteProspect(row.id);
             purgedFiller += 1;
+            continue;
+          }
+          // Invented named emails never verified from a real site
+          if (
+            row.email &&
+            Number(row.emailVerified ?? 0) !== 1 &&
+            !row.emailSource
+          ) {
+            await deleteProspect(row.id);
+            purgedUnverified += 1;
           }
         }
 
-        const afterPurge = purgedFiller > 0 ? await listProspects(1000) : existingRows;
+        const afterPurge = await listProspects(1000);
         const existingNames = afterPurge.map((r) => r.dealershipName);
+        const researchRemaining = countResearchableProspects(existingNames);
 
-        // 1) Research real dealer websites from the SA pool (never invent emails)
-        const { batch, researchRemaining } = pickNextProspectsForResearch(
-          existingNames,
-          Math.max(input.count, 5),
-        );
+        const { runScoutResearchJob, isScoutResearchJobRunning, getScoutJobMeta } =
+          await import("./_core/scoutResearchJob");
 
-        const { enrichDealershipPrincipal } = await import(
-          "./_core/prospectPrincipalEnrichment"
-        );
-        const { runPrincipalEnrichmentTick } = await import(
-          "./_core/principalEnrichmentRunner"
-        );
-
-        // Also retry enrichment on any existing DB rows still missing named emails
-        const retry = await runPrincipalEnrichmentTick({ limit: input.count });
-
-        let created = retry.created + retry.updated;
-        const foundNames: string[] = retry.results
-          .filter((r) => r.status === "enriched")
-          .map((r) => r.dealershipName);
-
-        for (const p of batch) {
-          if (foundNames.length >= input.count && created >= input.count) break;
-          const result = await enrichDealershipPrincipal({
-            dealershipName: p.name,
-            website: p.website,
-            city: p.city,
-            region: p.province,
-            phone: p.phone,
-            brandsCarried: p.brands.join(", "),
-            estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-          });
-          if (result.status !== "enriched" || !result.hit) continue;
-          const hit = result.hit;
-          await createProspects([
-            {
-              dealershipName: p.name,
-              region: p.province,
-              city: p.city,
-              phone: p.phone,
-              email: hit.email,
-              website: p.website ?? "",
-              estimatedMonthlyVolume: p.estimatedMonthlyVolume,
-              brandsCarried: p.brands.join(", "),
-              score:
-                p.segment === "luxury" || p.segment === "exotic"
-                  ? 88
-                  : p.segment === "volume"
-                    ? 82
-                    : 72,
-              rationale: `Auto-researched principal contact from ${hit.evidenceUrl}`,
-              status: "scouted" as const,
-              sourceNotes: `Sipho website research — ${input.region} | email_quality=${hit.quality} | source=${hit.source}`,
-              contactName: hit.contactName,
-              contactRole: hit.contactRole,
-              emailVerified: 1,
-              emailSource: hit.source,
-              enrichedAt: new Date(),
-              enrichmentNotes: result.notes,
-            },
-          ]);
-          created += 1;
-          foundNames.push(p.name);
+        if (isScoutResearchJobRunning()) {
+          return {
+            created: 0,
+            started: true as const,
+            alreadyRunning: true as const,
+            purgedFiller,
+            purgedUnverified,
+            poolRemaining: researchRemaining,
+            researchRemaining,
+            job: getScoutJobMeta(),
+            message:
+              "Sipho is already researching dealer websites in the background. Refresh in a minute.",
+          };
         }
 
-        const stillResearchable = countResearchableProspects([
-          ...existingNames,
-          ...foundNames,
-        ]);
+        // Fire-and-forget — do NOT await. Inline scraping caused Railway timeouts
+        // that returned HTML → "Unexpected token '<' ... is not valid JSON".
+        void runScoutResearchJob({
+          region: input.region,
+          count: input.count,
+        });
 
         await logAgentActivity({
           agentId: "prospector",
-          action: "scouted_batch_research",
+          action: "scout_research_started",
           subjectType: "prospect",
-          summary: `Sipho researched dealer websites and added/updated ${created} named/principal contact${created === 1 ? "" : "s"}${purgedFiller ? ` (removed ${purgedFiller} filler emails)` : ""}. ${stillResearchable} dealerships left to research.`,
+          summary: `Sipho started background website research for ${input.count} principal contact${input.count === 1 ? "" : "s"} (${researchRemaining} in queue)${purgedFiller || purgedUnverified ? ` — removed ${purgedFiller + purgedUnverified} bad contacts` : ""}.`,
           payload: {
             region: input.region,
-            created,
+            count: input.count,
+            researchRemaining,
             purgedFiller,
-            researched: batch.length + retry.examined,
-            researchRemaining: stillResearchable,
-            names: foundNames,
+            purgedUnverified,
           },
         });
 
-        if (created === 0) {
-          return {
-            created: 0,
-            purgedFiller,
-            poolRemaining: stillResearchable,
-            researchRemaining: stillResearchable,
-            message:
-              stillResearchable > 0
-                ? `Researched ${batch.length} sites but no new named/principal emails were public yet. ${stillResearchable} dealerships still in the research queue — try again (Sipho keeps scraping).`
-                : "Research queue caught up for now. Sipho will retry sites that previously had no public named email after a cooldown.",
-          } as const;
-        }
-
         return {
-          created,
+          created: 0,
+          started: true as const,
+          alreadyRunning: false as const,
           purgedFiller,
-          poolRemaining: stillResearchable,
-          researchRemaining: stillResearchable,
-          names: foundNames,
+          purgedUnverified,
+          poolRemaining: researchRemaining,
+          researchRemaining,
+          message: `Sipho is researching dealer websites now. Refresh in ~30–60s — fake filler/unverified contacts were cleared${purgedFiller + purgedUnverified ? ` (${purgedFiller + purgedUnverified} removed)` : ""}.`,
         } as const;
       }),
+
+    /** Poll background Generate-prospects job status. */
+    scoutJobStatus: protectedProcedure.query(async ({ ctx }) => {
+      if (!isFounderOrAdmin(ctx.user)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+      }
+      const { getScoutJobMeta } = await import("./_core/scoutResearchJob");
+      const existingNames = (await listProspects(1000)).map((r) => r.dealershipName);
+      return {
+        ...getScoutJobMeta(),
+        researchRemaining: countResearchableProspects(existingNames),
+        prospectCount: existingNames.length,
+      };
+    }),
 
     handoff: protectedProcedure
       .input(z.object({ id: z.number().int() }))
