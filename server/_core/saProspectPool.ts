@@ -811,6 +811,7 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
 /**
  * Returns pool entries not yet in DB that have a website to research.
  * Does NOT require a pre-known named email — Sipho enriches from the site.
+ * Skips names on short research cooldown (tried recently, no named email yet).
  */
 export function pickNextProspectsForResearch(
   existingNames: string[],
@@ -818,7 +819,10 @@ export function pickNextProspectsForResearch(
 ): { batch: SAProspectEntry[]; researchRemaining: number } {
   const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
   const available = SA_PROSPECT_POOL.filter(
-    (p) => !existing.has(p.name.toLowerCase().trim()) && Boolean(p.website?.trim()),
+    (p) =>
+      !existing.has(p.name.toLowerCase().trim()) &&
+      Boolean(p.website?.trim()) &&
+      !isOnResearchCooldown(p.name),
   );
 
   const shuffled = [...available];
@@ -858,10 +862,50 @@ export function pickNextProspects(
   return { batch, poolRemaining };
 }
 
-/** How many pool dealerships still have a website and are not in the DB. */
+/** How many pool dealerships still have a website, are not in the DB, and are not on cooldown. */
 export function countResearchableProspects(existingNames: string[]): number {
   const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
   return SA_PROSPECT_POOL.filter(
-    (p) => !existing.has(p.name.toLowerCase().trim()) && Boolean(p.website?.trim()),
+    (p) =>
+      !existing.has(p.name.toLowerCase().trim()) &&
+      Boolean(p.website?.trim()) &&
+      !isOnResearchCooldown(p.name),
   ).length;
+}
+
+/** Pool rows on cooldown (researched recently with no named email). */
+export function countCooldownProspects(existingNames: string[]): number {
+  const existing = new Set(existingNames.map((n) => n.toLowerCase().trim()));
+  return SA_PROSPECT_POOL.filter(
+    (p) =>
+      !existing.has(p.name.toLowerCase().trim()) &&
+      Boolean(p.website?.trim()) &&
+      isOnResearchCooldown(p.name),
+  ).length;
+}
+
+/** After a failed/empty research pass — don't re-hit the same sites for hours. */
+const RESEARCH_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const researchCooldownUntil = new Map<string, number>();
+
+export function markProspectResearchAttempted(name: string): void {
+  researchCooldownUntil.set(
+    name.toLowerCase().trim(),
+    Date.now() + RESEARCH_COOLDOWN_MS,
+  );
+}
+
+export function isOnResearchCooldown(name: string): boolean {
+  const until = researchCooldownUntil.get(name.toLowerCase().trim());
+  if (!until) return false;
+  if (until <= Date.now()) {
+    researchCooldownUntil.delete(name.toLowerCase().trim());
+    return false;
+  }
+  return true;
+}
+
+/** Test helper */
+export function _clearResearchCooldownsForTests(): void {
+  researchCooldownUntil.clear();
 }

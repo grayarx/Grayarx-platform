@@ -306,7 +306,7 @@ import { getChatbotDeployment } from "./_core/chatbotDeploymentService";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { prospects } from "../drizzle/schema";
-import { countResearchableProspects } from "./_core/saProspectPool";
+import { countResearchableProspects, countCooldownProspects } from "./_core/saProspectPool";
 // import { founderProfileRouter } from "./_core/founderProfileRouter";
 // import { stagingEnvironmentRouter } from "./_core/stagingEnvironmentRouter";
 import { tier2Router } from "./_core/tier2Improvements";
@@ -2202,6 +2202,7 @@ export const appRouter = router({
       return {
         ...getScoutJobMeta(),
         researchRemaining: countResearchableProspects(existingNames),
+        coolingDown: countCooldownProspects(existingNames),
         prospectCount: existingNames.length,
       };
     }),

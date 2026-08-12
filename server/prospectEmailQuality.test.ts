@@ -18,6 +18,8 @@ import {
   pickNextProspects,
   pickNextProspectsForResearch,
   countResearchableProspects,
+  markProspectResearchAttempted,
+  _clearResearchCooldownsForTests,
 } from "./_core/saProspectPool";
 import { runAudit, type AuditInput } from "./_core/improvementAgent";
 
@@ -124,10 +126,24 @@ describe("prospect email quality", () => {
   });
 
   it("SA research pool has many websites left (not 'expired' after named-only filter)", () => {
+    _clearResearchCooldownsForTests();
     const { batch, researchRemaining } = pickNextProspectsForResearch([], 8);
     expect(batch.length).toBe(8);
     expect(researchRemaining).toBeGreaterThan(20);
     expect(countResearchableProspects([])).toBeGreaterThan(30);
+  });
+
+  it("research cooldown removes dealers from the active queue after empty checks", () => {
+    _clearResearchCooldownsForTests();
+    const before = countResearchableProspects([]);
+    const { batch } = pickNextProspectsForResearch([], 5);
+    expect(batch.length).toBe(5);
+    for (const p of batch) markProspectResearchAttempted(p.name);
+    const after = countResearchableProspects([]);
+    expect(after).toBe(before - 5);
+    const next = pickNextProspectsForResearch([], 5);
+    expect(next.batch.every((p) => !batch.some((b) => b.name === p.name))).toBe(true);
+    _clearResearchCooldownsForTests();
   });
 
   it("SA pool named-email picker only returns outreach-ready", () => {

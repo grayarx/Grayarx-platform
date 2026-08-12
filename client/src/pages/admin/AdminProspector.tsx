@@ -59,6 +59,13 @@ export default function AdminProspector() {
   const [poolRemaining, setPoolRemaining] = useState<number | null>(null);
   const [poolExhausted, setPoolExhausted] = useState(false);
 
+  const activeQueue =
+    typeof scoutJob?.researchRemaining === "number"
+      ? scoutJob.researchRemaining
+      : poolRemaining;
+  const coolingDown =
+    typeof scoutJob?.coolingDown === "number" ? scoutJob.coolingDown : 0;
+
   const emailedByAddress = new Map(
     (recentSends ?? []).map((s) => [s.email.trim().toLowerCase(), s] as const),
   );
@@ -269,32 +276,41 @@ export default function AdminProspector() {
               : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
           }`}
         >
-          Last research:{" "}
+          Last research: checked{" "}
+          <span className="text-foreground font-medium">
+            {scoutJob.lastResult.researched ?? "—"}
+          </span>{" "}
+          site{(scoutJob.lastResult.researched ?? 0) === 1 ? "" : "s"}, found{" "}
           <span className="text-foreground font-medium">
             {scoutJob.lastResult.created}
           </span>{" "}
-          principal contact{scoutJob.lastResult.created === 1 ? "" : "s"} found
+          principal contact{scoutJob.lastResult.created === 1 ? "" : "s"}
           {scoutJob.lastResult.names?.length
             ? ` (${scoutJob.lastResult.names.slice(0, 3).join(", ")}${scoutJob.lastResult.names.length > 3 ? "…" : ""})`
             : ""}
           {scoutJob.lastResult.created === 0 ? (
             <span className="block mt-1 opacity-90">
-              Not broken — most dealer sites only list info@. Sipho keeps searching
-              dealer sites, directories, Facebook/LinkedIn, press, and the open web for
-              named@dealer-domain and retries after cooldown.
+              Not broken — those sites mostly only list info@. Tried dealers cool down
+              for a few hours so the active queue moves; deeper directory/press crawl
+              runs on the next enrich pass. Click Generate again to check more.
             </span>
           ) : null}
         </div>
       )}
       {poolExhausted && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 mb-4">
-          Research queue paused. Sipho retries dealer websites that had no public named email after a cooldown.
+          Active research queue empty for now (or all remaining dealers are cooling down).
+          Sipho retries after cooldown; scheduled enrich still digs deeper.
         </div>
       )}
-      {!poolExhausted && poolRemaining !== null && (
+      {!poolExhausted && activeQueue !== null && (
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground mb-4">
-          <span className="font-medium text-foreground">{poolRemaining}</span> dealership
-          {poolRemaining === 1 ? "" : "s"} left in the website research queue (named emails only — no filler like jane.doe)
+          <span className="font-medium text-foreground">{activeQueue}</span> dealership
+          {activeQueue === 1 ? "" : "s"} left in the active research queue
+          {coolingDown > 0
+            ? ` (${coolingDown} cooling down after a recent empty check)`
+            : ""}{" "}
+          — named emails only, no filler like jane.doe
         </div>
       )}
       {(recentSends?.length ?? 0) > 0 && (
