@@ -244,8 +244,9 @@ export default function AdminProspector() {
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
             Click &ldquo;Generate prospects&rdquo; — Sipho finds principal <em>names</em>
-            (like on LinkedIn), maps them to firstname@dealer-domain, and only keeps
-            addresses that verify. Sites that only publish info@ stay out.
+            (like on LinkedIn), then looks for a real firstname@dealer-domain inbox
+            on the public web / directories (Hunter paid plan not required). Sites that
+            only publish info@ stay out until a named inbox is confirmed.
           </p>
         </div>
       )}
@@ -261,7 +262,13 @@ export default function AdminProspector() {
         </div>
       )}
       {!scoutJob?.running && scoutJob?.lastResult && (
-        <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground mb-4">
+        <div
+          className={`rounded-lg border px-4 py-2 text-xs mb-4 ${
+            scoutJob.lastResult.created > 0
+              ? "border-emerald-500/25 bg-emerald-500/5 text-muted-foreground"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          }`}
+        >
           Last research:{" "}
           <span className="text-foreground font-medium">
             {scoutJob.lastResult.created}
@@ -270,6 +277,12 @@ export default function AdminProspector() {
           {scoutJob.lastResult.names?.length
             ? ` (${scoutJob.lastResult.names.slice(0, 3).join(", ")}${scoutJob.lastResult.names.length > 3 ? "…" : ""})`
             : ""}
+          {scoutJob.lastResult.created === 0 ? (
+            <span className="block mt-1 opacity-90">
+              Not broken — most dealer sites only list info@. Sipho keeps searching
+              public pages/directories for named@dealer-domain and retries after cooldown.
+            </span>
+          ) : null}
         </div>
       )}
       {poolExhausted && (

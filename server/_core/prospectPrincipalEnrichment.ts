@@ -346,7 +346,11 @@ export async function enrichDealershipPrincipal(
         city: candidate.city,
         pageTexts,
       });
-      const guessed = await verifyGuessedPrincipalEmail({ people, website: base });
+      const guessed = await verifyGuessedPrincipalEmail({
+        people,
+        website: base,
+        dealershipName: candidate.dealershipName,
+      });
       if (guessed) {
         const assessment = assessProspectEmail(guessed.email);
         return {
@@ -367,15 +371,12 @@ export async function enrichDealershipPrincipal(
         };
       }
       const onPage = [...allEmails];
-      const hunterHint = process.env.HUNTER_API_KEY?.trim()
-        ? ""
-        : " Tip: set HUNTER_API_KEY on Railway to find emails from LinkedIn-style names (SMTP:25 is often blocked in cloud).";
       return {
         dealershipName: candidate.dealershipName,
         prospectId: candidate.prospectId,
         status: "no_named_email",
         pagesTried,
-        notes: `No named email on dealer domain ${websiteHostSafe(base)}. People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}.${hunterHint}`,
+        notes: `No public named email on dealer domain ${websiteHostSafe(base)} yet (sites often only list info@). People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}. Sipho will retry via web directories / optional Hunter / SMTP.`,
       };
     } catch (err) {
       console.warn("[PrincipalEnrich] name/email guess failed", err);
