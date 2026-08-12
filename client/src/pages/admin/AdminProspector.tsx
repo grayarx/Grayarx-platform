@@ -206,7 +206,7 @@ export default function AdminProspector() {
   return (
     <AdminShell
       title="Prospector"
-      subtitle="Dealerships our outreach team should target. AI-scored and refreshed daily. NOT visible to current dealerships."
+      subtitle="Sipho works 24/7 — one dealership at a time. New principal contacts appear here when found. NOT visible to current dealerships."
       actions={
         <div className="flex items-center gap-2">
           <Button
@@ -249,11 +249,12 @@ export default function AdminProspector() {
       {!isLoading && (!data || data.length === 0) && !scoutJob?.running && (
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            Click &ldquo;Generate prospects&rdquo; — Sipho searches dealer sites,
-            directories, Facebook/LinkedIn public pages, press, and the open web for
-            principal names and a real firstname@dealer-domain inbox (no paid Hunter).
-            Sites that only publish info@ stay out until a named inbox is confirmed.
+          <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">
+            Sipho researches continuously (one dealer every ~15 min, deep search).
+            When he finds a real firstname@dealer-domain inbox, it shows up here.
+            <span className="block mt-1">
+              Generate is optional — a short burst if you want more checked now.
+            </span>
           </p>
         </div>
       )}
