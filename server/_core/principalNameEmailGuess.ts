@@ -1,10 +1,15 @@
 /**
- * Find dealer-principal *names* (like you would on LinkedIn), then guess
- * firstname@dealer-domain emails and SMTP-verify them.
+ * Find dealer-principal *names* (like you would on LinkedIn), then find a
+ * real firstname@dealer-domain inbox without inventing filler.
  *
  * Why websites alone fail: most SA dealer sites only publish info@/sales@.
  * LinkedIn shows people/titles but rarely emails — so we discover names,
- * map them onto the dealership domain, and only keep mailboxes that accept mail.
+ * then (in order):
+ *   1) Optional Hunter.io if HUNTER_API_KEY works (many free accounts get gated)
+ *   2) Public web / directory snippets that already publish named@dealer-domain
+ *   3) SMTP RCPT verify of pattern guesses when outbound :25 is open
+ *
+ * Do not pay for Hunter Starter just for Sipho — web publish + SMTP cover the free path.
  */
 
 import dns from "node:dns/promises";
@@ -23,6 +28,10 @@ export type DiscoveredPerson = {
   role: string | null;
   source: "website" | "web_search";
 };
+
+export type EmailFindMethod = "hunter" | "web_publish" | "smtp";
+
+const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 
 const ROLE_HINTS =
   /dealer\s*principal|managing\s*director|\bMD\b|\bCEO\b|owner|proprietor|general\s*manager|\bGM\b|sales\s*manager|director/i;
@@ -282,9 +291,19 @@ export async function domainLooksLikeCatchAll(website: string): Promise<boolean>
   return result === "ok";
 }
 
+/** Pull emails from plain text / search snippets. */
+export function extractEmailsFromText(text: string): string[] {
+  const found = new Set<string>();
+  for (const m of text.match(EMAIL_RE) ?? []) {
+    found.add(m.toLowerCase());
+  }
+  return [...found];
+}
+
 /**
  * Optional Hunter.io email finder (HTTPS — works when outbound SMTP:25 is blocked).
- * Set HUNTER_API_KEY on Railway.
+ * Free Hunter accounts are often gated (“upgrade-required”); treat as optional.
+ * Set HUNTER_API_KEY on Railway only if the key actually works.
  */
 async function hunterFindEmail(input: {
   domain: string;
@@ -320,27 +339,138 @@ async function hunterFindEmail(input: {
   }
 }
 
+async function fetchDuckDuckGoHtml(query: string): Promise<string> {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    signal: AbortSignal.timeout(8_000),
+    headers: {
+      "User-Agent":
+        "GrayArxBot/1.0 (+https://www.grayarx.com; prospect research)",
+      Accept: "text/html",
+    },
+  });
+  if (!res.ok) return "";
+  return await res.text();
+}
+
+/**
+ * Search public web/directory snippets for named emails already published
+ * on the dealership domain (no paid Hunter needed).
+ */
+export async function searchWebForPublishedEmails(input: {
+  website: string;
+  dealershipName: string;
+  people?: DiscoveredPerson[];
+}): Promise<string[]> {
+  const host = websiteHost(input.website);
+  if (!host) return [];
+
+  const queries: string[] = [
+    `"@${host}" (email OR contact OR "dealer principal" OR director)`,
+    `"${input.dealershipName}" "@${host}"`,
+    `site:brabys.com "${input.dealershipName}"`,
+    `site:cylex.co.za "${input.dealershipName}"`,
+  ];
+  for (const person of (input.people ?? []).slice(0, 3)) {
+    const nameQ = person.lastName
+      ? `"${person.firstName} ${person.lastName}" "@${host}"`
+      : `"${person.firstName}" "@${host}" "${input.dealershipName}"`;
+    queries.push(nameQ);
+  }
+
+  const found = new Set<string>();
+  for (const q of queries) {
+    try {
+      const html = await fetchDuckDuckGoHtml(q);
+      if (!html) continue;
+      const text = stripHtml(html);
+      for (const email of extractEmailsFromText(text)) {
+        if (
+          isOutreachReadyForDealership(email, input.website) &&
+          emailMatchesWebsiteDomain(email, input.website)
+        ) {
+          found.add(email);
+        }
+      }
+    } catch (err) {
+      console.warn("[PrincipalNames] published-email search failed", q, err);
+    }
+  }
+  return [...found];
+}
+
+/** Prefer emails whose local-part matches a discovered person's name. */
+export function pickBestPublishedEmail(
+  emails: string[],
+  people: DiscoveredPerson[],
+  website: string,
+): { email: string; person: DiscoveredPerson } | null {
+  const ready = emails.filter(
+    (e) =>
+      isOutreachReadyForDealership(e, website) &&
+      emailMatchesWebsiteDomain(e, website),
+  );
+  if (!ready.length) return null;
+
+  for (const person of people) {
+    const first = person.firstName.toLowerCase().replace(/[^a-z]/g, "");
+    const last = (person.lastName ?? "").toLowerCase().replace(/[^a-z]/g, "");
+    if (first.length < 2) continue;
+    const match = ready.find((email) => {
+      const local = email.split("@")[0] ?? "";
+      if (local === first) return true;
+      if (last && (local === `${first}.${last}` || local === `${first}${last}` || local === `${first[0]}${last}` || local === `${first}_${last}`)) {
+        return true;
+      }
+      return local.startsWith(first) && (!last || local.includes(last));
+    });
+    if (match) return { email: match, person };
+  }
+
+  // No name match — still use best published named inbox with a synthetic person
+  const email = ready[0]!;
+  const local = (email.split("@")[0] ?? "principal").replace(/[._]+/g, " ");
+  const parts = local.split(/\s+/).filter(Boolean);
+  const fullName = parts
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(" ");
+  const { firstName, lastName } = splitName(fullName || "Principal");
+  return {
+    email,
+    person: {
+      fullName: fullName || "Dealer Principal",
+      firstName,
+      lastName,
+      role: "Dealer Principal",
+      source: "web_search",
+    },
+  };
+}
+
 /**
  * Given people + dealer website, return a verified named email.
- * Prefers Hunter.io when HUNTER_API_KEY is set (reliable on Railway);
- * falls back to SMTP RCPT checks when outbound :25 is open.
+ * Order: optional Hunter → public web publish → SMTP RCPT (if :25 open).
  */
 export async function verifyGuessedPrincipalEmail(input: {
   people: DiscoveredPerson[];
   website: string;
+  dealershipName?: string;
 }): Promise<{
   email: string;
   person: DiscoveredPerson;
   verified: boolean;
-  method: "hunter" | "smtp";
+  method: EmailFindMethod;
 } | null> {
-  if (!input.people.length) return null;
   const host = websiteHost(input.website);
   if (!host) return null;
+  const people = input.people;
+  const dealershipName = input.dealershipName?.trim() || host;
 
-  // 1) Hunter.io (HTTPS) — best on cloud hosts that block SMTP
-  if (process.env.HUNTER_API_KEY?.trim()) {
-    for (const person of input.people) {
+  // 1) Hunter.io (HTTPS) — optional; free accounts often blocked
+  if (process.env.HUNTER_API_KEY?.trim() && people.length) {
+    for (const person of people) {
       const found = await hunterFindEmail({
         domain: host,
         firstName: person.firstName,
@@ -356,11 +486,28 @@ export async function verifyGuessedPrincipalEmail(input: {
     }
   }
 
-  // 2) SMTP RCPT (may be blocked on Railway — then returns null)
+  // 2) Public web / directories already publishing named@dealer-domain
+  const published = await searchWebForPublishedEmails({
+    website: input.website,
+    dealershipName,
+    people,
+  });
+  const fromWeb = pickBestPublishedEmail(published, people, input.website);
+  if (fromWeb) {
+    return {
+      email: fromWeb.email,
+      person: fromWeb.person,
+      verified: true,
+      method: "web_publish",
+    };
+  }
+
+  // 3) SMTP RCPT of pattern guesses (often blocked on Railway)
+  if (!people.length) return null;
   const catchAll = await domainLooksLikeCatchAll(input.website);
   if (catchAll) return null;
 
-  for (const person of input.people) {
+  for (const person of people) {
     const guesses = guessEmailsForPerson(person, input.website);
     for (const email of guesses) {
       if (!isOutreachReadyForDealership(email, input.website)) continue;
