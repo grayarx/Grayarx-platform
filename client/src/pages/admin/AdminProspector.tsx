@@ -243,8 +243,9 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Click &ldquo;Generate prospects&rdquo; — Sipho researches real dealer websites
-            in the background (named emails only).
+            Click &ldquo;Generate prospects&rdquo; — Sipho finds principal <em>names</em>
+            (like on LinkedIn), maps them to firstname@dealer-domain, and only keeps
+            addresses that verify. Sites that only publish info@ stay out.
           </p>
         </div>
       )}
