@@ -32,7 +32,9 @@
 ### Outbound prospect email
 - Emails must be **named + on the dealership’s own domain + MX**. Site-builder addresses (`webadmin@vmgsoftware…`) and invented `principal@` / `jane.doe@` are blocked and purged.
 - Sipho searches **everywhere public** for principals — dealer site team/about pages, open web, LinkedIn/Facebook snippets, SA directories (Brabys/Cylex/Hotfrog), press — then finds emails: optional Hunter (`HUNTER_API_KEY`) → **published named@dealer-domain** → SMTP if :25 is open. Not LinkedIn-only. See `principalNameEmailGuess.ts`. Hunter free often hits `upgrade-required` — **do not buy Starter**; paid Hunter is optional.
+- **Always-on drip:** `principalEnrichmentScheduler` digs **1 dealership every ~15 min** (deep mode) on a boot timer — principals appear in Prospector one at a time when found. Generate is a short fast burst only. See `PRINCIPAL_ENRICH_INTERVAL_MS`.
 - Generate prospects (`fast`): site pages + light web snippets only (no slow page-follows / SMTP). Failed dealers get a **6h in-memory cooldown** so the active queue number moves. Full multi-source crawl (directories/press/follow pages) runs on scheduled `prospect-enrich-tick`. See `scoutResearchJob.ts`.
+- Poll `prospects.scoutJobStatus` while Generate is running.
 - Helpers: `shared/prospectEmailQuality.ts` (`isOutreachReadyForDealership`), enricher: `server/_core/prospectPrincipalEnrichment.ts`.
 
 ### WhatsApp (production)

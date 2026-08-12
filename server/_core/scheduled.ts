@@ -209,7 +209,7 @@ export function registerScheduledRoutes(app: Express) {
       const count = typeof req.body?.count === "number" ? Math.max(1, Math.min(10, req.body.count)) : 5;
       const created = await runProspectorScout(region, count);
       const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
-      const enrich = await runPrincipalEnrichmentTick({ limit: 10 });
+      const enrich = await runPrincipalEnrichmentTick({ limit: 5, deep: true });
       res.json({
         ok: true,
         region,
@@ -243,9 +243,9 @@ export function registerScheduledRoutes(app: Express) {
         return res.status(403).json({ error: "cron-only" });
       }
       const limit =
-        typeof req.body?.limit === "number" ? Math.max(1, Math.min(20, req.body.limit)) : 8;
+        typeof req.body?.limit === "number" ? Math.max(1, Math.min(20, req.body.limit)) : 3;
       const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
-      const result = await runPrincipalEnrichmentTick({ limit });
+      const result = await runPrincipalEnrichmentTick({ limit, deep: true });
       console.log("[Scheduled] prospect-enrich-tick", {
         examined: result.examined,
         enriched: result.enriched,

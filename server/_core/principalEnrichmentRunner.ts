@@ -17,6 +17,10 @@ import {
   type EnrichmentCandidate,
   type EnrichmentAttemptResult,
 } from "./prospectPrincipalEnrichment";
+import {
+  isOnResearchCooldown,
+  markProspectResearchAttempted,
+} from "./saProspectPool";
 
 const DEFAULT_LIMIT = 8;
 /** Don't re-try the same prospect within this window after a failed enrich. */
@@ -102,11 +106,11 @@ export async function collectPrincipalEnrichmentTargets(
     });
   }
 
-  // SA pool — only those with websites and non-ready emails, not already good in DB
   for (const p of SA_PROSPECT_POOL) {
     if (targets.length >= limit) break;
     if (!needsEnrichmentEmail(p.email, p.website)) continue;
     if (!p.website?.trim()) continue;
+    if (isOnResearchCooldown(p.name)) continue;
     const existingRow = byName.get(p.name.toLowerCase().trim());
     if (existingRow && !needsEnrichmentEmail(existingRow.email)) continue;
     if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) continue;
@@ -129,9 +133,10 @@ export async function collectPrincipalEnrichmentTargets(
 }
 
 export async function runPrincipalEnrichmentTick(
-  opts?: { limit?: number },
+  opts?: { limit?: number; deep?: boolean },
 ): Promise<PrincipalEnrichTickResult> {
   const limit = opts?.limit ?? DEFAULT_LIMIT;
+  const deep = opts?.deep === true;
 
   // Drop fake filler contacts that bounced (jane.doe / john.doe)
   const { isFillerEmail } = await import("../../shared/prospectEmailQuality");
@@ -151,11 +156,14 @@ export async function runPrincipalEnrichmentTick(
   let failed = 0;
 
   for (const target of targets) {
-    const result = await enrichDealershipPrincipal(target);
+    const result = await enrichDealershipPrincipal(target, {
+      fast: !deep,
+    });
     results.push(result);
 
     if (result.status !== "enriched" || !result.hit) {
-      // Mark attempt time on existing rows so we don't hammer the same site
+      // Cool down pool dealers so always-on rotates; stamp DB rows too
+      markProspectResearchAttempted(target.dealershipName);
       if (target.prospectId) {
         try {
           await updateProspectContact(target.prospectId, {
@@ -173,6 +181,7 @@ export async function runPrincipalEnrichmentTick(
     const hit = result.hit;
     const sourceNotes = [
       "sipho_principal_enrich",
+      deep ? "mode=deep" : "mode=fast",
       `email_quality=${hit.quality}`,
       `source=${hit.source}`,
       `evidence=${hit.evidenceUrl}`,
@@ -224,13 +233,21 @@ export async function runPrincipalEnrichmentTick(
       agentId: "prospector",
       action: "principal_email_enrich_tick",
       subjectType: "prospect",
-      summary: `Sipho enriched ${enriched} dealer-principal email${enriched === 1 ? "" : "s"} (${updated} updated, ${created} created) from ${targets.length} researched site${targets.length === 1 ? "" : "s"}.`,
+      summary:
+        enriched > 0
+          ? `Sipho found ${enriched} principal contact${enriched === 1 ? "" : "s"} (${results
+              .filter((r) => r.status === "enriched")
+              .map((r) => r.dealershipName)
+              .slice(0, 3)
+              .join(", ")}) — always-on drip.`
+          : `Sipho checked ${targets.length} dealership${targets.length === 1 ? "" : "s"} — no public named inbox yet; will rotate to the next.`,
       payload: {
         examined: targets.length,
         enriched,
         updated,
         created,
         failed,
+        deep,
         names: results.filter((r) => r.status === "enriched").map((r) => r.dealershipName),
       },
     });
