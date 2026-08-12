@@ -213,6 +213,7 @@ async function fetchPageText(url: string, timeoutMs = 5_000): Promise<string> {
 /**
  * Multi-source web search for principal names (open web + LinkedIn + Facebook +
  * directories + press). Follows top result pages — not LinkedIn-only.
+ * `fast: true` = Generate/scout path: few snippet queries, no page follows.
  */
 export async function searchWebForPrincipalNames(
   dealershipName: string,
@@ -222,7 +223,7 @@ export async function searchWebForPrincipalNames(
   const fast = opts?.fast === true;
   const queries = buildPrincipalNameSearchQueries(dealershipName, city).slice(
     0,
-    fast ? 4 : 8,
+    fast ? 2 : 8,
   );
   const merged: DiscoveredPerson[] = [];
   const seen = new Set<string>();
@@ -238,13 +239,14 @@ export async function searchWebForPrincipalNames(
   for (const q of queries) {
     if (merged.length >= 8) break;
     try {
-      const html = await fetchDuckDuckGoHtml(q);
+      const html = await fetchDuckDuckGoHtml(q, fast ? 5_000 : 8_000);
       if (!html) continue;
       addPeople(peopleFromSearchText(stripHtml(html), dealershipName));
-      const followUrls = extractSearchResultUrls(html).slice(0, fast ? 2 : 4);
+      if (fast) continue; // snippets only — page follows are for full enrich ticks
+      const followUrls = extractSearchResultUrls(html).slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
-          const text = await fetchPageText(url, fast ? 4_000 : 5_000);
+          const text = await fetchPageText(url, 5_000);
           if (text) addPeople(peopleFromSearchText(text, dealershipName));
         }),
       );
@@ -422,12 +424,15 @@ async function hunterFindEmail(input: {
   }
 }
 
-async function fetchDuckDuckGoHtml(query: string): Promise<string> {
+async function fetchDuckDuckGoHtml(
+  query: string,
+  timeoutMs = 8_000,
+): Promise<string> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
   const res = await fetch(url, {
     method: "GET",
     redirect: "follow",
-    signal: AbortSignal.timeout(8_000),
+    signal: AbortSignal.timeout(timeoutMs),
     headers: {
       "User-Agent":
         "GrayArxBot/1.0 (+https://www.grayarx.com; prospect research)",
@@ -482,7 +487,7 @@ export async function searchWebForPublishedEmails(input: {
     host,
     dealershipName: input.dealershipName,
     people: input.people,
-  }).slice(0, fast ? 5 : 10);
+  }).slice(0, fast ? 2 : 10);
 
   const found = new Set<string>();
   const ingest = (text: string) => {
@@ -499,13 +504,14 @@ export async function searchWebForPublishedEmails(input: {
   for (const q of queries) {
     if (found.size >= 6) break;
     try {
-      const html = await fetchDuckDuckGoHtml(q);
+      const html = await fetchDuckDuckGoHtml(q, fast ? 5_000 : 8_000);
       if (!html) continue;
       ingest(stripHtml(html));
-      const followUrls = extractSearchResultUrls(html).slice(0, fast ? 2 : 4);
+      if (fast) continue; // snippets only on Generate path
+      const followUrls = extractSearchResultUrls(html).slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
-          const text = await fetchPageText(url, fast ? 4_000 : 5_000);
+          const text = await fetchPageText(url, 5_000);
           if (text) ingest(text);
         }),
       );
@@ -619,8 +625,8 @@ export async function verifyGuessedPrincipalEmail(input: {
     };
   }
 
-  // 3) SMTP RCPT of pattern guesses (often blocked on Railway)
-  if (!people.length) return null;
+  // 3) SMTP RCPT of pattern guesses (often blocked on Railway — skip on fast Generate path)
+  if (input.fast || !people.length) return null;
   const catchAll = await domainLooksLikeCatchAll(input.website);
   if (catchAll) return null;
 

@@ -54,14 +54,7 @@ const CONTACT_PATHS = [
 ];
 
 /** Fewer pages for interactive / budgeted runs */
-const CONTACT_PATHS_FAST = [
-  "",
-  "/contact",
-  "/contact-us",
-  "/about",
-  "/team",
-  "/our-team",
-];
+const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us", "/about", "/team"];
 
 /** Domains / locals that are never outreach contacts. */
 const BLOCKED_EMAIL_SUBSTRINGS = [
