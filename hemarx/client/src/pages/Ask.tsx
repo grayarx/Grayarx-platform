@@ -41,6 +41,19 @@ export default function Ask({ onSaved }: { onSaved: () => void }) {
     }
   }
 
+  if (error && !pending?.question) {
+    return (
+      <section className="card">
+        <p className="kicker">Ask User</p>
+        <h1>Could not load the next question.</h1>
+        <p className="error">{error}</p>
+        <button className="btn" type="button" onClick={() => void load()}>
+          Retry
+        </button>
+      </section>
+    );
+  }
+
   if (done && !pending?.question) {
     return (
       <section className="card">

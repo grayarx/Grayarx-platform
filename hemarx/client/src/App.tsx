@@ -32,7 +32,7 @@ export default function App() {
 
   useEffect(() => {
     reload();
-  }, []);
+  }, [location]);
 
   return (
     <div className="shell">
@@ -51,14 +51,18 @@ export default function App() {
           ))}
         </nav>
       </header>
-      {error && <p className="error">{error}</p>}
-      {!data ? (
+      {error && (
+        <p className="error">
+          {error}{" "}
+          <button className="btn secondary" type="button" onClick={() => void reload()}>
+            Retry
+          </button>
+        </p>
+      )}
+      {!data && !error ? (
         <p className="muted">Opening the desk…</p>
-      ) : (
+      ) : data ? (
         <Switch>
-          <Route path="/">
-            <Desk data={data} />
-          </Route>
           <Route path="/ask">
             <Ask onSaved={reload} />
           </Route>
@@ -77,7 +81,12 @@ export default function App() {
           <Route path="/architect">
             <Architect />
           </Route>
+          <Route path="/">
+            <Desk data={data} />
+          </Route>
         </Switch>
+      ) : (
+        <p className="muted">The desk did not open. Use Retry, or refresh the page.</p>
       )}
     </div>
   );

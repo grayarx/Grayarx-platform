@@ -1,7 +1,7 @@
 import type { Bootstrap } from "../api";
 
 export default function Curriculum({ data }: { data: Bootstrap }) {
-  if (!data.interviewComplete) {
+  if (!data.interviewComplete && data.curriculum.length === 0) {
     return (
       <section className="card">
         <p className="kicker">Spreadsheet</p>

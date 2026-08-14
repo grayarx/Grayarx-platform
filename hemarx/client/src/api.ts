@@ -105,7 +105,17 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
   });
-  const data = await response.json();
+  const raw = await response.text();
+  let data: { error?: string } = {};
+  try {
+    data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+  } catch {
+    throw new Error(
+      response.ok
+        ? "The studio returned a page instead of data. Refresh."
+        : raw.slice(0, 180) || response.statusText,
+    );
+  }
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data as T;
 }

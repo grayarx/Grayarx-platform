@@ -185,7 +185,12 @@ async function main() {
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
-    server: { middlewareMode: true, hmr: { server: httpServer }, allowedHosts: true },
+    server: {
+      middlewareMode: true,
+      host: true,
+      allowedHosts: true,
+      hmr: { server: httpServer, overlay: false },
+    },
     appType: "custom",
   });
   app.use(vite.middlewares);
