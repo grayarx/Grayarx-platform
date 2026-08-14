@@ -3,10 +3,20 @@ import {
   PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT,
   PRINCIPAL_ENRICH_INTERVAL_MS,
 } from "./_core/principalEnrichmentScheduler";
+import { SA_PROSPECT_POOL } from "./_core/saProspectPool";
+import { isOutreachReadyForDealership } from "../shared/prospectEmailQuality";
 
 describe("Sipho always-on drip", () => {
-  it("researches one dealership at a time on a ~15 min cadence", () => {
-    expect(PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT).toBe(1);
-    expect(PRINCIPAL_ENRICH_INTERVAL_MS).toBe(15 * 60 * 1000);
+  it("researches a small batch every ~10 min", () => {
+    expect(PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT).toBe(2);
+    expect(PRINCIPAL_ENRICH_INTERVAL_MS).toBe(10 * 60 * 1000);
+  });
+
+  it("SA pool still has outreach-ready named emails to import", () => {
+    const ready = SA_PROSPECT_POOL.filter((p) =>
+      isOutreachReadyForDealership(p.email, p.website),
+    );
+    expect(ready.length).toBeGreaterThanOrEqual(1);
+    expect(ready.some((p) => /jubilee/i.test(p.name))).toBe(true);
   });
 });

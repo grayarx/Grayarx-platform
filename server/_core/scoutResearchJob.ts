@@ -53,9 +53,11 @@ export async function runScoutResearchJob(input: {
     let existingRows = await listProspects(1000);
     let existingNames = existingRows.map((r) => r.dealershipName);
 
-    // Fast retry on existing incomplete rows (small batch)
+    // Import known-good named emails + small enrich retry (idempotent import inside)
+    const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
     const retry = await runPrincipalEnrichmentTick({
       limit: Math.min(2, input.count),
+      deep: false,
     });
 
     let created = retry.created;
@@ -63,6 +65,10 @@ export async function runScoutResearchJob(input: {
     const foundNames: string[] = retry.results
       .filter((r) => r.status === "enriched")
       .map((r) => r.dealershipName);
+    if (retry.importedReady > 0) {
+      existingRows = await listProspects(1000);
+      existingNames = existingRows.map((r) => r.dealershipName);
+    }
 
     // ~90s wall clock — enough for several fast site checks, not one slow "everywhere" crawl
     const deadline = Date.now() + 90_000;
