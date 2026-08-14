@@ -103,6 +103,29 @@ export async function scheduleFollowups(
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
+
+  // Honor per-dealership lead_drip module (default on when unset)
+  try {
+    const [lead] = await db
+      .select({ dealershipId: leadsTable.dealershipId })
+      .from(leadsTable)
+      .where(eq(leadsTable.id, leadId))
+      .limit(1);
+    if (lead?.dealershipId) {
+      const { getDealershipById } = await import("../db");
+      const { isModuleEnabled } = await import("../../shared/dealershipModules");
+      const dealer = await getDealershipById(lead.dealershipId);
+      if (dealer && !isModuleEnabled(dealer.modulesEnabled, "lead_drip")) {
+        console.log(
+          `[Mia/leadDrip] skip schedule for lead ${leadId} — lead_drip module off`,
+        );
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("[Mia/leadDrip] module check failed — scheduling anyway", err);
+  }
+
   const rows = (["day_1", "day_3", "day_7"] as DripStep[]).map((step) => ({
     leadId,
     step,

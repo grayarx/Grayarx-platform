@@ -107,6 +107,7 @@ import {
   getVehicle,
   getUserById,
   getDashboardStats,
+  getDealerGoLiveStatus,
   getVehicleInventoryCounts,
   getRecentActivity,
   getLeadsTrend,
@@ -1127,6 +1128,9 @@ export const appRouter = router({
           bookingsLast7Days: 0,
           totalProspects: 0,
           queuedProspects: 0,
+          afterHoursRepliesLast7Days: 0,
+          overdueFollowups: 0,
+          pendingFollowups: 0,
         };
       }
       // Dealer dashboard never surfaces platform Prospector aggregates.
@@ -1135,6 +1139,13 @@ export const appRouter = router({
         dealershipId: dealershipId ?? undefined,
         includeProspects: false,
       });
+    }),
+
+    /** Go-live checklist + after-hours → leads → bookings funnel. */
+    goLive: protectedProcedure.query(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) return null;
+      return getDealerGoLiveStatus(dealershipId);
     }),
     activity: protectedProcedure.query(async ({ ctx }) => {
       const dealershipId = ctx.user.dealershipId;
