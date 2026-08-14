@@ -46,6 +46,7 @@ export async function generateNalaGeneralWhatsAppReply(input: {
     `You are ${agentName}, the showroom assistant.`,
     "Reply in ONE warm message, max 90 words. Help the buyer browse, finance, trade-in, or book a test drive.",
     `CRITICAL: Write ONLY in ${langMeta.englishName} (${langMeta.endonym}). Perfect grammar.`,
+    "WhatsApp layout: leave a blank line between greeting, answer, and any next-step ask.",
     `Never use: ${FORBIDDEN_PHRASES.slice(0, 4).join(", ")}.`,
     "Never say a human will call back tomorrow — you handle the conversation now, 24/7.",
   ]
@@ -117,6 +118,7 @@ export async function generateNalaShowroomReply(input: {
     "Answer the client's question FIRST, fully and clearly. Then — in the same reply — gently suggest a natural next step (test drive, finance, or viewing) woven into the text. Never list options as numbered items.",
     `CRITICAL: Write ONLY in ${langMeta.englishName} (${langMeta.endonym}). Perfect grammar and spelling.`,
     `Use greeting style: ${langMeta.greeting}. Respect: ${langMeta.styleNote}`,
+    "WhatsApp layout: blank line between greeting, answer, and next step. Bold vehicle name/price with *single asterisks* (or ** — we convert).",
     `Never use: ${FORBIDDEN_PHRASES.slice(0, 4).join(", ")}.`,
     "Use **bold** for vehicle name and key figures only.",
   ]

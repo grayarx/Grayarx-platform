@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { composeShowroomBotReply, normalizeBuyerMessage, polishNalaReply } from "../shared/nalaGrammarPolish";
+import {
+  composeShowroomBotReply,
+  ensureWhatsAppSpacing,
+  normalizeBuyerMessage,
+  polishNalaReply,
+} from "../shared/nalaGrammarPolish";
 
 describe("normalizeBuyerMessage", () => {
   it("fixes kleer → kleur", () => {
@@ -16,6 +21,25 @@ describe("polishNalaReply", () => {
     expect(out).toMatch(/^Iets anders/i);
     expect(out).toContain("of kies");
   });
+
+  it("preserves blank lines between WhatsApp sections", () => {
+    const raw = "Sawubona\n\n**Polo** i-R250 000\n\nUfuna ukushayela?";
+    const out = polishNalaReply(raw, "zu");
+    expect(out).toContain("\n\n");
+    expect(out.split("\n\n").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("collapses triple newlines to double", () => {
+    const out = polishNalaReply("Hi\n\n\n\nNext", "en");
+    expect(out).toBe("Hi\n\nNext");
+  });
+});
+
+describe("ensureWhatsAppSpacing", () => {
+  it("adds blank line before CTA separator", () => {
+    const out = ensureWhatsAppSpacing("Body text\n─────────────\nBook now");
+    expect(out).toContain("Body text\n\n─────────────\n\nBook now");
+  });
 });
 
 describe("composeShowroomBotReply", () => {
@@ -24,7 +48,6 @@ describe("composeShowroomBotReply", () => {
       appendFollowUp: true,
     });
     expect(out).toContain("Die motor is **R 100 000**.");
-    // Current PROMPT_FOLLOW_UP.af (not the old "Iets anders / opsie hieronder" copy)
     expect(out).toContain("Is daar nog iets");
     expect(out).toContain("hierdie motor");
   });

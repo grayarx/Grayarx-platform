@@ -71,19 +71,25 @@ const ENGLISH_LEAKAGE: RegExp[] = [
   /\bworking on it\b/i,
   /\bsomething went wrong\b/i,
   /\btry again or pick\b/i,
+  /\bbooka test drive\b/i,
+  /\bwant to book a test drive\b/i,
 ];
 
-/** Universal fixes applied to every language. */
+/**
+ * Universal fixes applied to every language.
+ * IMPORTANT: never collapse newlines — WhatsApp needs blank lines between sections.
+ */
 const UNIVERSAL_FIXES: Array<[RegExp, string]> = [
-  [/\s{2,}/g, " "],
-  [/\s+\n/g, "\n"],
+  // Horizontal whitespace only (spaces/tabs) — preserve intentional \n\n
+  [/[^\S\n]{2,}/g, " "],
+  [/[^\S\n]+\n/g, "\n"],
+  [/\n[^\S\n]+/g, "\n"],
+  // Cap runaway blank lines (Meta-friendly: one empty line max)
   [/\n{3,}/g, "\n\n"],
-  // Remove space that crept in after an OPENING ** ("** word" → "**word")
-  [/\*\*\s+/g, "**"],
-  // Only remove space before a CLOSING ** (one NOT followed by a word/letter).
-  // Using a positive lookahead: \s+\*\* when ** is followed by punctuation, whitespace, or end.
-  // This preserves the legitimate space in "the **VehicleName**" while still cleaning up "word **".
-  [/\s+\*\*(?![a-zA-Z0-9\u00C0-\u024F_])/g, "**"],
+  // Strip spaces/tabs after ** — never eat newlines (closing **\n\n must survive)
+  [/\*\*[^\S\n]+/g, "**"],
+  // Strip spaces/tabs before a closing ** (not an opening ** on the next line)
+  [/[^\S\n]+\*\*(?![a-zA-Z0-9\u00C0-\u024F_*])/g, "**"],
 ];
 
 /** Per-language grammar / spelling corrections on outbound replies. */
@@ -98,31 +104,48 @@ const LANG_FIXES: Partial<Record<LanguageCode, Array<[RegExp, string]>>> = {
   zu: [
     [/\bUzo\*\*/g, "Uzothola i-**"],
     [/\bthe \*\*/gi, "**"],
+    [/\btest drive\b/gi, "ukushayela"],
   ],
-  xh: [[/\bthe \*\*/gi, "**"]],
+  xh: [
+    [/\bthe \*\*/gi, "**"],
+    [/\btest drive\b/gi, "ukushayela"],
+  ],
   st: [
     [/\bHo na le se seng\?\s*khetha/gi, "Ho na le se seng? Khetha"],
     [/\b, or pick\b/gi, ", khetha"],
+    [/\bGearbox:\b/gi, "Sebopeho sa gear:"],
   ],
   nso: [
     [/\bGo na le se sengwe\?\s*kgetha/gi, "Go na le se sengwe? Kgetha"],
     [/\b, or pick\b/gi, ", kgetha"],
+    [/\bGearbox:\b/gi, "Sebopešo sa gear:"],
   ],
   tn: [
     [/\bGo na le se sengwe\?\s*kgetha/gi, "Go na le se sengwe? Kgetha"],
     [/\b, or pick\b/gi, ", kgetha"],
+    [/\bGearbox:\b/gi, "Mokgwa wa gear:"],
   ],
   ts: [
     [/\bXiphiqo xin'wana\b/gi, "Xin'wana xin'we hi movha lowu"],
     [/\b, or pick\b/gi, ", kumbe hlawula"],
+    [/\bGearbox:\b/gi, "Gear ya ku cinca:"],
   ],
-  ss: [[/\b, or pick\b/gi, ", noma ukhethe"]],
+  ss: [
+    [/\b, or pick\b/gi, ", noma ukhethe"],
+    [/\bGearbox:\b/gi, "I-gearbox:"],
+    [/\btest drive\b/gi, "kushayela"],
+  ],
   ve: [
     [/\bZwi ita zwine\?\s*$/gi, "Dzina lavho ndi ani?"],
     [/\b, or pick\b/gi, ", nangani"],
     [/\bZwiṅwe\?\s*nangani/gi, "Zwiṅwe zwi re hone? Nangani"],
+    [/\bbooka test drive\b/gi, "bulokha u linga u shumisa"],
+    [/\bGearbox:\b/gi, "Gearbox ya u shandukisa:"],
   ],
-  nr: [[/\b, or pick\b/gi, ", noma ukhethe"]],
+  nr: [
+    [/\b, or pick\b/gi, ", noma ukhethe"],
+    [/\btest drive\b/gi, "ukushayela"],
+  ],
   pt: [
     [/\bexcellent\b/gi, "excelente"],
     [/\bgood\b/gi, "bom"],
@@ -173,6 +196,22 @@ export function polishNalaReply(text: string, lang: LanguageCode): string {
   out = capitalizeSentences(out);
 
   return out.trim();
+}
+
+/**
+ * Keep WhatsApp readable: collapse runaway blank lines, ensure space before
+ * separators / bullet lists / score blocks. Never remove intentional \n\n.
+ */
+export function ensureWhatsAppSpacing(text: string): string {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/([^\n])\n(─{3,})/g, "$1\n\n$2")
+    .replace(/(─{3,}[^\n]*)\n([^\n])/g, "$1\n\n$2")
+    .replace(/([^\n])\n(📊)/g, "$1\n\n$2")
+    .replace(/([^\n])\n(• )/g, "$1\n\n$2")
+    .trim();
 }
 
 /** One clean bot bubble — optional follow-up appended when appropriate. */

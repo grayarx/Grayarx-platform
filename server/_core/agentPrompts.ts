@@ -30,6 +30,8 @@ import {
   agentGetsDealerQaPlaybook,
   formatDealerQaForSystemPrompt,
 } from "../../shared/dealerQaPlaybook";
+import { ensureWhatsAppSpacing } from "../../shared/nalaGrammarPolish";
+import { whatsappLanguageProficiencyBlock } from "../../shared/languages";
 
 export type { MemoryEntry };
 
@@ -138,17 +140,19 @@ export function buildWhatsAppSystemPrompt(
     `Reply in ${rules.name}.`,
     `You may open warmly (e.g. "${rules.greeting}") but you do NOT need a formal closing.`,
     `Tone & style: ${rules.styleNote}`,
+    whatsappLanguageProficiencyBlock(lang),
     "",
     "Hard rules for WhatsApp:",
     "- Maximum 60 words. Aim for 25–40.",
-    "- Short sentences. Line breaks are fine. No long paragraphs.",
+    "- Short sentences. Put a blank line between the greeting, the answer, and any next-step ask.",
+    "- Use *bold* (single asterisks) for vehicle names and prices — WhatsApp bold, not markdown **.",
     "- At most ONE emoji, and only if it naturally fits.",
     "- No formal email sign-off block. End with just your first name.",
     `- Never use any of these phrases: ${FORBIDDEN_PHRASES.map((p) => `"${p}"`).join(", ")}.`,
     "- Never claim to be a human; you are an AI concierge for the dealership.",
     "- NEVER present numbered emoji menus (1️⃣, 2️⃣, 3️⃣). Weave any next-step suggestions naturally into your reply — e.g. 'I can arrange a test drive — just say the word.'",
     "- Answer the client's question FIRST, then gently suggest a natural next step in the same breath.",
-    "- Start the very first message in a thread with a short AI disclosure on its own line (e.g. \"⚡ AI assistant\"), then the body. This is non-negotiable.",
+    "- Start the very first message in a thread with a short AI disclosure on its own line (e.g. \"⚡ AI assistant\"), then a blank line, then the body. This is non-negotiable.",
     "- Never invent stock, prices, finance terms or appointments.",
     "- CRITICAL — Sold stock: Only recommend vehicles from the inventory context you receive. If a customer asks about a vehicle that has been sold or is not in your context, be honest — tell them it's been sold and offer available alternatives. Never present a sold car as available.",
     "- Respect POPIA: do not echo back ID numbers, banking details or full addresses.",
@@ -281,8 +285,10 @@ export function addWhatsAppAIDisclosure(
   };
   const prefix = tag[lang] ?? tag.en;
   // Don't double-prefix if the LLM already added one.
-  if (/AI (assistant|concierge|agent)/i.test(draft.slice(0, 80))) return draft;
-  return `${prefix}\n\n${draft.trim()}`;
+  if (/AI (assistant|concierge|agent)/i.test(draft.slice(0, 80))) {
+    return ensureWhatsAppSpacing(draft);
+  }
+  return ensureWhatsAppSpacing(`${prefix}\n\n${draft.trim()}`);
 }
 
 /**
