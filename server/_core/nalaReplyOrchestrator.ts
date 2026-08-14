@@ -8,7 +8,7 @@ import {
   detectLanguage,
   type VehicleChatContext,
 } from "../../shared/nalaShowroomChat";
-import { composeShowroomBotReply, polishNalaReply } from "../../shared/nalaGrammarPolish";
+import { composeShowroomBotReply, polishNalaReply, ensureWhatsAppSpacing } from "../../shared/nalaGrammarPolish";
 import { replyNeedsNameCapture } from "../../shared/nalaTranslations";
 import { scoreListingDeal } from "../../shared/priceIntelligence";
 import { generateNalaShowroomReply, generateNalaGeneralWhatsAppReply } from "./nalaShowroomLlm";
@@ -19,11 +19,14 @@ import { isQuotaError } from "./agentResilience";
 import { checkAiSessionCap } from "./usageCaps";
 import { MAKE_ALIASES, VEHICLE_MAKES } from "../../shared/vehicleCatalog";
 
+/** Convert markdown for Meta WhatsApp (*bold*) and preserve readable spacing. */
 export function stripMarkdownForWhatsApp(text: string): string {
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .trim();
+  const converted = text
+    .replace(/\*\*([^*]+)\*\*/g, "*$1*")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .replace(/[^\S\n]+$/gm, "")
+    .replace(/^[^\S\n]+/gm, "");
+  return ensureWhatsAppSpacing(converted);
 }
 
 const GREETING_RE =

@@ -40,6 +40,7 @@
 ### WhatsApp (production)
 - Callback: `https://www.grayarx.com/api/webhooks/whatsapp`. Health JSON via `/api/webhooks/health`.
 - Secrets on Railway. See `docs/PRODUCTION_WEBHOOK_SETUP.md`.
+- Nala: `polishNalaReply` must preserve `\n\n` (horizontal-space only collapse). Outbound uses `stripMarkdownForWhatsApp` → Meta `*bold*` + `ensureWhatsAppSpacing`. Language rules in `shared/languages.ts` (`whatsappLanguageProficiencyBlock`).
 
 ### Tenant isolation
 - Dealers (and founders linked to a dealership) only see their `dealershipId` stock on Showroom + Inventory.

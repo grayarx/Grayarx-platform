@@ -61,7 +61,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Kind regards",
     honorifics: ["Mr.", "Mrs.", "Ms.", "Dr."],
     styleNote:
-      "Use neutral South African English. Spell 'colour', 'kilometres', 'centre'. Avoid Americanisms ('y'all', 'gotten'). Be warm but professional.",
+      "Use neutral South African English. Spell 'colour', 'kilometres', 'centre'. Avoid Americanisms ('y'all', 'gotten'). Be warm but professional. Perfect grammar; short sentences; blank line between greeting and answer on WhatsApp.",
     saOfficial: true,
   },
   af: {
@@ -72,7 +72,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Vriendelike groete",
     honorifics: ["Mnr.", "Mev.", "Mej.", "Dr."],
     styleNote:
-      "Gebruik formele Afrikaans, nie Kombuis-Afrikaans nie. Spel 'lekker', 'kilometers'. Vermy Engelse woorde waar 'n natuurlike Afrikaanse weergawe bestaan.",
+      "Skryf vloeiende, korrekte Afrikaans (nie Kombuis-Afrikaans). Gebruik 'toetsrit', 'finansiering', 'inruil' eerder as Engelse leenwoorde waar moontlik. Korrekte spelling en leestekens. Op WhatsApp: kort sinne met 'n oop reël tussen groet en antwoord.",
     saOfficial: true,
   },
   zu: {
@@ -83,7 +83,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ngiyabonga",
     honorifics: ["Mnumzane", "Nkosikazi", "Nkosazana", "Baba", "Mama"],
     styleNote:
-      "Use respectful isiZulu register. Address elders with 'Baba' / 'Mama' where appropriate. Never mix in English words for which a natural Zulu equivalent exists (e.g. 'imoto' not 'car').",
+      "Bhala isiZulu esihloniphekile, nesiphelele ngokwegrama (ukuvumelana kwezibizo/izenzo). Sebenzisa 'imoto', 'ukushayela', 'imali' — ungaxubi isiNgisi uma kunokufanele. Biza abadala 'Baba'/'Mama'. WhatsApp: imisho emifushane, umugqa ovulekile phakathi kokubingelela nempendulo.",
     saOfficial: true,
   },
   xh: {
@@ -94,7 +94,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Enkosi",
     honorifics: ["Mnumzana", "Nkosikazi", "Nkosazana", "Bhuti", "Sisi"],
     styleNote:
-      "Use polite isiXhosa. Open with 'Molo' (singular) or 'Molweni' (plural). Use 'sisi' / 'bhuti' only when the customer's tone invites informal address.",
+      "Bhala isiXhosa esihloniphekileyo nesigramatical correct. Qala ngo'Molo' (sg) okanye 'Molweni' (pl). Musa ukuxuba isiNgesi xa kukho igama lesiXhosa. WhatsApp: izivakalisi ezimfutshane, umgca ovulekileyo phakathi kombuliso nempendulo.",
     saOfficial: true,
   },
   st: {
@@ -105,7 +105,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ke a leboha",
     honorifics: ["Ntate", "Mme", "Abuti", "Ausi"],
     styleNote:
-      "Use Sesotho (Southern Sotho — as spoken in Lesotho and the Free State). Address adults with 'Ntate' (sir) or 'Mme' (madam). Maintain warm, community-oriented register.",
+      "Sebelisa Sesotho sa Borwa (Free State / Lesotho) — e fapane le Sepedi (nso). Bua le batho baholo ka 'Ntate'/'Mme'. Grammar e nepahetseng; qoba Senyesemane se sa hlokahaleng. WhatsApp: dipolelo tse khutšoane, mola o bulehileng pakeng tsa tumediso le karabo.",
     saOfficial: true,
   },
   nso: {
@@ -116,7 +116,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ke a leboga",
     honorifics: ["Tate", "Mma", "Abuti", "Ausi"],
     styleNote:
-      "Use Sesotho sa Leboa / Sepedi (as spoken in Limpopo). Note this is distinct from Sesotho (st). Address adults with 'Tate' (sir) or 'Mma' (madam). Warm, respectful, neighbourly register.",
+      "Šomiša Sesotho sa Leboa / Sepedi (Limpopo) — e fapana le Sesotho (st). Oleditse 'Tate'/'Mma'. Grammar ye nepagilego; o se ke wa tsenya Seisemane ka go se hlokege. WhatsApp: mafoko a makopana, mothalo o bulegilego magareng ga tumedišo le karabo.",
     saOfficial: true,
   },
   tn: {
@@ -127,7 +127,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ke a leboga",
     honorifics: ["Rre", "Mme", "Abuti", "Ausi"],
     styleNote:
-      "Use Setswana. Address adults with 'Rre' (sir) or 'Mme' (madam). Polite, neighbourly tone — never abrupt.",
+      "Dirisa Setswana se se nepagetseng. Bitsa bagolo 'Rre'/'Mme'. Se tsenye Sekgoa fa go na le lefoko la Setswana. WhatsApp: dipolelo tse khutshwane, mola o bulegileng magareng ga tumediso le karabo.",
     saOfficial: true,
   },
   ts: {
@@ -138,7 +138,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ndza khensa",
     honorifics: ["Tatana", "Mhani", "Buti", "Sesi"],
     styleNote:
-      "Use Xitsonga (as spoken in Limpopo and northern Mpumalanga). Open with 'Avuxeni' and close with 'Ndza khensa'. Respectful register with 'Tatana' / 'Mhani' for elders.",
+      "Tirhisa Xitsonga xa ntiyiso (Limpopo / Mpumalanga). Sungula hi 'Avuxeni', heta hi 'Ndza khensa'. Grammar leyi lulameke; unga hlanganisi Xinghezi loko ku ri na rito ra Xitsonga. WhatsApp: swivulwa swo koma, ntila lowu pfulekeke exikarhi ka xiloso ni nhlamulo.",
     saOfficial: true,
   },
   ss: {
@@ -149,7 +149,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ngiyabonga",
     honorifics: ["Babe", "Make", "Bhuti", "Sisi"],
     styleNote:
-      "Use siSwati (closely related to isiZulu but with distinct vocabulary — 'ngiyabonga' yes, but Swati grammar). Open with 'Sawubona' (sg) or 'Sanibonani' (pl). Respectful register.",
+      "Sebentisa siSwati lesiphelele (hlukile ku-isiZulu). Vula nge-'Sawubona'/'Sanibonani'. Ungafaki siNgisi uma likhona ligama lesiSwati. WhatsApp: imisho lemfushane, umugca lovulekile emkhatsini wekubingelela nemphendvulo.",
     saOfficial: true,
   },
   ve: {
@@ -160,7 +160,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ndo livhuwa",
     honorifics: ["Vho", "Mufunzi"],
     styleNote:
-      "Use Tshivenḓa with proper diacritics where possible (ḓ, ṱ, ṅ, ṋ). Open with 'Ndaa' and close with 'Ndo livhuwa'. Highly respectful register.",
+      "Ṅwalani Tshivenḓa tsho tea, na diacritics (ḓ, ṱ, ṅ, ṋ) hune zwi tea. Vhulahani nga 'Ndaa', fhedzani nga 'Ndo livhuwa'. Ni songo ḓadzha English calques (e.g. 'booka test drive') — shumisani Tshivenḓa tsha nṱha. WhatsApp: miṱero miṱuku, mutala wo vuleaho vhukati ha u losha na phindulo.",
     saOfficial: true,
   },
   nr: {
@@ -171,7 +171,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Ngiyathokoza",
     honorifics: ["Babe", "Mama", "Bhuti", "Sisi"],
     styleNote:
-      "Use Southern isiNdebele (Mpumalanga). Open with 'Lotjhani' and close with 'Ngiyathokoza'. Note this is distinct from Northern Ndebele (Zimbabwe). Respectful, warm register.",
+      "Sebenzisa isiNdebele saseMpumalanga (Southern), hhayi Northern Ndebele. Vula ngo-'Lotjhani'. Igrama ephelele; ungaxubi isiNgisi uma kukhona igama lesiNdebele. WhatsApp: imisho emifishane, umugqa ovulekile phakathi kokubingelela nempendulo.",
     saOfficial: true,
   },
   pt: {
@@ -182,7 +182,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
     closing: "Com os melhores cumprimentos",
     honorifics: ["Sr.", "Sra.", "Dr."],
     styleNote:
-      "Use neutral business Portuguese. Aimed at the Mozambican and Angolan diaspora in SA. Polite, formal-ish register.",
+      "Use português de negócios claro (diáspora moçambicana/angolana na SA). Gramática correta; evite calques do inglês. No WhatsApp: frases curtas e uma linha em branco entre saudação e resposta.",
     saOfficial: false,
   },
 };
@@ -214,6 +214,21 @@ export function getLanguageMeta(code: LanguageCode): LanguageMeta {
 
 export function isLanguageCode(value: string): value is LanguageCode {
   return value in LANGUAGES;
+}
+
+/**
+ * Shared LLM instruction block — fluent grammar + WhatsApp readability
+ * for every supported language.
+ */
+export function whatsappLanguageProficiencyBlock(code: LanguageCode): string {
+  const m = LANGUAGES[code];
+  return [
+    `Language proficiency: write the ENTIRE message in flawless ${m.englishName} (${m.endonym}).`,
+    "Use correct grammar, natural word order, and culturally appropriate honorifics.",
+    "Do not mix English filler when a natural phrase exists (except vehicle make/model, prices, stock numbers, and URLs).",
+    "Keep numbers, prices, and links exactly as given.",
+    "WhatsApp layout: short lines; leave a blank line between greeting, main answer, and any next-step question.",
+  ].join(" ");
 }
 
 /**

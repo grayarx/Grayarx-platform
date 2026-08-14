@@ -11,9 +11,11 @@ describe("nalaReplyOrchestrator", () => {
     ).toBe("2022 Toyota Corolla XS");
   });
 
-  it("strips markdown for WhatsApp", () => {
+  it("converts markdown bold to WhatsApp bold and keeps spacing", () => {
     expect(stripMarkdownForWhatsApp("The **2022 Polo** is **R250 000**")).toBe(
-      "The 2022 Polo is R250 000",
+      "The *2022 Polo* is *R250 000*",
     );
+    const spaced = stripMarkdownForWhatsApp("Hi\n\n**Polo**\n\nAsk me");
+    expect(spaced).toBe("Hi\n\n*Polo*\n\nAsk me");
   });
 });
