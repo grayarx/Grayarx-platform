@@ -15,7 +15,9 @@
 
 ## Playbook (answers dealers ask)
 
-Canonical answers live in:
+**Close kit (pre-call / money ask / objections):** `docs/FOUNDER_SALES_KIT.md` · in-app `/admin/sales-kit`
+
+Canonical product Q&A:
 - `docs/DEALER_QA_PLAYBOOK.md`
 - `shared/dealerQaPlaybook.ts` (injected into Sipho, Themba, Kagiso system prompts)
 

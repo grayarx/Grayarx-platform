@@ -106,6 +106,7 @@ import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import AdminHelpCenter from "./pages/admin/AdminHelpCenter";
 import AdminMarketGuide from "./pages/admin/AdminMarketGuide";
 import AdminPilotDashboard from "./pages/admin/AdminPilotDashboard";
+import AdminSalesKit from "./pages/admin/AdminSalesKit";
 import AgentsEnhanced from "./pages/AgentsEnhanced";
 import CSVPhotoManager from "./pages/CSVPhotoManager";
 // import { ChatbotAnalyticsDashboard } from "./pages/ChatbotAnalyticsDashboard";
@@ -153,10 +154,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/showroom" component={Showroom} />
       <Route path="/showroom/:id" component={VehicleDetail} />
-      {/* Pricing hidden during pilot — see Navigation.tsx comment */}
-      <Route path="/pricing">
-        <Redirect to="/" />
-      </Route>
+      {/* Soft pilot terms + ROI — full tier table still hidden in upgrade UI */}
+      <Route path="/pricing" component={Pricing} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={SignUp} />
       <Route path="/check-email" component={CheckEmail} />
@@ -324,6 +323,9 @@ function Router() {
       </Route>
       <Route path="/admin/pilot">
         <AdminRouteGuard><AdminPilotDashboard /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/sales-kit">
+        <AdminRouteGuard><AdminSalesKit /></AdminRouteGuard>
       </Route>
       <Route path="/admin/automation">
         <AdminRouteGuard><AdminAutomationPage /></AdminRouteGuard>

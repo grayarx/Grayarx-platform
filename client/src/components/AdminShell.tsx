@@ -20,6 +20,7 @@ import {
   Mail,
   Megaphone,
   Calendar,
+  Handshake,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -49,6 +50,7 @@ const ADMIN_LINKS = [
   { href: "/admin/tax-dashboard", label: "Tax Dashboard", icon: DollarSign, founderOnly: true },
   { href: "/admin/email-preview", label: "Email Preview", icon: Mail, founderOnly: true },
   { href: "/admin/campaigns", label: "Pilot outreach", icon: Megaphone, founderOnly: true },
+  { href: "/admin/sales-kit", label: "Sales kit", icon: Handshake, founderOnly: true },
 ];
 
 export default function AdminShell({

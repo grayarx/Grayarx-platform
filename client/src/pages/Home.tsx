@@ -15,11 +15,13 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import LeadCaptureFormOptimized from "@/components/LeadCaptureFormOptimized";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
+import DealerRoiProof from "@/components/DealerRoiProof";
 import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
 import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
 import { SEO_PAGES, buildHomeJsonLd } from "@shared/seo";
+import { formatZar, ROI_DEFAULT_GROSS_PROFIT_ZAR, ROI_DEFAULT_MONTHLY_COST_ZAR } from "@shared/dealerRoiMath";
 
 const HOME_JSON_LD = buildHomeJsonLd();
 
@@ -205,7 +207,9 @@ export default function Home() {
               <span className="text-cyber-gradient">booked drive</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              One lost lead recovered pays for the month. This is the loop we run on your yard.
+              One recovered close at ~{formatZar(ROI_DEFAULT_GROSS_PROFIT_ZAR)} gross covers{" "}
+              {formatZar(ROI_DEFAULT_MONTHLY_COST_ZAR)}/mo after pilot — often several times over.
+              This is the loop we run on your yard.
             </p>
           </motion.div>
 
@@ -241,6 +245,21 @@ export default function Home() {
             >
               Or open self-serve setup →
             </Link>
+            <a
+              href="#roi-proof"
+              className="font-tech text-xs uppercase tracking-[0.2em] text-muted-foreground hover:text-primary"
+            >
+              See the math →
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Explicit ROI / economic argument for ICP */}
+      <section id="roi-proof" className="relative py-16 md:py-24 border-t border-primary/10">
+        <div className="container max-w-4xl">
+          <motion.div {...fadeUp}>
+            <DealerRoiProof ctaHref="#lead-capture" showPricingLink />
           </motion.div>
         </div>
       </section>
@@ -374,7 +393,9 @@ export default function Home() {
                 </h2>
                 <p className="text-muted-foreground text-lg mb-8 leading-relaxed max-w-md">
                   Small group of SA dealerships. You get Growth-level features — showroom, inventory,
-                  WhatsApp Nala, Mia drip, leads, trade-ins. Pricing confirmed before billing.
+                  WhatsApp Nala, Mia drip, leads, trade-ins. Free until we confirm terms in writing —
+                  typically from {formatZar(ROI_DEFAULT_MONTHLY_COST_ZAR)}/mo (Showroom list) as Pilot
+                  Partner. No credit card to start.
                 </p>
                 <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground mb-8">
                   {PILOT_FEATURES.slice(0, 8).map((item) => (

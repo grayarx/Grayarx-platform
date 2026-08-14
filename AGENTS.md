@@ -60,6 +60,8 @@
 ### Marketing home (ICP conversion)
 - `/` is dealer-principal first: after-hours WhatsApp leakage → CSV live → booked drive. Primary CTA is `#lead-capture` / free pilot — not browse showroom.
 - Hero keeps the Corvette showcase (`HERO_SHOWCASE_CORVETTE` / `/corvette-exterior.jpg`) — messaging changed, not the car.
+- ROI proof: `#roi-proof` / `DealerRoiProof` + `shared/dealerRoiMath.ts` (one recovered close vs Pilot Partner floor). Soft terms: `/pricing`.
+- Founder close kit: `/admin/sales-kit` + `docs/FOUNDER_SALES_KIT.md` (money ask R3,999 floor). Full Q&A remains `docs/DEALER_QA_PLAYBOOK.md`.
 
 ### Retention (Tier 3)
 - Weekly DP brief: `dealer.weeklyBrief` / `sendWeeklyBrief` + cron `POST /api/scheduled/weekly-dealer-brief` (module `weekly_brief`).

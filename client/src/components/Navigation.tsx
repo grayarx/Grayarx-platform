@@ -40,14 +40,13 @@ export default function Navigation() {
   });
   const initials = user?.name ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "GA";
 
-  // Pricing is intentionally hidden from navigation during the pilot phase —
-  // we want to learn what dealerships actually use and what they'd pay for
-  // it before anchoring them to a number. The route itself still resolves
-  // (redirects home) so no old link can leak the page.
+  // Soft pilot terms page is public (/pricing). Full list-price table stays hidden
+  // in upgrade UI via PILOT_PRICING_HIDDEN.
 
   const NAV_LINKS = [
     { href: "/", label: t("nav.home"), tip: "Platform overview and lead capture" },
     { href: "/showroom", label: t("nav.showroom"), tip: "Browse inventory — AI search and filters" },
+    { href: "/pricing", label: "Pilot", tip: "Free pilot terms, soft floor, and ROI math" },
     { href: "/compare", label: "Compare", tip: "Side-by-side comparison of up to 3 vehicles" },
     { href: "/trade-in", label: "Trade-In", tip: "Get an instant trade-in estimate from Tumi" },
     { href: "/finance", label: "Finance", tip: "Calculate monthly instalments on any vehicle" },

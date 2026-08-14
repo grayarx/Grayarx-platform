@@ -82,9 +82,9 @@ export default function Onboarding() {
             </div>
             <h1 className="font-display text-4xl font-bold">Thanks — we've got it.</h1>
             <p className="text-muted-foreground mt-4">
-              Our team will review your application within one business day. You'll receive
-              a welcome email at <span className="text-primary">{form.ownerEmail}</span> with
-              next steps.
+              Our team reviews every application within one business day. You'll get a welcome
+              email at <span className="text-primary">{form.ownerEmail}</span> with login and
+              CSV import steps.
             </p>
             <div className="card-premium rounded-2xl border border-primary/10 p-6 mt-8 text-left">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -97,12 +97,30 @@ export default function Onboarding() {
                 Keep this for your records. Quote it when calling or emailing support.
               </p>
             </div>
+            <div className="card-premium rounded-2xl border border-primary/15 p-6 mt-4 text-left space-y-2">
+              <p className="font-tech text-[10px] uppercase tracking-[0.2em] text-primary/80">
+                What happens next
+              </p>
+              <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                <li>We provision your yard (Growth pilot features).</li>
+                <li>You drop CSV stock — showroom can go live the same day.</li>
+                <li>WhatsApp Cloud API links when Meta is ready (webchat works first).</li>
+                <li>Billing only after written confirm — free pilot, no card now.</li>
+              </ol>
+              <p className="text-xs text-muted-foreground pt-2">
+                Goal: prove one recovered after-hours lead pays for the month. Soft terms on{" "}
+                <a href="/pricing" className="text-primary hover:underline">
+                  /pricing
+                </a>
+                .
+              </p>
+            </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
               <Button asChild variant="outline">
                 <a href="/legal">Review legal documents</a>
               </Button>
               <Button asChild variant="ghost">
-                <a href="/">Back to home</a>
+                <a href="/pricing">Pilot terms &amp; ROI</a>
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-6 max-w-md mx-auto">
@@ -129,8 +147,13 @@ export default function Onboarding() {
               Onboard your dealership
             </h1>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
-              Tell us a bit about your business. Our team reviews every application and
-              gets back within one business day.
+              Free pilot — no credit card. Tell us about your yard; we review within one
+              business day and aim to put CSV stock live fast. Soft floor after written
+              confirm — see{" "}
+              <a href="/pricing" className="text-primary hover:underline">
+                pilot terms
+              </a>
+              .
             </p>
             {referredBy ? (
               <p className="mt-3 text-xs text-primary/90 font-tech uppercase tracking-wider">

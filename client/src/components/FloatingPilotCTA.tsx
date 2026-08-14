@@ -39,12 +39,21 @@ export default function FloatingPilotCTA() {
         <p className="font-tech text-[9px] uppercase tracking-[0.25em] text-primary/80 mb-1 pr-6">
           Dealership pilot
         </p>
-        <p className="font-display font-semibold text-sm mb-3 leading-snug">
-          Run your showroom + WhatsApp AI on GrayArx — free pilot, no card.
+        <p className="font-display font-semibold text-sm mb-1.5 leading-snug">
+          Free pilot on your stock — no card.
+        </p>
+        <p className="text-[11px] text-muted-foreground mb-3 leading-snug">
+          One recovered lead usually pays for the month. Soft floor after written confirm.
         </p>
         <Button asChild className="btn-gold w-full h-10 text-xs font-semibold uppercase tracking-wider">
-          <Link href="/onboarding">Apply for pilot</Link>
+          <Link href="/#lead-capture">Start free pilot</Link>
         </Button>
+        <Link
+          href="/pricing"
+          className="mt-2 block text-center font-tech text-[9px] uppercase tracking-[0.18em] text-primary/70 hover:text-primary"
+        >
+          Pilot terms →
+        </Link>
       </div>
     </div>
   );
