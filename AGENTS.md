@@ -55,3 +55,6 @@
 - Finance → Apply carries `price`/`deposit`/`vehicle` into `/apply/:shortcode` (PreApproval prefills deal step).
 - Trade-in shows Tumi `factorBreakdown` and links `/finance?deposit=` for deposit handoff.
 - Compare from showroom cards: `/compare?ids=`.
+
+### Marketing home (ICP conversion)
+- `/` is dealer-principal first: after-hours WhatsApp leakage → CSV live → booked drive. Primary CTA is `#lead-capture` / free pilot — not browse showroom.

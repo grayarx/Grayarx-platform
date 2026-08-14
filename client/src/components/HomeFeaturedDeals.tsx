@@ -47,10 +47,11 @@ export default function HomeFeaturedDeals() {
             transition={{ duration: 0.6 }}
           >
             <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-3">
-              Price intelligence
+              Live on GrayArx
             </p>
             <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight">
-              Best deals <span className="text-cyber-gradient">right now</span>
+              Buyers already browsing{" "}
+              <span className="text-cyber-gradient">yards like yours</span>
             </h2>
           </motion.div>
           <Button
