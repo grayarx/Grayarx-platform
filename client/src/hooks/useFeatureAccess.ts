@@ -1,20 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 /**
- * Hook to check if current user has access to a feature
+ * Hook to check if current user has access to a feature.
+ * Skips the protected query when anonymous so public pages are not kicked to /login.
  */
 export function useFeatureAccess(featureId: string) {
+  const { user } = useAuth();
   const { data, isLoading, error } = trpc.featureAccess.checkFeatureAccess.useQuery(
     { featureId },
-    { staleTime: 5 * 60 * 1000 } // Cache for 5 minutes
+    {
+      enabled: Boolean(user),
+      staleTime: 5 * 60 * 1000,
+      retry: false,
+    },
   );
 
   return {
     hasAccess: data?.hasAccess ?? false,
     tier: data?.tier,
     reason: data?.reason,
-    isLoading,
+    isLoading: Boolean(user) && isLoading,
     error,
   };
 }
@@ -23,13 +29,16 @@ export function useFeatureAccess(featureId: string) {
  * Hook to get all accessible features for current dealership
  */
 export function useAccessibleFeatures() {
+  const { user } = useAuth();
   const { data, isLoading, error } = trpc.featureAccess.getAccessibleFeatures.useQuery(undefined, {
+    enabled: Boolean(user),
     staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   return {
     features: data ?? [],
-    isLoading,
+    isLoading: Boolean(user) && isLoading,
     error,
   };
 }
@@ -38,28 +47,35 @@ export function useAccessibleFeatures() {
  * Hook to get subscription details
  */
 export function useSubscriptionDetails() {
+  const { user } = useAuth();
   const { data, isLoading, error } = trpc.featureAccess.getSubscriptionDetails.useQuery(undefined, {
-    staleTime: 60 * 1000, // Cache for 1 minute
+    enabled: Boolean(user),
+    staleTime: 60 * 1000,
+    retry: false,
   });
 
   return {
     subscription: data,
-    isLoading,
+    isLoading: Boolean(user) && isLoading,
     error,
   };
 }
 
 /**
  * Hook to check if subscription is expiring soon
+ * (name keeps historical typo `oon` — callers import this symbol)
  */
 export function useSubscriptionExpiringoon() {
-  const { data, isLoading, error } = trpc.featureAccess.isSubscriptionExpiringoon.useQuery(undefined, {
-    staleTime: 60 * 1000, // Cache for 1 minute
+  const { user } = useAuth();
+  const { data, isLoading, error } = trpc.featureAccess.isSubscriptionExpiringSoon.useQuery(undefined, {
+    enabled: Boolean(user),
+    staleTime: 60 * 1000,
+    retry: false,
   });
 
   return {
-    isExpiringoon: data ?? false,
-    isLoading,
+    isExpiringSoon: data ?? false,
+    isLoading: Boolean(user) && isLoading,
     error,
   };
 }
@@ -68,13 +84,16 @@ export function useSubscriptionExpiringoon() {
  * Hook to get feature definitions
  */
 export function useFeatureDefinitions() {
+  const { user } = useAuth();
   const { data, isLoading, error } = trpc.featureAccess.getFeatureDefinitions.useQuery(undefined, {
-    staleTime: 24 * 60 * 60 * 1000, // Cache for 24 hours
+    enabled: Boolean(user),
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: false,
   });
 
   return {
     features: data ?? [],
-    isLoading,
+    isLoading: Boolean(user) && isLoading,
     error,
   };
 }

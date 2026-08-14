@@ -28,6 +28,42 @@ if (sentryDsn) {
 
 const queryClient = new QueryClient();
 
+/** Marketing / public paths must never bounce anonymous visitors to /login. */
+function isPublicUnauthedPath(path: string): boolean {
+  if (path === "/") return true;
+  const prefixes = [
+    "/login",
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+    "/check-email",
+    "/onboarding",
+    "/for-dealers",
+    "/showroom",
+    "/compare",
+    "/trade-in",
+    "/finance",
+    "/help",
+    "/legal",
+    "/privacy-policy",
+    "/terms",
+    "/ai-ethics",
+    "/dpa",
+    "/aup",
+    "/sla",
+    "/credit-disclaimer",
+    "/book/",
+    "/apply/",
+    "/verify-email",
+    "/email-preferences",
+    "/wizard",
+  ];
+  return prefixes.some((p) => {
+    if (p.endsWith("/")) return path.startsWith(p);
+    return path === p || path.startsWith(`${p}/`);
+  });
+}
+
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
@@ -37,12 +73,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!isUnauthorized) return;
 
   const path = window.location.pathname;
-  if (
-    path.startsWith("/login") ||
-    path.startsWith("/signup") ||
-    path.startsWith("/forgot-password") ||
-    path.startsWith("/reset-password")
-  ) {
+  if (isPublicUnauthedPath(path)) {
     return;
   }
 
