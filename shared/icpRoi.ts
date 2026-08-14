@@ -1,7 +1,16 @@
 /**
  * ICP "no-brainer" ROI math — after-hours leakage vs recovering one deal.
  * Used on /for-dealers and founder call kits. Keep assumptions editable.
+ *
+ * "Covers the month" anchors to Showroom list / pilot bill (R3 999) — the
+ * cheapest plan. Pilot partners get Growth features at that same price.
+ * Growth list (R7 999) still clears on ~one deal at default gross.
  */
+
+import { PILOT_PARTNER, TIER_PRICES_ZAR } from "./subscriptionTiers";
+
+/** Cheapest billable month: Showroom list === pilot partner rate. */
+export const CHEAPEST_MONTHLY_ZAR = TIER_PRICES_ZAR.starter; // 3999
 
 export const ICP_ROI_DEFAULTS = {
   deadLeadsPerWeek: 8,
@@ -10,10 +19,13 @@ export const ICP_ROI_DEFAULTS = {
   /** Typical gross profit on one closed used-car deal (ZAR) */
   grossProfitPerDealZar: 12_000,
   /**
-   * Soft public reference for "covers the month" — aligns with pilot list
-   * (~R3999) without requiring public price display.
+   * Public "covers the month" threshold — Showroom / pilot (not Growth list).
+   * Soft-rounded display still uses formatZarWhole; compare against exact rand.
    */
-  coversMonthBelowZar: 4_000,
+  coversMonthBelowZar: CHEAPEST_MONTHLY_ZAR,
+  /** Growth list — use on calls when upselling off pilot */
+  growthListZar: TIER_PRICES_ZAR.professional,
+  pilotBillZar: PILOT_PARTNER.monthlyPriceZar,
 } as const;
 
 export type IcpRoiInput = {

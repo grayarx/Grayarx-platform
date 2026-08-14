@@ -1,7 +1,8 @@
 # Founder sales call kit — GrayArx (ICP)
 
 **ICP:** Independent SA dealership principal (used / multi-brand, ~30–200 cars, WhatsApp-heavy).  
-**Offer:** Free pilot → Growth features → paid continuation (~R4k/mo internal pilot reference; public: “one recovered lead covers it”).  
+**Offer:** Free pilot → **Growth features @ Showroom price (R3 999/mo)** → paid continuation.  
+**Price ladder (internal):** Showroom R3 999 · Growth R7 999 · Multi-site R11 999. Public site keeps list prices soft (`PILOT_PRICING_HIDDEN`); say “one recovered lead covers the month.”  
 **Epoch:** Experimentation Mode (founder-led). Do not hire AEs until this motion is repeatable.
 
 Pete Kazanjy framing: pre-call plan → discovery → status-quo math → objection confront → clear money ask → instrument the funnel.
