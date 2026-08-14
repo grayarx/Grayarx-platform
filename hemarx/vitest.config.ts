@@ -1,0 +1,11 @@
+import { defineConfig } from "vitest/config";
+import path from "node:path";
+
+export default defineConfig({
+  root: path.resolve(__dirname),
+  test: {
+    environment: "node",
+    include: ["server/**/*.test.ts"],
+    testTimeout: 15000,
+  },
+});

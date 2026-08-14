@@ -1,0 +1,12 @@
+{
+  "name": "hemarx",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Private just-in-time learning studio. Not affiliated with any other product.",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "start": "tsx server/index.ts",
+    "test": "vitest run --config vitest.config.ts"
+  }
+}
