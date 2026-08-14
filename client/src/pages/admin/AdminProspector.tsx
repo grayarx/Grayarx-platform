@@ -250,8 +250,9 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">
-            Sipho researches continuously (one dealer every ~15 min, deep search).
-            When he finds a real firstname@dealer-domain inbox, it shows up here.
+            Sipho researches continuously (~every 10 min): imports known named
+            emails, then digs the next dealers. New cards appear when he finds a
+            real firstname@dealer-domain inbox.
             <span className="block mt-1">
               Generate is optional — a short burst if you want more checked now.
             </span>

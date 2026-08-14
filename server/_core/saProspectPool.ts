@@ -884,8 +884,8 @@ export function countCooldownProspects(existingNames: string[]): number {
   ).length;
 }
 
-/** After a failed/empty research pass — don't re-hit the same sites for hours. */
-const RESEARCH_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+/** After a failed/empty research pass — don't re-hit the same sites for a bit. */
+const RESEARCH_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 const researchCooldownUntil = new Map<string, number>();
 
 export function markProspectResearchAttempted(name: string): void {

@@ -1,6 +1,9 @@
 /**
  * Sipho principal-email enrichment tick — picks targets, researches sites,
  * updates/creates prospects with named emails only.
+ *
+ * Always-on model: import any pool/pilot rows that already have outreach-ready
+ * emails, then deep-research one unknown dealer at a time.
  */
 
 import {
@@ -9,22 +12,25 @@ import {
   updateProspectContact,
   logAgentActivity,
 } from "../db";
-import { SA_PROSPECT_POOL } from "./saProspectPool";
+import {
+  SA_PROSPECT_POOL,
+  isOnResearchCooldown,
+  markProspectResearchAttempted,
+} from "./saProspectPool";
 import { PILOT_PROSPECTS } from "../../shared/pilotProspectSegments";
-import { assessProspectEmail, isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
+import {
+  assessProspectEmail,
+  isOutreachReadyForDealership,
+} from "../../shared/prospectEmailQuality";
 import {
   enrichDealershipPrincipal,
   type EnrichmentCandidate,
   type EnrichmentAttemptResult,
 } from "./prospectPrincipalEnrichment";
-import {
-  isOnResearchCooldown,
-  markProspectResearchAttempted,
-} from "./saProspectPool";
 
 const DEFAULT_LIMIT = 8;
-/** Don't re-try the same prospect within this window after a failed enrich. */
-export const ENRICH_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
+/** Retry failed enrichments after 24h (was 7d — blocked always-on progress). */
+export const ENRICH_RETRY_MS = 24 * 60 * 60 * 1000;
 
 export type PrincipalEnrichTickResult = {
   examined: number;
@@ -32,6 +38,7 @@ export type PrincipalEnrichTickResult = {
   created: number;
   updated: number;
   failed: number;
+  importedReady: number;
   results: EnrichmentAttemptResult[];
 };
 
@@ -48,9 +55,95 @@ function staleEnrichment(enrichedAt: Date | null | undefined, now: number): bool
   return now - enrichedAt.getTime() >= ENRICH_RETRY_MS;
 }
 
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 /**
- * Build the work queue: DB prospects missing named emails, then SA pool /
- * pilot rows that aren't already in the DB with a good email.
+ * Immediately create prospects for pool/pilot rows that already have a
+ * named@dealer-domain email and are not in the DB yet.
+ * (Always-on used to skip these and only scrape hopeless info@ rows.)
+ */
+export async function importOutreachReadyKnownProspects(): Promise<{
+  created: number;
+  names: string[];
+}> {
+  const existing = await listProspects(1000);
+  const byName = new Set(existing.map((p) => p.dealershipName.toLowerCase().trim()));
+  const toCreate: Parameters<typeof createProspects>[0] = [];
+  const names: string[] = [];
+
+  for (const p of SA_PROSPECT_POOL) {
+    if (byName.has(p.name.toLowerCase().trim())) continue;
+    if (!isOutreachReadyForDealership(p.email, p.website)) continue;
+    const assessment = assessProspectEmail(p.email);
+    toCreate.push({
+      dealershipName: p.name,
+      region: p.province,
+      city: p.city,
+      phone: p.phone,
+      email: p.email,
+      website: p.website ?? "",
+      estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+      brandsCarried: p.brands.join(", "),
+      score:
+        p.segment === "luxury" || p.segment === "exotic"
+          ? 88
+          : p.segment === "volume"
+            ? 82
+            : 72,
+      rationale: "Imported named contact already on Sipho research pool",
+      status: "scouted",
+      sourceNotes: `sipho_ready_import | email_quality=${assessment.quality}`,
+      contactName: null,
+      contactRole: null,
+      emailVerified: 1,
+      emailSource: "pool_ready",
+      enrichedAt: new Date(),
+      enrichmentNotes: "Ready named email from SA prospect pool (no scrape needed)",
+    });
+    names.push(p.name);
+    byName.add(p.name.toLowerCase().trim());
+  }
+
+  for (const p of PILOT_PROSPECTS) {
+    if (byName.has(p.dealershipName.toLowerCase().trim())) continue;
+    if (!p.emailVerified || !isOutreachReadyForDealership(p.email, p.website)) continue;
+    const assessment = assessProspectEmail(p.email);
+    toCreate.push({
+      dealershipName: p.dealershipName,
+      region: p.region,
+      city: p.city,
+      phone: p.phone ?? null,
+      email: p.email!,
+      website: p.website ?? "",
+      score: 80,
+      rationale: `Pilot named contact (${p.contactRole ?? "principal"})`,
+      status: "scouted",
+      sourceNotes: `sipho_ready_import | pilot | email_quality=${assessment.quality}`,
+      contactName: p.contactName?.includes("TBD") ? null : p.contactName,
+      contactRole: p.contactRole ?? null,
+      emailVerified: 1,
+      emailSource: "pilot_ready",
+      enrichedAt: new Date(),
+      enrichmentNotes: "Ready named email from pilot research list",
+    });
+    names.push(p.dealershipName);
+    byName.add(p.dealershipName.toLowerCase().trim());
+  }
+
+  if (toCreate.length === 0) return { created: 0, names: [] };
+  await createProspects(toCreate);
+  return { created: toCreate.length, names };
+}
+
+/**
+ * Build the work queue: shuffle SA pool + pilot so we don't forever dig the
+ * same first pilot after every Railway restart.
  */
 export async function collectPrincipalEnrichmentTargets(
   limit = DEFAULT_LIMIT,
@@ -63,15 +156,22 @@ export async function collectPrincipalEnrichmentTargets(
 
   const targets: EnrichmentCandidate[] = [];
 
-  for (const p of existing) {
+  // 1) Existing DB rows missing a named inbox (retry after ENRICH_RETRY_MS)
+  const dbNeed = shuffleInPlace(
+    existing.filter((p) => {
+      if (!needsEnrichmentEmail(p.email, p.website)) return false;
+      if (!p.website?.trim()) return false;
+      const enrichedAt =
+        "enrichedAt" in p && p.enrichedAt instanceof Date
+          ? p.enrichedAt
+          : (p as { enrichedAt?: Date | null }).enrichedAt ?? null;
+      if (!staleEnrichment(enrichedAt, now)) return false;
+      if (isOnResearchCooldown(p.dealershipName)) return false;
+      return true;
+    }),
+  );
+  for (const p of dbNeed) {
     if (targets.length >= limit) break;
-    if (!needsEnrichmentEmail(p.email, p.website)) continue;
-    const enrichedAt =
-      "enrichedAt" in p && p.enrichedAt instanceof Date
-        ? p.enrichedAt
-        : (p as { enrichedAt?: Date | null }).enrichedAt ?? null;
-    if (!staleEnrichment(enrichedAt, now)) continue;
-    if (!p.website?.trim()) continue;
     targets.push({
       prospectId: p.id,
       dealershipName: p.dealershipName,
@@ -84,39 +184,25 @@ export async function collectPrincipalEnrichmentTargets(
     });
   }
 
-  // Pilot curated list — research sites for rows still on generic/missing email
-  for (const p of PILOT_PROSPECTS) {
+  // 2) SA pool (shuffled) — prefer before curated pilots so restarts don't
+  //    burn every tick on the same Gauteng Motor Centre deep dig.
+  const poolCandidates = shuffleInPlace(
+    SA_PROSPECT_POOL.filter((p) => {
+      if (!p.website?.trim()) return false;
+      if (!needsEnrichmentEmail(p.email, p.website)) return false; // ready ones imported separately
+      if (isOnResearchCooldown(p.name)) return false;
+      const existingRow = byName.get(p.name.toLowerCase().trim());
+      if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
+        return false;
+      }
+      if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) return false;
+      return true;
+    }),
+  );
+  for (const p of poolCandidates) {
     if (targets.length >= limit) break;
-    if (!needsEnrichmentEmail(p.email) && p.emailVerified) continue;
-    if (!p.website?.trim()) continue;
-    const existingRow = byName.get(p.dealershipName.toLowerCase().trim());
-    if (existingRow && !needsEnrichmentEmail(existingRow.email)) continue;
-    if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) continue;
-    // Avoid duplicate dealership in this batch
-    if (targets.some((t) => t.dealershipName.toLowerCase() === p.dealershipName.toLowerCase())) {
-      continue;
-    }
-    targets.push({
-      prospectId: existingRow?.id,
-      dealershipName: p.dealershipName,
-      website: p.website,
-      city: p.city,
-      region: p.region,
-      phone: p.phone,
-    });
-  }
-
-  for (const p of SA_PROSPECT_POOL) {
-    if (targets.length >= limit) break;
-    if (!needsEnrichmentEmail(p.email, p.website)) continue;
-    if (!p.website?.trim()) continue;
-    if (isOnResearchCooldown(p.name)) continue;
+    if (targets.some((t) => t.dealershipName.toLowerCase() === p.name.toLowerCase())) continue;
     const existingRow = byName.get(p.name.toLowerCase().trim());
-    if (existingRow && !needsEnrichmentEmail(existingRow.email)) continue;
-    if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) continue;
-    if (targets.some((t) => t.dealershipName.toLowerCase() === p.name.toLowerCase())) {
-      continue;
-    }
     targets.push({
       prospectId: existingRow?.id,
       dealershipName: p.name,
@@ -126,6 +212,40 @@ export async function collectPrincipalEnrichmentTargets(
       phone: p.phone,
       brandsCarried: p.brands.join(", "),
       estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+    });
+  }
+
+  // 3) Pilot list (shuffled) last
+  const pilotCandidates = shuffleInPlace(
+    PILOT_PROSPECTS.filter((p) => {
+      if (!p.website?.trim()) return false;
+      if (!needsEnrichmentEmail(p.email, p.website) && p.emailVerified) return false;
+      if (isOnResearchCooldown(p.dealershipName)) return false;
+      const existingRow = byName.get(p.dealershipName.toLowerCase().trim());
+      if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
+        return false;
+      }
+      if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) return false;
+      return true;
+    }),
+  );
+  for (const p of pilotCandidates) {
+    if (targets.length >= limit) break;
+    if (
+      targets.some(
+        (t) => t.dealershipName.toLowerCase() === p.dealershipName.toLowerCase(),
+      )
+    ) {
+      continue;
+    }
+    const existingRow = byName.get(p.dealershipName.toLowerCase().trim());
+    targets.push({
+      prospectId: existingRow?.id,
+      dealershipName: p.dealershipName,
+      website: p.website,
+      city: p.city,
+      region: p.region,
+      phone: p.phone,
     });
   }
 
@@ -148,10 +268,13 @@ export async function runPrincipalEnrichmentTick(
     }
   }
 
+  // Guarantee progress: import known-good named emails before scraping
+  const imported = await importOutreachReadyKnownProspects();
+
   const targets = await collectPrincipalEnrichmentTargets(limit);
   const results: EnrichmentAttemptResult[] = [];
-  let enriched = 0;
-  let created = 0;
+  let enriched = imported.created;
+  let created = imported.created;
   let updated = 0;
   let failed = 0;
 
@@ -162,7 +285,6 @@ export async function runPrincipalEnrichmentTick(
     results.push(result);
 
     if (result.status !== "enriched" || !result.hit) {
-      // Cool down pool dealers so always-on rotates; stamp DB rows too
       markProspectResearchAttempted(target.dealershipName);
       if (target.prospectId) {
         try {
@@ -228,27 +350,27 @@ export async function runPrincipalEnrichmentTick(
     }
   }
 
-  if (enriched > 0 || targets.length > 0) {
+  if (enriched > 0 || targets.length > 0 || imported.created > 0) {
     await logAgentActivity({
       agentId: "prospector",
       action: "principal_email_enrich_tick",
       subjectType: "prospect",
       summary:
-        enriched > 0
-          ? `Sipho found ${enriched} principal contact${enriched === 1 ? "" : "s"} (${results
-              .filter((r) => r.status === "enriched")
-              .map((r) => r.dealershipName)
-              .slice(0, 3)
-              .join(", ")}) — always-on drip.`
-          : `Sipho checked ${targets.length} dealership${targets.length === 1 ? "" : "s"} — no public named inbox yet; will rotate to the next.`,
+        imported.created > 0 || enriched > 0
+          ? `Sipho added ${created} / updated ${updated} principal contact${created + updated === 1 ? "" : "s"}${imported.names.length ? ` (imported: ${imported.names.slice(0, 3).join(", ")})` : ""}${results.some((r) => r.status === "enriched") ? ` (scraped: ${results.filter((r) => r.status === "enriched").map((r) => r.dealershipName).slice(0, 3).join(", ")})` : ""}.`
+          : `Sipho checked ${targets.length} dealership${targets.length === 1 ? "" : "s"} — no public named inbox yet; rotating.`,
       payload: {
         examined: targets.length,
         enriched,
         updated,
         created,
         failed,
+        importedReady: imported.created,
         deep,
-        names: results.filter((r) => r.status === "enriched").map((r) => r.dealershipName),
+        names: [
+          ...imported.names,
+          ...results.filter((r) => r.status === "enriched").map((r) => r.dealershipName),
+        ],
       },
     });
   }
@@ -259,6 +381,7 @@ export async function runPrincipalEnrichmentTick(
     created,
     updated,
     failed,
+    importedReady: imported.created,
     results,
   };
 }
