@@ -18,6 +18,8 @@ import {
   Scale,
 } from "lucide-react";
 import { OWNER_EMAIL, OWNER_PHONE_DISPLAY, OWNER_PHONE_E164, OWNER_WHATSAPP_URL } from "@/lib/contact";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 const FAQS = [
   {
@@ -74,6 +76,13 @@ const QUICK_LINKS = [
 ];
 
 export default function HelpCenter() {
+  useDocumentMeta({
+    title: SEO_PAGES.help.title,
+    description: SEO_PAGES.help.description,
+    keywords: SEO_PAGES.help.keywords,
+    canonicalPath: "/help",
+    ogType: "website",
+  });
   const [search, setSearch] = useState("");
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 

@@ -12,6 +12,8 @@ import VehicleComparePicker from "@/components/VehicleComparePicker";
 import { formatVehiclePrice } from "@/lib/formatPrice";
 import { scoreListingDeal } from "@shared/priceIntelligence";
 import DealScoreBadge from "@/components/DealScoreBadge";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 /**
  * Buyer-facing comparison tool — up to three vehicles side-by-side.
@@ -22,6 +24,13 @@ import DealScoreBadge from "@/components/DealScoreBadge";
  * to whatever IDs are in the URL.
  */
 export default function Compare() {
+  useDocumentMeta({
+    title: SEO_PAGES.compare.title,
+    description: SEO_PAGES.compare.description,
+    keywords: SEO_PAGES.compare.keywords,
+    canonicalPath: "/compare",
+    ogType: "website",
+  });
   const [location, setLocation] = useLocation();
   const { data: listPage } = trpc.showroom.list.useQuery({ limit: 200 });
   const vehicles = listPage?.items;

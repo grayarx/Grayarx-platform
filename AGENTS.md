@@ -65,3 +65,7 @@
 - Weekly DP brief: `dealer.weeklyBrief` / `sendWeeklyBrief` + cron `POST /api/scheduled/weekly-dealer-brief` (module `weekly_brief`).
 - Reputation + aftercare drafts: `dealer.retentionTools` + Google review URL in Settings (`googleReviewUrl`).
 - Dealer invite: `/onboarding?ref={shortcode}` stamped into onboarding notes for founder attribution.
+
+### SEO (ICP)
+- Copy SOT: `shared/seo.ts`. Shell meta in `client/index.html` matches Home ICP. Sitemap includes `/onboarding` + `/legal`.
+- `useDocumentMeta` sets canonical + Twitter + optional JSON-LD.

@@ -4,6 +4,8 @@ import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 interface LegalLayoutProps {
   title: string;
@@ -21,6 +23,13 @@ export default function LegalLayout({
   children,
   showHubCrumb = true,
 }: LegalLayoutProps) {
+  useDocumentMeta({
+    title: showHubCrumb ? `${title} | GrayArx Legal` : SEO_PAGES.legal.title,
+    description: subtitle?.trim() || SEO_PAGES.legal.description,
+    keywords: SEO_PAGES.legal.keywords,
+    canonicalPath: showHubCrumb ? undefined : "/legal",
+    ogType: "website",
+  });
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [title]);

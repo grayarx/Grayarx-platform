@@ -18,8 +18,17 @@ import {
   SA_PRIME_RATE_PCT,
   calcMonthlyInstalment,
 } from "@shared/saFinance";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 export default function FinanceCalculator() {
+  useDocumentMeta({
+    title: SEO_PAGES.finance.title,
+    description: SEO_PAGES.finance.description,
+    keywords: SEO_PAGES.finance.keywords,
+    canonicalPath: "/finance",
+    ogType: "website",
+  });
   const search = useSearch();
   const urlParams = useMemo(() => {
     const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
