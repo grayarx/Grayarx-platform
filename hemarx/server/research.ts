@@ -96,10 +96,43 @@ function scoreWikiHit(title: string, snippet: string, query: string): number {
   const q = query.toLowerCase();
   let score = 0;
   if (title.toLowerCase().includes(q) || q.includes(title.toLowerCase().split(" (")[0])) score += 3;
-  if (/\b(entrepreneur|programmer|software|blogger|writer|author|essayist|investor|founder|salesperson|executive)\b/.test(blob)) score += 8;
+  if (/\b(entrepreneur|programmer|software|blogger|writer|author|essayist|investor|salesperson|executive)\b/.test(blob)) score += 8;
   if (/\b(politician|footballer|soccer|actor|bishop|cricketer|rugby| rapper)\b/.test(blob) && !/\b(politician|football|actor)\b/.test(q)) score -= 12;
   if (/\b(patio11|kalzumeus|yc|y combinator|startup)\b/.test(blob)) score += 10;
   return score;
+}
+
+export type WikiCandidate = {
+  title: string;
+  snippet: string;
+  score: number;
+  url: string;
+};
+
+export function isAmbiguous(candidates: WikiCandidate[], person: string): boolean {
+  if (KNOWN_SITES[person.toLowerCase()]) return false;
+  if (/\(.+\)/.test(person)) return false;
+  if (candidates.length < 2) return false;
+  const disambiguated = candidates.filter((c) => /\(.+\)/.test(c.title));
+  if (disambiguated.length >= 2) return true;
+  const top = candidates[0]?.score ?? 0;
+  const second = candidates[1]?.score ?? 0;
+  if (top >= 8 && top - second >= 6) return false;
+  return true;
+}
+
+export async function wikipediaCandidates(person: string): Promise<WikiCandidate[]> {
+  const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(person)}&utf8=1&format=json&srlimit=8`;
+  const search = await json<WikiSearch>(searchUrl);
+  const hits = search?.query?.search ?? [];
+  return hits
+    .map((hit) => ({
+      title: hit.title,
+      snippet: (hit.snippet ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+      score: scoreWikiHit(hit.title, hit.snippet ?? "", person),
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g, "_"))}`,
+    }))
+    .sort((a, b) => b.score - a.score);
 }
 
 async function wikipedia(person: string): Promise<{

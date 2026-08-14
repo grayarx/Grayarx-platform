@@ -61,6 +61,33 @@ export type BookSection = {
   quotes: { text: string; source: string; verified: boolean }[];
 };
 
+export type AskKind = "text" | "single" | "multi";
+export type AskOption = { id: string; label: string; description?: string };
+export type AskQuestion = {
+  id: string;
+  prompt: string;
+  why: string;
+  kind: AskKind;
+  options?: AskOption[];
+  required: boolean;
+  answer?: string;
+  selected?: string[];
+};
+export type AskSession = {
+  id: string;
+  tool: "curriculum" | "architect" | "brief" | "custom";
+  reason: string;
+  questions: AskQuestion[];
+  createdAt: string;
+  completedAt?: string;
+};
+export type AskPending = {
+  session: AskSession | null;
+  question: AskQuestion | null;
+  remaining: number;
+  total: number;
+};
+
 export type Bootstrap = {
   learner: { name: string; city: string; posture: string; rule: string };
   struggleLabels: Record<string, string>;
@@ -69,6 +96,8 @@ export type Bootstrap = {
   curriculum: CurriculumRow[];
   sources: Source[];
   latestBrief: DailyBrief | null;
+  interviewComplete: boolean;
+  pendingAsk: AskPending;
 };
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
@@ -88,12 +117,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ interview, struggles }),
     }),
+  startAsk: (tool: "curriculum" | "architect" = "curriculum") =>
+    json<AskPending>("/api/ask/start", { method: "POST", body: JSON.stringify({ tool }) }),
+  pendingAsk: () => json<AskPending>("/api/ask/pending"),
+  answerAsk: (input: { sessionId: string; questionId: string; answer?: string; selected?: string[] }) =>
+    json<{
+      complete: boolean;
+      pending: AskPending;
+      interviewComplete: boolean;
+      curriculum: CurriculumRow[];
+    }>("/api/ask/answer", { method: "POST", body: JSON.stringify(input) }),
   brief: (force = false) => json<DailyBrief>("/api/brief", { method: "POST", body: JSON.stringify({ force }) }),
   mirror: (material: string, explanation: string) =>
     json<MirrorGrade>("/api/mirror", { method: "POST", body: JSON.stringify({ material, explanation }) }),
-  architect: (person: string) =>
-    json<{ outline: BookOutline; markdown: string }>("/api/architect", {
+  architect: (person: string, choice?: string) =>
+    json<{
+      outline?: BookOutline;
+      markdown?: string;
+      needsAsk?: boolean;
+      pending?: AskPending;
+      session?: AskSession;
+    }>("/api/architect", {
       method: "POST",
-      body: JSON.stringify({ person }),
+      body: JSON.stringify({ person, choice }),
     }),
 };

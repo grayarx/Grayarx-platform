@@ -1,20 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_STRUGGLES, INTERVIEW_QUESTIONS } from "./profile";
+import { INTERVIEW_QUESTIONS } from "./profile";
 import type { DailyBrief, StudioState } from "./types";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtimeDir = path.join(root, "data", "runtime");
-const statePath = path.join(runtimeDir, "state.json");
+const statePath =
+  process.env.HEMARX_STATE_PATH ||
+  path.join(runtimeDir, process.env.VITEST ? "state.test.json" : "state.json");
 
 function emptyState(): StudioState {
   return {
     interview: INTERVIEW_QUESTIONS.map((q) => ({ ...q })),
-    struggles: [...DEFAULT_STRUGGLES],
+    struggles: [],
     curriculum: [],
     seenUrls: [],
     briefs: [],
+    asks: [],
   };
 }
 
@@ -26,10 +29,11 @@ export function loadState(): StudioState {
       ...emptyState(),
       ...parsed,
       interview: parsed.interview?.length ? parsed.interview : emptyState().interview,
-      struggles: parsed.struggles?.length ? parsed.struggles : emptyState().struggles,
+      struggles: parsed.struggles ?? [],
       curriculum: parsed.curriculum ?? [],
       seenUrls: parsed.seenUrls ?? [],
       briefs: parsed.briefs ?? [],
+      asks: parsed.asks ?? [],
     };
   } catch {
     return emptyState();

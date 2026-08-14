@@ -1,20 +1,47 @@
 import { useState } from "react";
-import { api, type BookOutline } from "../api";
+import AskUserCard from "../AskUserCard";
+import { api, type AskPending, type BookOutline } from "../api";
 
 export default function Architect() {
   const [person, setPerson] = useState("Paul Graham");
   const [outline, setOutline] = useState<BookOutline | null>(null);
   const [markdown, setMarkdown] = useState("");
+  const [pending, setPending] = useState<AskPending | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function run() {
+  async function run(choice?: string) {
     setBusy(true);
     setError("");
     try {
-      const result = await api.architect(person);
-      setOutline(result.outline);
-      setMarkdown(result.markdown);
+      const result = await api.architect(person, choice);
+      if (result.needsAsk && result.pending?.question && result.pending.session) {
+        setPending(result.pending);
+        setOutline(null);
+        return;
+      }
+      setPending(null);
+      setOutline(result.outline ?? null);
+      setMarkdown(result.markdown ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function answerAsk(input: { answer?: string; selected?: string[] }) {
+    if (!pending?.session || !pending.question) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.answerAsk({
+        sessionId: pending.session.id,
+        questionId: pending.question.id,
+        ...input,
+      });
+      const choice = input.selected?.[0];
+      await run(choice);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -42,7 +69,7 @@ export default function Architect() {
         </p>
         <div className="row">
             <input type="text" value={person} onChange={(e) => setPerson(e.target.value)} placeholder="Paul Graham" />
-          <button className="btn" disabled={busy} onClick={run}>
+          <button className="btn" disabled={busy} onClick={() => run()}>
             {busy ? "Researching…" : "Research and outline"}
           </button>
           {markdown && (
@@ -53,6 +80,20 @@ export default function Architect() {
         </div>
         {error && <p className="error">{error}</p>}
       </section>
+      {pending?.session && pending.question && (
+        <div style={{ marginTop: 18 }}>
+          <AskUserCard
+            key={pending.question.id}
+            session={pending.session}
+            question={pending.question}
+            remaining={pending.remaining}
+            total={pending.total}
+            busy={busy}
+            error={error}
+            onAnswer={answerAsk}
+          />
+        </div>
+      )}
       {outline && (
         <section className="card" style={{ marginTop: 18 }}>
           <p className="kicker">

@@ -110,6 +110,34 @@ export type BookOutline = {
   caveats: string[];
 };
 
+export type AskKind = "text" | "single" | "multi";
+
+export type AskOption = {
+  id: string;
+  label: string;
+  description?: string;
+};
+
+export type AskQuestion = {
+  id: string;
+  prompt: string;
+  why: string;
+  kind: AskKind;
+  options?: AskOption[];
+  required: boolean;
+  answer?: string;
+  selected?: string[];
+};
+
+export type AskSession = {
+  id: string;
+  tool: "curriculum" | "architect" | "brief" | "custom";
+  reason: string;
+  questions: AskQuestion[];
+  createdAt: string;
+  completedAt?: string;
+};
+
 export type StudioState = {
   interview: InterviewAnswer[];
   struggles: Struggle[];
@@ -117,4 +145,5 @@ export type StudioState = {
   seenUrls: string[];
   briefs: DailyBrief[];
   lastBriefAt?: string;
+  asks: AskSession[];
 };

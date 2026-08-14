@@ -22,65 +22,58 @@ export const STRUGGLE_LABELS: Record<Struggle, string> = {
   sa_b2b: "South African owner-operator buying reality",
 };
 
-export const INTERVIEW_QUESTIONS: InterviewAnswer[] = [
+export const INTERVIEW_PROMPTS: Array<{ id: string; question: string }> = [
   {
     id: "fourteen_days",
     question:
       "If one problem disappeared in the next 14 days, what would actually change in your week?",
-    answer:
-      "A named dealer principal would take a 15-minute call and I would leave with a yes, a date, or a hard no — not another week of product work pretending it is progress.",
   },
   {
     id: "wasted_week",
     question:
       "Where did you last spend a week building instead of talking to the person who can pay?",
-    answer:
-      "Prospect research, email quality rules, and agent pipelines. The list got cleaner. The calendar did not fill. I optimised the machine that finds names instead of sitting in conversations with the names I already have.",
   },
   {
     id: "who_says_yes",
-    question:
-      "Who has to say yes for money to hit the account, and why do they stall?",
-    answer:
-      "The dealer principal — the owner, not the receptionist, not info@. They stall because they are already in a contract, they do not trust unknown software, and most mail never reaches them. They buy like owner-operators: cash, trust, and 'will this make me a weekend'.",
+    question: "Who has to say yes for money to hit the account, and why do they stall?",
   },
   {
     id: "skill_this_week",
-    question:
-      "Which skill, if you had it this week, would get a dealer to yes?",
-    answer:
-      "A demand-side sales conversation and a 15-minute pitch that is not a feature walkthrough. I can build. I need to help an owner see progress in their yard, then ask for a small yes they can make alone.",
+    question: "Which skill, if you had it this week, would get a dealer to yes?",
   },
   {
     id: "already_tried",
     question: "What have you already tried that burned time without a close?",
-    answer:
-      "Generic mailboxes, mass outreach, LinkedIn-only hunting, and shipping more product as a substitute for selling. Bounce-bait wastes the domain. More agents do not get a principal on the phone.",
   },
   {
     id: "minutes",
     question:
       "How many minutes a day can you actually protect for learning plus applying — not browsing?",
-    answer:
-      "A 10-minute morning brief with coffee, then one applied block: ten named emails, three calls, or one rewritten offer. If it cannot be used the same day, it does not belong on the list.",
   },
   {
     id: "next_action",
     question:
       "What is the next concrete action this week — a call, an email, a price, or a decision?",
-    answer:
-      "Ten named principals on their own domain. Four-sentence emails. Phone follow-up the same day. A pilot price an owner can approve without a committee. Stop opening the codebase until those ten are done.",
   },
 ];
 
-export const DEFAULT_STRUGGLES: Struggle[] = [
-  "first_customers",
-  "founder_outbound",
-  "reach_the_owner",
-  "build_trap",
-  "pricing",
-  "cash",
-  "demand_side_sales",
-  "time_split",
-  "sa_b2b",
-];
+export const INTERVIEW_QUESTIONS: InterviewAnswer[] = INTERVIEW_PROMPTS.map((q) => ({
+  ...q,
+  answer: "",
+}));
+
+/** Test-only fixture. Never pre-fill the Ask User tool with these. */
+export const SAMPLE_ANSWERS: InterviewAnswer[] = INTERVIEW_PROMPTS.map((q, i) => ({
+  ...q,
+  answer: [
+    "A named dealer principal would take a 15-minute call and I would leave with a yes, a date, or a hard no.",
+    "Prospect research and agent pipelines. The list got cleaner. The calendar did not fill.",
+    "The dealer principal — the owner, not info@. They stall on contracts, trust, and mail that never reaches them.",
+    "A demand-side sales conversation and a 15-minute pitch that is not a feature walkthrough.",
+    "Generic mailboxes, mass outreach, and shipping more product as a substitute for selling.",
+    "A 10-minute morning brief, then one applied block: ten named emails, three calls, or one rewritten offer.",
+    "Ten named principals on their own domain. Four-sentence emails. Phone follow-up the same day.",
+  ][i]!,
+}));
+
+export const DEFAULT_STRUGGLES: Struggle[] = [];

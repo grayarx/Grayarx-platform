@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCurriculum, csvCell, inferStruggles, toCsv } from "./curriculum";
-import { INTERVIEW_QUESTIONS } from "./profile";
+import { SAMPLE_ANSWERS } from "./profile";
 import type { Struggle } from "./types";
 
 describe("curriculum", () => {
@@ -14,7 +14,7 @@ describe("curriculum", () => {
 
   it("ranks founder-sales resources first for this learner", () => {
     const struggles: Struggle[] = ["first_customers", "founder_outbound", "reach_the_owner", "build_trap"];
-    const rows = buildCurriculum(struggles, INTERVIEW_QUESTIONS);
+    const rows = buildCurriculum(struggles, SAMPLE_ANSWERS);
     expect(rows.length).toBeGreaterThan(8);
     const names = rows.map((r) => r.resource.toLowerCase()).join(" ");
     expect(names).toContain("founding sales");
@@ -24,7 +24,7 @@ describe("curriculum", () => {
   });
 
   it("writes a four-column csv", () => {
-    const rows = buildCurriculum(["pricing"], INTERVIEW_QUESTIONS);
+    const rows = buildCurriculum(["pricing"], SAMPLE_ANSWERS);
     const csv = toCsv(rows);
     expect(csv.startsWith("resource,format,link,why\n")).toBe(true);
     expect(csvCell('He said "no"')).toBe('"He said ""no"""');

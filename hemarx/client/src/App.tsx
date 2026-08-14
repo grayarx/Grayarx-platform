@@ -2,15 +2,15 @@ import { Link, Route, Switch, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { api, type Bootstrap } from "./api";
 import Architect from "./pages/Architect";
+import Ask from "./pages/Ask";
 import Brief from "./pages/Brief";
 import Curriculum from "./pages/Curriculum";
 import Desk from "./pages/Desk";
-import Interview from "./pages/Interview";
 import Mirror from "./pages/Mirror";
 
 const LINKS = [
   ["/", "Desk"],
-  ["/interview", "Interview"],
+  ["/ask", "Ask"],
   ["/curriculum", "Curriculum"],
   ["/brief", "Brief"],
   ["/mirror", "Mirror"],
@@ -59,8 +59,11 @@ export default function App() {
           <Route path="/">
             <Desk data={data} />
           </Route>
+          <Route path="/ask">
+            <Ask onSaved={reload} />
+          </Route>
           <Route path="/interview">
-            <Interview data={data} onSaved={reload} />
+            <Ask onSaved={reload} />
           </Route>
           <Route path="/curriculum">
             <Curriculum data={data} />

@@ -128,16 +128,20 @@ textarea, input[type="text"] {
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 6px 10px;
+  border-radius: 14px;
+  padding: 8px 12px;
   background: var(--paper-2);
   cursor: pointer;
+  text-align: left;
+  max-width: 100%;
 }
 .chip.on {
   background: var(--ink);
   color: var(--paper);
   border-color: var(--ink);
 }
+.chip.on .muted { color: #d7ccbb; }
+.chip strong { display: block; }
 
 table {
   width: 100%;

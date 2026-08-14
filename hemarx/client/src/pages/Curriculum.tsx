@@ -1,6 +1,18 @@
 import type { Bootstrap } from "../api";
 
 export default function Curriculum({ data }: { data: Bootstrap }) {
+  if (!data.interviewComplete) {
+    return (
+      <section className="card">
+        <p className="kicker">Spreadsheet</p>
+        <h1>Blocked until you answer.</h1>
+        <p>Ask User has to finish first. No assumed curriculum.</p>
+        <a className="btn" href="/ask">
+          Open Ask User
+        </a>
+      </section>
+    );
+  }
   return (
     <section className="card">
       <div className="row" style={{ justifyContent: "space-between" }}>
