@@ -70,3 +70,4 @@
 - Copy SOT: `shared/seo.ts`. Shell meta in `client/index.html` matches Home ICP. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`.
 - `useDocumentMeta` sets canonical + Twitter + optional JSON-LD.
 - Founder call kit: `docs/FOUNDER_SALES_CALL_KIT.md`. Public ROI: `/for-dealers` + home `#roi`.
+- Anonymous visitors: `featureAccess.*` hooks must stay `enabled: !!user`. `main.tsx` `isPublicUnauthedPath` must include marketing routes (`/for-dealers`, showroom, etc.) so a stray UNAUTHED tRPC error does not force `/login`.
