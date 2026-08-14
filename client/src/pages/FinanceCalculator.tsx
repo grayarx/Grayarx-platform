@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { useSearch } from "wouter";
+import { Link, useSearch } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, TrendingUp, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calculator, TrendingUp, Info, Banknote, ArrowRight } from "lucide-react";
 import { formatVehiclePrice } from "@/lib/formatPrice";
 import { loadTradeInSession } from "@/lib/tradeInSession";
+import { trpc } from "@/lib/trpc";
 import {
   SA_CREDIT_PROFILES,
   SA_FINANCE_DEFAULTS,
@@ -19,15 +21,27 @@ import {
 
 export default function FinanceCalculator() {
   const search = useSearch();
-  const urlPrice = useMemo(() => {
+  const urlParams = useMemo(() => {
     const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-    const raw = params.get("price");
-    if (!raw) return null;
-    const n = Number(raw);
-    return Number.isFinite(n) && n > 1 ? Math.round(n) : null;
+    const rawPrice = params.get("price");
+    const price =
+      rawPrice && Number.isFinite(Number(rawPrice)) && Number(rawPrice) > 1
+        ? Math.round(Number(rawPrice))
+        : null;
+    const rawDeposit = params.get("deposit");
+    const deposit =
+      rawDeposit && Number.isFinite(Number(rawDeposit)) && Number(rawDeposit) >= 0
+        ? Math.round(Number(rawDeposit))
+        : null;
+    const rawVehicle = params.get("vehicle");
+    const vehicleId =
+      rawVehicle && Number(rawVehicle) > 0 ? Number(rawVehicle) : null;
+    return { price, deposit, vehicleId };
   }, [search]);
 
   const tradeInSession = useMemo(() => loadTradeInSession(), []);
+  const { data: shortcodeData } = trpc.showroom.primaryShortcode.useQuery();
+  const shortcode = shortcodeData?.shortcode ?? null;
 
   const [vehiclePrice, setVehiclePrice] = useState(650000);
   const [deposit, setDeposit] = useState(65000);
@@ -36,14 +50,22 @@ export default function FinanceCalculator() {
   const [grossIncome, setGrossIncome] = useState<number | "">("");
 
   useEffect(() => {
-    if (urlPrice != null) {
-      setVehiclePrice(urlPrice);
+    if (urlParams.price != null) {
+      setVehiclePrice(urlParams.price);
       const tradeInDeposit = tradeInSession?.estimateMid ?? 0;
-      setDeposit(Math.max(Math.round(urlPrice * 0.1), tradeInDeposit));
+      const fromUrl = urlParams.deposit;
+      setDeposit(
+        fromUrl != null
+          ? fromUrl
+          : Math.max(Math.round(urlParams.price * 0.1), tradeInDeposit),
+      );
+    } else if (urlParams.deposit != null) {
+      // Trade-in → finance: `/finance?deposit=` without a vehicle price yet
+      setDeposit(urlParams.deposit);
     } else if (tradeInSession?.estimateMid) {
       setDeposit(tradeInSession.estimateMid);
     }
-  }, [urlPrice, tradeInSession?.estimateMid]);
+  }, [urlParams.price, urlParams.deposit, tradeInSession?.estimateMid]);
 
   const principal = Math.max(0, vehiclePrice - deposit);
   const monthly = calcMonthlyInstalment(principal, interestRate, termMonths);
@@ -59,6 +81,15 @@ export default function FinanceCalculator() {
   }, [grossIncome, monthly]);
 
   const fmt = (n: number) => formatVehiclePrice(n);
+
+  const applyHref = shortcode
+    ? `/apply/${shortcode}?${new URLSearchParams({
+        ...(urlParams.vehicleId ? { vehicle: String(urlParams.vehicleId) } : {}),
+        price: String(Math.round(vehiclePrice)),
+        deposit: String(Math.round(deposit)),
+        term: String(termMonths),
+      }).toString()}`
+    : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -80,7 +111,7 @@ export default function FinanceCalculator() {
               Using your Tumi trade-in estimate ({fmt(tradeInSession.estimateMid)}) as deposit.
             </p>
           )}
-          {urlPrice != null && (
+          {urlParams.price != null && (
             <p className="text-sm text-primary mt-3">
               Pre-filled from vehicle price — adjust deposit and term below.
             </p>
@@ -246,6 +277,27 @@ export default function FinanceCalculator() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Indicative only — not a finance offer. Your bank quotes prime plus a spread based on credit score,
                 deposit, vehicle age, and term. Initiation & admin fees (NCA-capped) are not included.
+              </p>
+
+              {applyHref ? (
+                <Button asChild className="btn-gold w-full h-11 font-semibold">
+                  <Link href={applyHref}>
+                    <Banknote className="h-4 w-4 mr-2" />
+                    Apply for pre-approval
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              ) : (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+                  Online pre-approval opens once a dealership completes setup. Browse the{" "}
+                  <Link href="/showroom" className="text-primary hover:underline">
+                    showroom
+                  </Link>{" "}
+                  and apply from a vehicle page.
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground text-center">
+                Same car context → Naledi pre-approval (not a credit decision).
               </p>
             </CardContent>
           </Card>

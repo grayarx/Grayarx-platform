@@ -92,12 +92,27 @@ export default function PreApproval() {
   const params = useParams<{ shortcode: string }>();
   const shortcode = (params.shortcode ?? "").toLowerCase();
   const search = useSearch();
-  const vehicleId = (() => {
-    const v = new URLSearchParams(search).get("vehicle");
-    if (!v) return undefined;
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : undefined;
-  })();
+  const urlDeal = useMemo(() => {
+    const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    const vehicleRaw = params.get("vehicle");
+    const vehicleId =
+      vehicleRaw && Number(vehicleRaw) > 0 ? Number(vehicleRaw) : undefined;
+    const priceRaw = params.get("price");
+    const price =
+      priceRaw && Number.isFinite(Number(priceRaw)) && Number(priceRaw) > 1
+        ? Math.round(Number(priceRaw))
+        : undefined;
+    const depositRaw = params.get("deposit");
+    const deposit =
+      depositRaw && Number.isFinite(Number(depositRaw)) && Number(depositRaw) >= 0
+        ? Math.round(Number(depositRaw))
+        : undefined;
+    const termRaw = params.get("term");
+    const term =
+      termRaw && Number(termRaw) > 0 ? Math.round(Number(termRaw)) : undefined;
+    return { vehicleId, price, deposit, term };
+  }, [search]);
+  const vehicleId = urlDeal.vehicleId;
   const { data: linkedVehicle } = trpc.showroom.get.useQuery(
     { id: vehicleId ?? 0 },
     { enabled: !!vehicleId },
@@ -126,16 +141,27 @@ export default function PreApproval() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  // Prefill from finance calculator / vehicle deep-links (price, deposit, term).
   useEffect(() => {
-    if (linkedVehicle?.price) {
-      const p = Number(linkedVehicle.price);
-      if (Number.isFinite(p) && p > 1) {
-        setForm((f) =>
-          f.vehiclePrice ? f : { ...f, vehiclePrice: String(Math.round(p)) },
-        );
+    setForm((f) => {
+      let next = f;
+      if (!next.vehiclePrice) {
+        const fromVehicle = linkedVehicle?.price != null ? Number(linkedVehicle.price) : NaN;
+        if (Number.isFinite(fromVehicle) && fromVehicle > 1) {
+          next = { ...next, vehiclePrice: String(Math.round(fromVehicle)) };
+        } else if (urlDeal.price) {
+          next = { ...next, vehiclePrice: String(urlDeal.price) };
+        }
       }
-    }
-  }, [linkedVehicle?.id, linkedVehicle?.price]);
+      if (!next.desiredDeposit && urlDeal.deposit != null) {
+        next = { ...next, desiredDeposit: String(urlDeal.deposit) };
+      }
+      if (!next.desiredTermMonths && urlDeal.term) {
+        next = { ...next, desiredTermMonths: String(urlDeal.term) };
+      }
+      return next;
+    });
+  }, [linkedVehicle?.id, linkedVehicle?.price, urlDeal.price, urlDeal.deposit, urlDeal.term]);
 
   const canProceed = (s: Step): boolean => {
     if (s === 1) {

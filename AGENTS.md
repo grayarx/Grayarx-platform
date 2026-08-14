@@ -49,3 +49,9 @@
 - Go-live checklist + after-hours → leads → bookings funnel on `/dashboard` (`dealer.goLive`, `dealer.stats` extras).
 - Mia drip honors `modulesEnabled.lead_drip` when scheduling (`leadDrip.scheduleFollowups`).
 - Stock sync trust: sold-not-resurrected (see `csvStatusGuard` / Inventory Import copy).
+
+### Buyer tools (Tier 2)
+- Showroom filters sync to the URL (`shared/showroomUrl.ts`) so WhatsApp shares keep fuel/price/search/sort.
+- Finance → Apply carries `price`/`deposit`/`vehicle` into `/apply/:shortcode` (PreApproval prefills deal step).
+- Trade-in shows Tumi `factorBreakdown` and links `/finance?deposit=` for deposit handoff.
+- Compare from showroom cards: `/compare?ids=`.
