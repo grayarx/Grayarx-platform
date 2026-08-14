@@ -22,6 +22,7 @@ import CheckEmail from "./pages/CheckEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
+import ForDealers from "./pages/ForDealers";
 import OnboardingWizardNew from "./pages/OnboardingWizardNew";
 import AccountSecurity from "./pages/AccountSecurity";
 import ConnectedAccounts from "./pages/ConnectedAccounts";
@@ -183,6 +184,7 @@ function Router() {
         </AdminRouteGuard>
       </Route>
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/for-dealers" component={ForDealers} />
       <Route path="/onboarding/form" component={() => <div>Page disabled</div>} />
       <Route path="/wizard" component={OnboardingWizardNew} />
       <Route path="/apply/:shortcode" component={PreApproval} />
