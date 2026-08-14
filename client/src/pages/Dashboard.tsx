@@ -28,6 +28,8 @@ import {
 import DealerShell from "@/components/DealerShell";
 import { PhotoGuideCard } from "@/components/PhotoGuide";
 import ShareShowroomCard from "@/components/ShareShowroomCard";
+import GoLiveChecklistCard from "@/components/GoLiveChecklistCard";
+import AfterHoursFunnelCard from "@/components/AfterHoursFunnelCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -99,7 +101,7 @@ export default function Dashboard() {
   return (
     <DealerShell
       title={`Welcome, ${user?.name?.split(" ")[0] ?? "Dealer"}`}
-      subtitle="Live operational view of your dealership's leads, bookings, and inventory."
+      subtitle="After-hours desk → leads → bookings. Get live this week, then watch the funnel."
       actions={
         <div
           className="status-pill inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0"
@@ -111,6 +113,8 @@ export default function Dashboard() {
       }
     >
       <PhotoGuideCard />
+      <GoLiveChecklistCard />
+      <AfterHoursFunnelCard />
       <ShareShowroomCard />
 
       {isFounder && (

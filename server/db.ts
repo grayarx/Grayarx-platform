@@ -1247,6 +1247,12 @@ const EMPTY_DASHBOARD_STATS = {
   bookingsLast7Days: 0,
   totalProspects: 0,
   queuedProspects: 0,
+  /** After-hours desk replies (Bongi/Nala fallback) in last 7 days */
+  afterHoursRepliesLast7Days: 0,
+  /** Pending Mia drip rows past dueAt */
+  overdueFollowups: 0,
+  /** Pending Mia drip drafts waiting to send */
+  pendingFollowups: 0,
 } as const;
 
 /**
@@ -1359,6 +1365,49 @@ export async function getDashboardStats(opts?: {
         : gte(leads.createdAt, since7),
     );
 
+  let afterHoursRepliesLast7Days = 0;
+  let overdueFollowups = 0;
+  let pendingFollowups = 0;
+  const now = new Date();
+
+  if (dealershipId != null) {
+    const [ah] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(fallbackMessages)
+      .where(
+        and(
+          eq(fallbackMessages.dealershipId, dealershipId),
+          gte(fallbackMessages.createdAt, since7),
+        ),
+      );
+    afterHoursRepliesLast7Days = Number(ah?.c ?? 0);
+
+    const [overdue] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(leadFollowups)
+      .innerJoin(leads, eq(leadFollowups.leadId, leads.id))
+      .where(
+        and(
+          eq(leads.dealershipId, dealershipId),
+          eq(leadFollowups.status, "pending"),
+          lte(leadFollowups.dueAt, now),
+        ),
+      );
+    overdueFollowups = Number(overdue?.c ?? 0);
+
+    const [pending] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(leadFollowups)
+      .innerJoin(leads, eq(leadFollowups.leadId, leads.id))
+      .where(
+        and(
+          eq(leads.dealershipId, dealershipId),
+          eq(leadFollowups.status, "pending"),
+        ),
+      );
+    pendingFollowups = Number(pending?.c ?? 0);
+  }
+
   return {
     totalLeads: Number(totals?.totalLeads ?? 0),
     newLeads: Number(totals?.newLeads ?? 0),
@@ -1375,6 +1424,44 @@ export async function getDashboardStats(opts?: {
     bookingsLast7Days,
     totalProspects,
     queuedProspects,
+    afterHoursRepliesLast7Days,
+    overdueFollowups,
+    pendingFollowups,
+  };
+}
+
+/**
+ * Dealer go-live checklist + funnel facts for Overview.
+ */
+export async function getDealerGoLiveStatus(dealershipId: number) {
+  const { buildGoLiveStatus } = await import("../shared/goLiveChecklist");
+  const { isModuleEnabled } = await import("../shared/dealershipModules");
+  const row = await getDealershipById(dealershipId);
+  if (!row) return null;
+  const stats = await getDashboardStats({ dealershipId });
+  const status = buildGoLiveStatus({
+    availableVehicles: stats.availableVehicles,
+    publicShortcode: row.publicShortcode,
+    whatsappPhoneNumberId: row.whatsappPhoneNumberId,
+    leadDripEnabled: isModuleEnabled(row.modulesEnabled, "lead_drip"),
+    stockSyncEnabled: Number(row.stockSyncEnabled ?? 0) === 1,
+    stockSyncFeedUrl: row.stockSyncFeedUrl,
+    stockSyncLastAt: row.stockSyncLastAt,
+  });
+  return {
+    ...status,
+    dealershipName: row.name,
+    publicShortcode: row.publicShortcode,
+    stockSyncEnabled: Number(row.stockSyncEnabled ?? 0) === 1,
+    stockSyncLastAt: row.stockSyncLastAt,
+    stockSyncLastResult: row.stockSyncLastResult,
+    funnel: {
+      afterHoursRepliesLast7Days: stats.afterHoursRepliesLast7Days,
+      leadsLast7Days: stats.leadsLast7Days,
+      bookingsLast7Days: stats.bookingsLast7Days,
+      overdueFollowups: stats.overdueFollowups,
+      pendingFollowups: stats.pendingFollowups,
+    },
   };
 }
 

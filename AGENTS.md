@@ -45,7 +45,7 @@
 - Dealers (and founders linked to a dealership) only see their `dealershipId` stock on Showroom + Inventory.
 - Anonymous `/showroom` is the marketplace (demo yard excluded).
 
-### Cloud agent bootstrap
-- Repo `.cursor/environment.json`: `install` = `pnpm install`, `start` = brand assets script.
-- Update script for sessions: `pnpm install` only (no service start in update script).
-- `pnpm dev` for local app; production is Railway.
+### Dealer Overview (Tier 1 wedge)
+- Go-live checklist + after-hours → leads → bookings funnel on `/dashboard` (`dealer.goLive`, `dealer.stats` extras).
+- Mia drip honors `modulesEnabled.lead_drip` when scheduling (`leadDrip.scheduleFollowups`).
+- Stock sync trust: sold-not-resurrected (see `csvStatusGuard` / Inventory Import copy).

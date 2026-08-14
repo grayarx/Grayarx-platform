@@ -62,7 +62,12 @@ function stepLabel(step: string) {
 
 export default function Leads() {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | LeadStatus | "followups">("all");
+  const [filter, setFilter] = useState<"all" | LeadStatus | "followups">(() => {
+    if (typeof window === "undefined") return "all";
+    const q = new URLSearchParams(window.location.search).get("filter");
+    if (q === "followups") return "followups";
+    return "all";
+  });
   const [expandedDraft, setExpandedDraft] = useState<number | null>(null);
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.dealer.listLeads.useQuery();

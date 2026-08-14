@@ -323,6 +323,9 @@ export default function InventoryImportPage() {
           <p className="text-muted-foreground">
             Point GrayArx at a public HTTPS CSV export (Cars.co.za dealer export, Google Sheet published as CSV, or your DMS feed).
             Nightly cron keeps price, km, and status current. Match key = stock / VIN column.
+            <span className="block mt-1 text-foreground/80">
+              Trust rule: sold cars stay sold unless the feed explicitly says sold/reserved — no accidental resurrection.
+            </span>
           </p>
           <div className="space-y-2">
             <Label htmlFor="stock-feed-url" className="flex items-center gap-1.5">
