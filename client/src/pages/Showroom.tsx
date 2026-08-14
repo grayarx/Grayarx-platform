@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +22,11 @@ import Footer from "@/components/Footer";
 import FloatingPilotCTA from "@/components/FloatingPilotCTA";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import { Link, useSearch } from "wouter";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import {
+  buildShowroomQuery,
+  parseShowroomQuery,
+} from "@shared/showroomUrl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -261,18 +266,14 @@ function parseAiFilters(query: string) {
 
 export default function Showroom() {
   const urlSearch = useSearch();
-  const showroomScope = useMemo(() => {
-    const params = new URLSearchParams(
-      urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch,
-    );
-    const rawId = params.get("dealershipId") ?? params.get("dealerId");
-    const dealershipId = rawId && Number(rawId) > 0 ? Number(rawId) : undefined;
-    const shortcode =
-      params.get("shortcode")?.trim() ||
-      params.get("d")?.trim() ||
-      undefined;
-    return { dealershipId, shortcode };
-  }, [urlSearch]);
+  const parsedUrl = useMemo(() => parseShowroomQuery(urlSearch), [urlSearch]);
+  const showroomScope = useMemo(
+    () => ({
+      dealershipId: parsedUrl.dealershipId,
+      shortcode: parsedUrl.shortcode,
+    }),
+    [parsedUrl.dealershipId, parsedUrl.shortcode],
+  );
 
   // Appearance + stock scoped by ?dealershipId= / ?shortcode= so dealer Settings
   // "Preview showroom" opens THAT yard's theme/accent — not a random primary dealer.
@@ -304,24 +305,66 @@ export default function Showroom() {
     }
   }, [theme]);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => parsedUrl.search ?? "");
   const [aiQuery, setAiQuery] = useState("");
   const [aiThinking, setAiThinking] = useState(false);
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [aiFilters, setAiFilters] = useState<ReturnType<typeof parseAiFilters> | null>(null);
-  const [fuelFilter, setFuelFilter] = useState<string>("all");
-  const [transmissionFilter, setTransmissionFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"default" | "best_deals">("default");
-  const [maxPriceFilter, setMaxPriceFilter] = useState<number | null>(null);
+  const [fuelFilter, setFuelFilter] = useState<string>(() => parsedUrl.fuel ?? "all");
+  const [transmissionFilter, setTransmissionFilter] = useState<string>(
+    () => parsedUrl.transmission ?? "all",
+  );
+  const [sortBy, setSortBy] = useState<"default" | "best_deals">(
+    () => parsedUrl.sort ?? "default",
+  );
+  const [maxPriceFilter, setMaxPriceFilter] = useState<number | null>(
+    () => parsedUrl.maxPrice ?? null,
+  );
   const [pageOffset, setPageOffset] = useState(0);
   const [accumulated, setAccumulated] = useState<ShowroomVehicle[]>([]);
+  const syncingFromUrl = useRef(false);
 
+  // External URL changes (shared WhatsApp links) → hydrate filters
   useEffect(() => {
-    const params = new URLSearchParams(urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch);
-    if (params.get("sort") === "best_deals") setSortBy("best_deals");
-    const max = params.get("maxPrice");
-    if (max && Number(max) > 0) setMaxPriceFilter(Number(max));
+    const next = parseShowroomQuery(urlSearch);
+    syncingFromUrl.current = true;
+    setSearch(next.search ?? "");
+    setFuelFilter(next.fuel ?? "all");
+    setTransmissionFilter(next.transmission ?? "all");
+    setSortBy(next.sort ?? "default");
+    setMaxPriceFilter(next.maxPrice ?? null);
+    queueMicrotask(() => {
+      syncingFromUrl.current = false;
+    });
   }, [urlSearch]);
+
+  // Filters → shareable URL (preserve yard scope)
+  useEffect(() => {
+    if (syncingFromUrl.current) return;
+    if (typeof window === "undefined") return;
+    const qs = buildShowroomQuery({
+      dealershipId: showroomScope.dealershipId,
+      shortcode: showroomScope.shortcode,
+      search: search.trim() || undefined,
+      fuel: fuelFilter,
+      transmission: transmissionFilter,
+      sort: sortBy,
+      maxPrice: maxPriceFilter ?? undefined,
+    });
+    const next = qs ? `/showroom?${qs}` : "/showroom";
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current !== next) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [
+    search,
+    fuelFilter,
+    transmissionFilter,
+    sortBy,
+    maxPriceFilter,
+    showroomScope.dealershipId,
+    showroomScope.shortcode,
+  ]);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<ShowroomVehicle | null>(null);
@@ -423,6 +466,7 @@ export default function Showroom() {
     setAiResult(null);
     setAiQuery("");
     setMaxPriceFilter(null);
+    setSortBy("default");
   };
 
   const filtered = useMemo(() => {
@@ -459,6 +503,17 @@ export default function Showroom() {
     if (!listPage?.hasMore) return;
     setPageOffset(listPage.nextOffset);
   };
+
+  const yardName = appearance?.dealershipName?.trim();
+  useDocumentMeta({
+    title: yardName
+      ? `${yardName} showroom | GrayArx`
+      : "Live showroom | GrayArx",
+    description: yardName
+      ? `Browse ${visibleVehicles.length || "available"} vehicles at ${yardName} on GrayArx — filters shareable for WhatsApp.`
+      : "Browse live dealership stock on GrayArx. Filter by fuel, price, and transmission — share the link on WhatsApp.",
+    ogType: "website",
+  });
 
   const aiSearch = trpc.showroom.aiSearch.useMutation({
     onSuccess: (data) => {
@@ -895,6 +950,14 @@ export default function Showroom() {
                       >
                         <Eye className="h-3.5 w-3.5" />
                         View
+                      </Link>
+                      <Link
+                        href={`/compare?ids=${v.id}`}
+                        className="inline-flex items-center gap-1 h-8 px-2 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                        title="Add to compare"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <GitCompare className="h-3.5 w-3.5" />
                       </Link>
                       <Button
                         size="sm"

@@ -54,6 +54,7 @@ export default function TradeIn() {
     confidence: string;
     memoMarkdown: string;
     networkListed: boolean;
+    factorBreakdown: { factor: string; rand: number; reason: string }[];
   } | null>(null);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -87,6 +88,7 @@ export default function TradeIn() {
         confidence: data.confidence,
         memoMarkdown: data.memoMarkdown,
         networkListed: data.networkListed,
+        factorBreakdown: data.factorBreakdown ?? [],
       });
       saveTradeInSession({
         quoteId: data.quoteId,
@@ -412,6 +414,46 @@ export default function TradeIn() {
                     <p className="font-display text-xl font-bold">{fmt(result.estimateHigh)}</p>
                   </div>
                 </div>
+
+                {result.factorBreakdown.length > 0 && (
+                  <div className="mb-6 rounded-xl border border-primary/15 bg-background/40 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      What moved the estimate
+                    </p>
+                    <ul className="space-y-2.5">
+                      {result.factorBreakdown.map((f) => {
+                        const positive = f.rand >= 0;
+                        const abs = Math.abs(f.rand);
+                        const width = Math.min(100, Math.round((abs / Math.max(result.estimateMid, 1)) * 100 * 4));
+                        return (
+                          <li key={`${f.factor}-${f.reason.slice(0, 24)}`}>
+                            <div className="flex items-center justify-between gap-2 text-xs mb-1">
+                              <span className="font-medium capitalize text-foreground">
+                                {f.factor.replace(/_/g, " ")}
+                              </span>
+                              <span
+                                className={
+                                  positive ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"
+                                }
+                              >
+                                {positive ? "+" : "−"}
+                                {fmt(abs)}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full ${positive ? "bg-emerald-400/80" : "bg-amber-400/80"}`}
+                                style={{ width: `${Math.max(6, width)}%` }}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-1">{f.reason}</p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="text-sm text-muted-foreground leading-relaxed">
                   {renderMemoMarkdown(result.memoMarkdown)}
                 </div>
@@ -428,9 +470,16 @@ export default function TradeIn() {
                     </Link>
                   )}
                 </p>
-                <Button asChild className="btn-gold mt-6 w-full">
-                  <Link href="/showroom?sort=best_deals">Browse best deals <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                  <Button asChild className="btn-gold w-full">
+                    <Link href={`/finance?deposit=${result.estimateMid}`}>
+                      Use as finance deposit <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full border-primary/30">
+                    <Link href="/showroom?sort=best_deals">Browse best deals</Link>
+                  </Button>
+                </div>
                 <UpgradeJourneyCard
                   tradeInMid={result.estimateMid}
                   tradeInLow={result.estimateLow}

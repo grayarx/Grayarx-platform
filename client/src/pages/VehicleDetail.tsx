@@ -367,11 +367,14 @@ export default function VehicleDetail() {
                   <Sparkles className="h-4 w-4 mr-2" />
                   Chat with Nala about this car
                 </Button>
-                <PreApprovedCTA vehicleId={vehicle.id} />
+                <PreApprovedCTA
+                  vehicleId={vehicle.id}
+                  price={Number(vehicle.price) > 0 ? Number(vehicle.price) : undefined}
+                />
                 <BookTestDriveCTA vehicleId={vehicle.id} />
                 {!isSuspiciousPrice(vehicle.price) && (
                   <Link
-                    href={`/finance?price=${Math.round(Number(vehicle.price))}`}
+                    href={`/finance?price=${Math.round(Number(vehicle.price))}&vehicle=${vehicle.id}`}
                     className="block rounded-2xl border border-primary/20 bg-card/40 p-5 hover:border-primary/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
@@ -513,7 +516,13 @@ export default function VehicleDetail() {
   );
 }
 
-function PreApprovedCTA({ vehicleId }: { vehicleId: number }) {
+function PreApprovedCTA({
+  vehicleId,
+  price,
+}: {
+  vehicleId: number;
+  price?: number;
+}) {
   const { data, isLoading } = trpc.showroom.primaryShortcode.useQuery();
   const shortcode = data?.shortcode ?? null;
   if (isLoading) {
@@ -541,7 +550,9 @@ function PreApprovedCTA({ vehicleId }: { vehicleId: number }) {
       </div>
     );
   }
-  const href = `/apply/${shortcode}?vehicle=${vehicleId}`;
+  const qs = new URLSearchParams({ vehicle: String(vehicleId) });
+  if (price && price > 1) qs.set("price", String(Math.round(price)));
+  const href = `/apply/${shortcode}?${qs.toString()}`;
   // Note: BookTestDriveCTA below reuses the same `showroom.primaryShortcode`
   // query; tRPC dedupes the request so we don't pay for it twice.
   return (
