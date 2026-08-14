@@ -25,6 +25,8 @@ import { saveTradeInSession } from "@/lib/tradeInSession";
 import { formatVehiclePrice } from "@/lib/formatPrice";
 import { ArrowRight, Car, ImagePlus, Sparkles, X, Bell } from "lucide-react";
 import UpgradeJourneyCard, { GrayArxAdvantages } from "@/components/UpgradeJourneyCard";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 function renderMemoMarkdown(text: string) {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
@@ -45,6 +47,13 @@ function renderMemoMarkdown(text: string) {
 }
 
 export default function TradeIn() {
+  useDocumentMeta({
+    title: SEO_PAGES.tradeIn.title,
+    description: SEO_PAGES.tradeIn.description,
+    keywords: SEO_PAGES.tradeIn.keywords,
+    canonicalPath: "/trade-in",
+    ogType: "website",
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{
     quoteId: number;

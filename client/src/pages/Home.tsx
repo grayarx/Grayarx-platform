@@ -19,6 +19,9 @@ import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
 import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
+import { SEO_PAGES, buildHomeJsonLd } from "@shared/seo";
+
+const HOME_JSON_LD = buildHomeJsonLd();
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -97,13 +100,14 @@ const PILOT_FEATURES = TIER_FEATURE_ROWS.filter((f) =>
 
 export default function Home() {
   useDocumentMeta({
-    title: "GrayArx — Stop losing after-hours deals",
-    description:
-      "For independent SA dealerships: put your CSV stock live, answer WhatsApp after hours, and book test drives before morning. Free pilot.",
+    title: SEO_PAGES.home.title,
+    description: SEO_PAGES.home.description,
+    keywords: SEO_PAGES.home.keywords,
     ogImage: "https://www.grayarx.com/hero-car.jpg",
-    ogUrl: "https://www.grayarx.com/",
+    canonicalPath: "/",
     ogType: "website",
     themeColor: "#060608",
+    jsonLd: HOME_JSON_LD,
   });
 
   return (

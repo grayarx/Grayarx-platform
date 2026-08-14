@@ -12,6 +12,8 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { useSearch } from "wouter";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { SEO_PAGES } from "@shared/seo";
 
 const REGIONS = [
   "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
@@ -37,6 +39,13 @@ const LANGUAGES = [
 ];
 
 export default function Onboarding() {
+  useDocumentMeta({
+    title: SEO_PAGES.onboarding.title,
+    description: SEO_PAGES.onboarding.description,
+    keywords: SEO_PAGES.onboarding.keywords,
+    canonicalPath: "/onboarding",
+    ogType: "website",
+  });
   const search = useSearch();
   const referredBy = useMemo(() => {
     const raw = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("ref");

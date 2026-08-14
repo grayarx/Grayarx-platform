@@ -27,6 +27,7 @@ import {
   buildShowroomQuery,
   parseShowroomQuery,
 } from "@shared/showroomUrl";
+import { SEO_PAGES } from "@shared/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -508,10 +509,12 @@ export default function Showroom() {
   useDocumentMeta({
     title: yardName
       ? `${yardName} showroom | GrayArx`
-      : "Live showroom | GrayArx",
+      : SEO_PAGES.showroom.title,
     description: yardName
       ? `Browse ${visibleVehicles.length || "available"} vehicles at ${yardName} on GrayArx — filters shareable for WhatsApp.`
-      : "Browse live dealership stock on GrayArx. Filter by fuel, price, and transmission — share the link on WhatsApp.",
+      : SEO_PAGES.showroom.description,
+    keywords: SEO_PAGES.showroom.keywords,
+    canonicalPath: "/showroom",
     ogType: "website",
   });
 
