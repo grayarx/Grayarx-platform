@@ -18,6 +18,7 @@ import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
+import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
 
 const fadeUp = {
   initial: { opacity: 0, y: 32 },
@@ -25,10 +26,6 @@ const fadeUp = {
   viewport: { once: true, margin: "-80px" },
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
 };
-
-/** SA yard stock energy — Hilux / working inventory, not supercar theatre. */
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=1800&q=88&auto=format&fit=crop";
 
 const MARQUEE_ITEMS = [
   "After-hours WhatsApp",
@@ -123,8 +120,8 @@ export default function Home() {
       {/* ── Hero: ICP in three seconds ── */}
       <section className="relative home-hero-stage overflow-hidden">
         <img
-          src={HERO_IMAGE}
-          alt=""
+          src={HERO_SHOWCASE_CORVETTE}
+          alt="GrayArx showcase"
           className="absolute inset-0 w-full h-full object-cover object-center"
           fetchPriority="high"
           loading="eager"

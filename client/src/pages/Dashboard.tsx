@@ -30,6 +30,8 @@ import { PhotoGuideCard } from "@/components/PhotoGuide";
 import ShareShowroomCard from "@/components/ShareShowroomCard";
 import GoLiveChecklistCard from "@/components/GoLiveChecklistCard";
 import AfterHoursFunnelCard from "@/components/AfterHoursFunnelCard";
+import WeeklyBriefCard from "@/components/WeeklyBriefCard";
+import RetentionToolsCard from "@/components/RetentionToolsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -115,6 +117,8 @@ export default function Dashboard() {
       <PhotoGuideCard />
       <GoLiveChecklistCard />
       <AfterHoursFunnelCard />
+      <WeeklyBriefCard />
+      <RetentionToolsCard />
       <ShareShowroomCard />
 
       {isFounder && (

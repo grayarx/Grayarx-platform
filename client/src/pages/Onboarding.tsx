@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import Logo from "@/components/Logo";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { CheckCircle2, ArrowRight } from "lucide-react";
+import { useSearch } from "wouter";
 
 const REGIONS = [
   "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
@@ -36,6 +37,11 @@ const LANGUAGES = [
 ];
 
 export default function Onboarding() {
+  const search = useSearch();
+  const referredBy = useMemo(() => {
+    const raw = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("ref");
+    return raw?.trim().toLowerCase().replace(/[^a-z0-9]/g, "") || "";
+  }, [search]);
   const [submitted, setSubmitted] = useState<{ reference: string } | null>(null);
   const submit = trpc.publicOnboarding.submit.useMutation({
     onSuccess: (r: any) => setSubmitted({ reference: r.reference }),
@@ -117,6 +123,11 @@ export default function Onboarding() {
               Tell us a bit about your business. Our team reviews every application and
               gets back within one business day.
             </p>
+            {referredBy ? (
+              <p className="mt-3 text-xs text-primary/90 font-tech uppercase tracking-wider">
+                Referred by dealer · {referredBy}
+              </p>
+            ) : null}
             <p className="mt-4 text-xs text-muted-foreground">
               Preview agreements at{" "}
               <a href="/legal" className="text-primary hover:underline">grayarx.com/legal</a>
@@ -293,7 +304,12 @@ export default function Onboarding() {
                   !form.ownerPhone ||
                   !form.region
                 }
-                onClick={() => submit.mutate(form)}
+                onClick={() =>
+                  submit.mutate({
+                    ...form,
+                    ...(referredBy ? { referredBy } : {}),
+                  })
+                }
               >
                 {submit.isPending ? "Submitting…" : "Submit application"}
                 <ArrowRight className="h-4 w-4 ml-2" />

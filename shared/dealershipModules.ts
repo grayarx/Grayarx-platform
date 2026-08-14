@@ -19,6 +19,9 @@ export type DealershipModuleId =
   | "finance_calculator"
   | "comparison_tool"
   | "lead_drip"
+  | "weekly_brief"
+  | "aftercare"
+  | "dealer_referral"
   | "whatsapp"
   | "voice_agent"
   | "prospector"
@@ -69,6 +72,27 @@ export const DEALERSHIP_MODULES: DealershipModuleSpec[] = [
     id: "lead_drip",
     title: "Lead Follow-up Drip (Mia)",
     description: "Day 1 / 3 / 7 cadence drafting and sending follow-up emails.",
+    category: "operations",
+    toggleable: true,
+  },
+  {
+    id: "weekly_brief",
+    title: "Weekly DP Brief",
+    description: "Monday email to the dealership contact with after-hours, leads, bookings, and Mia follow-ups.",
+    category: "operations",
+    toggleable: true,
+  },
+  {
+    id: "aftercare",
+    title: "Aftercare & Review Ask",
+    description: "Post-sale check-in drafts and Google review ask templates for recently sold stock.",
+    category: "operations",
+    toggleable: true,
+  },
+  {
+    id: "dealer_referral",
+    title: "Dealer Invite Link",
+    description: "Shareable /onboarding?ref=shortcode attribution for referring peer yards.",
     category: "operations",
     toggleable: true,
   },

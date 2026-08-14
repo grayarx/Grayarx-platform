@@ -1270,6 +1270,7 @@ export const appRouter = router({
         agentDisplayName: dealership.agentDisplayName ?? null,
         publicShortcode: dealership.publicShortcode ?? null,
         whatsappPhoneNumberId: dealership.whatsappPhoneNumberId ?? null,
+        googleReviewUrl: (dealership as { googleReviewUrl?: string | null }).googleReviewUrl ?? null,
       };
     }),
 
@@ -1279,6 +1280,7 @@ export const appRouter = router({
           theme: z.enum(["futuristic", "classic", "minimal", "bold"]),
           brandAccentColor: z.string().max(16).nullable().optional(),
           agentDisplayName: z.string().max(40).nullable().optional(),
+          googleReviewUrl: z.string().max(500).nullable().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -1301,8 +1303,125 @@ export const appRouter = router({
             ? { agentDisplayName: input.agentDisplayName?.trim() || null }
             : {}),
         });
+        if (Object.prototype.hasOwnProperty.call(input, "googleReviewUrl")) {
+          const { updateDealershipGoogleReviewUrl } = await import("./_core/dealerWeeklyBrief");
+          const raw = input.googleReviewUrl?.trim() || null;
+          if (raw && !/^https?:\/\//i.test(raw)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Google review URL must start with http:// or https://",
+            });
+          }
+          await updateDealershipGoogleReviewUrl(dealershipId, raw);
+        }
         return { success: true, theme: input.theme };
       }),
+
+    /** Preview this week's DP brief (Overview card). */
+    weeklyBrief: protectedProcedure.query(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) return null;
+      const { buildDealerWeeklyBriefForId } = await import("./_core/dealerWeeklyBrief");
+      return buildDealerWeeklyBriefForId(dealershipId);
+    }),
+
+    /** Email the weekly brief to the dealership contact (manual send from Overview). */
+    sendWeeklyBrief: protectedProcedure.mutation(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No dealership assigned" });
+      }
+      const { sendDealerWeeklyBriefEmail } = await import("./_core/dealerWeeklyBrief");
+      const result = await sendDealerWeeklyBriefEmail(dealershipId);
+      if (!result.ok) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.reason ?? "Failed" });
+      }
+      return result;
+    }),
+
+    /**
+     * Tier 3 aftercare + reputation + invite pack for Overview.
+     * Recently sold stock + review/check-in drafts + invite link.
+     */
+    retentionTools: protectedProcedure.query(async ({ ctx }) => {
+      const dealershipId = ctx.user.dealershipId;
+      if (!dealershipId) return null;
+      const dealership = await getDealershipById(dealershipId);
+      if (!dealership) return null;
+      const { isModuleEnabled } = await import("../shared/dealershipModules");
+      const {
+        buildReviewAskDraft,
+        buildAftercareCheckInDraft,
+      } = await import("../shared/dealerWeeklyBrief");
+
+      const db = await getDb();
+      const sold: Array<{
+        id: number;
+        title: string;
+        make: string | null;
+        model: string | null;
+        year: number | null;
+        updatedAt: Date | null;
+      }> = [];
+      if (db) {
+        const { vehicles } = await import("../drizzle/schema");
+        const { desc, and, eq } = await import("drizzle-orm");
+        const rows = await db
+          .select({
+            id: vehicles.id,
+            title: vehicles.title,
+            make: vehicles.make,
+            model: vehicles.model,
+            year: vehicles.year,
+            updatedAt: vehicles.updatedAt,
+          })
+          .from(vehicles)
+          .where(and(eq(vehicles.dealershipId, dealershipId), eq(vehicles.status, "sold")))
+          .orderBy(desc(vehicles.updatedAt))
+          .limit(8);
+        sold.push(...rows);
+      }
+
+      const googleReviewUrl =
+        (dealership as { googleReviewUrl?: string | null }).googleReviewUrl ?? null;
+      const shortcode = dealership.publicShortcode?.trim() || null;
+      const inviteUrl = shortcode
+        ? `https://www.grayarx.com/onboarding?ref=${encodeURIComponent(shortcode)}`
+        : null;
+
+      const recentSold = sold.map((v) => {
+        const label = [v.year, v.make, v.model].filter(Boolean).join(" ") || v.title;
+        return {
+          id: v.id,
+          label,
+          updatedAt: v.updatedAt,
+          reviewDraft: buildReviewAskDraft({
+            dealershipName: dealership.name,
+            googleReviewUrl,
+          }),
+          checkInDraft: buildAftercareCheckInDraft({
+            dealershipName: dealership.name,
+            vehicleLabel: label,
+          }),
+        };
+      });
+
+      return {
+        googleReviewUrl,
+        inviteUrl,
+        publicShortcode: shortcode,
+        modules: {
+          weeklyBrief: isModuleEnabled(dealership.modulesEnabled, "weekly_brief"),
+          aftercare: isModuleEnabled(dealership.modulesEnabled, "aftercare"),
+          dealerReferral: isModuleEnabled(dealership.modulesEnabled, "dealer_referral"),
+        },
+        reviewDraft: buildReviewAskDraft({
+          dealershipName: dealership.name,
+          googleReviewUrl,
+        }),
+        recentSold,
+      };
+    }),
 
     listLeads: protectedProcedure.query(async ({ ctx }) => {
       const isAdmin = isFounderOrAdmin(ctx.user);
@@ -3275,6 +3394,8 @@ export const appRouter = router({
             .max(64)
             .regex(/^\d*$/, "Meta Phone Number ID must be digits only")
             .optional(),
+          /** Peer dealer shortcode from /onboarding?ref= */
+          referredBy: z.string().max(12).optional(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -3291,6 +3412,17 @@ export const appRouter = router({
           ? input.brandsCarried.split(",").map((b) => b.trim()).filter(Boolean)
           : null;
         const waId = input.whatsappPhoneNumberId?.trim() || null;
+        const refCode = input.referredBy?.trim().toLowerCase().replace(/[^a-z0-9]/g, "") || null;
+        let referrerNote = "";
+        if (refCode) {
+          const all = await listAllDealerships();
+          const match = all.find(
+            (d) => (d.publicShortcode ?? "").trim().toLowerCase() === refCode,
+          );
+          referrerNote = match
+            ? `\n[referredBy: ${refCode}] [referrerDealershipId: ${match.id}] [${match.name}]`
+            : `\n[referredBy: ${refCode}]`;
+        }
         await createOnboardingSubmission({
           dealershipName: input.dealershipName,
           ownerName: input.ownerName,
@@ -3301,13 +3433,17 @@ export const appRouter = router({
           languages,
           vehicleTypes,
           csvUrl: input.csvUrl ?? null,
-          notes: input.notes ? `${input.notes}\n[ref: ${reference}]` : `[ref: ${reference}]`,
+          notes: input.notes
+            ? `${input.notes}\n[ref: ${reference}]${referrerNote}`
+            : `[ref: ${reference}]${referrerNote}`,
           whatsappPhoneNumberId: waId,
         });
         try {
           await alertFounder({
             title: `New onboarding application — ${input.dealershipName}`,
-            content: `Reference: ${reference}\nOwner: ${input.ownerName} <${input.ownerEmail}>\nPhone: ${input.ownerPhone}\nRegion: ${input.region}\nLanguage: ${input.primaryLanguage}`,
+            content: `Reference: ${reference}\nOwner: ${input.ownerName} <${input.ownerEmail}>\nPhone: ${input.ownerPhone}\nRegion: ${input.region}\nLanguage: ${input.primaryLanguage}${
+              refCode ? `\nReferred by: ${refCode}` : ""
+            }`,
             category: "onboarding",
             actionUrl: "https://www.grayarx.com/admin/onboarding",
           });
