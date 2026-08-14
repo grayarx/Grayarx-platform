@@ -17,7 +17,8 @@ export type SeoPageKey =
   | "showroom"
   | "tradeIn"
   | "finance"
-  | "compare";
+  | "compare"
+  | "forDealers";
 
 export type SeoPageMeta = {
   title: string;
@@ -41,6 +42,14 @@ export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
       "Onboard your SA dealership in one application — CSV inventory, WhatsApp Nala, leads, and bookings. Free pilot, no credit card.",
     keywords:
       "dealership software free trial South Africa, car dealer CRM onboarding, WhatsApp dealership pilot",
+  },
+  forDealers: {
+    path: "/for-dealers",
+    title: "ROI for SA dealerships | GrayArx",
+    description:
+      "Run the after-hours leakage math for your yard. One recovered deal a month usually covers GrayArx — free pilot on your CSV stock.",
+    keywords:
+      "dealership ROI calculator South Africa, WhatsApp leads cost, car dealer software worth it",
   },
   help: {
     path: "/help",

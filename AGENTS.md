@@ -67,5 +67,6 @@
 - Dealer invite: `/onboarding?ref={shortcode}` stamped into onboarding notes for founder attribution.
 
 ### SEO (ICP)
-- Copy SOT: `shared/seo.ts`. Shell meta in `client/index.html` matches Home ICP. Sitemap includes `/onboarding` + `/legal`.
+- Copy SOT: `shared/seo.ts`. Shell meta in `client/index.html` matches Home ICP. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`.
 - `useDocumentMeta` sets canonical + Twitter + optional JSON-LD.
+- Founder call kit: `docs/FOUNDER_SALES_CALL_KIT.md`. Public ROI: `/for-dealers` + home `#roi`.

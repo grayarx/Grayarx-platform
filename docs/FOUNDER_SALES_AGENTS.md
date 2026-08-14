@@ -18,6 +18,8 @@
 Canonical answers live in:
 - `docs/DEALER_QA_PLAYBOOK.md`
 - `shared/dealerQaPlaybook.ts` (injected into Sipho, Themba, Kagiso system prompts)
+- **`docs/FOUNDER_SALES_CALL_KIT.md`** — pre-call plan, objections, money ask, weekly funnel (Pete-style)
+- Public ROI share link: `https://www.grayarx.com/for-dealers`
 
 Covers price, WhatsApp/Meta, POPIA, contract (month-to-month vs 12-month), SLA, CSV stock, pre-approvals honesty, objections (“still in a contract”), etc.
 

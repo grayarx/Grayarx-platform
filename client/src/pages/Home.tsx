@@ -15,6 +15,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import LeadCaptureFormOptimized from "@/components/LeadCaptureFormOptimized";
 import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
+import IcpRoiCalculator from "@/components/IcpRoiCalculator";
 import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
@@ -279,6 +280,21 @@ export default function Home() {
               ))}
             </motion.ul>
           </div>
+        </div>
+      </section>
+
+      {/* No-brainer ROI */}
+      <section id="roi" className="relative py-16 md:py-24 border-t border-primary/10">
+        <div className="container max-w-3xl">
+          <motion.div {...fadeUp}>
+            <IcpRoiCalculator />
+            <p className="mt-4 text-center font-tech text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Full dealer brief →{" "}
+              <Link href="/for-dealers" className="text-primary hover:underline">
+                /for-dealers
+              </Link>
+            </p>
+          </motion.div>
         </div>
       </section>
 
