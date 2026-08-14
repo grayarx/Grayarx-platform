@@ -58,3 +58,9 @@
 
 ### Marketing home (ICP conversion)
 - `/` is dealer-principal first: after-hours WhatsApp leakage → CSV live → booked drive. Primary CTA is `#lead-capture` / free pilot — not browse showroom.
+- Hero keeps the Corvette showcase (`HERO_SHOWCASE_CORVETTE` / `/corvette-exterior.jpg`) — messaging changed, not the car.
+
+### Retention (Tier 3)
+- Weekly DP brief: `dealer.weeklyBrief` / `sendWeeklyBrief` + cron `POST /api/scheduled/weekly-dealer-brief` (module `weekly_brief`).
+- Reputation + aftercare drafts: `dealer.retentionTools` + Google review URL in Settings (`googleReviewUrl`).
+- Dealer invite: `/onboarding?ref={shortcode}` stamped into onboarding notes for founder attribution.

@@ -363,6 +363,31 @@ export function registerScheduledRoutes(app: Express) {
   });
 
   /**
+   * Weekly DP brief — emails each active dealership their yard desk numbers
+   * (after-hours, leads, bookings, Mia). Honours modulesEnabled.weekly_brief.
+   */
+  app.post("/api/scheduled/weekly-dealer-brief", async (req: Request, res: Response) => {
+    try {
+      if (!(await isAuthorizedScheduledTask(req))) {
+        return res.status(403).json({ error: "cron-only" });
+      }
+      const { sendAllDealerWeeklyBriefs } = await import("./dealerWeeklyBrief");
+      const result = await sendAllDealerWeeklyBriefs();
+      console.log("[Scheduled] weekly-dealer-brief", result);
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error("[Scheduled] weekly-dealer-brief failed", err);
+      alertFounder({
+        title: "Scheduled job failed: weekly-dealer-brief",
+        content: `Error: ${err instanceof Error ? err.message : String(err)}`,
+        category: "ops",
+        actionUrl: "https://www.grayarx.com/admin/ops",
+      }).catch(() => {});
+      return res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  /**
    * Nightly stock sync — fetches each dealership's CSV feed URL and
    * create/update/sold-marks inventory. See inventorySyncService.ts.
    */

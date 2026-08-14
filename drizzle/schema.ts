@@ -469,6 +469,10 @@ export const dealerships = mysqlTable("dealerships", {
   stockSyncLastAt: timestamp("stockSyncLastAt"),
   /** JSON: { created, updated, unchanged, markedSold, failed, error? } */
   stockSyncLastResult: json("stockSyncLastResult"),
+  /**
+   * Public Google review / Maps URL — used for post-sale “ask for review” drafts.
+   */
+  googleReviewUrl: varchar("googleReviewUrl", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

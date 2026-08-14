@@ -46,11 +46,15 @@ export default function DealerSettings() {
   const [showroomTheme, setShowroomTheme] = useState<ShowroomThemeId>("classic");
   const [brandAccentColor, setBrandAccentColor] = useState("#d4af37");
   const [agentDisplayName, setAgentDisplayName] = useState("");
+  const [googleReviewUrl, setGoogleReviewUrl] = useState("");
 
   const shortcode = appearance?.publicShortcode?.trim() || null;
   const waLinked = Boolean(appearance?.whatsappPhoneNumberId?.trim());
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://www.grayarx.com";
+  const inviteUrl = shortcode
+    ? `${origin}/onboarding?ref=${encodeURIComponent(shortcode)}`
+    : null;
 
   const embedSnippets = useMemo(() => {
     if (!shortcode) return null;
@@ -70,6 +74,7 @@ export default function DealerSettings() {
       setShowroomTheme(appearance.theme);
       setBrandAccentColor(appearance.brandAccentColor ?? "#d4af37");
       setAgentDisplayName(appearance.agentDisplayName ?? "");
+      setGoogleReviewUrl(appearance.googleReviewUrl ?? "");
     }
   }, [appearance]);
 
@@ -182,6 +187,39 @@ export default function DealerSettings() {
                   Shown in WhatsApp greetings and the AI disclosure line. Leave blank for Nala.
                 </p>
               </div>
+              <div className="max-w-lg space-y-2">
+                <Label htmlFor="google-review-url">Google review link</Label>
+                <Input
+                  id="google-review-url"
+                  value={googleReviewUrl}
+                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                  placeholder="https://g.page/r/…"
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used in post-sale “ask for review” WhatsApp drafts on Overview.
+                </p>
+              </div>
+              {inviteUrl && (
+                <div className="max-w-lg space-y-2 rounded-xl border border-border/50 bg-card/30 p-4">
+                  <Label>Invite another dealership</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link — new applications are tagged with your shortcode.
+                  </p>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <code className="text-[11px] truncate max-w-full">{inviteUrl}</code>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyText("Invite link", inviteUrl)}
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="btn-gold shrink-0"
@@ -191,6 +229,7 @@ export default function DealerSettings() {
                       theme: showroomTheme,
                       brandAccentColor: brandAccentColor.trim() || null,
                       agentDisplayName: agentDisplayName.trim() || null,
+                      googleReviewUrl: googleReviewUrl.trim() || null,
                     })
                   }
                 >
