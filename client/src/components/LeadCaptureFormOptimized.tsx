@@ -57,24 +57,24 @@ export default function LeadCaptureFormOptimized() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="glass-gold rounded-xl p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <span className="font-display text-2xl font-bold text-gold-gradient">Live</span>
+            <Zap className="h-5 w-5 text-primary" />
+            <span className="font-display text-2xl font-bold text-gold-gradient">24/7</span>
           </div>
-          <p className="text-xs text-muted-foreground">Deal scores on stock</p>
+          <p className="text-xs text-muted-foreground">WhatsApp replies</p>
+        </div>
+        <div className="glass-gold rounded-xl p-6 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <span className="font-display text-2xl font-bold text-gold-gradient">CSV</span>
+          </div>
+          <p className="text-xs text-muted-foreground">Your stock live</p>
         </div>
         <div className="glass-gold rounded-xl p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Users className="h-5 w-5 text-primary" />
-            <span className="font-display text-2xl font-bold text-gold-gradient">11</span>
+            <span className="font-display text-2xl font-bold text-gold-gradient">Free</span>
           </div>
-          <p className="text-xs text-muted-foreground">SA languages</p>
-        </div>
-        <div className="glass-gold rounded-xl p-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Zap className="h-5 w-5 text-primary" />
-            <span className="font-display text-2xl font-bold text-gold-gradient">24h</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Pilot onboarding</p>
+          <p className="text-xs text-muted-foreground">Pilot · no card</p>
         </div>
       </div>
 
