@@ -414,14 +414,14 @@ function AppContent() {
       />
       {showPendingBanner && (
         <div
-          className={`fixed top-0 left-0 right-0 ${POPIA_BANNER_Z} bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-4`}
+          className={`fixed top-0 left-0 right-0 ${POPIA_BANNER_Z} border-b border-amber-500/30 bg-[#12110c]/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-4`}
           role="status"
         >
-          <div className="flex items-center gap-2 text-sm text-amber-900">
-            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+          <div className="flex items-center gap-2 text-sm text-amber-100/90">
+            <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
             <span>
-              POPIA acknowledgment pending —{' '}
-              <a href="/dealer/legal" className="underline font-medium hover:text-amber-700">
+              POPIA acknowledgment pending —{" "}
+              <a href="/dealer/legal" className="underline font-medium text-amber-200 hover:text-primary">
                 complete it in Legal → POPIA
               </a>
             </span>
@@ -438,7 +438,7 @@ function AppContent() {
               e.stopPropagation();
               handleBannerDismiss();
             }}
-            className="relative z-[1] p-2 -mr-1 text-amber-600 hover:text-amber-800 shrink-0 rounded-sm cursor-pointer"
+            className="relative z-[1] p-2 -mr-1 text-amber-300/80 hover:text-amber-100 shrink-0 rounded-sm cursor-pointer"
             aria-label="Dismiss POPIA banner"
           >
             <X className="h-4 w-4 pointer-events-none" />
