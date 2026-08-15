@@ -123,7 +123,7 @@ export function POPIAConsentModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:thin] [scrollbar-color:rgba(212,175,55,0.35)_transparent]">
           <div className="space-y-4">
             {POPIA_SECTIONS.map((section) => (
               <section
