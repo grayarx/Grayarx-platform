@@ -398,6 +398,12 @@ function AppContent() {
     unsignedButDismissed,
   } = usePopiaConsent();
 
+  // Dev-only: /?popiaPreview=1 forces the consent modal so we can QA the UI.
+  const popiaPreview =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("popiaPreview");
+
   // Founders/admins never see the dealer POPIA pending banner.
   const showPendingBanner = unsignedButDismissed && !isFounderOrAdmin;
 
@@ -407,7 +413,7 @@ function AppContent() {
   return (
     <>
       <POPIAConsentModal
-        open={showModal}
+        open={showModal || popiaPreview}
         onClose={handleDismiss}
         onSign={handleSign}
         isLoading={isLoading}
