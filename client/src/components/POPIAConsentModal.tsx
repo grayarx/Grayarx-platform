@@ -1,11 +1,17 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { useState } from "react";
+import { Link } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Scale, ShieldCheck, ExternalLink } from "lucide-react";
 
 interface POPIAConsentModalProps {
   open: boolean;
@@ -14,115 +20,52 @@ interface POPIAConsentModalProps {
   isLoading?: boolean;
 }
 
-const POPIA_FORM_TEXT = `
-GrayArx POPIA Consent & Acknowledgment Form
+type PopiaSection = {
+  title: string;
+  body: string;
+  bullets?: string[];
+};
 
-Effective Date: 1 June 2026
-
-INTRODUCTION
-This POPIA Consent & Acknowledgment Form sets out your explicit consent and acknowledgment regarding the processing of personal information in accordance with the Protection of Personal Information Act, 2013 (POPIA).
-
-By signing this Form, you confirm that you understand your obligations under POPIA and agree to comply with all POPIA requirements when using the GrayArx platform.
-
-RESPONSIBLE PARTY STATUS
-You acknowledge that you are the "Responsible Party" under POPIA, meaning you:
-- Determine the purpose and means of processing personal information
-- Bear full responsibility for POPIA compliance
-- Are liable for any POPIA violations
-
-GrayArx acts as a "Processor" on your behalf and processes personal information only as instructed.
-
-LAWFUL BASIS FOR PROCESSING
-You confirm that all personal information processed through the GrayArx platform is collected and processed on one or more of the following lawful bases:
-- Consent: You have obtained explicit, informed consent from the data subject
-- Contract: The information is necessary to perform a contract with the data subject
-- Legal Obligation: You are required by law to collect and process the information
-- Legitimate Interest: You have a legitimate business interest in processing the information
-
-CONSENT REQUIREMENT
-You acknowledge that:
-- Explicit consent is required before collecting sensitive personal information
-- Consent must be freely given, specific, informed, and unambiguous
-- Consent cannot be a condition of receiving a service (except where necessary)
-- Consent must be documented and retained for audit purposes
-
-PURPOSE LIMITATION
-You confirm that personal information will be processed only for the purposes disclosed to the data subject, including:
-- Lead capture and customer relationship management
-- Vehicle inventory and sales
-- Customer communication and follow-up
-- Finance and credit assessment
-- Service and warranty management
-- Regulatory compliance and reporting
-
-DATA SUBJECT RIGHTS
-You acknowledge that data subjects have the right to:
-- Request access to their personal information (15 business days)
-- Request correction of inaccurate information (15 business days)
-- Request deletion of their personal information (15 business days)
-- Object to processing or opt-out of marketing (48 hours)
-- Request their information in portable format (15 business days)
-- Lodge a complaint with the Information Regulator
-
-DATA SECURITY & PROTECTION
-You acknowledge that GrayArx implements appropriate security measures, including:
-- Encryption (TLS 1.2+ in transit, AES-256 at rest)
-- Access control and multi-factor authentication
-- Firewalls and network perimeter protection
-- Real-time threat detection and monitoring
-- Daily automated backups
-
-You commit to:
-- Protecting your login credentials
-- Reporting breaches immediately
-- Ensuring only authorized personnel access the Service
-- Securely deleting data when no longer needed
-
-THIRD-PARTY DATA SHARING
-You acknowledge that GrayArx shares personal information with the following sub-processors:
-- Amazon Web Services (AWS) — Cloud hosting and data storage
-- Stripe — Payment processing
-- Twilio — SMS delivery
-- Resend — Email delivery
-- Google Analytics — Analytics and usage tracking
-- GrayArx AI Services — LLM & AI infrastructure
-
-All sub-processors are bound by confidentiality agreements and process data only as instructed.
-
-DATA RETENTION & DELETION
-You acknowledge the following retention periods:
-- Customer leads: Duration of subscription + 12 months
-- Communications: Duration of subscription + 6 months
-- Payment records: 7 years (tax compliance)
-- Server logs: 90 days
-- Trade-in valuations: Duration of subscription + 12 months
-
-Upon account termination, all personal information will be deleted within 30 days.
-
-COMPLIANCE OBLIGATIONS
-You commit to:
-- Complying with all POPIA requirements
-- Maintaining records of processing activities
-- Conducting privacy impact assessments for high-risk processing
-- Implementing privacy by design principles
-- Training employees on POPIA compliance
-- Complying with the National Credit Act (NCA)
-- Complying with the Consumer Protection Act (CPA)
-- Complying with the Electronic Communications and Transactions Act (ECTA)
-
-LIABILITY & INDEMNIFICATION
-You acknowledge that you are solely liable for POPIA compliance and agree to indemnify GrayArx for any claims arising from:
-- Your violation of POPIA
-- Your violation of other applicable laws
-- Your processing of personal information
-- Your failure to obtain consent
-- Your failure to honor data subject rights
-
-ANNUAL RE-CONFIRMATION
-This Form must be re-confirmed annually to ensure continued compliance with POPIA. GrayArx will send a re-confirmation request on the anniversary date of the initial signature.
-
-For full details, visit: www.grayarx.com/legal/popia-consent-form
-`;
+const POPIA_SECTIONS: PopiaSection[] = [
+  {
+    title: "Introduction",
+    body: "This form records your explicit consent and acknowledgment under the Protection of Personal Information Act, 2013 (POPIA). By signing, you confirm you understand your obligations when using GrayArx.",
+  },
+  {
+    title: "Responsible party",
+    body: "You are the Responsible Party under POPIA. You determine the purpose and means of processing, bear compliance responsibility, and are liable for POPIA violations. GrayArx acts as Processor and processes personal information only on your instructions.",
+  },
+  {
+    title: "Lawful basis",
+    body: "Personal information on GrayArx must rest on a lawful basis:",
+    bullets: [
+      "Consent — explicit, informed consent from the data subject",
+      "Contract — necessary to perform a contract with the data subject",
+      "Legal obligation — required by law",
+      "Legitimate interest — a genuine business interest in processing",
+    ],
+  },
+  {
+    title: "Consent & purpose",
+    body: "Sensitive personal information needs explicit consent. Consent must be freely given, specific, informed, and unambiguous — and documented for audit. Processing is limited to disclosed purposes: leads & CRM, inventory & sales, customer follow-up, finance/credit assessment, service & warranty, and regulatory reporting.",
+  },
+  {
+    title: "Data subject rights",
+    body: "You will honour requests for access, correction, deletion (15 business days), marketing opt-out (48 hours), portability (15 business days), and complaints to the Information Regulator.",
+  },
+  {
+    title: "Security & sub-processors",
+    body: "GrayArx uses TLS 1.2+, AES-256 at rest, access controls, MFA, perimeter protection, monitoring, and daily backups. You protect credentials, report breaches promptly, and limit access to authorised staff. Sub-processors (bound by confidentiality) may include AWS, Stripe, Twilio, Resend, Google Analytics, and GrayArx AI infrastructure.",
+  },
+  {
+    title: "Retention & deletion",
+    body: "Typical retention: leads and trade-ins — subscription + 12 months; communications — subscription + 6 months; payment records — 7 years; server logs — 90 days. After account termination, personal information is deleted within 30 days.",
+  },
+  {
+    title: "Compliance & liability",
+    body: "You commit to POPIA, processing records, privacy-by-design, staff training, and applicable NCA / CPA / ECTA duties. You remain solely liable for POPIA compliance and indemnify GrayArx for claims arising from your violations, unlawful processing, or failure to obtain consent or honour data-subject rights. This form is re-confirmed annually.",
+  },
+];
 
 export function POPIAConsentModal({
   open,
@@ -130,7 +73,7 @@ export function POPIAConsentModal({
   onSign,
   isLoading = false,
 }: POPIAConsentModalProps) {
-  const [signedName, setSignedName] = useState('');
+  const [signedName, setSignedName] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -140,7 +83,7 @@ export function POPIAConsentModal({
     setSubmitting(true);
     try {
       await onSign(signedName);
-      setSignedName('');
+      setSignedName("");
       setAgreed(false);
     } finally {
       setSubmitting(false);
@@ -148,75 +91,118 @@ export function POPIAConsentModal({
   };
 
   const isValid = signedName.trim().length >= 2 && agreed;
+  const busy = submitting || isLoading;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        // Only dismiss when the dialog is closing (X / overlay). Opening is controlled by parent.
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col gap-3 bg-[#0c0c10] border-primary/25 text-foreground">
-        <DialogHeader>
-          <DialogTitle className="text-foreground">POPIA Consent & Acknowledgment</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Scroll the form, then sign below — required before dealers operate on GrayArx.
-          </DialogDescription>
-        </DialogHeader>
-
-        <Alert className="border-amber-500/40 bg-amber-500/10">
-          <AlertTriangle className="h-4 w-4 text-amber-400" />
-          <AlertDescription className="text-amber-100">
-            Please complete your POPIA acknowledgment. Required for dealers operating on the platform.
-          </AlertDescription>
-        </Alert>
-
-        <ScrollArea className="min-h-[180px] max-h-[38vh] border border-white/10 rounded-md p-4 bg-black/40">
-          <div className="pr-4 text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">
-            {POPIA_FORM_TEXT}
+      <DialogContent
+        showCloseButton
+        className="flex max-h-[min(92vh,840px)] w-full flex-col gap-0 overflow-hidden border-primary/25 bg-[#0a0a0c] p-0 text-foreground shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:max-w-2xl"
+      >
+        <div className="relative shrink-0 border-b border-primary/15 bg-gradient-to-br from-primary/[0.12] via-transparent to-transparent px-6 pb-5 pt-6 pr-12">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+            <Scale className="h-5 w-5 text-primary" aria-hidden />
           </div>
-        </ScrollArea>
+          <DialogHeader className="gap-2 text-left">
+            <DialogTitle className="font-display text-xl font-bold tracking-tight md:text-2xl">
+              POPIA consent & acknowledgment
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              Required before your yard operates on GrayArx. Scroll the summary, then sign —
+              you remain the Responsible Party under POPIA.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-emerald-200/90">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            Effective 1 June 2026 · Annual re-confirm
+          </div>
+        </div>
 
-        <div className="space-y-3 shrink-0 border-t border-white/10 pt-3">
-          <Input
-            placeholder="Enter your full name (e-signature)"
-            value={signedName}
-            onChange={(e) => setSignedName(e.target.value)}
-            disabled={submitting || isLoading}
-            className="bg-black/40 border-white/15"
-            autoComplete="name"
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="space-y-4">
+            {POPIA_SECTIONS.map((section) => (
+              <section
+                key={section.title}
+                className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4"
+              >
+                <h3 className="font-tech mb-2 text-[10px] uppercase tracking-[0.22em] text-primary/85">
+                  {section.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-white/75">{section.body}</p>
+                {section.bullets ? (
+                  <ul className="mt-3 space-y-1.5 border-l border-primary/20 pl-3">
+                    {section.bullets.map((item) => (
+                      <li key={item} className="text-sm leading-snug text-muted-foreground">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+            ))}
+          </div>
 
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="agree"
-              checked={agreed}
-              onCheckedChange={(checked) => setAgreed(checked as boolean)}
-              disabled={submitting || isLoading}
-              className="mt-0.5"
+          <Link
+            href="/legal/popia-consent-form"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            Full POPIA consent form
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        </div>
+
+        <div className="shrink-0 space-y-4 border-t border-primary/15 bg-[#0c0c10] px-6 py-5">
+          <div className="space-y-2">
+            <Label htmlFor="popia-sign-name" className="text-xs uppercase tracking-wider text-muted-foreground">
+              Full name (e-signature)
+            </Label>
+            <Input
+              id="popia-sign-name"
+              placeholder="e.g. Thabo Molefe"
+              value={signedName}
+              onChange={(e) => setSignedName(e.target.value)}
+              disabled={busy}
+              className="h-11 border-white/15 bg-black/40 focus-visible:border-primary/40"
+              autoComplete="name"
             />
-            <label htmlFor="agree" className="text-sm text-muted-foreground cursor-pointer leading-snug">
-              I have read and agree to the POPIA Consent & Acknowledgment Form and understand my
-              obligations under POPIA.
+          </div>
+
+          <div className="flex items-start gap-3 rounded-xl border border-white/[0.08] bg-black/30 p-3">
+            <Checkbox
+              id="popia-agree"
+              checked={agreed}
+              onCheckedChange={(checked) => setAgreed(checked === true)}
+              disabled={busy}
+              className="mt-0.5 border-white/30 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+            />
+            <label htmlFor="popia-agree" className="cursor-pointer text-sm leading-snug text-white/80">
+              I have read and agree to this POPIA Consent & Acknowledgment and understand my
+              obligations as the Responsible Party.
             </label>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
+              type="button"
               variant="outline"
               onClick={onClose}
-              disabled={submitting || isLoading}
-              className="border-white/20"
+              disabled={busy}
+              className="h-11 border-white/20 bg-transparent hover:bg-white/5"
             >
               Remind me later
             </Button>
             <Button
+              type="button"
               onClick={handleSign}
-              disabled={!isValid || submitting || isLoading}
-              className="btn-gold"
+              disabled={!isValid || busy}
+              className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider"
             >
-              {submitting || isLoading ? 'Signing...' : 'Sign & Agree'}
+              {busy ? "Signing…" : "Sign & agree"}
             </Button>
           </div>
         </div>
