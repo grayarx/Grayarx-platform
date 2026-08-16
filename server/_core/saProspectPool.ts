@@ -10,6 +10,12 @@ export interface SAProspectEntry {
   segment: "luxury" | "volume" | "budget" | "exotic" | "multi-brand";
   estimatedMonthlyVolume: number;
   website?: string;
+  /**
+   * Known principal / owner first (or full) name when the public mailbox is
+   * still info@/sales@. Sipho seeds email-guess with this before cold scrape.
+   */
+  principalName?: string;
+  principalRole?: string;
 }
 
 export const SA_PROSPECT_POOL: SAProspectEntry[] = [
@@ -25,6 +31,48 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
     segment: "volume",
     estimatedMonthlyVolume: 40,
     website: "https://jubileemotors.co.za",
+    principalName: "Darius",
+    principalRole: "Dealer Principal",
+  },
+  // Known first names (still on info@) — prioritize for name→email guess
+  {
+    name: "SD Auto CC",
+    city: "Wychwood, Johannesburg",
+    province: "Gauteng",
+    email: "info@sdautocc.co.za",
+    phone: "0116150228",
+    brands: ["Multi-brand used"],
+    segment: "budget",
+    estimatedMonthlyVolume: 30,
+    website: "https://sdautocc.co.za",
+    principalName: "Donoven",
+    principalRole: "Owner",
+  },
+  {
+    name: "Corona Motors",
+    city: "Gezina, Pretoria",
+    province: "Gauteng",
+    email: "info@coronamotors.co.za",
+    phone: "0123358359",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 55,
+    website: "https://coronamotors.co.za",
+    principalName: "Jan",
+    principalRole: "Contact",
+  },
+  {
+    name: "M5 Auto",
+    city: "Boksburg",
+    province: "Gauteng",
+    email: "info@m5auto.co.za",
+    phone: "0112305220",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 80,
+    website: "https://m5auto.co.za",
+    principalName: "Ammaar",
+    principalRole: "Contact",
   },
   // ─── Gauteng – Johannesburg ───────────────────────────────────────────────
   {

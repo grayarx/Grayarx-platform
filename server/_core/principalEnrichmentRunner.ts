@@ -172,6 +172,28 @@ export async function collectPrincipalEnrichmentTargets(
   );
   for (const p of dbNeed) {
     if (targets.length >= limit) break;
+    const knownFromPilot = PILOT_PROSPECTS.find(
+      (x) => x.dealershipName.toLowerCase() === p.dealershipName.toLowerCase(),
+    );
+    const knownFromPool = SA_PROSPECT_POOL.find(
+      (x) => x.name.toLowerCase() === p.dealershipName.toLowerCase(),
+    );
+    const knownPeople: Array<{ fullName: string; role?: string | null }> = [];
+    if (p.contactName?.trim()) {
+      knownPeople.push({ fullName: p.contactName, role: p.contactRole });
+    }
+    if (knownFromPilot?.contactName) {
+      knownPeople.push({
+        fullName: knownFromPilot.contactName,
+        role: knownFromPilot.contactRole,
+      });
+    }
+    if (knownFromPool?.principalName) {
+      knownPeople.push({
+        fullName: knownFromPool.principalName,
+        role: knownFromPool.principalRole,
+      });
+    }
     targets.push({
       prospectId: p.id,
       dealershipName: p.dealershipName,
@@ -181,11 +203,11 @@ export async function collectPrincipalEnrichmentTargets(
       phone: p.phone,
       brandsCarried: p.brandsCarried,
       estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+      knownPeople,
     });
   }
 
-  // 2) SA pool (shuffled) — prefer before curated pilots so restarts don't
-  //    burn every tick on the same Gauteng Motor Centre deep dig.
+  // 2) SA pool — prefer rows with a known principalName (higher yield)
   const poolCandidates = shuffleInPlace(
     SA_PROSPECT_POOL.filter((p) => {
       if (!p.website?.trim()) return false;
@@ -199,6 +221,8 @@ export async function collectPrincipalEnrichmentTargets(
       return true;
     }),
   );
+  // Stable preference: known-name rows first within the shuffle buckets
+  poolCandidates.sort((a, b) => Number(Boolean(b.principalName)) - Number(Boolean(a.principalName)));
   for (const p of poolCandidates) {
     if (targets.length >= limit) break;
     if (targets.some((t) => t.dealershipName.toLowerCase() === p.name.toLowerCase())) continue;
@@ -212,10 +236,13 @@ export async function collectPrincipalEnrichmentTargets(
       phone: p.phone,
       brandsCarried: p.brands.join(", "),
       estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+      knownPeople: p.principalName
+        ? [{ fullName: p.principalName, role: p.principalRole }]
+        : undefined,
     });
   }
 
-  // 3) Pilot list (shuffled) last
+  // 3) Pilot list (shuffled) last — pass contactName into knownPeople
   const pilotCandidates = shuffleInPlace(
     PILOT_PROSPECTS.filter((p) => {
       if (!p.website?.trim()) return false;
@@ -228,6 +255,11 @@ export async function collectPrincipalEnrichmentTargets(
       if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) return false;
       return true;
     }),
+  );
+  pilotCandidates.sort(
+    (a, b) =>
+      Number(!/TBD|Dealer Principal|Sales Manager|^Owner$/i.test(b.contactName)) -
+      Number(!/TBD|Dealer Principal|Sales Manager|^Owner$/i.test(a.contactName)),
   );
   for (const p of pilotCandidates) {
     if (targets.length >= limit) break;
@@ -246,6 +278,9 @@ export async function collectPrincipalEnrichmentTargets(
       city: p.city,
       region: p.region,
       phone: p.phone,
+      knownPeople: p.contactName
+        ? [{ fullName: p.contactName, role: p.contactRole }]
+        : undefined,
     });
   }
 

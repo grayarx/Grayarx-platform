@@ -2337,6 +2337,105 @@ export const appRouter = router({
       };
     }),
 
+    /**
+     * Founder paste: add or update a prospect with a verified named@dealer-domain email.
+     * Highest-yield path when Sipho scrape finds only info@.
+     */
+    addPrincipal: protectedProcedure
+      .input(
+        z.object({
+          dealershipName: z.string().min(2).max(255),
+          email: z.string().email().max(320),
+          website: z.string().url().max(500),
+          contactName: z.string().min(1).max(255).optional(),
+          contactRole: z.string().max(128).optional(),
+          phone: z.string().max(32).optional(),
+          city: z.string().max(128).optional(),
+          region: z.string().max(128).optional(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (!isFounderOrAdmin(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Founder access only" });
+        }
+        const { isOutreachReadyForDealership, assessProspectEmail } = await import(
+          "../shared/prospectEmailQuality"
+        );
+        const email = input.email.trim().toLowerCase();
+        if (!isOutreachReadyForDealership(email, input.website)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Email must be a named/principal inbox on the dealership domain (not info@/sales@).",
+          });
+        }
+        const quality = assessProspectEmail(email);
+        const existing = await listProspects(1000);
+        const match = existing.find(
+          (p) => p.dealershipName.toLowerCase().trim() === input.dealershipName.toLowerCase().trim(),
+        );
+        if (match) {
+          const { updateProspectContact } = await import("./db");
+          await updateProspectContact(match.id, {
+            email,
+            contactName: input.contactName?.trim() || match.contactName,
+            contactRole: input.contactRole?.trim() || match.contactRole,
+            emailVerified: 1,
+            emailSource: "founder_paste",
+            enrichedAt: new Date(),
+            enrichmentNotes: `Founder paste — quality=${quality.quality}`,
+            sourceNotesAppend: "Founder-added principal email",
+          });
+          await logAgentActivity({
+            agentId: "prospector",
+            action: "founder_paste_principal",
+            subjectType: "prospect",
+            subjectId: match.id,
+            summary: `Founder updated ${input.dealershipName} → ${email}`,
+            payload: { email, dealershipName: input.dealershipName },
+          });
+          return { ok: true as const, updated: true as const, created: false as const, id: match.id };
+        }
+        await createProspects([
+          {
+            dealershipName: input.dealershipName.trim(),
+            region: input.region?.trim() || null,
+            city: input.city?.trim() || null,
+            phone: input.phone?.trim() || null,
+            email,
+            website: input.website.trim(),
+            score: 90,
+            rationale: "Founder-pasted named principal contact",
+            status: "scouted",
+            sourceNotes: "Founder paste via /admin/prospector",
+            contactName: input.contactName?.trim() || null,
+            contactRole: input.contactRole?.trim() || "Dealer Principal",
+            emailVerified: 1,
+            emailSource: "founder_paste",
+            enrichedAt: new Date(),
+            enrichmentNotes: `Founder paste — quality=${quality.quality}`,
+          },
+        ]);
+        const after = await listProspects(1000);
+        const created = after.find(
+          (p) => p.dealershipName.toLowerCase().trim() === input.dealershipName.toLowerCase().trim(),
+        );
+        await logAgentActivity({
+          agentId: "prospector",
+          action: "founder_paste_principal",
+          subjectType: "prospect",
+          subjectId: created?.id ?? null,
+          summary: `Founder added ${input.dealershipName} → ${email}`,
+          payload: { email, dealershipName: input.dealershipName },
+        });
+        return {
+          ok: true as const,
+          updated: false as const,
+          created: true as const,
+          id: created?.id ?? null,
+        };
+      }),
+
     handoff: protectedProcedure
       .input(z.object({ id: z.number().int() }))
       .mutation(async ({ input, ctx }) => {

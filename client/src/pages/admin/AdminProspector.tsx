@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Mail, Phone, Globe, Sparkles, Loader2, Send, PhoneCall, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -133,7 +134,33 @@ export default function AdminProspector() {
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+  const addPrincipal = trpc.prospects.addPrincipal.useMutation({
+    onSuccess: (result) => {
+      utils.prospects.list.invalidate();
+      utils.prospects.scoutJobStatus.invalidate();
+      toast.success(result.created ? "Principal prospect added" : "Principal email updated");
+      setPasteOpen(false);
+      setPasteForm({
+        dealershipName: "",
+        email: "",
+        website: "",
+        contactName: "",
+        phone: "",
+        city: "",
+      });
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteForm, setPasteForm] = useState({
+    dealershipName: "",
+    email: "",
+    website: "",
+    contactName: "",
+    phone: "",
+    city: "",
+  });
 
   async function handleSendEmail(p: {
     id: number;
@@ -206,9 +233,12 @@ export default function AdminProspector() {
   return (
     <AdminShell
       title="Prospector"
-      subtitle="Sipho works 24/7 — one dealership at a time. New principal contacts appear here when found. NOT visible to current dealerships."
+      subtitle="Sipho digs named principals (not info@). Paste a verified firstname@dealer when you find one — highest yield. NOT visible to dealerships."
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Button variant="outline" onClick={() => setPasteOpen(true)}>
+            Paste principal
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -245,6 +275,88 @@ export default function AdminProspector() {
         </div>
       }
     >
+      <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+        <DialogContent className="sm:max-w-lg bg-[#0a0a0c] border-primary/25 text-foreground">
+          <DialogHeader>
+            <DialogTitle className="font-display">Paste principal contact</DialogTitle>
+            <DialogDescription>
+              Add a named inbox on the dealer domain (e.g. thabo@yard.co.za). Rejects info@ /
+              sales@. Instant card — no scrape wait.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              placeholder="Dealership name *"
+              value={pasteForm.dealershipName}
+              onChange={(e) => setPasteForm((f) => ({ ...f, dealershipName: e.target.value }))}
+              className="bg-black/40 border-white/15"
+            />
+            <Input
+              placeholder="Website URL * (https://…)"
+              value={pasteForm.website}
+              onChange={(e) => setPasteForm((f) => ({ ...f, website: e.target.value }))}
+              className="bg-black/40 border-white/15"
+            />
+            <Input
+              placeholder="Principal email * (firstname@dealer-domain)"
+              value={pasteForm.email}
+              onChange={(e) => setPasteForm((f) => ({ ...f, email: e.target.value }))}
+              className="bg-black/40 border-white/15"
+            />
+            <Input
+              placeholder="Contact name (optional)"
+              value={pasteForm.contactName}
+              onChange={(e) => setPasteForm((f) => ({ ...f, contactName: e.target.value }))}
+              className="bg-black/40 border-white/15"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Phone"
+                value={pasteForm.phone}
+                onChange={(e) => setPasteForm((f) => ({ ...f, phone: e.target.value }))}
+                className="bg-black/40 border-white/15"
+              />
+              <Input
+                placeholder="City"
+                value={pasteForm.city}
+                onChange={(e) => setPasteForm((f) => ({ ...f, city: e.target.value }))}
+                className="bg-black/40 border-white/15"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasteOpen(false)} className="border-white/20">
+              Cancel
+            </Button>
+            <Button
+              className="btn-gold"
+              disabled={
+                addPrincipal.isPending ||
+                !pasteForm.dealershipName.trim() ||
+                !pasteForm.email.trim() ||
+                !pasteForm.website.trim()
+              }
+              onClick={() =>
+                addPrincipal.mutate({
+                  dealershipName: pasteForm.dealershipName.trim(),
+                  email: pasteForm.email.trim(),
+                  website: pasteForm.website.trim(),
+                  contactName: pasteForm.contactName.trim() || undefined,
+                  phone: pasteForm.phone.trim() || undefined,
+                  city: pasteForm.city.trim() || undefined,
+                  region: "Gauteng",
+                })
+              }
+            >
+              {addPrincipal.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Save principal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {isLoading && <p className="text-muted-foreground">Loading prospects…</p>}
       {!isLoading && (!data || data.length === 0) && !scoutJob?.running && (
         <div className="text-center py-16">

@@ -93,6 +93,8 @@ export type EnrichmentCandidate = {
   estimatedMonthlyVolume?: number | null;
   /** Existing DB id when updating */
   prospectId?: number;
+  /** Known principal names from pool / pilot research */
+  knownPeople?: Array<{ fullName: string; role?: string | null }>;
 };
 
 export type EnrichmentHit = {
@@ -354,6 +356,7 @@ export async function enrichDealershipPrincipal(
         city: candidate.city,
         pageTexts,
         fast,
+        knownPeople: candidate.knownPeople,
       });
       const guessed = await verifyGuessedPrincipalEmail({
         people,
