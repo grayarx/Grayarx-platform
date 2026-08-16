@@ -643,13 +643,62 @@ export async function verifyGuessedPrincipalEmail(input: {
   return null;
 }
 
+/** Turn a known first/full name from research notes into a DiscoveredPerson. */
+export function personFromKnownName(
+  fullName: string,
+  role?: string | null,
+): DiscoveredPerson | null {
+  const cleaned = fullName.replace(/\s+/g, " ").trim();
+  if (!cleaned || /TBD|unknown|dealer principal|sales manager|^owner$/i.test(cleaned)) {
+    return null;
+  }
+  // Allow single first names (Donoven, Jan, Ammaar) — email guess still works.
+  if (cleaned.split(" ").length === 1) {
+    if (cleaned.length < 2) return null;
+    return {
+      fullName: cleaned,
+      firstName: cleaned,
+      lastName: null,
+      role: role?.trim() || "Dealer Principal",
+      source: "website",
+    };
+  }
+  if (!looksLikePersonFullName(cleaned) && cleaned.split(" ").length > 1) {
+    // Still accept "First Last" even if casing is off
+    const { firstName, lastName } = splitName(cleaned);
+    if (!firstName) return null;
+    return {
+      fullName: cleaned,
+      firstName,
+      lastName,
+      role: role?.trim() || "Dealer Principal",
+      source: "website",
+    };
+  }
+  const { firstName, lastName } = splitName(cleaned);
+  return {
+    fullName: cleaned,
+    firstName,
+    lastName,
+    role: role?.trim() || "Dealer Principal",
+    source: "website",
+  };
+}
+
 export async function discoverPrincipalPeople(input: {
   dealershipName: string;
   website: string;
   city?: string | null;
   pageTexts?: string[];
   fast?: boolean;
+  /** Founder / pool / pilot known names — tried before cold scrape. */
+  knownPeople?: Array<{ fullName: string; role?: string | null }>;
 }): Promise<DiscoveredPerson[]> {
+  const seeded: DiscoveredPerson[] = [];
+  for (const k of input.knownPeople ?? []) {
+    const person = personFromKnownName(k.fullName, k.role);
+    if (person) seeded.push(person);
+  }
   const fromPages: DiscoveredPerson[] = [];
   for (const text of input.pageTexts ?? []) {
     fromPages.push(...extractPrincipalNamesFromText(text));
@@ -661,7 +710,8 @@ export async function discoverPrincipalPeople(input: {
   );
   const seen = new Set<string>();
   const merged: DiscoveredPerson[] = [];
-  for (const p of [...fromPages, ...fromSearch]) {
+  // Seeded names first — highest chance of ammaar@ / donoven@ hits.
+  for (const p of [...seeded, ...fromPages, ...fromSearch]) {
     const key = p.fullName.toLowerCase();
     if (seen.has(key)) continue;
     // Prefer people whose snippet/role looks principal-ish

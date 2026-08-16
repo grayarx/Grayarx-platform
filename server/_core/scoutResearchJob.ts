@@ -55,17 +55,25 @@ export async function runScoutResearchJob(input: {
 
     // Import known-good named emails + small enrich retry (idempotent import inside)
     const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
+    // One deep dig first (directories/press/SMTP) — then fast waves for volume
+    const deepPass = await runPrincipalEnrichmentTick({
+      limit: 1,
+      deep: true,
+    });
     const retry = await runPrincipalEnrichmentTick({
       limit: Math.min(2, input.count),
       deep: false,
     });
 
-    let created = retry.created;
-    let researched = retry.examined;
-    const foundNames: string[] = retry.results
+    let created = deepPass.created + retry.created;
+    let researched = deepPass.examined + retry.examined;
+    const foundNames: string[] = [
+      ...deepPass.results,
+      ...retry.results,
+    ]
       .filter((r) => r.status === "enriched")
       .map((r) => r.dealershipName);
-    if (retry.importedReady > 0) {
+    if (deepPass.importedReady > 0 || retry.importedReady > 0) {
       existingRows = await listProspects(1000);
       existingNames = existingRows.map((r) => r.dealershipName);
     }
@@ -101,6 +109,9 @@ export async function runScoutResearchJob(input: {
             phone: p.phone,
             brandsCarried: p.brands.join(", "),
             estimatedMonthlyVolume: p.estimatedMonthlyVolume,
+            knownPeople: p.principalName
+              ? [{ fullName: p.principalName, role: p.principalRole }]
+              : undefined,
           },
           { fast: true },
         );
