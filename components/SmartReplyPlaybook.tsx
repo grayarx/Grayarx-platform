@@ -13,7 +13,7 @@ type SmartReplyPlaybookProps = {
 };
 
 export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
-  const [message, setMessage] = useState(smartReplyExamples[0]);
+  const [message, setMessage] = useState<string>(smartReplyExamples[0]);
   const [result, setResult] = useState<SmartReply>(() =>
     getSmartReply(smartReplyExamples[0], lead),
   );
