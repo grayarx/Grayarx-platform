@@ -108,16 +108,17 @@ const replies: Record<CallIntent, ReplyBuilder> = {
   "not-interested": () => ({
     situation: "They are not interested",
     reply:
-      "Understood — thanks for being direct. I won't keep you. Have a good day.",
-    nextStep: "End politely. Do not restart the pitch or pressure them.",
+      "No problem at all — I appreciate your time. If it ever becomes relevant, you can find us at grayarx.com. Enjoy the rest of your day. Goodbye.",
+    nextStep:
+      "Speak the full farewell, wait for the audio to finish, and only then end the call. Do not restart the pitch.",
     endCall: true,
   }),
   "do-not-call": () => ({
     situation: "They ask not to be contacted",
     reply:
-      "Understood. I'll mark that now and we won't contact you again. Thank you for letting me know.",
+      "Of course. I'll mark your dealership as do not contact, and we won't call again. Thank you for letting me know. Goodbye.",
     nextStep:
-      "End immediately and add the number to the do-not-contact list.",
+      "Record the suppression, speak the full farewell, wait for the audio to finish, and only then end the call.",
     endCall: true,
   }),
   unknown: () => ({

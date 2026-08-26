@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     intent: result.intent,
     response: result.reply,
     action: result.endCall
-      ? "speak_then_end"
+      ? "speak_farewell_then_end"
       : requiresHuman
         ? "speak_then_escalate"
         : "speak_then_listen",

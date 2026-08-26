@@ -93,4 +93,13 @@ The endpoint returns one response and one action:
 The calling integration must wait for a final speech transcript, call this
 endpoint once, speak only `response`, perform `action`, and wait for the next
 utterance. A `do-not-call` intent returns `suppressContact: true`; the telephony
-or CRM layer must persist that suppression before ending the call.
+or CRM layer must persist that suppression before ending the call. An ending
+action is `speak_farewell_then_end`: it must finish playing the complete goodbye
+before disconnecting.
+
+This repository currently provides the decision layer and browser simulator. It
+does not contain a telephony provider, speech-to-text service, text-to-speech
+voice, outbound dialler, or persistent CRM/do-not-contact integration. Those
+services must be connected before this can place a real call. The current
+matcher is an approved, deterministic playbook for common situations; it is not
+a general-purpose model with complete knowledge of GrayArx.

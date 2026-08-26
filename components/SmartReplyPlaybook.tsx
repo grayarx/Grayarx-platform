@@ -91,7 +91,9 @@ export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
                   : "bg-emerald-400/15 text-emerald-300"
               }`}
             >
-              {result.endCall ? "End call" : "Reply, then listen"}
+              {result.endCall
+                ? "Say farewell, then end"
+                : "Reply, then listen"}
             </span>
           </div>
 
@@ -114,7 +116,7 @@ export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
         {[
           ["One turn at a time", "Never deliver the entire script."],
           ["No made-up answers", "Unknown questions go to a human."],
-          ["Respect the contact", "Stop immediately on do-not-call."],
+          ["Respect the contact", "Say goodbye before ending every call."],
         ].map(([title, detail]) => (
           <div key={title} className="bg-zinc-950 p-4">
             <p className="text-sm font-medium text-zinc-200">{title}</p>
