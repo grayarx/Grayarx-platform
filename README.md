@@ -63,3 +63,34 @@ not interested, do-not-call, and unknown questions.
 
 The browser UI includes a simulator: enter what the dealership says or select a
 common example to see the next approved response and action.
+
+## Voice-agent integration
+
+Send each **final** dealership utterance to `POST /api/call-agent/reply`:
+
+```json
+{
+  "message": "I'm just the receptionist.",
+  "lead": {
+    "dealershipName": "Sandton Audi Prestige",
+    "agentName": "Themba"
+  }
+}
+```
+
+The endpoint returns one response and one action:
+
+```json
+{
+  "intent": "gatekeeper",
+  "response": "Thanks for letting me know. Who would be the best person to speak to about online enquiries and test-drive bookings? If they're available, would you mind putting me through?",
+  "action": "speak_then_listen",
+  "nextStep": "Ask for the contact's name and best time to call if they cannot transfer you.",
+  "suppressContact": false
+}
+```
+
+The calling integration must wait for a final speech transcript, call this
+endpoint once, speak only `response`, perform `action`, and wait for the next
+utterance. A `do-not-call` intent returns `suppressContact: true`; the telephony
+or CRM layer must persist that suppression before ending the call.
