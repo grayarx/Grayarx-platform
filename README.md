@@ -58,8 +58,11 @@ The call is a state machine, not a script recording:
 
 The playbook includes branches for a receptionist, the decision-maker, a busy
 contact, requests for information, pricing, existing tools, existing enquiry
-processes, direct AI questions, POPIA or customer-data concerns, demo booking,
-not interested, do-not-call, and unknown questions.
+processes, an existing service provider, "not now," direct AI questions, POPIA
+or customer-data concerns, demo booking, not interested, do-not-call, and
+unknown questions. The existing-provider branch offers a free parallel pilot;
+the "not now" branch leaves the website and callback number, and only sends a
+WhatsApp summary with permission.
 
 The browser UI includes a simulator: enter what the dealership says or select a
 common example to see the next approved response and action.
@@ -103,3 +106,7 @@ voice, outbound dialler, or persistent CRM/do-not-contact integration. Those
 services must be connected before this can place a real call. The current
 matcher is an approved, deterministic playbook for common situations; it is not
 a general-purpose model with complete knowledge of GrayArx.
+
+See `docs/VOICE_AGENT_IMPLEMENTATION.md` for the recommended Twilio/OpenAI SIP
+architecture, GrayArx knowledge and tool integration, compliance gate, data
+model, voice criteria, and rollout sequence.

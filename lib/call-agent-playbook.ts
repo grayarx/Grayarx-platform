@@ -9,6 +9,7 @@ export type CallIntent =
   | "pricing"
   | "existing-tools"
   | "current-process"
+  | "not-now"
   | "ai-question"
   | "privacy"
   | "book-demo"
@@ -71,10 +72,11 @@ const replies: Record<CallIntent, ReplyBuilder> = {
     endCall: false,
   }),
   "existing-tools": () => ({
-    situation: "They already use a website, AutoTrader, or DMS",
+    situation: "They already have a provider or existing tools",
     reply:
-      "That's good — and we wouldn't ask you to replace any of it. GrayArx sits alongside your current setup and focuses on the gap between a buyer enquiring and your team getting a qualified, booked opportunity. What happens to an enquiry when the team is tied up or the dealership is closed?",
-    nextStep: "Position GrayArx as complementary, then listen.",
+      "That's completely fine — we're not asking you to replace them. We can run GrayArx alongside your current provider as a free pilot using your own vehicles, with no disruption and no credit card. That lets you compare the results for yourself before making any decision. Would you be open to seeing what the parallel pilot would look like?",
+    nextStep:
+      "If they agree, book a walkthrough. Never criticize or misrepresent their current provider.",
     endCall: false,
   }),
   "current-process": () => ({
@@ -82,6 +84,13 @@ const replies: Record<CallIntent, ReplyBuilder> = {
     reply:
       "That's a good sign — you already take lead response seriously. We're not trying to replace your team; we help them respond consistently when they're busy or off duty. Do you know roughly how quickly an after-hours enquiry gets its first response?",
     nextStep: "Use their answer to identify whether there is a response-time gap.",
+    endCall: false,
+  }),
+  "not-now": (lead) => ({
+    situation: "They are interested, but not right now",
+    reply: `No problem at all — timing matters. I'll leave you with grayarx.com, and you can reach us on ${lead.phoneNumber} whenever it makes sense. If you'd like, I can send one short WhatsApp summary and leave it there. Would that be helpful?`,
+    nextStep:
+      "Only send the summary if they say yes. Otherwise thank them, say goodbye, and end the call.",
     endCall: false,
   }),
   "ai-question": () => ({
@@ -146,6 +155,11 @@ const intentMatchers: Array<{
       /\b(reception|receptionist|switchboard|not the (right )?person|doesn'?t handle|speak to the manager|wrong person)\b/i,
   },
   {
+    intent: "not-now",
+    pattern:
+      /\b(not (right )?now|not at the moment|maybe later|another time|not ready|later (this year|on)|call (me )?(next|in|after))\b/i,
+  },
+  {
     intent: "not-interested",
     pattern: /\b(not interested|no thanks|no thank you|don'?t need it)\b/i,
   },
@@ -181,7 +195,7 @@ const intentMatchers: Array<{
   {
     intent: "existing-tools",
     pattern:
-      /\b(already (have|use)|our (website|DMS|CRM)|AutoTrader|dealer management system)\b/i,
+      /\b(already (have|use)|current (provider|supplier|system)|service provider|someone already|our (website|DMS|CRM)|AutoTrader|dealer management system)\b/i,
   },
   {
     intent: "current-process",
@@ -224,6 +238,8 @@ export const smartReplyExamples = [
   "How much does it cost?",
   "We already use AutoTrader and a DMS.",
   "Our sales team already handles that.",
+  "We already have a service provider.",
+  "It sounds good, but not right now.",
   "Is this AI?",
   "How do you handle customer data?",
   "Show me how it works.",
