@@ -1,6 +1,6 @@
 # GrayArx Sales Scripts
 
-Dealership outreach templates for GrayArx sales agents. Copy focuses on what yards care about — CRM updates, booking viewings, branded showroom, live stock, and warm leads — without AI or product-tier jargon.
+Dealership outreach templates for GrayArx sales agents. Copy focuses on what yards care about — recovering after-hours enquiries, booking test drives, showcasing live stock, and delivering warm leads — without AI or product-tier jargon.
 
 ## Run locally
 
@@ -24,22 +24,30 @@ Edit lead fields in the UI or change `DEFAULT_LEAD` for your prospect.
 
 **WhatsApp / email**
 
-> Hi Sandton Audi Prestige — Themba from GrayArx. Sipho flagged your yard as a strong fit for what we do.
+> Hi Sandton Audi Prestige — Themba here from GrayArx. Sipho had a look at your yard and thought this was worth putting in front of you.
 >
-> GrayArx helps yards capture every enquiry — leads update your CRM straight away, viewings get booked without the back-and-forth, and buyers browse your live stock on a branded showroom. Warm leads land in your inbox, even after close.
+> We help dealerships turn after-hours enquiries into booked test drives. Your live stock is presented in a polished, branded showroom; buyers get an immediate response; and serious enquiries go straight to your sales team — while the interest is still hot.
 >
-> Stock uploads via CSV, shortcodes for campaigns, and simple invoicing — pay by card or EFT. Runs alongside what you already use — no need to cancel anything. Free pilot.
+> It works alongside your current website, AutoTrader and DMS, so there is nothing to replace. We can set up a free pilot using your own vehicles, with no credit card required.
 >
-> 15-min demo? Reply YES or call 079 491 5187.
+> Worth a quick 15-minute look? Reply YES and I'll arrange it, or call me on 079 491 5187.
 
 **Call script**
 
-> Hello, this is Themba from GrayArx. I'm reaching out to Sandton Audi Prestige in Sandton, Gauteng.
+> Hi, it's Themba from GrayArx — how are you?
 >
-> Quick version — GrayArx is built for car yards. When someone enquires — on your site, on WhatsApp, or from a missed call — we capture it, update your CRM, help book the viewing, and send them through your branded showroom with live stock. Warm leads hit your inbox; you're not chasing voicemails at nine at night.
+> I'll be brief. Sipho had a look at your yard and thought you were exactly the kind of dealership we built this for.
 >
-> The reason I'm calling you specifically: Sipho flagged you from our dealer research — your yard looked like a strong fit.
+> Here's the problem we solve: a buyer finds the right car at eight o'clock, sends an enquiry and, by the time someone gets back to them the next morning, they've already messaged three other dealerships.
 >
-> GrayArx runs alongside your current tools — nothing to cancel. Pilot agreement and POPIA consent before go-live — dealer agreement and consent form on grayarx.com/legal. Month-to-month with 30 days' notice; we also offer a 12-month commit with founder rate lock if you want that locked in.
+> GrayArx closes that gap. We put your live stock into a polished, branded showroom, respond to buyers after hours, qualify the serious ones and help get the test drive booked. The opportunity goes straight to your team, so they start the day with warm customers — not a list of cold follow-ups.
 >
-> Would you have 15 minutes this week for a quick walk-through?
+> And we don't replace your website, AutoTrader or DMS. GrayArx works alongside them. We can prove it with a free pilot on your own stock, with no credit card required.
+>
+> Out of interest, what normally happens when a WhatsApp enquiry comes in after hours?
+>
+> [Listen to their answer]
+>
+> That makes sense — and that's exactly the gap we'd like to help you close. Rather than talk you through a long pitch, let me show you what it looks like using your own vehicles. Would a quick 15-minute walk-through suit you better on Tuesday or Wednesday?
+>
+> If neither works: No problem — what day suits you? You can also reach me directly on 079 491 5187.

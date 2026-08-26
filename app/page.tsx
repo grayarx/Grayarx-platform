@@ -26,8 +26,8 @@ export default function Home() {
             Sales scripts
           </h1>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Outcome-focused copy for dealerships — CRM updates, bookings, showroom,
-            and leads — without product jargon.
+            Outcome-focused copy for dealerships — after-hours enquiries, booked
+            test drives, live stock, and warm leads — without product jargon.
           </p>
         </header>
 
