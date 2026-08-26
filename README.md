@@ -24,7 +24,7 @@ Edit lead fields in the UI or change `DEFAULT_LEAD` for your prospect.
 
 **WhatsApp / email**
 
-> Hi Sandton Audi Prestige — Themba here from GrayArx. Sipho had a look at your yard and thought this was worth putting in front of you.
+> Hi Sandton Audi Prestige — Themba here from GrayArx. I've had a look at your yard and thought this was worth putting in front of you.
 >
 > We help dealerships turn after-hours enquiries into booked test drives. Your live stock is presented in a polished, branded showroom; buyers get an immediate response; and serious enquiries go straight to your sales team — while the interest is still hot.
 >
@@ -36,7 +36,7 @@ Edit lead fields in the UI or change `DEFAULT_LEAD` for your prospect.
 
 > Hi, it's Themba from GrayArx — how are you?
 >
-> I'll be brief. Sipho had a look at your yard and thought you were exactly the kind of dealership we built this for.
+> I'll be brief. I've had a look at your yard, and I think you're exactly the kind of dealership we built this for.
 >
 > Here's the problem we solve: a buyer finds the right car at eight o'clock, sends an enquiry and, by the time someone gets back to them the next morning, they've already messaged three other dealerships.
 >

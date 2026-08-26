@@ -13,9 +13,9 @@ export const DEFAULT_LEAD: LeadContext = {
   agentName: "Themba",
   phoneNumber: "079 491 5187",
   researchNote:
-    "Sipho had a look at your yard and thought this was worth putting in front of you",
+    "I've had a look at your yard and thought this was worth putting in front of you",
   callReason:
-    "Sipho had a look at your yard and thought you were exactly the kind of dealership we built this for.",
+    "I've had a look at your yard, and I think you're exactly the kind of dealership we built this for.",
 };
 
 /**
