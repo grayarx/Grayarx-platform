@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LeadForm } from "@/components/LeadForm";
+import { SmartReplyPlaybook } from "@/components/SmartReplyPlaybook";
 import { TemplateCard } from "@/components/TemplateCard";
 import {
   DEFAULT_LEAD,
@@ -40,6 +41,8 @@ export default function Home() {
           />
 
           <TemplateCard title="Call script (spoken opener)" body={callScript} />
+
+          <SmartReplyPlaybook lead={lead} />
         </div>
       </main>
     </div>

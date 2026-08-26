@@ -34,26 +34,17 @@ export function buildWhatsAppFollowUp(lead: LeadContext): string {
 }
 
 /**
- * Spoken call opener — sounds like a real salesperson, not a feature list.
+ * Spoken call opener — only the first turn. The agent must wait for an answer
+ * and use the smart-reply playbook instead of reading a monologue.
  */
 export function buildCallScript(lead: LeadContext): string {
   return [
     `Hi, it's ${lead.agentName} from GrayArx — how are you?`,
     "",
-    `I'll be brief. ${lead.callReason}`,
+    "[STOP AND LISTEN]",
     "",
-    "Here's the problem we solve: a buyer finds the right car at eight o'clock, sends an enquiry and, by the time someone gets back to them the next morning, they've already messaged three other dealerships.",
+    `I'm trying to reach the person who looks after sales or online enquiries for ${lead.dealershipName}. Would that be you?`,
     "",
-    "GrayArx closes that gap. We put your live stock into a polished, branded showroom, respond to buyers after hours, qualify the serious ones and help get the test drive booked. The opportunity goes straight to your team, so they start the day with warm customers — not a list of cold follow-ups.",
-    "",
-    "And we don't replace your website, AutoTrader or DMS. GrayArx works alongside them. We can prove it with a free pilot on your own stock, with no credit card required.",
-    "",
-    "Out of interest, what normally happens when a WhatsApp enquiry comes in after hours?",
-    "",
-    "[Listen to their answer]",
-    "",
-    "That makes sense — and that's exactly the gap we'd like to help you close. Rather than talk you through a long pitch, let me show you what it looks like using your own vehicles. Would a quick 15-minute walk-through suit you better on Tuesday or Wednesday?",
-    "",
-    `If neither works: No problem — what day suits you? You can also reach me directly on ${lead.phoneNumber}.`,
+    "[STOP AND LISTEN — choose the matching smart reply below]",
   ].join("\n");
 }
