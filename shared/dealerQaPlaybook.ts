@@ -38,7 +38,7 @@ export type DealerQaEntry = {
   neverSay?: string[];
 };
 
-export const DEALER_QA_VERSION = "2026-07-v3";
+export const DEALER_QA_VERSION = "2026-08-v4";
 
 export const DEALER_QA_THEMES: Record<
   DealerQaTheme,
@@ -409,6 +409,52 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     neverSay: ["We train on all your customer chats to make the model smarter for everyone"],
     keywords: ["training chatgpt", "openai on my", "foundation model"],
   },
+  {
+    id: "q_test_drive",
+    theme: "product_truths",
+    question: "Can it actually book a test drive?",
+    answer:
+      "Yes. Lerato detects booking intent, collects name and when, and pencils a slot with a reference number. Your team confirms from Bookings — she never auto-confirms. Works from the website form, the showroom CTA, and WhatsApp.",
+    written:
+      "Lerato pencils the test drive + reference. You confirm on /dealer/bookings. No auto-confirm.",
+    neverSay: [
+      "The AI confirms the appointment without a human",
+      "Themba books test drives by calling the buyer",
+    ],
+    keywords: [
+      "test drive",
+      "book a test",
+      "lerato",
+      "booking",
+      "appointment",
+      "schedule a viewing",
+      "can it book",
+    ],
+  },
+  {
+    id: "q_calling",
+    theme: "product_truths",
+    question: "Does the AI call my customers?",
+    answer:
+      "No. Themba is GrayArx’s own sales caller — he phones dealerships to invite them onto the platform. Your yard never gets Themba, and he never calls your buyers. Nala and Lerato handle WhatsApp and test-drive requests; your floor takes the human calls.",
+    written:
+      "Themba is GrayArx sales (calling yards). He does not call your customers. You don’t get a calling agent.",
+    neverSay: [
+      "Themba will call your customers",
+      "Dealers can use Themba to call buyers",
+      "Outbound AI calling is a dealer add-on",
+    ],
+    keywords: [
+      "calling agent",
+      "themba",
+      "outbound call",
+      "voice agent",
+      "ai call",
+      "phone call",
+      "does it call",
+      "will it call",
+    ],
+  },
 ];
 
 export const DEALER_QA_NEVER_SAY: string[] = [
@@ -424,6 +470,9 @@ export const DEALER_QA_NEVER_SAY: string[] = [
   "OpenAI is required for any reply — templates cover outages.",
   "Manus Forge powers the chat.",
   "Live Cars.co.za sync is included in the pilot.",
+  "Themba will call your customers during the pilot.",
+  "Dealers can use Themba to call buyers.",
+  "Outbound AI calling is a dealer add-on.",
   "We train on your customers’ chats.",
 ];
 
@@ -470,6 +519,14 @@ export const DEALER_QA_PRODUCT_TRUTHS: Array<{ truth: string; line: string }> = 
     line: "Sharper from outcomes and FAQs you add — not ‘we train on your customers.’",
   },
   { truth: "Leads", line: "Your leads stay yours." },
+  {
+    truth: "Voice",
+    line: "Themba is GrayArx’s sales caller to dealerships. Dealers never get him; he never calls their buyers.",
+  },
+  {
+    truth: "Bookings",
+    line: "Lerato pencils test drives; humans confirm from /dealer/bookings.",
+  },
   {
     truth: "Multi-branch",
     line: "One dealership per branch + groupKey + Branch switcher.",

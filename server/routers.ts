@@ -159,11 +159,11 @@ import {
   formatDealerQaForSystemPrompt,
 } from "../shared/dealerQaPlaybook";
 import { invokeLLM } from "./_core/llm";
+import { placeOutboundCall } from "./_core/calling";
 import { notifyOwner } from "./_core/notification";
 import { ENV } from "./_core/env";
 import { alertFounder } from "./_core/founderAlert";
 import { sendLeadAcknowledgmentEmail } from "./_core/resendEmailService";
-import { placeOutboundCall } from "./_core/calling";
 import { generateAgentReply, generateWhatsAppReply, addWhatsAppAIDisclosure, generateMemoryAugmentedReply, type LanguageCode, LANGUAGE_RULES } from "./_core/agentPrompts";
 import { recordOutcome } from "./_core/agentMemory";
 import { markNalaChatBookingConversion } from "./_core/chatBookingConversion";
@@ -2445,7 +2445,8 @@ export const appRouter = router({
         const prospect = await getProspect(input.id);
         if (!prospect) return { success: false, error: "Prospect not found" } as const;
 
-        // Sipho → Themba: attempt outbound sales call (playbook script). Falls back to queue.
+        // Sipho → Themba: founder sales call to the dealership (playbook script).
+        // Falls back to queue if Twilio is off. Dealers never get Themba.
         await updateProspectStatus(prospect.id, "queued_for_call");
         await logAgentActivity({
           agentId: "prospector",

@@ -67,7 +67,7 @@ const AGENTS: AgentMeta[] = [
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-lerato-MHEMVdXmRiHSXFiXkpPCFN.webp",
     color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
-    description: "Owns the test-drive calendar — confirms, reschedules, cancels",
+    description: "Pencils test drives — your team confirms, reschedules, or cancels",
   },
   {
     id: "tumi",
@@ -93,7 +93,7 @@ const AGENTS: AgentMeta[] = [
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-sipho-ntvMMNVigvLKKf5htoC6qD.webp",
     color: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/30",
-    description: "Hunts for dealerships nightly, scores and routes hot leads",
+    description: "Hunts for dealerships nightly, scores them, queues follow-up for your team",
   },
   {
     id: "thandi",
@@ -126,11 +126,11 @@ const AGENTS: AgentMeta[] = [
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-themba-a4kg3nBuYDzsMeGY8onqkm.webp",
     color: "text-amber-400 bg-amber-500/10 border-amber-500/30",
-    description: "Outbound voice calls for opted-in dealerships",
+    description: "GrayArx sales caller — phones dealerships to join the platform. Not a dealer tool.",
   },
 ];
 
-// ── Types ────────────────────────────────────────────────────────────────────
+const PILOT_CHAT_AGENTS = AGENTS.filter((a) => a.id !== "themba");
 
 interface ChatMessage {
   id: string;
@@ -187,7 +187,7 @@ export default function AgentChat() {
   const [, setLocation] = useLocation();
 
   const initialAgent =
-    AGENTS.find((a) => a.id === params.agentId) ?? AGENTS[0];
+    PILOT_CHAT_AGENTS.find((a) => a.id === params.agentId) ?? PILOT_CHAT_AGENTS[0];
   const [activeAgent, setActiveAgent] = useState<AgentMeta>(initialAgent);
   const [messages, setMessages] = useState<Map<AgentId, ChatMessage[]>>(
     new Map(),
@@ -274,7 +274,7 @@ export default function AgentChat() {
       <div className="flex gap-4 h-[calc(100vh-280px)] min-h-[520px]">
         {/* ── Sidebar ── */}
         <aside className="w-56 shrink-0 flex flex-col gap-1 overflow-y-auto pr-1">
-          {AGENTS.map((agent) => {
+          {PILOT_CHAT_AGENTS.map((agent) => {
             const isActive = activeAgent.id === agent.id;
             const msgCount = messages.get(agent.id)?.length ?? 0;
             return (

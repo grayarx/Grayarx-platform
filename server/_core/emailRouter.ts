@@ -57,8 +57,8 @@ export const emailRouter = router({
             <p><strong>Here's what our autonomous agents do:</strong></p>
             <ul>
                 <li><strong>Mia (Email Agent)</strong> — Captures leads 24/7 and sends personalized follow-ups</li>
-                <li><strong>Themba (Calling Agent)</strong> — Places outbound calls to prospects and qualifies buyers</li>
-                <li><strong>Lerato (Booking Agent)</strong> — Schedules test drives across WhatsApp, email, and web</li>
+                <li><strong>Nala (WhatsApp Agent)</strong> — Answers buyers on WhatsApp and web chat from your live stock</li>
+                <li><strong>Lerato (Booking Agent)</strong> — Pencils in test drives; your team confirms the slot</li>
                 <li><strong>Sipho (Prospector)</strong> — Generates qualified dealership leads from your market</li>
                 <li><strong>Tumi (Trade-In Agent)</strong> — Provides instant valuations on trade-in vehicles</li>
                 <li><strong>Bongi (Fallback Agent)</strong> — Handles after-hours inquiries with professionalism</li>
@@ -68,9 +68,9 @@ export const emailRouter = router({
             
             <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
             
-            <p>We're offering a <strong>free 30-day trial</strong> — no credit card required.</p>
+            <p>We're inviting a small group of SA dealerships to the <strong>GrayArx pilot</strong> — Growth-level features, terms we agree on a call. Outbound AI calling is not part of the pilot.</p>
             
-            <a href="https://www.grayarx.com/onboarding" class="cta-button">Start Free Trial</a>
+            <a href="https://www.grayarx.com/onboarding" class="cta-button">Join the Pilot</a>
             
             <p style="margin-top: 30px;">Questions? Reply to this email or call <strong>079 491 5187</strong>.</p>
             

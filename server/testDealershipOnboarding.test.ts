@@ -84,16 +84,16 @@ describe('Test Dealership Onboarding - End-to-End', () => {
     expect(miaConfig.enabled).toBe(true);
   });
 
-  it('should activate Themba (Test Drive Booking Agent)', async () => {
-    const thembaConfig = {
+  it('should activate Lerato (Test Drive Booking Agent)', async () => {
+    const leratoConfig = {
       enabled: true,
       calendarConnected: true,
       availableSlots: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
       smsRemindersEnabled: true,
     };
 
-    console.log(`[Themba] Activated with ${thembaConfig.availableSlots.length} daily slots`);
-    expect(thembaConfig.enabled).toBe(true);
+    console.log(`[Lerato] Activated with ${leratoConfig.availableSlots.length} daily slots`);
+    expect(leratoConfig.enabled).toBe(true);
   });
 
   it('should activate Kagiso (Follow-up & Nurturing Agent)', async () => {
@@ -150,9 +150,9 @@ describe('Test Dealership Onboarding - End-to-End', () => {
     }
   });
 
-  it('should schedule test drive with Themba', async () => {
+  it('should schedule test drive with Lerato', async () => {
     const testDriveTime = new Date(Date.now() + 86400000).toISOString(); // Tomorrow
-    console.log(`[Themba] Scheduled test drive: ${testDriveTime}`);
+    console.log(`[Lerato] Scheduled test drive: ${testDriveTime}`);
     expect(testDriveTime).toBeDefined();
   });
 
@@ -218,7 +218,7 @@ describe('Test Dealership Onboarding - End-to-End', () => {
     const agentPerformance = {
       sipho: { leadsCapture: 3, accuracy: 100 },
       mia: { qualifications: 3, accuracy: 100 },
-      themba: { bookings: 1, accuracy: 100 },
+      lerato: { bookings: 1, accuracy: 100 },
       kagiso: { followups: 3, accuracy: 100 },
       nala: { queries: 3, accuracy: 100 },
     };
@@ -226,7 +226,7 @@ describe('Test Dealership Onboarding - End-to-End', () => {
     console.log('\n[Agent Performance]');
     console.log(`  Sipho (Lead Capture): ${agentPerformance.sipho.leadsCapture} leads`);
     console.log(`  Mia (Qualification): ${agentPerformance.mia.qualifications} qualified`);
-    console.log(`  Themba (Booking): ${agentPerformance.themba.bookings} test drives`);
+    console.log(`  Lerato (Booking): ${agentPerformance.lerato.bookings} test drives`);
     console.log(`  Kagiso (Follow-up): ${agentPerformance.kagiso.followups} emails`);
     console.log(`  Nala (Support): ${agentPerformance.nala.queries} queries answered`);
 

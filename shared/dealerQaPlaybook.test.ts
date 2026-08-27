@@ -37,11 +37,16 @@ describe("dealerQaPlaybook", () => {
     expect(llm?.line).toMatch(/No Forge/i);
   });
 
-  it("matchDealerQa finds WhatsApp Business question", () => {
-    const hit = matchDealerQa("Do we need a WhatsApp Business number?");
-    expect(hit?.id).toBe("q5_wa_business");
-    expect(hit?.answer).toMatch(/Growth features/);
-    expect(hit?.answer).toMatch(/Showroom/);
+  it("matchDealerQa finds test-drive booking and calling-agent truths", () => {
+    const book = matchDealerQa("Can it actually book a test drive?");
+    expect(book?.id).toBe("q_test_drive");
+    expect(book?.answer).toMatch(/Lerato/);
+    expect(book?.answer).toMatch(/never auto-confirms/i);
+
+    const call = matchDealerQa("Does the AI call my customers?");
+    expect(call?.id).toBe("q_calling");
+    expect(call?.answer).toMatch(/GrayArx/i);
+    expect(call?.answer).toMatch(/never calls your buyers/i);
   });
 
   it("formatDealerQaForSystemPrompt is cached and includes playbook header", () => {

@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: "How do the AI agents work?",
-    a: "AI agents (Nala on WhatsApp/web, Mia on email, Lerato on bookings, Naledi on finance forms, Tumi on trade-ins, Bongi after hours) run in the background 24/7. You don’t manage an agent roster — you work Leads, Bookings, Inventory, and Pre-approvals. GrayArx founder tools (Sipho, Themba, Kagiso, Thandi, compliance inbox) are not part of the dealership console.",
+    a: "AI agents (Nala on WhatsApp/web, Mia on email, Lerato on bookings, Naledi on finance forms, Tumi on trade-ins, Bongi after hours) run in the background 24/7. You don’t manage an agent roster — you work Leads, Bookings, Inventory, and Pre-approvals. GrayArx founder tools (Sipho, Themba, Kagiso, Thandi) are not part of the dealership console. Themba phones dealerships to join GrayArx — he never calls your buyers.",
   },
   {
     q: "Why didn't I receive a confirmation email?",

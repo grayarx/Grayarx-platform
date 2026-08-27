@@ -19,19 +19,19 @@ We're building autonomous AI agents that help South African dealerships capture 
 
 Our AI agents:
 ✅ Mia (Email Agent) — Captures leads 24/7
-✅ Themba (Calling Agent) — Places outbound calls
-✅ Lerato (Booking Agent) — Schedules test drives
-✅ Sipho (Prospector) — Generates qualified leads
+✅ Nala (WhatsApp Agent) — Answers buyers from your live stock
+✅ Lerato (Booking Agent) — Pencils in test drives (your team confirms)
+✅ Sipho (Prospector) — Scores dealerships for your team to follow up
 ✅ Tumi (Trade-In Agent) — Instant valuations
 ✅ Bongi (Fallback Agent) — After-hours support
 
 All agents speak all 11 South African official languages and are POPIA-compliant.
 
 📞 Call: 079 491 5187
-📧 Email: grayarx@gmail.com
+📧 Email: hello@grayarx.com
 🌐 Website: www.grayarx.com
 
-Start your free 30-day trial today — no credit card required.`,
+Join the GrayArx pilot — Growth-level features, terms we agree on a call.`,
   },
 
   mission: {
@@ -63,8 +63,8 @@ Three weeks ago, a dealership in Gauteng started using GrayArx.
 Here's what happened:
 
 Week 1: Mia captured 45 leads from their website and WhatsApp
-Week 2: Themba called 30 prospects; 18 scheduled test drives
-Week 3: Lerato booked 12 confirmed test drives; 8 converted to sales
+Week 2: Nala answered after-hours stock questions; Lerato pencilled 18 test-drive requests
+Week 3: The floor confirmed 12 test drives; 8 converted to sales
 
 Total: 150 leads processed, 8 sales, R2.4M in revenue attributed to GrayArx agents.
 
@@ -88,7 +88,7 @@ What Mia does:
 ✅ Sends personalized follow-ups (Day 1, 3, 7)
 ✅ Speaks all 11 South African languages
 ✅ Qualifies buyers automatically
-✅ Hands off to Themba for calling
+✅ Hands off to Lerato for a pencilled test drive
 ✅ Works 24/7/365
 
 Result: 3-5x more leads captured, 40% faster response times.
@@ -142,7 +142,7 @@ GrayArx gives you:
 ✅ All 11 SA languages
 ✅ POPIA compliant
 
-Start your free 30-day trial today — no credit card required.
+Start your GrayArx pilot today — Growth-level features, terms we agree on a call.
 
 👉 www.grayarx.com/onboarding
 

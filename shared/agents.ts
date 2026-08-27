@@ -63,7 +63,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-themba-a4kg3nBuYDzsMeGY8onqkm.webp",
     description:
-      "GrayArx sales voice — dials dealerships Sipho scouts, delivers the playbook pitch (alongside existing tools, free pilot, demo CTA), and hands warm interest to Henrique for contract close. Founder-only; not shown to customer dealerships.",
+      "GrayArx sales voice — dials dealerships Sipho scouts and invites them onto the platform. Founder-only. Dealers never get Themba, and he never calls their buyers.",
     audience: "founder",
   },
   booking: {
@@ -76,7 +76,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-lerato-MHEMVdXmRiHSXFiXkpPCFN.webp",
     description:
-      "Owns the test-drive calendar. Finds free slots, confirms appointments, and sends WhatsApp + email reminders before the booking.",
+      "Owns the test-drive calendar. Pencils in the next in-hours slot with a reference number; your team confirms, reschedules, or cancels from Bookings.",
     audience: "dealer",
   },
   prospector: {
@@ -89,7 +89,7 @@ export const AGENTS: Record<AgentId, AgentPersona> = {
     avatarUrl:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663686786306/b7neeuheFQMzyejb4JTfRC/agent-sipho-ntvMMNVigvLKKf5htoC6qD.webp",
     description:
-      "Goes hunting at 05:00 SAST every night, rotating through SA provinces weekly. Scores each dealership 0–100 and hands the hot ones to the Calling Agent.",
+      "Goes hunting at 05:00 SAST every night, rotating through SA provinces weekly. Scores each dealership 0–100 and hands the hot ones to Themba to invite onto GrayArx.",
     audience: "founder",
   },
   improvement: {

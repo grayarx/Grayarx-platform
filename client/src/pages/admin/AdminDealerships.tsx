@@ -716,7 +716,9 @@ function ModuleTogglesDialog({
                   {cat.replace("-", " ")}
                 </h3>
                 <div className="space-y-2">
-                  {DEALERSHIP_MODULES.filter((m) => m.category === cat).map((m) => (
+                  {DEALERSHIP_MODULES.filter(
+                    (m) => m.category === cat && m.id !== "voice_agent",
+                  ).map((m) => (
                     <div
                       key={m.id}
                       className="flex items-start justify-between gap-4 p-3 rounded-md border border-border bg-card"

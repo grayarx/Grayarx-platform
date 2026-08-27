@@ -165,7 +165,7 @@ export function runAudit(input: AuditInput): Finding[] {
         title: "Conversion rate is critically low",
         finding: `Only ${(convertRate * 100).toFixed(1)}% of ${input.kpis.totalLeads} total leads have converted. SA dealership benchmark is 8\u201312%.`,
         suggestedFix:
-          "Add a Day-3 follow-up cadence for any lead still in status 'new'. Mia drafts the reply, Themba places a polite check-in call.",
+          "Add a Day-3 follow-up cadence for any lead still in status 'new'. Mia drafts the reply; Nala can nudge on WhatsApp. Your team handles any phone follow-up during the pilot.",
         impactEstimate: "Expected lift: 2\u20134 percentage points in conversion within 30 days.",
         autoApplicable: 0,
         confidence: String(Math.min(0.95, 0.6 + input.kpis.totalLeads / 200).toFixed(2)),
@@ -226,10 +226,10 @@ export function runAudit(input: AuditInput): Finding[] {
     findings.push({
       category: "prospect_cadence",
       severity: "high",
-      title: "Backlog of prospects waiting for a call",
-      finding: `${input.kpis.queuedProspects} prospects are queued for the Calling Agent. The buffer should stay below 15.`,
+      title: "Backlog of prospects waiting for follow-up",
+      finding: `${input.kpis.queuedProspects} prospects are queued for human follow-up (outbound AI calling is not enabled in the pilot). The buffer should stay below 15.`,
       suggestedFix:
-        "Increase Themba's daily call quota from 8 to 14, OR pause the Prospector for 3 days to let the queue drain.",
+        "Work the queue by email, WhatsApp, or your own phone, OR pause the Prospector for 3 days to let the queue drain.",
       impactEstimate: "Expected queue depth in 7 days: <10.",
         autoApplicable: 0,
         confidence: "0.85",
@@ -319,31 +319,7 @@ export function runAudit(input: AuditInput): Finding[] {
     }
   }
 
-  // ---- 7. Calling Agent outcomes ----
-  if (input.recentCalls.length >= 5) {
-    const completed = input.recentCalls.filter((c) => c.status === "completed").length;
-    const completionRate = completed / input.recentCalls.length;
-    if (completionRate < 0.4) {
-      findings.push({
-        category: "calling_followup",
-        severity: "high",
-        title: "Calling Agent connection rate is low",
-        finding: `Only ${(completionRate * 100).toFixed(0)}% of recent calls connected. Likely cause: calling outside SA business hours (08:00\u201317:00 SAST).`,
-        suggestedFix:
-          "Move Themba's outbound window to 09:00\u201311:30 and 14:00\u201316:00 SAST. Skip Mondays before 09:30.",
-        impactEstimate: "Expected connection rate: 55\u201365%.",
-        autoApplicable: 1,
-        confidence: String(Math.min(0.90, 0.55 + input.recentCalls.length / 50).toFixed(2)),
-        evidence: JSON.stringify({
-          metric: "call_completion_rate",
-          value: Number((completionRate * 100).toFixed(1)),
-          threshold: 40,
-          sampleSize: input.recentCalls.length,
-        }),
-        payload: JSON.stringify({ completionRate, sampleSize: input.recentCalls.length }),
-      });
-    }
-  }
+  // Themba is GrayArx sales (calling yards), not a dealer module — skip dealer calling KPIs.
 
   // ---- 8. Prospect email quality (dealer principals vs info@) ----
   const emailStats = input.prospectEmailStats;
@@ -386,7 +362,7 @@ export function runAudit(input: AuditInput): Finding[] {
 
   // ---- 9. Agent inactivity ----
   for (const [agentId, stats] of Object.entries(input.agents)) {
-    if (agentId === "improvement") continue;
+    if (agentId === "improvement" || agentId === "calling") continue;
     if (stats.actionCount === 0) {
       findings.push({
         category: "general",

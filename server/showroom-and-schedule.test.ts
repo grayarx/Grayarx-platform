@@ -54,6 +54,7 @@ describe("public showroom + scheduling", () => {
 
 
 import { normalizeToE164, placeOutboundCall } from "./_core/calling";
+import { buildThembaSalesSayScript, buildSalesTwiml } from "./_core/salesCallScript";
 
 describe("calling agent (Twilio integration)", () => {
   const originalEnv = { ...process.env };
@@ -85,5 +86,15 @@ describe("calling agent (Twilio integration)", () => {
     expect(result.ok).toBe(false);
     // @ts-expect-error – discriminated union narrowing
     expect(result.skipped).toBe(true);
+  });
+
+  it("scripts Themba as GrayArx sales to a dealership, not a buyer call", () => {
+    const prospect = { dealershipName: "Test Motors", rationale: "they have no after-hours cover" };
+    const script = buildThembaSalesSayScript(prospect);
+    expect(script).toMatch(/Themba/);
+    expect(script).toMatch(/Test Motors/);
+    expect(script).toMatch(/not to your customers/);
+    const twiml = buildSalesTwiml(prospect);
+    expect(twiml).toContain("Test Motors");
   });
 });

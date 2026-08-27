@@ -155,12 +155,18 @@ describe("agent.list (roster)", () => {
       "tradein",
       "whatsapp",
     ]);
+    for (const agent of result.agents) {
+      expect(agent.displayName).toBeTruthy();
+      expect(agent.email).toMatch(/@grayarx\.com$/);
+      expect(agent.role).toBeTruthy();
+      expect(["idle", "active", "paused"]).toContain(agent.status);
+      expect(typeof agent.stats.actionCount).toBe("number");
+    }
   });
 
   it("reflects action counts after activity is logged", async () => {
     const dealer = createCaller({ openId: "user", role: "dealer_owner" });
     const founder = createCaller({ openId: "founder", role: "founder" });
-    // Submit a lead — that should generate at least one Mia (email) activity entry.
     await dealer.leads.create({
       dealershipName: "Test Motors",
       contactName: "Alex Tester",
@@ -206,7 +212,6 @@ describe("agent.feed", () => {
     });
     const feed = await founder.agent.feed({ limit: 10 });
     expect(feed.length).toBeGreaterThanOrEqual(2);
-    // Newest entry first
     expect(feed[0]!.summary).toMatch(/Beta Motors|Mia drafted/);
   });
 

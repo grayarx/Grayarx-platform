@@ -138,34 +138,27 @@ Click the settings icon to:
       category: "AI Agents",
       content: `# AI Agents Explained
 
-GrayArx includes four intelligent AI agents that work 24/7 to grow your dealership.
+GrayArx includes a 24/7 AI team. Lerato pencils test drives; your staff confirm the slot. Outbound voice is not in the pilot.
 
 ## Mia - Email Agent
 
 Responds to customer emails automatically with personalized, professional replies.
 
 - Handles inquiries about vehicles
-- Schedules test drives
-- Sends follow-ups
+- Drafts follow-ups
+- Hands booking intent to Lerato
 - Available 24/7
-
-## Themba - Calling Agent
-
-Makes outbound calls to prospects and follows up with interested customers.
-
-- Calls qualified leads
-- Schedules appointments
-- Answers common questions
-- Respects customer preferences
 
 ## Lerato - Booking Agent
 
-Manages test drive bookings and customer appointments.
+Pencils test-drive requests and customer appointments.
 
-- Confirms bookings
-- Sends reminders
-- Reschedules appointments
-- Tracks completion
+- Collects name and preferred time
+- Suggests the next in-hours slot
+- Hands a reference number to the buyer
+- Your team confirms, reschedules, or cancels from Bookings
+
+Outbound voice (Themba) is GrayArx’s own sales caller to dealerships. Your yard never gets him, and he never calls your buyers.
 
 ## Sipho - Prospector Agent
 

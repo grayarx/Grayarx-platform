@@ -18,7 +18,7 @@ describe("Themba sales call scripts", () => {
     const script = buildThembaSalesSayScript(prospect);
     expect(script).toMatch(/Themba/i);
     expect(script).toMatch(/Karoo Motors/);
-    expect(script).toMatch(/alongside/i);
+    expect(script).toMatch(/not to your customers/);
     expect(script).toMatch(/demo/i);
     expect(script).toMatch(/079|zero seven nine/i);
   });

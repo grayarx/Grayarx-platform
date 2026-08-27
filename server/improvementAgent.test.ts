@@ -74,7 +74,7 @@ describe("Kagiso runAudit", () => {
     ).toBeDefined();
   });
 
-  it("flags a calling-agent low connection rate as high severity", () => {
+  it("does not flag calling-agent connection rate during the pilot", () => {
     const input = baseInput();
     input.recentCalls = Array.from({ length: 10 }, (_, i) => ({
       status: i < 8 ? "failed" : "completed",
@@ -82,8 +82,7 @@ describe("Kagiso runAudit", () => {
     }));
     const findings = runAudit(input);
     const c = findings.find((f) => f.category === "calling_followup");
-    expect(c).toBeDefined();
-    expect(c?.severity).toBe("high");
+    expect(c).toBeUndefined();
   });
 
   it("sorts findings critical-first", () => {
@@ -101,7 +100,7 @@ describe("Kagiso runAudit", () => {
 
   it("flags an agent that has been silent for >14 days", () => {
     const input = baseInput();
-    input.agents.calling = {
+    input.agents.email = {
       actionCount: 10,
       lastActionAt: Date.now() - 20 * 24 * 60 * 60 * 1000,
     };

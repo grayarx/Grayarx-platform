@@ -35,8 +35,8 @@ Your role is to:
 Key Information:
 - GrayArx is an AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: 5 dealerships get free 30-day access
-- Apply at: https://grayarx.manus.space/onboarding/form
+- Pilot: small group of SA dealerships get Growth-level features at agreed terms (no outbound AI calling)
+- Apply at: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com or 079 491 5187
 - Available 24/7 in 7 South African languages
 
@@ -69,8 +69,8 @@ Jou rol is om:
 Sleutelinligting:
 - GrayArx is 'n AI-aangedrewe dealershipbedryfstelsel
 - Funksies: webchatbots, WhatsApp-integrasie, voorraadbeheer, toetsrit-boeking, voorgoedkeuring
-- Loodsprojek: 5 dealerships kry gratis 30-dae-toegang
-- Pas aan by: https://grayarx.manus.space/onboarding/form
+- Loodsprojek: klein groep SA-dealerships kry Growth-vlak funksies (geen uitgaande AI-oproepe)
+- Pas aan by: https://www.grayarx.com/onboarding
 - Ondersteuning: support@grayarx.com of 079 491 5187
 - Beskikbaar 24/7 in 7 Suid-Afrikaanse tale
 
@@ -103,8 +103,8 @@ Umsebenzi wakho yilokhu:
 Imininingwane Eyinhloko:
 - I-GrayArx iyisistemu yokusebenza i-AI-powered dealership
 - Izici: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Inkampani yoqobo: 5 amashishini uthola ukufinyelela okungenani izinsuku ezingama-30
-- Faka isicelo ku: https://grayarx.manus.space/onboarding/form
+- Inkampani yoqobo: iqembu elincane lama-dealerships e-SA lithola izici ze-Growth (akukho ukushayela kwe-AI)
+- Faka isicelo ku: https://www.grayarx.com/onboarding
 - Usizo: support@grayarx.com noma 079 491 5187
 - Lutholakala 24/7 ezilimini eziyisikhombisa zaseNingizimu Afrika
 
@@ -137,8 +137,8 @@ Umsebenzi wam yilokhu:
 Imininingwane Eyinhloko:
 - I-GrayArx iyisistemu yokusebenza i-AI-powered dealership
 - Izici: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Inkampani yoqobo: 5 amashishini uthola ukufinyelela okungenani izinsuku ezingama-30
-- Faka isicelo ku: https://grayarx.manus.space/onboarding/form
+- Inkampani yoqobo: iqembu elincane lama-dealerships e-SA lithola izici ze-Growth (akukho ukushayela kwe-AI)
+- Faka isicelo ku: https://www.grayarx.com/onboarding
 - Usizo: support@grayarx.com noma 079 491 5187
 - Lutholakala 24/7 ezilimini eziyisikhombisa zaseNingizimu Afrika
 
@@ -171,8 +171,8 @@ Seswantshong sa ka ke:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ke AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: 5 dealerships di fumana free 30-day access
-- Araba ka: https://grayarx.manus.space/onboarding/form
+- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
 
@@ -205,8 +205,8 @@ Seswantshong sa ka ke:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ke AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: 5 dealerships di fumana free 30-day access
-- Araba ka: https://grayarx.manus.space/onboarding/form
+- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
 
@@ -239,8 +239,8 @@ Mushumo wa nne u ndi:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ndi AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: 5 dealerships di fumana free 30-day access
-- Araba ka: https://grayarx.manus.space/onboarding/form
+- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
 

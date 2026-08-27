@@ -106,9 +106,10 @@ export const DEALERSHIP_MODULES: DealershipModuleSpec[] = [
   {
     id: "voice_agent",
     title: "Voice Agent (Themba)",
-    description: "Future opt-in — outbound AI calling. Disabled during pilot.",
+    description:
+      "Founder-only GrayArx sales caller. Not a dealership module — yards never receive Themba.",
     category: "agents",
-    toggleable: true,
+    toggleable: false,
   },
   {
     id: "prospector",
@@ -126,8 +127,8 @@ export const DEALERSHIP_MODULES: DealershipModuleSpec[] = [
   },
   {
     id: "fallback",
-    title: "Fallback Inbox (Lerato)",
-    description: "Catch-all queue for messages no other agent handled.",
+    title: "Fallback Inbox (Bongi)",
+    description: "Catch-all after-hours queue for messages no other agent handled.",
     category: "operations",
     toggleable: true,
   },

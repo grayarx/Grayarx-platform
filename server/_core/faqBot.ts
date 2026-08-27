@@ -43,15 +43,14 @@ Public pricing will be published at grayarx.com when the pilot closes. Join the 
     category: "pricing",
     question: "Is there a free trial?",
     keywords: ["free", "trial", "no credit card", "test"],
-    answer: `Yes! We offer a **30-day free trial** with full access to all features:
+    answer: `Yes — join the **GrayArx pilot**. Pilot partners get **Growth-level features** (Nala on web/WhatsApp, Lerato test-drive booking, inventory, leads) at terms we agree on a call.
 
-✅ All AI agents (Mia, Themba, Lerato, Sipho, Tumi, Bongi)
-✅ Unlimited leads during trial
-✅ Full onboarding support
-✅ No credit card required
-✅ Cancel anytime
+✅ Themba is GrayArx’s sales caller to other yards — not a tool you get, and he never calls your buyers
+✅ WhatsApp Nala + web chat from your live stock
+✅ Test-drive requests pencilled by Lerato; you confirm the slot
+✅ Cancel month-to-month
 
-Start your trial at: www.grayarx.com/onboarding`,
+Apply at: www.grayarx.com/onboarding`,
     followUp: "Ready to get started?",
   },
 
@@ -77,21 +76,21 @@ No questions asked. We're confident you'll love GrayArx.`,
     category: "features",
     question: "What AI agents do you have?",
     keywords: ["agents", "features", "what can", "capabilities"],
-    answer: `GrayArx includes 6 autonomous AI agents:
+    answer: `GrayArx includes a 24/7 AI team for your yard:
 
-**Mia (Email Agent)** — Captures leads from your website, sends personalized follow-ups in 11 languages
+**Mia (Email Agent)** — Captures leads from your website and drafts follow-ups in 11 languages
 
-**Themba (Calling Agent)** — Places outbound calls to prospects, qualifies buyers, books test drives
+**Nala (WhatsApp Agent)** — Answers buyers on WhatsApp and web chat from your live stock
 
-**Lerato (Booking Agent)** — Schedules test drives via WhatsApp, email, and web forms
+**Lerato (Booking Agent)** — Pencils test drives via WhatsApp, email, and the web form; a human confirms
 
-**Sipho (Prospector)** — Generates qualified dealership leads from your market
+**Tumi (Trade-In Agent)** — Instant trade-in valuations using an eight-factor SA model
 
-**Tumi (Trade-In Agent)** — Provides instant trade-in valuations using AI analysis
+**Bongi (Fallback Agent)** — After-hours cover with a reference number until the floor is back
 
-**Bongi (Fallback Agent)** — Handles after-hours inquiries, answers FAQs, provides support
+**Themba** is GrayArx’s own sales caller — he phones dealerships to invite them onto the platform. Your yard never gets him, and he never calls your buyers.
 
-All agents work 24/7 and speak all 11 South African official languages.`,
+All customer-facing agents speak all 11 South African official languages.`,
   },
 
   {

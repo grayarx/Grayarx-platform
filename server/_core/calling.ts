@@ -1,19 +1,22 @@
 /**
- * Themba (Calling Agent) — places outbound GrayArx sales calls via Twilio.
+ * Themba — GrayArx sales caller.
  *
- * Used after Sipho hands off a dealership prospect. Script content comes from
- * the dealer Q&A playbook (elevator + contract framing + demo CTA).
+ * Places an outbound voice call to a dealership Sipho has scored, to invite
+ * them onto GrayArx. Founder-side BD only: yards never get Themba, and he
+ * never calls their car buyers.
+ *
+ * Script content comes from salesCallScript.ts (dealer Q&A playbook).
  *
  * Gracefully degrades when secrets are missing: returns `{ skipped: true }`
- * so the rest of the flow (status update, DB logging) still works.
+ * so status updates and DB logging still work.
  *
  * Required env:
  *   TWILIO_ACCOUNT_SID
- *   TWILIO_AUTH_TOKEN  (or legacy TWILIO_API_KEY — same Auth Token from Twilio console)
- *   TWILIO_FROM_NUMBER (or legacy TWILIO_PHONE_NUMBER) — E.164 voice number
+ *   TWILIO_AUTH_TOKEN  (or legacy TWILIO_API_KEY)
+ *   TWILIO_FROM_NUMBER (or legacy TWILIO_PHONE_NUMBER) — E.164
  *
  * Optional:
- *   TWILIO_TWIML_URL — override TwiML URL (defaults to playbook-based Echo TwiML)
+ *   TWILIO_TWIML_URL — override TwiML URL (defaults to playbook Echo TwiML)
  *   ENABLE_OUTBOUND_SALES_CALLS — set to "false" to force queue-only
  */
 
@@ -60,7 +63,6 @@ export async function placeOutboundCall(input: PlaceCallInput): Promise<PlaceCal
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  // Prefer AUTH_TOKEN; accept API_KEY for older SMS docs / Railway names.
   const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_API_KEY;
   const fromNumber = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER;
 
@@ -109,4 +111,4 @@ export async function placeOutboundCall(input: PlaceCallInput): Promise<PlaceCal
   return { ok: true, sid: json.sid ?? "unknown", status: json.status ?? "initiated" };
 }
 
-export { normalizeToE164 };
+export { normalizeToE164, buildTwimlUrl };

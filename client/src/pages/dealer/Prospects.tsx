@@ -26,7 +26,7 @@ import {
 
 const STATUS_OPTIONS = [
   { value: "scouted", label: "Scouted" },
-  { value: "queued_for_call", label: "Queued for call" },
+  { value: "queued_for_call", label: "Queued for follow-up" },
   { value: "called", label: "Called" },
   { value: "contacted", label: "Contacted" },
   { value: "converted", label: "Converted" },
@@ -86,11 +86,15 @@ export default function Prospects() {
   });
 
   const handoff = trpc.prospects.handoff.useMutation({
-    onSuccess: () => {
+    onSuccess: (res) => {
       utils.prospects.list.invalidate();
       utils.dealer.stats.invalidate();
-      toast.success("Handed off to Calling Agent");
+      toast.success(
+        res.reason ??
+          "Queued for follow-up — outbound AI calling is not enabled in the pilot.",
+      );
     },
+    onError: (e) => toast.error(e.message),
   });
   const updateStatus = trpc.prospects.updateStatus.useMutation({
     onSuccess: () => utils.prospects.list.invalidate(),
@@ -131,7 +135,7 @@ export default function Prospects() {
   return (
     <DealerShell
       title="Prospector AI"
-      subtitle="Your autonomous business-development agent. It scouts South African dealerships matching your criteria, scores them, then hands the best ones to the Calling Agent."
+      subtitle="Founder BD: Sipho scouts South African dealerships, scores them, then queues the best ones for Themba / your follow-up. Dealers never see this queue."
       actions={
         <div className="flex flex-wrap items-center gap-2">
           {!nightly && (
@@ -260,7 +264,7 @@ export default function Prospects() {
           <Sparkles className="h-10 w-10 mx-auto text-primary/50 mb-4" />
           <h3 className="font-display text-2xl font-semibold">No prospects yet</h3>
           <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-            Run the Prospector to have AI find qualified South African dealerships ready for your Calling Agent.
+            Run the Prospector to have AI find qualified South African dealerships for your team to follow up.
           </p>
         </div>
       )}
@@ -348,7 +352,7 @@ export default function Prospects() {
                   onClick={() => handoff.mutate({ id: p.id })}
                   disabled={handoff.isPending}
                 >
-                  <Phone className="h-3.5 w-3.5 mr-2" /> Hand off to Calling Agent
+                  <Phone className="h-3.5 w-3.5 mr-2" /> Queue for follow-up
                 </Button>
               )}
               <Button
@@ -357,7 +361,7 @@ export default function Prospects() {
                 onClick={() => toast.info("Send email feature coming soon")}
                 disabled={false}
               >
-                <Mail className="h-3.5 w-3.5 mr-2" /> "Send Email"
+                <Mail className="h-3.5 w-3.5 mr-2" /> Send email
               </Button>
             </div>
           </div>

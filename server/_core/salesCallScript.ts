@@ -53,6 +53,7 @@ export function buildThembaSalesSayScript(prospect: SalesProspectContext): strin
     `I'm reaching out to ${name}${where ? ` in ${where}` : ""}.`,
     `${elevatorLine()}`,
     `The reason I'm calling you specifically: ${why}.`,
+    `This is a business call to your dealership, not to your customers.`,
     `GrayArx runs alongside your current tools — no cancel needed.`,
     `${contractLine()}`,
     `If you'd like a free fifteen minute demo on your own stock, stay on the line or call us back on zero seven nine, four nine one, five one eight seven.`,
