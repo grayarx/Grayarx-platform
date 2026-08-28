@@ -51,6 +51,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(templateRoot, "client", "src"),
       "@shared": path.resolve(templateRoot, "shared"),
+      "@nalaOs": path.resolve(templateRoot, "server", "_core", "nalaOs"),
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
   },

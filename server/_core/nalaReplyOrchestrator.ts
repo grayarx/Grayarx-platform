@@ -17,6 +17,7 @@ import type { LanguageCode } from "../../shared/languages";
 import { detectsBookingIntent } from "../../shared/agentIntentRouting";
 import { isQuotaError } from "./agentResilience";
 import { checkAiSessionCap } from "./usageCaps";
+import { decideReplyMode, recordLlmPolish, recordTemplateReply } from "./nalaOs/billing/usage";
 import { MAKE_ALIASES, VEHICLE_MAKES } from "../../shared/vehicleCatalog";
 
 /** Convert markdown for Meta WhatsApp (*bold*) and preserve readable spacing. */
@@ -790,12 +791,17 @@ export async function resolveNalaReply(input: {
       : text;
 
   // Soft-block OpenAI when monthly AI session cap is hit (templates still OK).
+  // OS pack metering also auto-swaps to templates when polish credits/quota/key are gone.
   const aiCap = await checkAiSessionCap(input.dealershipId);
-  const skipLlm = aiCap.blocked;
-  if (skipLlm) {
+  const osDealerId = String(input.dealershipId ?? "demo-yard");
+  const osMode = decideReplyMode(osDealerId);
+  const skipLlm = aiCap.blocked || osMode.mode === "template";
+  if (aiCap.blocked) {
     console.warn(
       `[nalaReplyOrchestrator] AI session cap hit dealership=${input.dealershipId} used=${aiCap.snapshot.aiSessionsUsed}/${aiCap.snapshot.caps.aiSessionsPerMonth}`,
     );
+  } else if (osMode.mode === "template") {
+    console.warn(`[nalaReplyOrchestrator] OS polish fallback: ${osMode.reason}`);
   }
 
   if (!input.vehicle?.title) {
@@ -894,6 +900,7 @@ export async function resolveNalaReply(input: {
     }
     reply = disclose(reply);
     reply = appendVehicleCTA(reply);
+    recordTemplateReply(osDealerId);
     return {
       reply,
       language: lang,
@@ -934,6 +941,7 @@ export async function resolveNalaReply(input: {
     }
     reply = disclose(reply);
     reply = appendVehicleCTA(reply);
+    recordLlmPolish(osDealerId);
     return {
       reply,
       language: lang,

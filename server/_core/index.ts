@@ -15,6 +15,7 @@ import { attachMarketGuideRefreshMiddleware } from "./marketGuideScheduler";
 import { attachPrincipalEnrichmentMiddleware } from "./principalEnrichmentScheduler";
 import { registerSitemapRoutes } from "./sitemap";
 import { registerWebhookRoutes } from "./webhookRoutes";
+import { registerNalaOsRoutes } from "./nalaOsRoutes";
 import { registerEmbedRoutes } from "./embedRoutes";
 import { registerSecurityHeaders, registerCanonicalRedirect } from "./securityHeaders";
 import { appRouter } from "../routers";
@@ -135,6 +136,9 @@ async function startServer() {
   });
   // Webhook routes for WhatsApp and other integrations
   registerWebhookRoutes(app);
+  // Nala Dealership OS REST pack (pricing, regions, prospector ICP, metering).
+  // Must sit BEFORE apiRouter's Bearer catch-all. Does not replace WhatsApp webhooks.
+  registerNalaOsRoutes(app);
   // Dealer website drop-in: /embed/:shortcode (+ .js bootstrap)
   registerEmbedRoutes(app);
   // Health check endpoint
