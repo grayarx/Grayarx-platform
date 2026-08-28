@@ -1,8 +1,7 @@
 /**
  * Shared invoice document rendering — GrayArx gold/black brand.
  * Used by the full print page (InvoicePrint.tsx) AND by the "preview before
- * you draft / send" dialogs in AdminInvoices.tsx, so what founders/Thandi
- * see in preview is pixel-identical to the final PDF.
+ * you create / send" dialogs in AdminInvoices.tsx, so the preview matches the PDF.
  */
 import { LOGO_ICON_URL } from "@/components/Logo";
 import { INVOICE_BRAND } from "@shared/invoiceBrand";
@@ -99,7 +98,7 @@ export function InvoiceSheet({ doc }: { doc: InvoiceDocumentView }) {
           </div>
           <div className="text-3xl font-bold tracking-tight">{doc.totalFormatted}</div>
           <div className="mt-1 text-xs" style={{ color: INVOICE_BRAND.muted }}>
-            Prepared by {doc.preparedBy}
+            Due {doc.dueDate}
           </div>
         </div>
       </section>

@@ -16,6 +16,7 @@ import {
   grayArxInvoiceVatFooterNote,
   grayArxRegisteredAddressSingleLine,
 } from "./companyLegal";
+import { invoiceLineForSubtotal } from "./osPlans";
 import {
   buildEftPaymentInstructions,
   type EftPaymentInstructions,
@@ -141,6 +142,8 @@ export function buildInvoiceDocumentView(input: {
   }>;
   /** Platform receiving account from env (server passes this). */
   platformBank?: GrayArxBankDetails | null;
+  /** Override the subscription line (e.g. Professional OS). */
+  lineDescription?: string | null;
 }): InvoiceDocumentView {
   const letterheadMode = resolveLetterheadMode({
     leadId: Number(input.invoice.leadId) || 0,
@@ -172,7 +175,9 @@ export function buildInvoiceDocumentView(input: {
     letterheadMode === "platform"
       ? [
           {
-            description: `GrayArx subscription — ${input.dealership?.name ?? "Dealership"}`,
+            description:
+              input.lineDescription?.trim() ||
+              invoiceLineForSubtotal(subtotal, input.dealership?.name ?? "Dealership"),
             quantity: 1,
             unitAmount: subtotal,
             amount: subtotal,
@@ -203,7 +208,7 @@ export function buildInvoiceDocumentView(input: {
     letterheadMode === "platform"
       ? {
           name: GRAYARX_LEGAL.legalName,
-          subtitle: "Prepared by Thandi · GrayArx Accountant",
+          subtitle: null,
           email: GRAYARX_LEGAL.supportEmail,
           phone: GRAYARX_LEGAL.phone,
           address: grayArxRegisteredAddressSingleLine(),
@@ -211,7 +216,7 @@ export function buildInvoiceDocumentView(input: {
         }
       : {
           name: input.dealership?.name ?? "Dealership",
-          subtitle: "Invoice / quotation · prepared with Thandi (GrayArx)",
+          subtitle: null,
           email: input.dealership?.contactEmail ?? null,
           phone: input.dealership?.contactPhone
             ? maskLast4(input.dealership.contactPhone)
@@ -288,7 +293,7 @@ export function buildInvoiceDocumentView(input: {
       letterheadMode === "dealership" && input.dealership?.bankDetails
         ? String(input.dealership.bankDetails).trim() || null
         : null,
-    preparedBy: "Thandi · GrayArx Accountant Agent",
+    preparedBy: GRAYARX_LEGAL.legalName,
     popiaFooter: invoicePopiaFooter(),
     platformCredit:
       letterheadMode === "dealership"

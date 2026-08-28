@@ -1,5 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { GRAYARX_LEGAL } from "../shared/companyLegal";
+import { invoiceLineForSubtotal, osInvoicePlanById } from "../shared/osPlans";
 import { validateVin } from "@shared/validateVin";
 import { z } from "zod";
 
@@ -5632,6 +5633,7 @@ export const appRouter = router({
   }),
 
   // ---- Thandi: Accountant Agent ----
+  // Founder invoice create/preview (planId overrides a mismatched typed amount).
   thandi: router({
     listInvoices: protectedProcedure
       .input(
@@ -5695,9 +5697,9 @@ export const appRouter = router({
 
     /**
      * Preview the invoice document (letterhead, line items, VAT, EFT details)
-     * WITHOUT persisting anything — lets Thandi/founder sanity-check a draft
-     * before it's actually created or sent. Same rendering used by the real
-     * print page (buildInvoiceDocumentView), just fed synthetic invoice data.
+     * WITHOUT persisting anything — lets a founder sanity-check before it's
+     * actually created or sent. Same rendering used by the real print page
+     * (buildInvoiceDocumentView), just fed synthetic invoice data.
      */
     previewInvoice: protectedProcedure
       .input(
@@ -5710,6 +5712,7 @@ export const appRouter = router({
           leadId: z.number().int().optional(),
           vehicleId: z.number().int().optional(),
           subtotal: z.number().nonnegative(),
+          planId: z.string().optional(),
           paymentTermsDays: z.number().int().min(1).max(180).default(30),
         }),
       )
@@ -5719,17 +5722,23 @@ export const appRouter = router({
         }
         const leadId = input.leadId ?? 0;
         const vehicleId = input.vehicleId ?? 0;
+        const plan = input.planId ? osInvoicePlanById(input.planId) : undefined;
+        const subtotal = plan ? plan.priceMonthlyZar : input.subtotal;
         const vatRate = GRAYARX_LEGAL.vatRegistered ? 0.15 : 0;
-        const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
+        const vatAmount = Math.round(subtotal * vatRate * 100) / 100;
         const totalAmount =
           vatRate === 0
-            ? Math.round(input.subtotal * 100) / 100
-            : Math.round((input.subtotal + vatAmount) * 100) / 100;
+            ? Math.round(subtotal * 100) / 100
+            : Math.round((subtotal + vatAmount) * 100) / 100;
         const dueDate = new Date(Date.now() + input.paymentTermsDays * 24 * 60 * 60 * 1000);
 
         const dealership = await getDealershipById(input.dealershipId);
         const lead = leadId > 0 ? await getLeadById(leadId) : null;
         const vehicle = vehicleId > 0 ? await getVehicle(vehicleId) : null;
+        const lineDescription = invoiceLineForSubtotal(
+          subtotal,
+          dealership?.name ?? "Dealership",
+        );
 
         const { buildInvoiceDocumentView } = await import(
           "../shared/invoiceDocument"
@@ -5745,7 +5754,7 @@ export const appRouter = router({
             dueDate,
             leadId,
             vehicleId,
-            subtotal: input.subtotal,
+            subtotal,
             vatAmount,
             totalAmount,
           },
@@ -5754,6 +5763,7 @@ export const appRouter = router({
           vehicle,
           payments: [],
           platformBank: getGrayArxBankDetailsFromEnv(),
+          lineDescription,
         });
 
         return { document, vatAmount, totalAmount, dueDate };
@@ -5770,6 +5780,7 @@ export const appRouter = router({
           leadId: z.number().int().optional(),
           vehicleId: z.number().int().optional(),
           subtotal: z.number().nonnegative(),
+          planId: z.string().optional(),
           paymentTermsDays: z.number().int().min(1).max(180).default(30),
         }),
       )
@@ -5779,12 +5790,14 @@ export const appRouter = router({
         }
         const leadId = input.leadId ?? 0;
         const vehicleId = input.vehicleId ?? 0;
+        const plan = input.planId ? osInvoicePlanById(input.planId) : undefined;
+        const subtotal = plan ? plan.priceMonthlyZar : input.subtotal;
         const vatRate = GRAYARX_LEGAL.vatRegistered ? 0.15 : 0;
-        const vatAmount = Math.round(input.subtotal * vatRate * 100) / 100;
+        const vatAmount = Math.round(subtotal * vatRate * 100) / 100;
         const totalAmount =
           vatRate === 0
-            ? Math.round(input.subtotal * 100) / 100
-            : Math.round((input.subtotal + vatAmount) * 100) / 100;
+            ? Math.round(subtotal * 100) / 100
+            : Math.round((subtotal + vatAmount) * 100) / 100;
         const invoiceNumber = `INV-${input.dealershipId}-${Date.now().toString().slice(-8)}`;
         const dueDate = new Date(Date.now() + input.paymentTermsDays * 24 * 60 * 60 * 1000);
 
@@ -5794,7 +5807,7 @@ export const appRouter = router({
           invoiceNumber,
           dueDate,
           vehicleId,
-          subtotal: input.subtotal,
+          subtotal,
           vatAmount,
           totalAmount,
         });

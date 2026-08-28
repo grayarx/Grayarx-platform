@@ -682,7 +682,7 @@ export function registerNalaOsRoutes(app: express.Express) {
         name: c.name,
         category: c.category,
         categoryLabel: c.categoryLabel,
-        pricing: c.pricing,
+        pricing: c.pricing.public,
         sameAsGrayArx: c.sameAsGrayArx,
         oneLiner: c.oneLiner,
       })),

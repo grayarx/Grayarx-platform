@@ -1,7 +1,7 @@
 /**
- * Founder/admin view of Thandi's invoice ledger across any dealership.
+ * Founder/admin invoice ledger across any dealership.
  *
- * Pick a dealership, see her invoices, draft a new one, record payments.
+ * Pick a dealership, create invoices, record payments.
  * POPIA: full customer/bank details live in the database; this page renders
  * only what's safe for a founder operator (already masked at the data layer
  * for any customer-facing PDF).
@@ -42,6 +42,7 @@ import { InvoicePreviewDialog } from "@/components/invoices/InvoicePreviewDialog
 import { Plus, Receipt, FileText, AlertCircle, Printer, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { OS_INVOICE_PLANS, osInvoicePlanById } from "@shared/osPlans";
 
 type InvoiceKind = "subscription" | "other";
 
@@ -78,16 +79,20 @@ export default function AdminInvoices() {
 
   const emptyForm = {
     invoiceType: "subscription" as InvoiceKind,
+    planId: "professional",
     leadId: "",
     vehicleId: "",
-    subtotal: "",
+    subtotal: "14990",
     paymentTermsDays: "30",
   };
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
-  // Draft flow: form -> preview (no DB write yet) -> confirm creates it for real.
+  // Form -> preview (no DB write yet) -> confirm creates it for real.
   const [draftPreviewOpen, setDraftPreviewOpen] = useState(false);
+
+  const namedPlanSelected =
+    form.invoiceType === "subscription" && form.planId !== "custom";
 
   const buildDraftPayload = () => ({
     dealershipId: effectiveDealershipId ?? 0,
@@ -99,6 +104,7 @@ export default function AdminInvoices() {
         : undefined,
     subtotal: Number(form.subtotal),
     paymentTermsDays: Number(form.paymentTermsDays) || 30,
+    ...(namedPlanSelected ? { planId: form.planId } : {}),
   });
 
   const previewInvoice = trpc.thandi.previewInvoice.useMutation({
@@ -111,7 +117,7 @@ export default function AdminInvoices() {
 
   const generateInvoice = trpc.thandi.generateInvoice.useMutation({
     onSuccess: (res) => {
-      toast.success(`Invoice ${res.invoiceNumber} drafted`);
+      toast.success(`Invoice ${res.invoiceNumber} created`);
       setDraftPreviewOpen(false);
       setForm(emptyForm);
       utils.thandi.listInvoices.invalidate();
@@ -183,8 +189,8 @@ export default function AdminInvoices() {
 
   return (
     <AdminShell
-      title="Invoices · Thandi"
-      subtitle="Thandi drafts and reconciles invoices. Download / Print opens a GrayArx-branded PDF. Platform subscription invoices include FNB EFT details from Railway env."
+      title="Invoices"
+      subtitle="Create and reconcile invoices. Download / Print opens a new tab. Subscription invoices include FNB EFT details."
       actions={
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
@@ -193,21 +199,32 @@ export default function AdminInvoices() {
               disabled={!effectiveDealershipId}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Draft invoice
+              New invoice
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Draft a new invoice</DialogTitle>
+              <DialogTitle>New invoice</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label className="mb-2 block">Invoice type</Label>
                 <RadioGroup
                   value={form.invoiceType}
-                  onValueChange={(v) =>
-                    setForm({ ...form, invoiceType: v as InvoiceKind })
-                  }
+                  onValueChange={(v) => {
+                    const invoiceType = v as InvoiceKind;
+                    if (invoiceType === "subscription") {
+                      const plan = osInvoicePlanById("professional");
+                      setForm({
+                        ...form,
+                        invoiceType,
+                        planId: "professional",
+                        subtotal: String(plan?.priceMonthlyZar ?? 14990),
+                      });
+                      return;
+                    }
+                    setForm({ ...form, invoiceType, planId: "custom" });
+                  }}
                   className="gap-2"
                 >
                   <label
@@ -263,18 +280,65 @@ export default function AdminInvoices() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              {form.invoiceType === "subscription" && (
                 <div>
-                  <Label htmlFor="subtotal">Subtotal (R, excl VAT)</Label>
-                  <Input
-                    id="subtotal"
-                    type="number"
-                    step="0.01"
-                    value={form.subtotal}
-                    onChange={(e) => setForm({ ...form, subtotal: e.target.value })}
-                    placeholder="259999.00"
-                  />
+                  <Label htmlFor="planId" className="mb-2 block">
+                    Plan
+                  </Label>
+                  <Select
+                    value={form.planId}
+                    onValueChange={(v) => {
+                      if (v === "custom") {
+                        setForm({ ...form, planId: "custom" });
+                        return;
+                      }
+                      const plan = osInvoicePlanById(v);
+                      setForm({
+                        ...form,
+                        planId: v,
+                        subtotal: plan ? String(plan.priceMonthlyZar) : form.subtotal,
+                      });
+                    }}
+                  >
+                    <SelectTrigger id="planId">
+                      <SelectValue placeholder="Pick a plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OS_INVOICE_PLANS.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name} — R{plan.priceMonthlyZar.toLocaleString("en-US")}/mo
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom amount</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                {namedPlanSelected ? (
+                  <div>
+                    <Label>Subtotal (R, excl VAT)</Label>
+                    <p className="mt-2 text-sm font-medium">
+                      {formatRand(Number(form.subtotal))}
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        / month
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="subtotal">Subtotal (R, excl VAT)</Label>
+                    <Input
+                      id="subtotal"
+                      type="number"
+                      step="0.01"
+                      value={form.subtotal}
+                      onChange={(e) => setForm({ ...form, subtotal: e.target.value })}
+                      placeholder="14990"
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="terms">Payment terms (days)</Label>
                   <Input
@@ -450,7 +514,7 @@ export default function AdminInvoices() {
                   (!invoicesQuery.data || invoicesQuery.data.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
-                        No invoices yet for this dealership. Draft the first one.
+                        No invoices yet for this dealership. Create the first one.
                       </TableCell>
                     </TableRow>
                   )}
@@ -592,7 +656,7 @@ export default function AdminInvoices() {
                 generateInvoice.mutate(buildDraftPayload());
               }}
             >
-              {generateInvoice.isPending ? "Creating…" : "Confirm & create draft"}
+              {generateInvoice.isPending ? "Creating…" : "Confirm & create"}
             </Button>
           </>
         }
