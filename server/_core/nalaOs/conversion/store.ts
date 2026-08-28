@@ -2,11 +2,23 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const DATA_DIR = process.env.NALA_OS_DATA_DIR
-  ? join(process.env.NALA_OS_DATA_DIR)
-  : process.env.VITEST
-    ? join(tmpdir(), "nala-os-vitest", process.env.VITEST_WORKER_ID ?? "main")
-    : join(process.cwd(), "data", "nala-os");
+function resolveDataDir(): string {
+  if (process.env.NALA_OS_DATA_DIR) return process.env.NALA_OS_DATA_DIR;
+  if (process.env.VITEST) {
+    return join(
+      tmpdir(),
+      "nala-os-vitest",
+      `${process.env.VITEST_WORKER_ID ?? "main"}-${crypto.randomUUID()}`,
+    );
+  }
+  return join(process.cwd(), "data", "nala-os");
+}
+
+const DATA_DIR = resolveDataDir();
+
+export function getNalaOsDataDir(): string {
+  return DATA_DIR;
+}
 
 function ensureDataDir() {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });

@@ -368,6 +368,57 @@ async function main() {
     fail("setup refuses to write .env", e);
   }
 
+  for (const region of ["ZA", "AU", "GB", "AE", "US", "NZ"]) {
+    try {
+      const { status, body } = await json(base, `/api/regions?region=${region}`);
+      assert.equal(status, 200);
+      assert.equal(body.region.id, region);
+      assert.ok(body.region.packages.professional.amount >= 0);
+      ok(`region ${region}`);
+    } catch (e) {
+      fail(`region ${region}`, e);
+    }
+  }
+
+  try {
+    const csv = [
+      "name,city,regionId,segment,abilityToPay,score,stockHint,phone,email,website,contactName,status",
+      "Stress Yard,Sandton,ZA,premium_independent,high,99,Stress import,+27115550199,gm@stress.example,https://stress.example,Test,scouted",
+    ].join("\n");
+    const { status, body } = await json(base, "/api/prospector/prospects", {
+      method: "POST",
+      body: JSON.stringify({ csv }),
+    });
+    assert.equal(status, 200);
+    assert.equal(body.imported, 1);
+    ok("prospector CSV import");
+  } catch (e) {
+    fail("prospector CSV import", e);
+  }
+
+  try {
+    await json(base, "/api/billing/usage", {
+      method: "POST",
+      body: JSON.stringify({ action: "set_plan", dealershipId: "stress-pilot", planId: "pilot" }),
+    });
+    for (let i = 0; i < 20; i++) {
+      const { status, body } = await json(base, "/api/os", {
+        method: "POST",
+        body: JSON.stringify({
+          buyerName: `Burst ${i}`,
+          buyerPhone: `+2782999${String(1000 + i).padStart(4, "0")}`,
+          message: i % 2 === 0 ? "Is the Polo Vivo still available?" : "oil filter for Polo",
+          dealershipId: "demo-yard",
+        }),
+      });
+      assert.equal(status, 200);
+      assert.ok(body.result?.intent);
+    }
+    ok("20-message OS burst");
+  } catch (e) {
+    fail("20-message OS burst", e);
+  }
+
   server.close();
 
   console.log("\n---");

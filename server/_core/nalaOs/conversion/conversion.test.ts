@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, it } from "vitest";
+import { getNalaOsDataDir } from "./store";
 
-const dataDir = join(process.cwd(), "data");
+const dataDir = getNalaOsDataDir();
 
 afterAll(() => {
   for (const file of ["leads.json", "stock.json", "pilot.json"]) {
