@@ -27,9 +27,9 @@ export default function Home() {
             Sales scripts
           </h1>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Discovery-first outreach — diagnose the yard&apos;s pain, quantify
-            the cost of inaction, offer a free pilot. No feature dumps; pricing
-            and tiers only when they ask.
+            Stage-aware discovery funnel — permission, diagnose, quantify, close
+            on a free pilot. Structured intel on every turn feeds CRM and product.
+            Pricing and tiers only when they ask.
           </p>
         </header>
 
