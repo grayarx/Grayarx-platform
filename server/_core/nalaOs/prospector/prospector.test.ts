@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { MOCK_PROSPECTS, highAbilityProspects } from "@nalaOs/prospector-data";
+import { MOCK_PROSPECTS, highAbilityProspects, patchProspectContact } from "@nalaOs/prospector-data";
 import { parseProspectCsv } from "@nalaOs/prospector/import";
 import { REGIONS, listRegions } from "@nalaOs/regions/config";
 
@@ -31,5 +31,18 @@ describe("prospector ICP + regions", () => {
     assert.ok(REGIONS.US.packages.professional.amount > 0);
     assert.ok(REGIONS.GB.packages.professional.amount > 0);
     assert.match(REGIONS.US.packages.professional.label, /\$/);
+  });
+
+  it("patches phone and email onto a seeded yard", () => {
+    const seed = MOCK_PROSPECTS[0]!;
+    const prevPhone = seed.phone;
+    const prevEmail = seed.email;
+    const patched = patchProspectContact(seed.id, {
+      phone: "+27115550100",
+      email: "gm@example-yard.co.za",
+    });
+    assert.equal(patched?.phone, "+27115550100");
+    assert.equal(patched?.email, "gm@example-yard.co.za");
+    patchProspectContact(seed.id, { phone: prevPhone ?? "", email: prevEmail ?? "" });
   });
 });

@@ -616,6 +616,55 @@ const SEEDS: Seed[] = [
 
 export const MOCK_PROSPECTS: Prospect[] = SEEDS.map(build);
 
+export function findIcpProspect(id: string): Prospect | undefined {
+  return MOCK_PROSPECTS.find((p) => p.id === id);
+}
+
+/** Paste public switchboard / named email onto a seeded yard (in-memory). */
+export function patchProspectContact(
+  id: string,
+  patch: { phone?: string; email?: string; website?: string; contactName?: string },
+): Prospect | undefined {
+  const prospect = findIcpProspect(id);
+  if (!prospect) return undefined;
+  if (patch.phone !== undefined) {
+    prospect.phone = patch.phone.trim() || undefined;
+  }
+  if (patch.email !== undefined) {
+    prospect.email = patch.email.trim() || undefined;
+  }
+  if (patch.website !== undefined) {
+    prospect.website = patch.website.trim() || undefined;
+  }
+  if (patch.contactName !== undefined) {
+    prospect.contactName = patch.contactName.trim() || prospect.contactName;
+  }
+  return prospect;
+}
+
+export function addImportedProspects(rows: Prospect[]): number {
+  let added = 0;
+  for (const row of rows) {
+    const existing = MOCK_PROSPECTS.find(
+      (p) => p.id === row.id || (p.name === row.name && p.regionId === row.regionId),
+    );
+    if (existing) {
+      existing.phone = row.phone ?? existing.phone;
+      existing.email = row.email ?? existing.email;
+      existing.website = row.website ?? existing.website;
+      existing.contactName = row.contactName ?? existing.contactName;
+      existing.stockHint = row.stockHint ?? existing.stockHint;
+      existing.score = row.score;
+      existing.segment = row.segment;
+      existing.abilityToPay = row.abilityToPay;
+      continue;
+    }
+    MOCK_PROSPECTS.push(row);
+    added += 1;
+  }
+  return added;
+}
+
 export function prospectsByRegion(regionId: RegionId): Prospect[] {
   return MOCK_PROSPECTS.filter((p) => p.regionId === regionId);
 }
