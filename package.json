@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversion/conversion.test.ts lib/competitors/competitors.test.ts lib/os/os.test.ts",
+    "test": "node --import tsx --test lib/conversion/conversion.test.ts lib/competitors/competitors.test.ts lib/os/os.test.ts lib/platform/platform.test.ts",
     "sync:twilio": "node scripts/sync-twilio-env.mjs",
     "verify:twilio": "node scripts/sync-twilio-env.mjs && curl -s -X POST http://127.0.0.1:43123/api/setup/verify"
   },

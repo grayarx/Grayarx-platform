@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { bookViewing } from "@/lib/conversion/leads";
+import { bookViewingAndNotify } from "@/lib/os/router";
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = bookViewing({ leadId, viewingAt });
+  const result = await bookViewingAndNotify({ leadId, viewingAt });
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

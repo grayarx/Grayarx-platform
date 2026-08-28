@@ -9,8 +9,16 @@ import { handleOsMessage } from "@/lib/os/router";
 import { listServiceBookings } from "@/lib/os/service";
 import { listTradeIns } from "@/lib/os/tradein";
 import { buildMondayRoiReport } from "@/lib/conversion/roi";
+import { listWhatsAppOutbox } from "@/lib/whatsapp/send";
+import { listEmailOutbox } from "@/lib/email/send";
+import { listCrmDeliveries, listCrmSubscriptions } from "@/lib/crm/webhooks";
+import { listBranches, ensureBranches } from "@/lib/branches/store";
+import { listFinanceApplications } from "@/lib/finance/prequal";
+import { seedMultiBranchStock } from "@/lib/marketplace/ingest";
 
 export async function GET() {
+  ensureBranches();
+  seedMultiBranchStock();
   return NextResponse.json({
     modules: OS_MODULES,
     packages: GRAYARX_OS_PACKAGES,
@@ -20,6 +28,12 @@ export async function GET() {
     partsEnquiries: listPartsEnquiries().slice(0, 20),
     serviceBookings: listServiceBookings().slice(0, 20),
     tradeIns: listTradeIns().slice(0, 20),
+    finance: listFinanceApplications().slice(0, 20),
+    branches: listBranches(),
+    whatsappOutbox: listWhatsAppOutbox().slice(0, 20),
+    emailOutbox: listEmailOutbox().slice(0, 10),
+    crmSubscriptions: listCrmSubscriptions(),
+    crmDeliveries: listCrmDeliveries().slice(0, 20),
     roi: buildMondayRoiReport(),
   });
 }
@@ -31,6 +45,7 @@ export async function POST(request: Request) {
     message?: string;
     holdPart?: boolean;
     source?: "whatsapp" | "website" | "manual";
+    dealershipId?: string;
   };
 
   if (
@@ -44,12 +59,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = handleOsMessage({
+  const result = await handleOsMessage({
     buyerName: body.buyerName,
     buyerPhone: body.buyerPhone,
     message: body.message,
     holdPart: Boolean(body.holdPart),
     source: body.source,
+    dealershipId: body.dealershipId,
   });
 
   return NextResponse.json({ result });

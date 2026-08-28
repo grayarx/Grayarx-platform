@@ -3,36 +3,20 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-type Module = {
-  id: string;
-  name: string;
-  job: string;
-  status: string;
-  beats: string[];
-};
-
-type Package = {
-  id: string;
-  name: string;
-  priceLabel: string;
-  target: string;
-  headline: string;
-  vsMarket: string;
-  includes: string[];
-};
-
 type OsState = {
-  modules: Module[];
-  packages: Package[];
+  modules: Array<{ id: string; name: string; job: string; status: string }>;
+  packages: Array<{ id: string; name: string; priceLabel: string; headline: string }>;
   parts: Array<{ id: string; sku: string; name: string; price: number; qty: number }>;
-  partsEnquiries: Array<{ id: string; buyerName: string; status: string; nalaReply: string }>;
+  partsEnquiries: Array<{ id: string; buyerName: string; status: string }>;
   serviceBookings: Array<{ id: string; buyerName: string; serviceType: string; scheduledAt: string }>;
   tradeIns: Array<{ id: string; buyerName: string; make: string; model: string; status: string }>;
-  pricingStrategy: {
-    principle: string;
-    whyNotCheaper: string;
-    grayArx: Array<{ plan: string; price: string; why: string }>;
-  };
+  finance: Array<{ id: string; buyerName: string; status: string; partnerUrl: string }>;
+  branches: Array<{ id: string; name: string; city: string }>;
+  whatsappOutbox: Array<{ id: string; to: string; body: string; status: string; channel: string }>;
+  emailOutbox: Array<{ id: string; to: string; subject: string; status: string }>;
+  crmDeliveries: Array<{ id: string; provider: string; event: string; status: string }>;
+  pricingStrategy: { principle: string; whyNotCheaper: string };
+  roi: { headline: string; proofLines: string[] };
 };
 
 export default function OsCommandCenterPage() {
@@ -43,18 +27,23 @@ export default function OsCommandCenterPage() {
   const [holdPart, setHoldPart] = useState(true);
   const [lastReply, setLastReply] = useState<string | null>(null);
   const [lastIntent, setLastIntent] = useState<string | null>(null);
+  const [lastMeta, setLastMeta] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/os");
-    const json = (await res.json()) as OsState;
-    setData(json);
+    setData((await res.json()) as OsState);
   }, []);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  function pushLog(line: string) {
+    setLog((prev) => [line, ...prev].slice(0, 12));
+  }
 
   async function send() {
     setBusy(true);
@@ -66,7 +55,11 @@ export default function OsCommandCenterPage() {
         body: JSON.stringify({ buyerName, buyerPhone, message, holdPart }),
       });
       const json = (await res.json()) as {
-        result?: { intent: string; reply: string };
+        result?: {
+          intent: string;
+          reply: string;
+          delivery?: { whatsapp: { id: string; status: string }; crm: unknown[] };
+        };
         error?: string;
       };
       if (!res.ok || !json.result) {
@@ -75,6 +68,96 @@ export default function OsCommandCenterPage() {
       }
       setLastIntent(json.result.intent);
       setLastReply(json.result.reply);
+      setLastMeta(
+        json.result.delivery
+          ? `WhatsApp ${json.result.delivery.whatsapp.status} · CRM events ${json.result.delivery.crm.length}`
+          : null,
+      );
+      pushLog(`OS ${json.result.intent}: WhatsApp delivered`);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pollMarketplace() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/marketplace/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "poll", limit: 3 }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        ingested?: number;
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(json.error ?? "Poll failed");
+        return;
+      }
+      pushLog(`Marketplace poll: ingested ${json.ingested} leads + WhatsApp`);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function missedCall() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/recovery/missed-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callerName: "Lebo Mokoena",
+          callerPhone: "+27 82 777 6611",
+          vehicleHint: "Polo Vivo",
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        nalaReply?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(json.error ?? "Recovery failed");
+        return;
+      }
+      setLastIntent("missed_call");
+      setLastReply(json.nalaReply ?? null);
+      pushLog("Missed call recovered → WhatsApp sent");
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function mondayEmail() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/reports/monday", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: "gm@sandtonmotors.test",
+          dealershipName: "Sandton Motors",
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        email?: { subject: string };
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(json.error ?? "Email failed");
+        return;
+      }
+      pushLog(`Monday email: ${json.email?.subject}`);
       await refresh();
     } finally {
       setBusy(false);
@@ -85,6 +168,7 @@ export default function OsCommandCenterPage() {
     { label: "Parts", text: "Do you have brake pads for a Hilux?" },
     { label: "Service", text: "Book a minor service for my Polo next week" },
     { label: "Trade-in", text: "Trade-in my 2019 Polo with 78000 km, good condition" },
+    { label: "Finance", text: "Can I finance the Hilux on monthly instalment?" },
     { label: "Sales", text: "Is the Hilux still available on AutoTrader?" },
   ];
 
@@ -97,61 +181,68 @@ export default function OsCommandCenterPage() {
               GrayArx Dealership OS
             </p>
             <h1 className="mt-2 text-2xl font-semibold text-white">
-              One OS. Sales, parts, service, trade-in.
+              Working OS — every path delivers
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              {data?.pricingStrategy.principle ??
-                "AI-native operating system for the yard — not a bolt-on chatbot."}
+              {data?.pricingStrategy.principle}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/pricing"
-              className="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white"
-            >
-              Pricing matrix
+            <Link href="/admin/pricing" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
+              Pricing
             </Link>
-            <Link
-              href="/admin/competitors"
-              className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300"
-            >
+            <Link href="/admin/conversion" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
+              Sales
+            </Link>
+            <Link href="/admin/competitors" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
               Battlecards
-            </Link>
-            <Link
-              href="/admin/conversion"
-              className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300"
-            >
-              Sales engine
             </Link>
           </div>
         </header>
 
-        <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {(data?.modules ?? [])
-            .filter((m) =>
-              ["sales_conversion", "parts", "service", "trade_in"].includes(m.id),
-            )
-            .map((m) => (
-              <div
-                key={m.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-4"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-white">{m.name}</h2>
-                  <span className="text-[10px] uppercase tracking-wide text-emerald-400">
-                    {m.status}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-zinc-400">{m.job}</p>
-              </div>
-            ))}
+        <section className="mb-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void pollMarketplace()}
+            className="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Poll AutoTrader/Cars leads
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void missedCall()}
+            className="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Simulate missed call
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void mondayEmail()}
+            className="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Send Monday ROI email
+          </button>
         </section>
+
+        {error ? <p className="mb-4 text-sm text-amber-400">{error}</p> : null}
+
+        {data?.roi ? (
+          <section className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/80 p-4">
+            <h2 className="text-sm font-semibold text-white">Monday proof</h2>
+            <p className="mt-2 text-sm text-emerald-300">{data.roi.headline}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+              {data.roi.proofLines.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/80 p-4">
           <h2 className="text-sm font-semibold text-white">Nala OS router</h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            One message → sales, parts, service, or trade-in. Presets:
-          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {presets.map((p) => (
               <button
@@ -169,13 +260,11 @@ export default function OsCommandCenterPage() {
               value={buyerName}
               onChange={(e) => setBuyerName(e.target.value)}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-              placeholder="Buyer name"
             />
             <input
               value={buyerPhone}
               onChange={(e) => setBuyerPhone(e.target.value)}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-              placeholder="Phone"
             />
           </div>
           <textarea
@@ -190,7 +279,7 @@ export default function OsCommandCenterPage() {
               checked={holdPart}
               onChange={(e) => setHoldPart(e.target.checked)}
             />
-            Hold matched part on counter (parts intent)
+            Hold matched part on counter
           </label>
           <button
             type="button"
@@ -198,13 +287,13 @@ export default function OsCommandCenterPage() {
             onClick={() => void send()}
             className="mt-4 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
-            {busy ? "Routing…" : "Run through OS"}
+            {busy ? "Working…" : "Run through OS (WhatsApp + CRM)"}
           </button>
-          {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
           {lastReply ? (
             <div className="mt-4 rounded-lg border border-emerald-900/50 bg-emerald-950/30 p-3">
               <p className="text-xs uppercase tracking-wide text-emerald-400">
                 Intent: {lastIntent}
+                {lastMeta ? ` · ${lastMeta}` : ""}
               </p>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-100">
                 {lastReply}
@@ -213,122 +302,124 @@ export default function OsCommandCenterPage() {
           ) : null}
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-xl border border-zinc-800 p-4">
-            <h2 className="text-sm font-semibold text-white">Parts counter</h2>
-            <ul className="mt-3 space-y-2 text-xs text-zinc-400">
-              {(data?.parts ?? []).map((p) => (
-                <li key={p.id} className="flex justify-between gap-2">
-                  <span>
-                    {p.name}{" "}
-                    <span className="text-zinc-600">({p.sku})</span>
-                  </span>
-                  <span className="text-zinc-200">
-                    R{p.price} · qty {p.qty}
-                  </span>
+            <h2 className="text-sm font-semibold text-white">WhatsApp outbox</h2>
+            <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs text-zinc-400">
+              {(data?.whatsappOutbox ?? []).map((m) => (
+                <li key={m.id} className="border-b border-zinc-900 pb-2">
+                  <span className="text-emerald-400">{m.status}</span> → {m.to}{" "}
+                  <span className="text-zinc-600">({m.channel})</span>
+                  <p className="mt-1 line-clamp-2 text-zinc-300">{m.body}</p>
+                </li>
+              ))}
+              {(data?.whatsappOutbox ?? []).length === 0 ? (
+                <li>Empty — run a message or poll marketplace.</li>
+              ) : null}
+            </ul>
+          </section>
+
+          <section className="rounded-xl border border-zinc-800 p-4">
+            <h2 className="text-sm font-semibold text-white">CRM deliveries</h2>
+            <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs text-zinc-400">
+              {(data?.crmDeliveries ?? []).map((d) => (
+                <li key={d.id}>
+                  <span className="text-zinc-200">{d.provider}</span> · {d.event} ·{" "}
+                  {d.status}
+                </li>
+              ))}
+              {(data?.crmDeliveries ?? []).length === 0 ? (
+                <li>Empty — OS actions push MotorX mock webhooks.</li>
+              ) : null}
+            </ul>
+          </section>
+
+          <section className="rounded-xl border border-zinc-800 p-4">
+            <h2 className="text-sm font-semibold text-white">Parts · Service · Trade-in · Finance</h2>
+            <div className="mt-3 grid gap-3 text-xs text-zinc-400 sm:grid-cols-2">
+              <div>
+                <p className="font-medium text-zinc-200">Parts stock</p>
+                <ul className="mt-1 space-y-1">
+                  {(data?.parts ?? []).map((p) => (
+                    <li key={p.id}>
+                      {p.name} — R{p.price} · qty {p.qty}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-zinc-200">Service</p>
+                <ul className="mt-1 space-y-1">
+                  {(data?.serviceBookings ?? []).slice(0, 5).map((b) => (
+                    <li key={b.id}>
+                      {b.buyerName} · {b.serviceType.replaceAll("_", " ")}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 font-medium text-zinc-200">Trade-ins</p>
+                <ul className="mt-1 space-y-1">
+                  {(data?.tradeIns ?? []).slice(0, 4).map((t) => (
+                    <li key={t.id}>
+                      {t.make} {t.model} · {t.status}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 font-medium text-zinc-200">Finance</p>
+                <ul className="mt-1 space-y-1">
+                  {(data?.finance ?? []).slice(0, 4).map((f) => (
+                    <li key={f.id}>
+                      {f.buyerName} · {f.status}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-zinc-800 p-4">
+            <h2 className="text-sm font-semibold text-white">Branches</h2>
+            <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+              {(data?.branches ?? []).map((b) => (
+                <li key={b.id}>
+                  {b.name} — {b.city}{" "}
+                  <span className="text-xs text-zinc-600">({b.id})</span>
                 </li>
               ))}
             </ul>
             <h3 className="mt-4 text-xs font-semibold uppercase text-zinc-500">
-              Recent quotes
+              Activity log
             </h3>
-            <ul className="mt-2 space-y-2 text-xs text-zinc-400">
-              {(data?.partsEnquiries ?? []).slice(0, 5).map((e) => (
+            <ul className="mt-2 space-y-1 text-xs text-zinc-500">
+              {log.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+              {log.length === 0 ? <li>Actions appear here.</li> : null}
+            </ul>
+            <h3 className="mt-4 text-xs font-semibold uppercase text-zinc-500">
+              Email outbox
+            </h3>
+            <ul className="mt-2 space-y-1 text-xs text-zinc-400">
+              {(data?.emailOutbox ?? []).map((e) => (
                 <li key={e.id}>
-                  {e.buyerName} — {e.status}
+                  {e.status}: {e.subject} → {e.to}
                 </li>
               ))}
-              {(data?.partsEnquiries ?? []).length === 0 ? (
-                <li>No parts enquiries yet.</li>
-              ) : null}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-zinc-800 p-4">
-            <h2 className="text-sm font-semibold text-white">Service diary</h2>
-            <ul className="mt-3 space-y-2 text-xs text-zinc-400">
-              {(data?.serviceBookings ?? []).slice(0, 8).map((b) => (
-                <li key={b.id}>
-                  {b.buyerName} · {b.serviceType.replaceAll("_", " ")} ·{" "}
-                  {new Date(b.scheduledAt).toLocaleString("en-ZA", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </li>
-              ))}
-              {(data?.serviceBookings ?? []).length === 0 ? (
-                <li>No service bookings yet.</li>
-              ) : null}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-zinc-800 p-4">
-            <h2 className="text-sm font-semibold text-white">Trade-in queue</h2>
-            <ul className="mt-3 space-y-2 text-xs text-zinc-400">
-              {(data?.tradeIns ?? []).slice(0, 8).map((t) => (
-                <li key={t.id}>
-                  {t.buyerName} · {t.make} {t.model} · {t.status}
-                </li>
-              ))}
-              {(data?.tradeIns ?? []).length === 0 ? (
-                <li>No trade-ins yet.</li>
-              ) : null}
             </ul>
           </section>
         </div>
 
         <section className="mt-6 rounded-xl border border-zinc-800 p-4">
-          <h2 className="text-sm font-semibold text-white">
-            OS packages (premium)
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            {data?.pricingStrategy.whyNotCheaper}
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {(data?.packages ?? []).map((p) => (
-              <div
-                key={p.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-950 p-3"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-medium text-white">{p.name}</span>
-                  <span className="text-sm text-emerald-400">{p.priceLabel}</span>
+          <h2 className="text-sm font-semibold text-white">Module status</h2>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {(data?.modules ?? []).map((m) => (
+              <div key={m.id} className="rounded-lg border border-zinc-900 p-3 text-xs">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium text-white">{m.name}</span>
+                  <span className="text-emerald-400">{m.status}</span>
                 </div>
-                <p className="mt-2 text-xs text-zinc-400">{p.headline}</p>
-                <p className="mt-2 text-[11px] text-zinc-600">{p.vsMarket}</p>
+                <p className="mt-1 text-zinc-500">{m.job}</p>
               </div>
             ))}
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-xl border border-zinc-800 p-4">
-          <h2 className="text-sm font-semibold text-white">Full module map</h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase text-zinc-500">
-                <tr>
-                  <th className="py-2 pr-3">Module</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Job</th>
-                  <th className="py-2">Beats</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.modules ?? []).map((m) => (
-                  <tr key={m.id} className="border-t border-zinc-900 text-zinc-300">
-                    <td className="py-2 pr-3 font-medium text-white">{m.name}</td>
-                    <td className="py-2 pr-3 text-emerald-400">{m.status}</td>
-                    <td className="py-2 pr-3 text-xs">{m.job}</td>
-                    <td className="py-2 text-xs text-zinc-500">
-                      {m.beats.join("; ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </section>
       </main>
