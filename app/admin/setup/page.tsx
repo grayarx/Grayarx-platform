@@ -57,8 +57,18 @@ export default function SetupPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void (async () => {
+      const response = await fetch("/api/setup/status");
+      const data = (await response.json()) as SetupPayload & {
+        verify?: VerifyPayload | null;
+      };
+      setStatus(data);
+      if (data.verify) {
+        setVerify(data.verify);
+        setSaved(data.twilio.accountSidSet && data.twilio.authTokenSet);
+      }
+    })();
+  }, []);
 
   const sidOk = accountSid.trim().startsWith("AC");
   const tokenOk = authToken.trim().length > 0;
