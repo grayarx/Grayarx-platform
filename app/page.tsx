@@ -34,18 +34,26 @@ export default function Home() {
                 Pricing and tiers only when they ask.
               </p>
             </div>
-            <a
-              href="/admin/conversion"
-              className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400"
-            >
-              Conversion engine
-            </a>
-            <a
-              href="/admin/prospector"
-              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
-            >
-              Open prospector
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="/dealer"
+                className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400"
+              >
+                Dealer home
+              </a>
+              <a
+                href="/admin/conversion"
+                className="rounded-md border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-zinc-500"
+              >
+                Conversion
+              </a>
+              <a
+                href="/admin/prospector"
+                className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              >
+                Open prospector
+              </a>
+            </div>
           </div>
         </header>
 

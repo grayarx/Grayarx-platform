@@ -15,6 +15,8 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Competitor battlecards:** [http://127.0.0.1:43123/admin/competitors](http://127.0.0.1:43123/admin/competitors) — MotorX, WhatsApp bots, DMS pricing, talk tracks, and beat roadmap. See [`docs/COMPETITOR_BATTLECARDS.md`](docs/COMPETITOR_BATTLECARDS.md).
 
+**Dealer home (value + setup):** [http://127.0.0.1:43123/dealer](http://127.0.0.1:43123/dealer) · [5-step onboard](http://127.0.0.1:43123/dealer/onboard) — money-left-on-table calculator and process playbooks. [`docs/VALUE_STORY.md`](docs/VALUE_STORY.md).
+
 **Dealership OS:** [http://127.0.0.1:43123/admin/os](http://127.0.0.1:43123/admin/os) — full desks. Dealer explainer (parts pricing, modules): [`docs/DEALER_EXPLAINER.md`](docs/DEALER_EXPLAINER.md).
 
 **Showroom:** [http://127.0.0.1:43123/showroom/demo-yard](http://127.0.0.1:43123/showroom/demo-yard) (parts on) · [Pretoria parts off](http://127.0.0.1:43123/showroom/yard-pta)
