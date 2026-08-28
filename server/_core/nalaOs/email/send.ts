@@ -28,8 +28,11 @@ function save(outbox: Outbox) {
   writeJsonFile(FILE, outbox);
 }
 
-export function buildMondayEmailBody(report: RoiReport): string {
-  const parts = listPartsEnquiries().length;
+export function buildMondayEmailBody(
+  report: RoiReport,
+  partsCount = 0,
+): string {
+  const parts = partsCount;
   const services = listServiceBookings().length;
   const trades = listTradeIns().length;
   return [
@@ -54,7 +57,7 @@ export async function sendMondayRoiEmail(input: {
 }): Promise<{ email: EmailMessage; report: RoiReport }> {
   const report = buildMondayRoiReport();
   const subject = `Monday ROI — ${input.dealershipName ?? "Your yard"}`;
-  const body = buildMondayEmailBody(report);
+  const body = buildMondayEmailBody(report, (await listPartsEnquiries()).length);
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from =
     process.env.RESEND_FROM_EMAIL?.trim() || "GrayArx <reports@grayarx.com>";

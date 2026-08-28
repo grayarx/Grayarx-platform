@@ -86,6 +86,7 @@ import AdminAgents from "./pages/admin/AdminAgents";
 import AdminBilling from "./pages/admin/AdminBilling";
 import AdminInventoryImport from "./pages/admin/AdminInventoryImport";
 import DealerInventoryImport from "./pages/dealer/InventoryImport";
+import DealerParts from "./pages/dealer/DealerParts";
 import DealerSettings from "./pages/dealer/Settings";
 import DealerTeam from "./pages/dealer/Team";
 import TradeInNetwork from "./pages/dealer/TradeInNetwork";
@@ -207,6 +208,7 @@ function Router() {
       <Route path="/dealer/leads" component={Leads} />
       <Route path="/dealer/bookings" component={Bookings} />
       <Route path="/dealer/inventory" component={Inventory} />
+      <Route path="/dealer/parts" component={DealerParts} />
       <Route path="/dealer/security-report" component={DealershipSecurityReport} />
       <Route path="/dealer/security" component={DealershipSecurityDashboard} />
       <Route path="/dealer/inventory/import" component={DealerInventoryImport} />

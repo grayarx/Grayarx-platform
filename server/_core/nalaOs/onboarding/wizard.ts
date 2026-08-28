@@ -102,16 +102,16 @@ export type StepGuide = {
   isDone: boolean;
 };
 
-export function getOnboardingGuides(dealershipId = "demo-yard"): {
+export async function getOnboardingGuides(dealershipId = "demo-yard"): Promise<{
   state: OnboardState;
   steps: StepGuide[];
   percentComplete: number;
   readyForPilot: boolean;
-} {
+}> {
   const state = getOnboarding(dealershipId);
   const settings = getDealershipSettings(dealershipId);
   const stockCount = listAvailable(dealershipId).length;
-  const partsCount = listAllParts(dealershipId).length;
+  const partsCount = (await listAllParts(dealershipId)).length;
   const hasCrm = listCrmSubscriptions().length > 0;
 
   const steps: StepGuide[] = [

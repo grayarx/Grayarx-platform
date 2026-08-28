@@ -22,6 +22,8 @@ import {
 import { runFallbackAgent, isAfterHoursSAST, generateReferenceNumber } from "./fallbackAgent";
 import { resolveNalaReply, stripMarkdownForWhatsApp, getConvState } from "./nalaReplyOrchestrator";
 import { addWhatsAppAIDisclosure } from "./agentPrompts";
+import { detectOsIntent } from "@nalaOs/os/router";
+import { quotePart, holdPart } from "@nalaOs/os/parts";
 import {
   createTestDriveBooking,
   createFallbackMessage,
@@ -295,6 +297,42 @@ async function handleBongiRoute(input: ResolveRoutedReplyInput, lang: LanguageCo
   };
 }
 
+async function handlePartsQuote(
+  input: ResolveRoutedReplyInput,
+  lang: LanguageCode,
+): Promise<RoutedReplyResult> {
+  const { enquiry } = await quotePart({
+    buyerName: input.customerName?.trim() || "there",
+    buyerPhone: input.customerPhone?.trim() || "",
+    message: input.message,
+    dealershipId: String(input.dealershipId),
+  });
+  let reply = enquiry.nalaReply;
+  if (
+    /\bhold\b/i.test(input.message) &&
+    enquiry.partId &&
+    enquiry.status !== "module_off"
+  ) {
+    const held = await holdPart(enquiry.id);
+    if (!("error" in held)) reply = held.nalaReply;
+  }
+  if (input.channel === "whatsapp") {
+    reply = addWhatsAppAIDisclosure(
+      stripMarkdownForWhatsApp(reply),
+      lang,
+      input.agentDisplayName,
+    );
+  }
+  return {
+    agent: "nala",
+    reply,
+    language: lang,
+    intent: "parts",
+    answered: true,
+    source: "template",
+  };
+}
+
 /** Main entry — classify intent, route to specialist, or fall back to Nala. */
 export async function resolveRoutedReply(
   input: ResolveRoutedReplyInput,
@@ -314,6 +352,9 @@ export async function resolveRoutedReply(
     case "bongi":
       return handleBongiRoute(input, lang);
     default: {
+      if (detectOsIntent(input.message) === "parts") {
+        return handlePartsQuote(input, lang);
+      }
       const nala = await resolveNalaReply({
         message: input.message,
         vehicle: input.vehicle,

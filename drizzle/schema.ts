@@ -1,5 +1,5 @@
 import { boolean as mysqlBoolean, mediumtext } from "drizzle-orm/mysql-core";
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, date, tinyint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, date, tinyint, uniqueIndex, index } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -3480,3 +3480,58 @@ export type FeatureAccessLog = typeof featureAccessLogs.$inferSelect;
 export type InsertFeatureAccessLog = typeof featureAccessLogs.$inferInsert;
 export type FeatureDefinition = typeof featureDefinitions.$inferSelect;
 export type InsertFeatureDefinition = typeof featureDefinitions.$inferInsert;
+
+/**
+ * Dealer parts catalog — tenant-scoped by dealershipId (string so OS demo-yard
+ * and numeric dealer ids both work). Survives Railway deploys unlike parts.json.
+ */
+export const dealershipParts = mysqlTable(
+  "dealership_parts",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    dealershipId: varchar("dealershipId", { length: 64 }).notNull(),
+    sku: varchar("sku", { length: 128 }).notNull(),
+    oemNumber: varchar("oemNumber", { length: 128 }),
+    name: varchar("name", { length: 255 }).notNull(),
+    fits: json("fits").$type<string[]>(),
+    make: varchar("make", { length: 64 }),
+    model: varchar("model", { length: 64 }),
+    yearFrom: int("yearFrom"),
+    yearTo: int("yearTo"),
+    costPrice: decimal("costPrice", { precision: 12, scale: 2 }),
+    retailPrice: decimal("retailPrice", { precision: 12, scale: 2 }).notNull(),
+    qty: int("qty").default(0).notNull(),
+    supplier: varchar("supplier", { length: 255 }),
+    source: varchar("source", { length: 32 }).default("csv_import").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("dealership_parts_dealer_sku").on(t.dealershipId, t.sku),
+    index("dealership_parts_dealer").on(t.dealershipId),
+  ],
+);
+
+export type DealershipPart = typeof dealershipParts.$inferSelect;
+export type InsertDealershipPart = typeof dealershipParts.$inferInsert;
+
+/** Buyer parts quotes / holds — same tenant key as the catalog. */
+export const dealershipPartsEnquiries = mysqlTable(
+  "dealership_parts_enquiries",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    dealershipId: varchar("dealershipId", { length: 64 }).notNull(),
+    buyerName: varchar("buyerName", { length: 255 }).notNull(),
+    buyerPhone: varchar("buyerPhone", { length: 64 }).notNull(),
+    message: text("message").notNull(),
+    partId: varchar("partId", { length: 64 }),
+    status: varchar("status", { length: 32 }).notNull(),
+    nalaReply: text("nalaReply").notNull(),
+    holdUntil: timestamp("holdUntil"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [index("dealership_parts_enq_dealer").on(t.dealershipId)],
+);
+
+export type DealershipPartEnquiry = typeof dealershipPartsEnquiries.$inferSelect;
+export type InsertDealershipPartEnquiry = typeof dealershipPartsEnquiries.$inferInsert;

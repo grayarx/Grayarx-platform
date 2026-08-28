@@ -210,7 +210,7 @@ export async function handleOsMessage(input: {
   }
 
   if (intent === "parts") {
-    const { enquiry } = quotePart({
+    const { enquiry } = await quotePart({
       buyerName: input.buyerName,
       buyerPhone: input.buyerPhone,
       message: input.message,
@@ -222,7 +222,7 @@ export async function handleOsMessage(input: {
       enquiry.partId &&
       enquiry.status !== "module_off"
     ) {
-      const result = holdPart(enquiry.id);
+      const result = await holdPart(enquiry.id);
       if (!("error" in result)) held = result;
     }
     const reply = held?.nalaReply ?? enquiry.nalaReply;
