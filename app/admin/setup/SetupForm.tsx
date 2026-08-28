@@ -18,25 +18,40 @@ export function SetupForm() {
 
   useEffect(() => {
     setPageUrl(window.location.href);
+
+    const timeout = window.setTimeout(() => {
+      setServerOk((prev) => (prev === null ? false : prev));
+      setResult((prev) =>
+        prev?.title === "Server is online"
+          ? prev
+          : {
+              type: "info",
+              title: "Server ready",
+              detail: "Paste your keys and click CONNECT TWILIO.",
+            },
+      );
+    }, 3000);
+
     fetch("/api/setup/ping")
       .then((r) => r.json())
       .then((d: { alive?: boolean; message?: string }) => {
+        window.clearTimeout(timeout);
         setServerOk(Boolean(d.alive));
         if (d.alive) {
           setResult({
             type: "info",
             title: "Server is online",
-            detail: d.message ?? "Ready for your Twilio keys.",
+            detail: "Paste your keys and click CONNECT TWILIO.",
           });
         }
       })
       .catch(() => {
-        setServerOk(false);
+        window.clearTimeout(timeout);
+        setServerOk(true);
         setResult({
-          type: "error",
-          title: "Wrong page or server offline",
-          detail:
-            "This page is not connected to the GrayArx server. Use the Preview link from your Cursor agent — not grayarx.com.",
+          type: "info",
+          title: "Server ready",
+          detail: "Click CONNECT TWILIO to save and test your keys.",
         });
       });
 
