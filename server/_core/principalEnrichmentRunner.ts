@@ -324,12 +324,22 @@ export async function runPrincipalEnrichmentTick(
       if (target.prospectId) {
         try {
           await updateProspectContact(target.prospectId, {
+            ...(result.phone ? { phone: result.phone } : {}),
             enrichedAt: new Date(),
             enrichmentNotes: result.notes,
           });
         } catch (err) {
           console.warn("[PrincipalEnrich] failed to stamp enrichedAt", err);
         }
+      }
+      try {
+        const { persistHitToIcpYard } = await import("./icpContactResearch");
+        persistHitToIcpYard(target.dealershipName, {
+          phone: result.phone,
+          website: target.website,
+        });
+      } catch (err) {
+        console.warn("[PrincipalEnrich] ICP phone persist failed", err);
       }
       if (result.status === "fetch_failed") failed += 1;
       continue;
@@ -342,11 +352,15 @@ export async function runPrincipalEnrichmentTick(
       `email_quality=${hit.quality}`,
       `source=${hit.source}`,
       `evidence=${hit.evidenceUrl}`,
-    ].join(" | ");
+      result.phone ? `phone=${result.phone}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
 
     if (target.prospectId) {
       await updateProspectContact(target.prospectId, {
         email: hit.email,
+        ...(result.phone ? { phone: result.phone } : {}),
         contactName: hit.contactName,
         contactRole: hit.contactRole,
         emailVerified: 1,
@@ -363,7 +377,7 @@ export async function runPrincipalEnrichmentTick(
           dealershipName: target.dealershipName,
           region: target.region ?? null,
           city: target.city ?? null,
-          phone: target.phone ?? null,
+          phone: result.phone ?? target.phone ?? null,
           email: hit.email,
           website: target.website ?? null,
           estimatedMonthlyVolume: target.estimatedMonthlyVolume ?? null,
@@ -382,6 +396,17 @@ export async function runPrincipalEnrichmentTick(
       ]);
       created += 1;
       enriched += 1;
+    }
+    try {
+      const { persistHitToIcpYard } = await import("./icpContactResearch");
+      persistHitToIcpYard(target.dealershipName, {
+        phone: result.phone ?? hit.phone,
+        email: hit.email,
+        contactName: hit.contactName,
+        website: target.website,
+      });
+    } catch (err) {
+      console.warn("[PrincipalEnrich] ICP persist failed", err);
     }
   }
 

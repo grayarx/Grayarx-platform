@@ -15,6 +15,11 @@ import {
   isOutreachReadyForDealership,
   type ProspectEmailAssessment,
 } from "../../shared/prospectEmailQuality";
+import {
+  isSaLandline,
+  mergeDiscoveredPhone,
+  pickPreferredSaPhone,
+} from "../../shared/prospectPhone";
 import dns from "node:dns/promises";
 
 async function domainHasMx(email: string): Promise<boolean> {
@@ -33,7 +38,7 @@ const FETCH_TIMEOUT_FAST_MS = 3_000;
 const MAX_HTML_CHARS = 80_000;
 const MAX_TEXT_FOR_LLM = 12_000;
 
-const CONTACT_PATHS = [
+export const CONTACT_PATHS = [
   "",
   "/contact",
   "/contact-us",
@@ -54,7 +59,10 @@ const CONTACT_PATHS = [
 ];
 
 /** Fewer pages for interactive / budgeted runs */
-const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us", "/about", "/team"];
+export const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us", "/about", "/team"];
+export const CONTACT_PATHS_DEEP = CONTACT_PATHS;
+
+const CONTACTISH_PATH = /contact|about|team|people|staff|leadership|directors/i;
 
 /** Domains / locals that are never outreach contacts. */
 const BLOCKED_EMAIL_SUBSTRINGS = [
@@ -105,6 +113,8 @@ export type EnrichmentHit = {
   source: "website_mailto" | "website_text" | "llm_from_page";
   evidenceUrl: string;
   score: number;
+  /** Switchboard / public number scraped from the same pages (never invented). */
+  phone?: string | null;
 };
 
 export type EnrichmentAttemptResult = {
@@ -112,8 +122,12 @@ export type EnrichmentAttemptResult = {
   prospectId?: number;
   status: "enriched" | "no_named_email" | "no_website" | "fetch_failed" | "skipped";
   hit?: EnrichmentHit;
+  /** Best SA number found on fetched pages; existing candidate phone kept if scrape is empty. */
+  phone?: string | null;
   pagesTried: number;
   notes: string;
+  /** true when the full CONTACT_PATHS crawl ran */
+  deep?: boolean;
 };
 
 function normalizeWebsite(url: string | null | undefined): string | null {
@@ -276,14 +290,16 @@ ${input.pageText.slice(0, 8000)}`,
 }
 
 /**
- * Research one dealership website for a named/principal email.
- * Pass `{ fast: true }` for interactive/budgeted runs (fewer pages, shorter timeout, skip LLM if one named email).
+ * Research one dealership website for a named/principal email and a public phone.
+ * `{ deep: true }` / `{ fast: false }` uses the full CONTACT_PATHS crawl.
+ * `{ fast: true }` caps at 5 pages (Generate tail).
  */
 export async function enrichDealershipPrincipal(
   candidate: EnrichmentCandidate,
-  opts?: { fast?: boolean },
+  opts?: { fast?: boolean; deep?: boolean },
 ): Promise<EnrichmentAttemptResult> {
-  const fast = opts?.fast === true;
+  const deep = opts?.deep === true;
+  const fast = deep ? false : opts?.fast === true;
   const paths = fast ? CONTACT_PATHS_FAST : CONTACT_PATHS;
   const timeoutMs = fast ? FETCH_TIMEOUT_FAST_MS : FETCH_TIMEOUT_MS;
 
@@ -295,6 +311,8 @@ export async function enrichDealershipPrincipal(
       status: "no_website",
       pagesTried: 0,
       notes: "No website URL to fetch",
+      phone: mergeDiscoveredPhone(candidate.phone, null),
+      deep,
     };
   }
 
@@ -303,25 +321,52 @@ export async function enrichDealershipPrincipal(
   let bestPageText = "";
   let pagesTried = 0;
   let anyOk = false;
+  let discoveredPhone: string | null = null;
+  let foundNamedOnPage = false;
 
   for (const path of paths) {
+    if (foundNamedOnPage && discoveredPhone && !CONTACTISH_PATH.test(path)) {
+      break;
+    }
     const url = `${base}${path}`;
     pagesTried += 1;
     const page = await fetchPage(url, timeoutMs);
     if (!page.ok || !page.html) continue;
     anyOk = true;
+    const pagePhone = pickPreferredSaPhone(page.html, {
+      pageUrl: `${page.finalUrl} ${path}`,
+    });
+    if (pagePhone) {
+      const preferSwitchboard =
+        CONTACTISH_PATH.test(path) || CONTACTISH_PATH.test(page.finalUrl);
+      if (!discoveredPhone) {
+        discoveredPhone = pagePhone;
+      } else if (preferSwitchboard && isSaLandline(pagePhone) && !isSaLandline(discoveredPhone)) {
+        discoveredPhone = pagePhone;
+      } else {
+        discoveredPhone = mergeDiscoveredPhone(discoveredPhone, pagePhone);
+      }
+    }
     const emails = extractEmailsFromHtml(page.html);
     for (const e of emails) allEmails.add(e);
     const ranked = rankEmails(emails.filter((e) => emailMatchesWebsiteDomain(e, base)));
     if (ranked.some((r) => r.email && isOutreachReadyForDealership(r.email, base))) {
       bestPageUrl = page.finalUrl;
       bestPageText = htmlToRoughText(page.html);
-      break;
+      foundNamedOnPage = true;
+      if (discoveredPhone) continue;
     } else if (!bestPageText) {
       bestPageUrl = page.finalUrl;
       bestPageText = htmlToRoughText(page.html);
     }
   }
+
+  discoveredPhone = mergeDiscoveredPhone(
+    discoveredPhone,
+    pickPreferredSaPhone(bestPageText),
+  );
+  const phone = mergeDiscoveredPhone(candidate.phone, discoveredPhone);
+  const phoneNote = phone ? ` Switchboard: ${phone}.` : "";
 
   if (!anyOk) {
     return {
@@ -330,6 +375,8 @@ export async function enrichDealershipPrincipal(
       status: "fetch_failed",
       pagesTried,
       notes: `Could not fetch ${base}`,
+      phone,
+      deep,
     };
   }
 
@@ -378,9 +425,12 @@ export async function enrichDealershipPrincipal(
             source: "website_text",
             evidenceUrl: bestPageUrl,
             score: assessment.score,
+            phone,
           },
+          phone,
           pagesTried,
-          notes: `Verified ${guessed.email} for ${guessed.person.fullName} (${guessed.person.role ?? "principal"}) via ${guessed.method} + name discovery on dealer domain`,
+          deep,
+          notes: `Verified ${guessed.email} for ${guessed.person.fullName} (${guessed.person.role ?? "principal"}) via ${guessed.method} + name discovery on dealer domain.${phoneNote}`,
         };
       }
       const onPage = [...allEmails];
@@ -389,7 +439,9 @@ export async function enrichDealershipPrincipal(
         prospectId: candidate.prospectId,
         status: "no_named_email",
         pagesTried,
-        notes: `No public named email on dealer domain ${websiteHostSafe(base)} yet (sites often only list info@). People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}. Sipho keeps searching dealer sites, directories, Facebook/LinkedIn snippets, and press — not LinkedIn-only.`,
+        phone,
+        deep,
+        notes: `No public named email on dealer domain ${websiteHostSafe(base)} yet (sites often only list info@). People found: ${people.map((p) => p.fullName).join(", ") || "none"}. On page: ${onPage.slice(0, 5).join(", ") || "none"}. Sipho keeps searching dealer sites, directories, Facebook/LinkedIn snippets, and press — not LinkedIn-only.${phoneNote}`,
       };
     } catch (err) {
       console.warn("[PrincipalEnrich] name/email guess failed", err);
@@ -399,7 +451,9 @@ export async function enrichDealershipPrincipal(
         prospectId: candidate.prospectId,
         status: "no_named_email",
         pagesTried,
-        notes: `No named email on dealer domain ${websiteHostSafe(base)}. On page: ${onPage.slice(0, 5).join(", ") || "none"}`,
+        phone,
+        deep,
+        notes: `No named email on dealer domain ${websiteHostSafe(base)}. On page: ${onPage.slice(0, 5).join(", ") || "none"}.${phoneNote}`,
       };
     }
   }
@@ -427,7 +481,9 @@ export async function enrichDealershipPrincipal(
       prospectId: candidate.prospectId,
       status: "no_named_email",
       pagesTried,
-      notes: "Pick was not outreach-ready on dealer domain",
+      phone,
+      deep,
+      notes: `Pick was not outreach-ready on dealer domain.${phoneNote}`,
     };
   }
 
@@ -438,7 +494,9 @@ export async function enrichDealershipPrincipal(
       prospectId: candidate.prospectId,
       status: "no_named_email",
       pagesTried,
-      notes: `Domain for ${chosenEmail} has no MX — would bounce`,
+      phone,
+      deep,
+      notes: `Domain for ${chosenEmail} has no MX — would bounce.${phoneNote}`,
     };
   }
 
@@ -449,7 +507,9 @@ export async function enrichDealershipPrincipal(
       prospectId: candidate.prospectId,
       status: "no_named_email",
       pagesTried,
-      notes: "LLM/heuristic pick was not outreach-ready",
+      phone,
+      deep,
+      notes: `LLM/heuristic pick was not outreach-ready.${phoneNote}`,
     };
   }
 
@@ -467,6 +527,7 @@ export async function enrichDealershipPrincipal(
         : "website_text",
     evidenceUrl: bestPageUrl,
     score: assessment.score,
+    phone,
   };
 
   return {
@@ -474,8 +535,10 @@ export async function enrichDealershipPrincipal(
     prospectId: candidate.prospectId,
     status: "enriched",
     hit,
+    phone,
     pagesTried,
-    notes: `Found ${hit.email} (${hit.quality}) on ${hit.evidenceUrl} (domain+MX ok)`,
+    deep,
+    notes: `Found ${hit.email} (${hit.quality}) on ${hit.evidenceUrl} (domain+MX ok).${phoneNote}`,
   };
 }
 

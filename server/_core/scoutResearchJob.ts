@@ -4,13 +4,13 @@
  * (HTML error page → "Unexpected token '<' ... is not valid JSON").
  *
  * Design notes:
- * - Fast path only (site pages + light web snippets). Full multi-source crawl is for
- *   scheduled enrich ticks — Generate must finish in ~1–2 minutes, not hang per dealer.
- * - Dealers with no named email get a cooldown so the queue number moves down.
- * - Multiple short waves until deadline or target count.
+ * - First GENERATE_DEEP_COUNT dealers get a full CONTACT_PATHS crawl (deep).
+ * - Remaining dealers in the 90s window use the fast 5-page scan for volume.
+ * - Always persist named email + phone when found.
+ * - ICP yard cards are researched with the same enricher (not paste-only).
  */
 
-import { createProspects, listProspects, logAgentActivity } from "../db";
+import { createProspects, listProspects, logAgentActivity, updateProspectContact } from "../db";
 import {
   pickNextProspectsForResearch,
   countResearchableProspects,
@@ -18,7 +18,10 @@ import {
   markProspectResearchAttempted,
 } from "./saProspectPool";
 import { enrichDealershipPrincipal } from "./prospectPrincipalEnrichment";
-import { runPrincipalEnrichmentTick } from "./principalEnrichmentRunner";
+import { persistHitToIcpYard, researchIcpContacts } from "./icpContactResearch";
+
+/** First N Generate dealers use full contact/about/team crawl (not the 5-page fast cap). */
+export const GENERATE_DEEP_COUNT = 3;
 
 let scoutJobRunning = false;
 let lastScoutJobAt: number | null = null;
@@ -29,6 +32,11 @@ let lastScoutJobSummary: {
   coolingDown: number;
   names: string[];
   finishedAt: number;
+  deepCount: number;
+  fastCount: number;
+  phonesFound: number;
+  icpResearched: number;
+  modeNote: string;
 } | null = null;
 
 export function isScoutResearchJobRunning(): boolean {
@@ -53,11 +61,9 @@ export async function runScoutResearchJob(input: {
     let existingRows = await listProspects(1000);
     let existingNames = existingRows.map((r) => r.dealershipName);
 
-    // Import known-good named emails + small enrich retry (idempotent import inside)
     const { runPrincipalEnrichmentTick } = await import("./principalEnrichmentRunner");
-    // One deep dig first (directories/press/SMTP) — then fast waves for volume
     const deepPass = await runPrincipalEnrichmentTick({
-      limit: 1,
+      limit: GENERATE_DEEP_COUNT,
       deep: true,
     });
     const retry = await runPrincipalEnrichmentTick({
@@ -67,20 +73,33 @@ export async function runScoutResearchJob(input: {
 
     let created = deepPass.created + retry.created;
     let researched = deepPass.examined + retry.examined;
-    const foundNames: string[] = [
-      ...deepPass.results,
-      ...retry.results,
-    ]
+    let deepCount = deepPass.results.filter((r) => r.deep).length;
+    let fastCount = deepPass.results.filter((r) => !r.deep).length + retry.results.length;
+    let phonesFound =
+      [...deepPass.results, ...retry.results].filter((r) => r.phone).length;
+    const foundNames: string[] = [...deepPass.results, ...retry.results]
       .filter((r) => r.status === "enriched")
       .map((r) => r.dealershipName);
+
     if (deepPass.importedReady > 0 || retry.importedReady > 0) {
       existingRows = await listProspects(1000);
       existingNames = existingRows.map((r) => r.dealershipName);
     }
 
-    // ~90s wall clock — enough for several fast site checks, not one slow "everywhere" crawl
+    const icp = await researchIcpContacts({
+      limit: GENERATE_DEEP_COUNT,
+      deep: true,
+    });
+    created += icp.emailsFound;
+    researched += icp.researched;
+    deepCount += icp.researched;
+    phonesFound += icp.phonesFound;
+    foundNames.push(...icp.names);
+
+    // ~90s wall clock — deep first, then a fast tail for volume
     const deadline = Date.now() + 90_000;
     const target = Math.min(Math.max(input.count, 1), 8);
+    let loopDeepLeft = GENERATE_DEEP_COUNT;
 
     while (Date.now() < deadline && created < target) {
       existingRows = await listProspects(1000);
@@ -97,8 +116,12 @@ export async function runScoutResearchJob(input: {
         if (created >= target) break;
 
         researched += 1;
-        // Always cool down after an attempt so "67 left" moves when sites only have info@
         markProspectResearchAttempted(p.name);
+
+        const useDeep = loopDeepLeft > 0;
+        if (useDeep) loopDeepLeft -= 1;
+        if (useDeep) deepCount += 1;
+        else fastCount += 1;
 
         const result = await enrichDealershipPrincipal(
           {
@@ -113,8 +136,25 @@ export async function runScoutResearchJob(input: {
               ? [{ fullName: p.principalName, role: p.principalRole }]
               : undefined,
           },
-          { fast: true },
+          { deep: useDeep, fast: !useDeep },
         );
+
+        persistHitToIcpYard(p.name, {
+          phone: result.phone,
+          email: result.hit?.email,
+          contactName: result.hit?.contactName,
+          website: p.website,
+        });
+
+        if (result.phone) phonesFound += 1;
+
+        const existingMatch = existingRows.find(
+          (row) => row.dealershipName.toLowerCase().trim() === p.name.toLowerCase().trim(),
+        );
+        if (existingMatch && result.phone) {
+          await updateProspectContact(existingMatch.id, { phone: result.phone });
+        }
+
         if (result.status !== "enriched" || !result.hit) continue;
         const hit = result.hit;
         await createProspects([
@@ -122,7 +162,7 @@ export async function runScoutResearchJob(input: {
             dealershipName: p.name,
             region: p.province,
             city: p.city,
-            phone: p.phone,
+            phone: result.phone ?? p.phone,
             email: hit.email,
             website: p.website ?? "",
             estimatedMonthlyVolume: p.estimatedMonthlyVolume,
@@ -135,7 +175,7 @@ export async function runScoutResearchJob(input: {
                   : 72,
             rationale: `Auto-researched principal contact from ${hit.evidenceUrl}`,
             status: "scouted",
-            sourceNotes: `Sipho website research — ${input.region} | email_quality=${hit.quality} | source=${hit.source}`,
+            sourceNotes: `Sipho website research — ${input.region} | email_quality=${hit.quality} | source=${hit.source} | mode=${useDeep ? "deep" : "fast"}`,
             contactName: hit.contactName,
             contactRole: hit.contactRole,
             emailVerified: 1,
@@ -152,6 +192,9 @@ export async function runScoutResearchJob(input: {
     const allKnown = [...existingNames, ...foundNames];
     const researchRemaining = countResearchableProspects(allKnown);
     const coolingDown = countCooldownProspects(allKnown);
+    const modeNote =
+      `First ${GENERATE_DEEP_COUNT} dealers (or all if fewer): full contact/about/team crawl. ` +
+      `Remaining Generate tail: fast 5-page scan.`;
 
     lastScoutJobSummary = {
       created,
@@ -160,13 +203,18 @@ export async function runScoutResearchJob(input: {
       coolingDown,
       names: foundNames,
       finishedAt: Date.now(),
+      deepCount,
+      fastCount,
+      phonesFound,
+      icpResearched: icp.researched,
+      modeNote,
     };
 
     await logAgentActivity({
       agentId: "prospector",
       action: "scouted_batch_research",
       subjectType: "prospect",
-      summary: `Sipho checked ${researched} dealer site${researched === 1 ? "" : "s"}: ${created} named/principal contact${created === 1 ? "" : "s"} found. ${researchRemaining} still in active queue (${coolingDown} cooling down).`,
+      summary: `Sipho checked ${researched} dealer site${researched === 1 ? "" : "s"} (${deepCount} deep, ${fastCount} fast): ${created} named/principal contact${created === 1 ? "" : "s"}, ${phonesFound} switchboard${phonesFound === 1 ? "" : "s"}. ${researchRemaining} still in active queue (${coolingDown} cooling down).`,
       payload: lastScoutJobSummary,
     });
 

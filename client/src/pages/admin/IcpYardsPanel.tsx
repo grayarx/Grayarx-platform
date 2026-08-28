@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, PhoneCall, Send, Loader2, Globe } from "lucide-react";
+import { Mail, Phone, PhoneCall, Send, Loader2, Globe, Search } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { ProspectorCallModal } from "@/components/prospector/ProspectorCallModal";
@@ -39,6 +39,7 @@ export default function IcpYardsPanel() {
   const [drafts, setDrafts] = useState<Record<string, { phone: string; email: string }>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [callModal, setCallModal] = useState<CallModalState | null>(null);
+  const [researching, setResearching] = useState(false);
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -57,9 +58,13 @@ export default function IcpYardsPanel() {
     setDrafts((prev) => {
       const next = { ...prev };
       for (const p of rows) {
-        if (!next[p.id]) {
+        const existing = next[p.id];
+        if (!existing) {
           next[p.id] = { phone: p.phone ?? "", email: p.email ?? "" };
+          continue;
         }
+        if (!existing.phone.trim() && p.phone) existing.phone = p.phone;
+        if (!existing.email.trim() && p.email) existing.email = p.email;
       }
       return next;
     });
@@ -98,7 +103,7 @@ export default function IcpYardsPanel() {
     const saved = await saveContact(p);
     const email = saved?.email?.trim();
     if (!email) {
-      toast.error("Paste a named firstname@dealer-domain email first");
+      toast.error("No named firstname@dealer-domain yet — run Research contacts or paste one");
       return;
     }
     setBusyId(p.id);
@@ -125,7 +130,7 @@ export default function IcpYardsPanel() {
     const saved = await saveContact(p);
     const phone = saved?.phone?.trim();
     if (!phone) {
-      toast.error("Paste a public switchboard number first");
+      toast.error("No switchboard yet — run Research contacts or paste a public number");
       return;
     }
     setBusyId(p.id);
@@ -165,6 +170,43 @@ export default function IcpYardsPanel() {
     }
   }
 
+  async function researchContacts() {
+    setResearching(true);
+    try {
+      const res = await fetch("/api/prospector/research-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 6, deep: true }),
+      });
+      const data = (await res.json()) as { error?: string; message?: string; started?: boolean };
+      if (!res.ok) {
+        toast.error(data.error ?? "Research failed to start");
+        return;
+      }
+      toast.success(data.message ?? "Researching ICP yards for named emails and switchboards");
+      const t0 = Date.now();
+      while (Date.now() - t0 < 120_000) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const st = await fetch("/api/prospector/research-contacts");
+        const meta = (await st.json()) as {
+          running?: boolean;
+          lastResult?: { emailsFound?: number; phonesFound?: number; researched?: number };
+        };
+        await load();
+        if (!meta.running) {
+          const found = meta.lastResult;
+          toast.message(
+            `Research pass finished — ${found?.emailsFound ?? 0} named email${(found?.emailsFound ?? 0) === 1 ? "" : "s"}, ${found?.phonesFound ?? 0} switchboard${(found?.phonesFound ?? 0) === 1 ? "" : "s"} on ${found?.researched ?? 0} yards.`,
+          );
+          return;
+        }
+      }
+      await load();
+    } finally {
+      setResearching(false);
+    }
+  }
+
   async function importCsv() {
     const res = await fetch("/api/prospector/prospects", {
       method: "POST",
@@ -189,8 +231,9 @@ export default function IcpYardsPanel() {
         <div>
           <h2 className="font-display text-xl font-semibold">ICP yards ({totalSeeded} seeded)</h2>
           <p className="text-sm text-muted-foreground">
-            Seeds have no invented numbers. Paste a public phone or named email on the card, then Email or Call.
-            High-ability first → Pilot → Monday proof → Professional
+            Sipho researches dealer sites for a named firstname@ and switchboard. Paste still
+            overrides when the scrape only finds info@. High-ability first → Pilot → Monday proof →
+            Professional
             {regionPrice ? ` (${regionPrice})` : ""}.
           </p>
         </div>
@@ -208,6 +251,19 @@ export default function IcpYardsPanel() {
           </select>
           <Button variant={highOnly ? "default" : "outline"} size="sm" onClick={() => setHighOnly((v) => !v)}>
             {highOnly ? "High ability" : "All ability"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void researchContacts()}
+            disabled={researching}
+          >
+            {researching ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <Search className="h-3.5 w-3.5 mr-1" />
+            )}
+            Research contacts
           </Button>
           <Button variant="outline" size="sm" asChild>
             <a href="/api/prospector/prospects?template=1">CSV template</a>
@@ -253,7 +309,7 @@ export default function IcpYardsPanel() {
                         setDrafts((d) => ({ ...d, [p.id]: { ...draftFor(p), phone: e.target.value } }))
                       }
                       onBlur={() => void saveContact(p)}
-                      placeholder="Paste public switchboard"
+                      placeholder="Switchboard (researched or paste)"
                       className="h-8 pl-7 text-xs"
                     />
                   </div>

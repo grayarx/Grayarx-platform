@@ -378,7 +378,8 @@ export default function AdminProspector() {
         <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm mb-4 flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" />
           <span>
-            Sipho is researching dealer websites for principal emails…
+            Sipho is deep-researching dealer websites for named emails and switchboards
+            (first 3 yards: full contact/about crawl; remaining: fast 5-page scan).
             {typeof scoutJob.researchRemaining === "number"
               ? ` ${scoutJob.researchRemaining} left in queue.`
               : ""}
@@ -397,19 +398,29 @@ export default function AdminProspector() {
           <span className="text-foreground font-medium">
             {scoutJob.lastResult.researched ?? "—"}
           </span>{" "}
-          site{(scoutJob.lastResult.researched ?? 0) === 1 ? "" : "s"}, found{" "}
+          site{(scoutJob.lastResult.researched ?? 0) === 1 ? "" : "s"}
+          {"deepCount" in scoutJob.lastResult && scoutJob.lastResult.deepCount != null
+            ? ` (${scoutJob.lastResult.deepCount} deep, ${scoutJob.lastResult.fastCount ?? 0} fast)`
+            : ""}
+          , found{" "}
           <span className="text-foreground font-medium">
             {scoutJob.lastResult.created}
           </span>{" "}
           principal contact{scoutJob.lastResult.created === 1 ? "" : "s"}
+          {"phonesFound" in scoutJob.lastResult && scoutJob.lastResult.phonesFound
+            ? ` and ${scoutJob.lastResult.phonesFound} switchboard${scoutJob.lastResult.phonesFound === 1 ? "" : "s"}`
+            : ""}
           {scoutJob.lastResult.names?.length
             ? ` (${scoutJob.lastResult.names.slice(0, 3).join(", ")}${scoutJob.lastResult.names.length > 3 ? "…" : ""})`
             : ""}
+          {"modeNote" in scoutJob.lastResult && scoutJob.lastResult.modeNote ? (
+            <span className="block mt-1 opacity-90">{String(scoutJob.lastResult.modeNote)}</span>
+          ) : null}
           {scoutJob.lastResult.created === 0 ? (
             <span className="block mt-1 opacity-90">
               Not broken — those sites mostly only list info@. Tried dealers cool down
-              for a few hours so the active queue moves; deeper directory/press crawl
-              runs on the next enrich pass. Click Generate again to check more.
+              for a few hours so the active queue moves. Click Generate again to deep-dig
+              the next yards.
             </span>
           ) : null}
         </div>
