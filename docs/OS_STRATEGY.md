@@ -29,4 +29,4 @@ GrayArx is designed as the **operating system to run the yard** — not a chatbo
 
 ## Price
 
-Pilot free → Starter **R5,990** → Professional **R11,990** → Enterprise **from R19,990**. See `docs/COMPETITOR_PRICING.md`.
+Pilot free → Starter **R7,990** → Professional **R14,990** → Enterprise **from R29,990**. See `docs/COMPETITOR_PRICING.md`.

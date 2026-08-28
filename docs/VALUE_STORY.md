@@ -12,7 +12,7 @@
 - + missed calls that never call back  
 - × 25% viewing→sale × ~R18,000 GP  
 
-→ **Often R50k–R100k+/mo of GP at risk** vs **R11,990** Professional OS.
+→ **Often R50k–R100k+/mo of GP at risk** vs **R14,990** Professional OS.
 
 One extra car a month already beats the fee. Pilot is free.
 

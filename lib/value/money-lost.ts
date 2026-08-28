@@ -30,7 +30,7 @@ export const DEFAULT_VALUE_INPUTS: ValueInputs = {
   avgGrossProfitZar: 18000,
   weeklyMissedCalls: 12,
   missedCallLossRate: 0.35,
-  grayArxMonthlyZar: 11990,
+  grayArxMonthlyZar: 14990,
 };
 
 export type ValueReport = {

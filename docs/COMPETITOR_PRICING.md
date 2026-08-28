@@ -11,9 +11,9 @@ Live desk: [/admin/pricing](/admin/pricing)
 | Plan | Price | Why |
 | --- | --- | --- |
 | **Pilot** | **R0 / 14 days** | Hook on proof |
-| **Starter OS** | **R5,990/mo** | Above Visio Scale (R5k) & Raimond Starter (R5k) |
-| **Professional OS** | **R11,990/mo** | Above Raimond Pro (R10k); below agency typical R14.9k — full sales+parts+service |
-| **Enterprise OS** | **From R19,990/mo** | Multi-yard / MotorX-class without R50k+ agency builds |
+| **Starter OS** | **R7,990/mo** | Above Visio Scale (R5k) & Raimond Starter (R5k) |
+| **Professional OS** | **R14,990/mo** | Above Raimond Pro (R10k); below agency typical R14.9k — full sales+parts+service |
+| **Enterprise OS** | **From R29,990/mo** | Multi-yard / MotorX-class without R50k+ agency builds |
 
 **Why we raised price:** GrayArx is an **AI-native dealership OS**, not a cheap chatbot. Undercutting trained the market to see us as a bolt-on. Free pilot still removes risk; paid tiers match the modules we run.
 

@@ -7,6 +7,8 @@ Stage-aware, discovery-first dealership outreach for GrayArx calling agents. The
 ```bash
 npm install
 npm run dev -- --port 43123
+npm test          # unit
+npm run smoke     # live HTTP against :43123
 ```
 
 Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
@@ -21,7 +23,9 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Showroom:** [http://127.0.0.1:43123/showroom/demo-yard](http://127.0.0.1:43123/showroom/demo-yard) (parts on) · [Pretoria parts off](http://127.0.0.1:43123/showroom/yard-pta)
 
-**Pricing matrix:** [http://127.0.0.1:43123/admin/pricing](http://127.0.0.1:43123/admin/pricing) — every competitor price we can document. [`docs/COMPETITOR_PRICING.md`](docs/COMPETITOR_PRICING.md).
+**Pricing + unit economics:** [http://127.0.0.1:43123/admin/pricing](http://127.0.0.1:43123/admin/pricing) — sell prices, COGS, margins, competitor matrix. [`docs/PRICING.md`](docs/PRICING.md) · [`docs/COMPETITOR_PRICING.md`](docs/COMPETITOR_PRICING.md).
+
+**Pilot → paid:** Pilot free (150 WA cap) → Starter **R7,990** → Professional **R14,990** (hero) → Enterprise **from R29,990**. Conversation overage protects margin.
 
 **Conversion engine:** [http://127.0.0.1:43123/admin/conversion](http://127.0.0.1:43123/admin/conversion)
 

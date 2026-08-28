@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { detectOsIntent, handleOsMessage, bookViewingAndNotify } from "@/lib/os/router";
-import { listParts } from "@/lib/os/parts";
+import { importPartsCatalog, listParts } from "@/lib/os/parts";
 import { GRAYARX_OS_PACKAGES } from "@/lib/os/pricing";
 import { listWhatsAppOutbox } from "@/lib/whatsapp/send";
 import { listCrmDeliveries } from "@/lib/crm/webhooks";
+import { updateDealershipSettings } from "@/lib/dealership/settings";
 
 describe("GrayArx dealership OS", () => {
   it("prices Professional above Raimond Pro anchor", () => {
     const pro = GRAYARX_OS_PACKAGES.find((p) => p.id === "professional");
     assert.ok(pro);
-    assert.equal(pro!.priceMonthlyZar, 11990);
+    assert.equal(pro!.priceMonthlyZar, 14990);
     assert.ok(pro!.priceMonthlyZar > 10000);
   });
 
@@ -26,7 +27,28 @@ describe("GrayArx dealership OS", () => {
   });
 
   it("quotes, holds a part, and delivers WhatsApp + CRM", async () => {
-    const before = listParts().find((p) => /brake/i.test(p.name))!.qty;
+    updateDealershipSettings("demo-yard", { modules: { parts: true } });
+    importPartsCatalog({
+      dealershipId: "demo-yard",
+      rows: [
+        {
+          sku: "BR-PAD-HILUX",
+          oemNumber: "04465-0K290",
+          name: "Front brake pads — Hilux GD-6",
+          fits: "Toyota Hilux",
+          make: "Toyota",
+          model: "Hilux",
+          yearFrom: 2016,
+          yearTo: 2024,
+          costPrice: 780,
+          retailPrice: 1450,
+          qty: 8,
+        },
+      ],
+    });
+
+    const before = listParts("demo-yard").find((p) => /brake/i.test(p.name));
+    assert.ok(before, "seed brake pads must be in stock for this test");
     const waBefore = listWhatsAppOutbox().length;
     const crmBefore = listCrmDeliveries().length;
 
@@ -35,14 +57,15 @@ describe("GrayArx dealership OS", () => {
       buyerPhone: "+27820000099",
       message: "Do you have brake pads for a Hilux?",
       holdPart: true,
+      dealershipId: "demo-yard",
     });
     assert.equal(result.intent, "parts");
     assert.match(result.reply, /brake pads/i);
     assert.equal(result.delivery.whatsapp.status, "sent");
     assert.ok(result.delivery.crm.length >= 1);
 
-    const after = listParts().find((p) => /brake/i.test(p.name))!.qty;
-    assert.equal(after, before - 1);
+    const after = listParts("demo-yard").find((p) => /brake/i.test(p.name))!;
+    assert.equal(after.qty, before!.qty - 1);
     assert.ok(listWhatsAppOutbox().length > waBefore);
     assert.ok(listCrmDeliveries().length > crmBefore);
   });

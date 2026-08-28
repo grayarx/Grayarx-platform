@@ -87,7 +87,7 @@ export const OS_MODULES: OsModule[] = [
     id: "showroom",
     name: "Branded showroom",
     job: "Buyer-facing stock + Nala embed on the dealer site",
-    status: "shipping",
+    status: "live",
     beats: ["Adas website packages R3.3–9.8k standalone"],
   },
   {
@@ -113,108 +113,14 @@ export const OS_MODULES: OsModule[] = [
   },
 ];
 
-export type GrayArxPackage = {
-  id: "pilot" | "starter" | "professional" | "enterprise";
-  name: string;
-  priceMonthlyZar: number | 0;
-  priceLabel: string;
-  target: string;
-  includes: OsModuleId[];
-  headline: string;
-  vsMarket: string;
-};
-
-/**
- * Premium OS pricing — free pilot to hook, then priced as the yard OS
- * (above chatbots / nurture tools; at or above Raimond Pro for Professional).
- */
-export const GRAYARX_OS_PACKAGES: GrayArxPackage[] = [
-  {
-    id: "pilot",
-    name: "Pilot",
-    priceMonthlyZar: 0,
-    priceLabel: "R0 / 14 days",
-    target: "Any yard — prove Monday numbers on their stock",
-    includes: [
-      "sales_conversion",
-      "live_stock",
-      "parts",
-      "service",
-      "trade_in",
-      "monday_roi",
-    ],
-    headline: "Hook: full OS slice free, then decide on proof.",
-    vsMarket: "No competitor gives a real multi-module pilot this clean.",
-  },
-  {
-    id: "starter",
-    name: "Starter OS",
-    priceMonthlyZar: 5990,
-    priceLabel: "R5,990/mo",
-    target: "Single-yard independents replacing chatbot + nurture stack",
-    includes: [
-      "sales_conversion",
-      "live_stock",
-      "missed_call",
-      "marketplace_ingest",
-      "monday_roi",
-    ],
-    headline: "AI sales OS — live stock, recovery, Monday proof.",
-    vsMarket:
-      "Above Visio Scale (R5k templates) and Raimond Starter (R5k chats); still below agency typical R14.9k.",
-  },
-  {
-    id: "professional",
-    name: "Professional OS",
-    priceMonthlyZar: 11990,
-    priceLabel: "R11,990/mo",
-    target: "Yards that want one OS for sales + parts + service",
-    includes: [
-      "sales_conversion",
-      "live_stock",
-      "parts",
-      "service",
-      "trade_in",
-      "missed_call",
-      "marketplace_ingest",
-      "monday_roi",
-      "showroom",
-    ],
-    headline: "Full AI dealership OS — sales, parts, service, trade-in.",
-    vsMarket:
-      "Above Raimond Pro (R10k chat bot) and Visio Scale; below / beside custom agency R14.9–26k with a fixed product.",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise OS",
-    priceMonthlyZar: 19990,
-    priceLabel: "From R19,990/mo",
-    target: "Multi-yard groups / MotorX-class footprint",
-    includes: [
-      "sales_conversion",
-      "live_stock",
-      "parts",
-      "service",
-      "trade_in",
-      "missed_call",
-      "marketplace_ingest",
-      "monday_roi",
-      "showroom",
-      "crm_webhooks",
-      "multi_branch",
-      "finance_partner",
-    ],
-    headline: "Group OS — branches, SLA, CRM sync, finance partner.",
-    vsMarket:
-      "Competes with MotorX Enterprise (custom) and complex agency R50k+ builds — productised, month-to-month.",
-  },
-];
-
-export function packageById(id: GrayArxPackage["id"]): GrayArxPackage {
-  const pkg = GRAYARX_OS_PACKAGES.find((p) => p.id === id);
-  if (!pkg) throw new Error(`Unknown package ${id}`);
-  return pkg;
-}
+export type { SellPackage as GrayArxPackage } from "@/lib/os/unit-economics";
+export {
+  GRAYARX_OS_PACKAGES,
+  packageById,
+  pricingEconomicsSummary,
+  MONTHLY_COGS_LINES,
+  sumCogs,
+} from "@/lib/os/unit-economics";
 
 export function liveModules(): OsModule[] {
   return OS_MODULES.filter((m) => m.status === "live");

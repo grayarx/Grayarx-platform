@@ -33,6 +33,6 @@ describe("competitor battlecards", () => {
   it("price-anchors Raimond", () => {
     const card = battlecardFromMessage("We looked at Raimond at ten thousand");
     assert.equal(card?.competitor.id, "raimond");
-    assert.match(card!.pricingContrast, /R11,990/);
+    assert.match(card!.pricingContrast, /R14,990/);
   });
 });

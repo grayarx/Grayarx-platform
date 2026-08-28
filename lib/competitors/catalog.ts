@@ -113,7 +113,7 @@ export const COMPETITORS: Competitor[] = [
     oneLiner:
       "MotorX assists your team. GrayArx is the OS that answers, books, and proves ROI — sales, parts, and service.",
     talkTrack:
-      "MotorX is a strong ops platform — keep the CRM and feeds if you want. GrayArx is the dealership OS that actually owns the buyer: Nala answers from live stock after hours, quotes parts, books service, captures trade-ins, and shows Monday ROI. Free 14-day pilot on your stock — then Professional OS at R11,990/mo for the full stack.",
+      "MotorX is a strong ops platform — keep the CRM and feeds if you want. GrayArx is the dealership OS that actually owns the buyer: Nala answers from live stock after hours, quotes parts, books service, captures trade-ins, and shows Monday ROI. Free 14-day pilot on your stock — then Professional OS at R14,990/mo for the full stack.",
     sayNever: "Cancel MotorX or trash their product.",
     categories: [
       {
@@ -149,14 +149,14 @@ export const COMPETITORS: Competitor[] = [
       {
         category: "Price",
         they: "Full suite custom (demo-priced)",
-        we: "Pilot free → Starter R5,990 / Professional R11,990 / Enterprise from R19,990",
+        we: "Pilot free → Starter R7,990 / Professional R14,990 / Enterprise from R29,990",
         beat: "Transparent OS pricing vs opaque custom",
       },
     ],
     productLessons: [
       "Ship CRM webhooks so MotorX users feel zero rip-and-replace risk",
       "Win on autonomous AI OS + parts/service — not e-sign/DMS",
-      "Price as OS (Professional R11,990+), never as cheap chatbot",
+      "Price as OS (Professional R14,990+), never as cheap chatbot",
     ],
   },
   {
@@ -470,13 +470,13 @@ export const COMPETITORS: Competitor[] = [
     coexistence: "Price under Raimond Pro while selling outcomes not chat counts.",
     oneLiner: "They sell chats. We sell booked viewings — usually cheaper.",
     talkTrack:
-      "Raimond-style bots sit at R5–10k for chat volume. GrayArx Professional OS is R11,990/mo for sales + parts + service + recovery + Monday proof — an OS, not a chat counter. Pilot is free so Monday decides.",
+      "Raimond-style bots sit at R5–10k for chat volume. GrayArx Professional OS is R14,990/mo for sales + parts + service + recovery + Monday proof — an OS, not a chat counter. Pilot is free so Monday decides.",
     sayNever: "",
     categories: [
       {
         category: "Pricing",
         they: "R5k–R10k chat tiers",
-        we: "Starter R5,990 / Professional R11,990 OS",
+        we: "Starter R7,990 / Professional R14,990 OS",
         beat: "Priced as OS; more modules than a bot",
       },
     ],
@@ -607,13 +607,13 @@ export const COMPETITORS: Competitor[] = [
     coexistence: "Productised OS vs custom agency retainers.",
     oneLiner: "Fixed OS product vs R15k agency builds.",
     talkTrack:
-      "Custom AI builds often land around R14,900/mo and climb to R26–50k. GrayArx Professional OS is R11,990 fixed — sales, parts, service, trade-in, Monday ROI — free pilot, no scope creep.",
+      "Custom AI builds often land around R14,900/mo and climb to R26–50k. GrayArx Professional OS is R14,990 fixed — sales, parts, service, trade-in, Monday ROI — free pilot, no scope creep.",
     sayNever: "",
     categories: [
       {
         category: "Pricing clarity",
         they: "R2.5k–R26k / ~R15k typical",
-        we: "Pilot free → Professional R11,990 OS",
+        we: "Pilot free → Professional R14,990 OS",
         beat: "Product price vs agency quote",
       },
     ],
@@ -672,44 +672,45 @@ export const GRAYARX_PACKAGES = [
     price: "R0 / 14 days",
     target: "Any yard — prove the OS on their stock",
     includes: [
-      "Nala sales + parts + service + trade-in",
-      "Live stock",
+      "Nala sales + optional parts/service/trade-in",
+      "Live stock + showroom",
       "Monday ROI report",
+      "150 WhatsApp conversations hard cap",
     ],
   },
   {
     id: "starter",
     name: "Starter OS",
-    price: "R5,990/mo",
+    price: "R7,990/mo",
     target: "Single-yard independents (replace chatbot + nurture)",
     includes: [
       "AI sales from live stock",
       "Marketplace + missed-call recovery",
-      "Monday ROI",
+      "Showroom + Monday ROI",
+      "1,000 WA included · overage R0.85",
     ],
   },
   {
     id: "professional",
     name: "Professional OS",
-    price: "R11,990/mo",
+    price: "R14,990/mo",
     target: "Full AI dealership OS — sales, parts, service",
     includes: [
       "Everything in Starter",
-      "Parts desk + service booking",
-      "Trade-in intake",
-      "Branded showroom path",
+      "Parts desk + service calendar",
+      "Trade-in photos + finance pre-qual",
+      "CRM webhooks · 3,500 WA · overage R0.75",
     ],
   },
   {
     id: "enterprise",
     name: "Enterprise OS",
-    price: "From R19,990/mo",
+    price: "From R29,990/mo",
     target: "Multi-yard / MotorX-class groups",
     includes: [
       "Multi-branch + SLA",
-      "CRM/DMS webhooks",
-      "Finance partner link",
-      "Group ROI",
+      "Group ROI + custom CRM mapping",
+      "12,000 WA included · overage R0.55",
     ],
   },
 ] as const;
@@ -717,32 +718,37 @@ export const GRAYARX_PACKAGES = [
 /** Ordered product bets to stay the best OS */
 export const BEAT_ROADMAP = [
   {
-    phase: "Live now",
+    phase: "Live now (product)",
     items: [
-      "Sales conversion (Nala + live stock)",
-      "Parts desk (quote + hold)",
-      "Service booking",
-      "Trade-in intake → appraiser",
-      "Monday ROI + competitor/OS desks",
+      "Sales conversion (Nala + live stock + book viewing)",
+      "Parts desk (dealer catalog import, quote + hold, module toggle)",
+      "Service booking + 14-day calendar",
+      "Trade-in intake + photo attach",
+      "Finance pre-qual partner checklist",
+      "Marketplace poll + AutoTrader-shaped webhook",
+      "Missed-call → WhatsApp recovery path",
+      "CRM webhook outbox (MotorX / CarLeads / Adas)",
+      "Multi-branch stock + routing",
+      "Branded showroom + Monday ROI email",
+      "Dealer value calculator + 5-step onboard",
+      "Unit-economics pricing desk (/admin/pricing)",
     ],
   },
   {
-    phase: "Ship next (table stakes)",
+    phase: "Production credentials (customer env)",
     items: [
-      "Live AutoTrader + Cars.co.za lead ingest",
-      "Production Meta WhatsApp send",
-      "Missed-call → WhatsApp (Twilio production)",
-      "Auto Monday email across sales/parts/service",
-      "CRM webhook into MotorX / CarLeads / Adas",
+      "Live Meta WhatsApp Cloud (beyond mock outbox)",
+      "Twilio SA Gray Ox number approved for live Themba dial",
+      "Dealer AutoTrader / Cars.co.za webhook secrets wired",
+      "Resend production for Monday ROI to dealer inbox",
     ],
   },
   {
-    phase: "Then (Enterprise depth)",
+    phase: "Then (depth)",
     items: [
-      "Multi-branch stock routing + group ROI",
-      "Finance pre-qual partner (don't build a bank)",
-      "Buyer showroom embed",
-      "No-show reminders + rebook",
+      "No-show reminders + auto-rebook",
+      "OEM / DMS inventory push (beyond CSV)",
+      "Group roll-up dashboards for 5+ yards",
     ],
   },
   {
@@ -784,7 +790,7 @@ export const PRICE_BANDS = [
   },
   {
     band: "GrayArx Dealership OS",
-    range: "Pilot R0 → Starter R5,990 → Professional R11,990 → Enterprise from R19,990",
+    range: "Pilot R0 → Starter R7,990 → Professional R14,990 → Enterprise from R29,990",
     examples: "Priced as OS above bots; below opaque agency/MotorX custom",
   },
 ] as const;

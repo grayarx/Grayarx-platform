@@ -100,7 +100,7 @@ Use this when a dealer says “we already have X.”
 | --- | --- | --- | --- |
 | **Pilot** | Any yard | **R0 / 14 days** | Nala on their stock, web + 1 channel, Monday report |
 | **Convert** | MotorX/Adas users | **R2,490–R3,990/mo** | Web + WhatsApp, marketplace lead recovery, missed-call, ROI |
-| **Growth** | No full platform | **R4,990–R7,990/mo** | + branded showroom/embed, higher volume, invoice/pay links, **parts/service WA** |
+| **Starter / Professional OS** | Chatbot R5–10k | **R7,990 / R14,990/mo** | Full AI dealership OS — sales + parts + service + recovery + Monday ROI |
 | **Group** | Multi-yard | Custom | Multi-branch + SSO + SLA + CRM webhooks |
 
 Undercuts Raimond Pro (R10k) and agency typical (~R15k); sits **below** a full MotorX commitment while staying **above** toy template tools — price for **ROI**, not feature count.

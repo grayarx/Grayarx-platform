@@ -303,25 +303,25 @@ export const COMPETITOR_PRICE_MATRIX: PriceRow[] = [
 
 export const PRICING_STRATEGY = {
   principle:
-    "GrayArx is an AI-native dealership OS (sales + parts + service + recovery + proof). Price like an OS, not like a cheap chatbot. Free pilot hooks; paid tiers sit at or above Raimond Pro for Professional.",
+    "GrayArx is an AI-native dealership OS. Free 14-day pilot (capped). Paid tiers price for ~45%+ gross margin after LLM + WhatsApp + Twilio + support, with conversation overage so spikes stay profitable.",
   grayArx: [
-    { plan: "Pilot", price: "R0 / 14 days", why: "Proof before pay" },
+    { plan: "Pilot", price: "R0 / 14 days (150 WA cap)", why: "Proof before pay — we absorb pilot COGS to win" },
     {
       plan: "Starter OS",
-      price: "R5,990/mo",
-      why: "Above Visio Scale (R5k) & Raimond Starter (R5k) — sells outcomes not chats",
+      price: "R7,990/mo · 1,000 WA incl.",
+      why: "Sales + recovery; ~50% margin after est. COGS; above Visio/Raimond Starter",
     },
     {
       plan: "Professional OS",
-      price: "R11,990/mo",
-      why: "Above Raimond Pro (R10k); below agency typical R14.9k — full sales+parts+service OS",
+      price: "R14,990/mo · 3,500 WA incl.",
+      why: "Full OS hero plan; at agency typical with fixed product + overage protection",
     },
     {
       plan: "Enterprise OS",
-      price: "From R19,990/mo",
-      why: "Multi-yard / MotorX-class footprint without custom agency R50k+",
+      price: "From R29,990/mo · 12,000 WA incl.",
+      why: "Multi-yard + SLA; margin floor after higher COGS",
     },
   ],
   whyNotCheaper:
-    "Undercutting taught the market we were a bolt-on. We run more modules than Visio/Raimond and a clearer product than MotorX's AI-assist story — premium price matches premium OS.",
+    "Cheaper than COGS+margin means we lose money on every yard. Value still clears: one extra car/month (~R18k GP) beats Professional. Overage stops high-volume yards from eating margin.",
 };

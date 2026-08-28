@@ -3,7 +3,11 @@ import {
   COMPETITOR_PRICE_MATRIX,
   PRICING_STRATEGY,
 } from "@/lib/os/competitor-prices";
-import { GRAYARX_OS_PACKAGES, OS_MODULES } from "@/lib/os/pricing";
+import {
+  GRAYARX_OS_PACKAGES,
+  OS_MODULES,
+  pricingEconomicsSummary,
+} from "@/lib/os/pricing";
 import { listParts, listPartsEnquiries } from "@/lib/os/parts";
 import { handleOsMessage } from "@/lib/os/router";
 import { listServiceBookings } from "@/lib/os/service";
@@ -22,6 +26,7 @@ export async function GET() {
   return NextResponse.json({
     modules: OS_MODULES,
     packages: GRAYARX_OS_PACKAGES,
+    economics: pricingEconomicsSummary(),
     pricingStrategy: PRICING_STRATEGY,
     competitorPrices: COMPETITOR_PRICE_MATRIX,
     parts: listParts(),

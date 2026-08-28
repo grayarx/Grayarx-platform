@@ -3,6 +3,7 @@ export {
   OS_MODULES,
   liveModules,
   packageById,
+  pricingEconomicsSummary,
   type GrayArxPackage,
   type OsModule,
   type OsModuleId,

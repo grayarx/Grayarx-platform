@@ -15,22 +15,54 @@ type PriceRow = {
   notes?: string;
 };
 
-type Payload = {
-  competitorPrices: PriceRow[];
+type Economics = {
+  cogsLines: Array<{
+    item: string;
+    starter: number;
+    professional: number;
+    enterprise: number;
+    notes: string;
+  }>;
   packages: Array<{
     id: string;
-    name: string;
-    priceLabel: string;
-    headline: string;
-    vsMarket: string;
-    target: string;
+    price: number;
+    cogs: number;
+    marginPercent: number;
+    includedConversations: number;
+    overage: number;
+    profitNote: string;
   }>;
+  rules: string[];
+};
+
+type OsPackage = {
+  id: string;
+  name: string;
+  priceLabel: string;
+  headline: string;
+  vsMarket: string;
+  target: string;
+  includedWhatsAppConversations: number;
+  overagePerConversationZar: number;
+  estimatedCogsZar: number;
+  grossMarginPercent: number;
+  profitNote: string;
+};
+
+type Payload = {
+  competitorPrices: PriceRow[];
+  packages: OsPackage[];
+  economics: Economics;
   pricingStrategy: {
     principle: string;
     whyNotCheaper: string;
     grayArx: Array<{ plan: string; price: string; why: string }>;
   };
 };
+
+function zar(n: number) {
+  return `R${n.toLocaleString("en-ZA")}`;
+}
 
 export default function PricingMatrixPage() {
   const [data, setData] = useState<Payload | null>(null);
@@ -47,10 +79,10 @@ export default function PricingMatrixPage() {
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">
-              Competitive pricing research
+              Sell price + unit economics
             </p>
             <h1 className="mt-2 text-2xl font-semibold text-white">
-              Their prices vs GrayArx OS
+              GrayArx pricing that still makes profit
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
               {data?.pricingStrategy.principle}
@@ -74,16 +106,114 @@ export default function PricingMatrixPage() {
 
         <section className="mb-8 rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-5">
           <h2 className="text-sm font-semibold text-emerald-200">
-            GrayArx premium packages
+            What we charge (pilot stays free)
           </h2>
           <p className="mt-2 text-sm text-zinc-300">
             {data?.pricingStrategy.whyNotCheaper}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(data?.packages ?? []).map((p) => (
+              <div
+                key={p.id}
+                className="rounded-lg border border-emerald-900/50 bg-black/30 p-3"
+              >
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium text-white">{p.name}</span>
+                  <span className="text-emerald-400">{p.priceLabel}</span>
+                </div>
+                <p className="mt-2 text-xs text-zinc-400">{p.headline}</p>
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  {p.includedWhatsAppConversations.toLocaleString("en-ZA")} WA
+                  included
+                  {p.overagePerConversationZar > 0
+                    ? ` · overage R${p.overagePerConversationZar}/conv`
+                    : " · hard cap"}
+                </p>
+                {p.id === "pilot" ? (
+                  <p className="mt-2 text-[11px] text-amber-400/90">
+                    We absorb pilot COGS — capped conversations only
+                  </p>
+                ) : (
+                  <p className="mt-2 text-[11px] text-emerald-500/90">
+                    Est. COGS {zar(p.estimatedCogsZar)} · ~
+                    {p.grossMarginPercent}% gross
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-8 overflow-x-auto rounded-xl border border-zinc-800">
+          <div className="border-b border-zinc-800 px-4 py-3">
+            <h2 className="text-sm font-semibold text-white">
+              Our monthly COGS per yard (est.)
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              LLM + WhatsApp + Twilio + hosting + support + 15% contingency
+            </p>
+          </div>
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="border-b border-zinc-800 text-xs uppercase text-zinc-500">
+              <tr>
+                <th className="px-4 py-3">Cost</th>
+                <th className="px-4 py-3">Starter</th>
+                <th className="px-4 py-3">Professional</th>
+                <th className="px-4 py-3">Enterprise</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.economics?.cogsLines ?? []).map((line) => (
+                <tr
+                  key={line.item}
+                  className="border-b border-zinc-900 text-zinc-300"
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-white">{line.item}</div>
+                    <div className="text-[11px] text-zinc-500">{line.notes}</div>
+                  </td>
+                  <td className="px-4 py-3">{zar(line.starter)}</td>
+                  <td className="px-4 py-3">{zar(line.professional)}</td>
+                  <td className="px-4 py-3">{zar(line.enterprise)}</td>
+                </tr>
+              ))}
+              <tr className="bg-emerald-950/20 text-emerald-200">
+                <td className="px-4 py-3 font-semibold">Sell vs COGS</td>
+                {(["starter", "professional", "enterprise"] as const).map(
+                  (id) => {
+                    const row = data?.economics?.packages.find(
+                      (p) => p.id === id,
+                    );
+                    if (!row) return <td key={id} className="px-4 py-3" />;
+                    return (
+                      <td key={id} className="px-4 py-3 text-sm">
+                        {zar(row.price)} − {zar(row.cogs)} ={" "}
+                        <span className="font-semibold">
+                          ~{row.marginPercent}%
+                        </span>
+                      </td>
+                    );
+                  },
+                )}
+              </tr>
+            </tbody>
+          </table>
+          <ul className="space-y-1 px-4 py-3 text-xs text-zinc-500">
+            {(data?.economics?.rules ?? []).map((rule) => (
+              <li key={rule}>· {rule}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mb-8 rounded-xl border border-zinc-800 p-5">
+          <h2 className="text-sm font-semibold text-white">
+            Positioning vs market
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(data?.pricingStrategy.grayArx ?? []).map((p) => (
               <div
                 key={p.plan}
-                className="rounded-lg border border-emerald-900/50 bg-black/30 p-3"
+                className="rounded-lg border border-zinc-800 bg-black/20 p-3"
               >
                 <div className="flex justify-between gap-2">
                   <span className="font-medium text-white">{p.plan}</span>
