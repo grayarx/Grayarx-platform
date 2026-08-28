@@ -155,10 +155,12 @@ export default function ProspectorAdminPage() {
               Prospector
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Hand off to Themba — Twilio dials the yard and runs the discovery
-              funnel on the call. Set env vars in{" "}
-              <code className="text-zinc-300">.env.local</code> — see{" "}
-              <code className="text-zinc-300">docs/TWILIO_CALLING_TODAY.md</code>.
+              <strong className="text-zinc-200">Today:</strong> click{" "}
+              <strong className="text-emerald-300">Practice funnel</strong> — learn
+              the call opener and smart replies while you dial from your own phone.
+              After Gray Ox is approved and we add the +27 number,{" "}
+              <strong className="text-zinc-200">Hand off to Themba</strong> will
+              auto-dial.
             </p>
           </div>
           <Link
@@ -175,8 +177,14 @@ export default function ProspectorAdminPage() {
           </Link>
         </header>
 
-        <div className="mb-6 space-y-2 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
-          <p>{twilioMessage}</p>
+        <div className="mb-6 space-y-2 rounded-xl border border-emerald-900/40 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-100/90">
+          <p>
+            <strong>Twilio:</strong>{" "}
+            {twilioConfigured
+              ? "Ready to dial."
+              : "Connected — waiting for Gray Ox bundle + SA phone number."}{" "}
+            {twilioMessage}
+          </p>
           {queueError ? <p className="text-red-300">{queueError}</p> : null}
         </div>
 
@@ -186,7 +194,14 @@ export default function ProspectorAdminPage() {
               key={prospect.id}
               prospect={prospect}
               loading={queueLoading === prospect.id}
+              canDial={twilioConfigured}
               onPhoneChange={handlePhoneChange}
+              onPractice={(selected) => {
+                setCallPlaced(false);
+                setLiveSessionId(null);
+                setCallSid(null);
+                setActiveProspect(selected);
+              }}
               onHandOff={(selected) => {
                 if (queueLoading !== selected.id) {
                   void handleHandOff(selected);

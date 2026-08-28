@@ -168,9 +168,7 @@ export function ProspectorCallModal({
               >
                 {callPlaced
                   ? "Themba is on the line — live Twilio call in progress."
-                  : twilioConfigured
-                    ? "Ready to dial — check Twilio env and webhook URL."
-                    : "Twilio not configured — use manual funnel below."}
+                  : "Practice mode — read the opener, type what they say, learn the funnel."}
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
                 {prospect.location}

@@ -57,13 +57,14 @@ export function SetupForm() {
 
     fetch("/api/setup/status")
       .then((r) => r.json())
-      .then((d: { verify?: { ok: boolean; accountName?: string; balance?: string; error?: string } }) => {
+      .then((d: { verify?: { ok: boolean; accountName?: string; balance?: string } }) => {
         if (d.verify?.ok) {
           setResult({
             type: "success",
-            title: "Already connected",
-            detail: `${d.verify.accountName} — balance ${d.verify.balance}`,
+            title: "CONNECTED TO TWILIO",
+            detail: `${d.verify.accountName} — balance ${d.verify.balance}. Ready for Gray Ox bundle + phone number.`,
           });
+          setServerOk(true);
         }
       })
       .catch(() => undefined);
