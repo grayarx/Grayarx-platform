@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 data/twilio-credentials.json
+data/leads.json
+data/stock.json
+data/pilot.json
+data/*.json
 
 # vercel
 .vercel

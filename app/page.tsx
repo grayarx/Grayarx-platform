@@ -35,6 +35,12 @@ export default function Home() {
               </p>
             </div>
             <a
+              href="/admin/conversion"
+              className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400"
+            >
+              Conversion engine
+            </a>
+            <a
               href="/admin/prospector"
               className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
             >
