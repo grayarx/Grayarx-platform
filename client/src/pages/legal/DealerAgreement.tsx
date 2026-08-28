@@ -34,10 +34,12 @@ export default function DealerAgreement() {
 
       <h2>2. Subscription & pilot pricing</h2>
       <p>
-        GrayArx provides the dealership AI platform (inventory, showroom, lead capture, WhatsApp and
-        email agents, dashboard). During the pilot programme, your plan tier and monthly fee are
-        confirmed in writing before billing begins — typically from the Growth tier (R3,999/month
-        floor) depending on scope agreed on your kickoff call.
+        GrayArx provides the Nala Dealership OS (inventory, showroom, WhatsApp sales, parts,
+        service, trade-in, missed-call recovery, Monday ROI). The Pilot is fourteen days at no
+        charge, capped at 150 WhatsApp conversations. After the Pilot, the monthly fee is
+        confirmed in writing before billing begins — typically Starter OS (R7,990/month),
+        Professional OS (R14,990/month, the usual close), or Enterprise OS (from R29,990/month)
+        depending on scope agreed on your kickoff call.
       </p>
       <p>
         Full plan feature matrices are available on request. Outbound AI voice calling is{" "}

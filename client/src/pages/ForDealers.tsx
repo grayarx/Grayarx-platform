@@ -18,10 +18,10 @@ const fadeUp = {
 
 const PROOF = [
   "CSV / DMS stock live on your showroom the same day",
-  "WhatsApp after hours — Nala answers; you wake up to leads",
-  "Mia drip so cold enquiries get a second and third touch",
-  "Test drives and pre-approvals on the car they asked about",
-  "POPIA + dealer agreement ready before billing",
+  "WhatsApp after hours — Nala answers; missed calls bounce to WhatsApp",
+  "Parts desk, service bookings, and trade-in intake on Professional OS",
+  "Monday ROI email so you see recovered deals vs the R14,990 desk",
+  "14-day Pilot (150 WA cap) — then Starter R7,990 or Professional R14,990/mo",
 ];
 
 export default function ForDealers() {
@@ -48,13 +48,13 @@ export default function ForDealers() {
               <span className="text-cyber-gradient">no-brainer</span> with your own math
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl">
-              Independent SA yards lose deals after 6pm on WhatsApp. Put your stock live, catch
-              those leads overnight, and book the drive — free pilot until you see it on your cars.
+              Yards lose deals after 6pm on WhatsApp. Put your stock live, catch those leads
+              overnight, and book the drive — 14-day Pilot until you see Monday proof on your cars.
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Button asChild className="btn-gold h-12 px-8 font-semibold uppercase tracking-wider text-sm">
                 <Link href="/onboarding">
-                  Start free pilot <ArrowRight className="ml-2 h-4 w-4" />
+                  Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="btn-cyber h-12 bg-transparent">
@@ -77,7 +77,7 @@ export default function ForDealers() {
         <div className="container max-w-3xl">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl md:text-3xl font-bold mb-6">
-              What you get in the free pilot
+              What you get in the 14-day Pilot
             </h2>
             <ul className="space-y-3 mb-10">
               {PROOF.map((line) => (
@@ -88,8 +88,8 @@ export default function ForDealers() {
               ))}
             </ul>
             <p className="text-sm text-muted-foreground mb-8">
-              We sit beside AutoTrader and your DMS — not a rip-replace. Month-to-month after you
-              see proof.
+              We sit beside AutoTrader and your DMS — not a rip-replace. After the Pilot, most
+              yards close Professional OS (R14,990/mo). Month-to-month once you see proof.
             </p>
           </motion.div>
         </div>

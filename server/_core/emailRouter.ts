@@ -68,7 +68,7 @@ export const emailRouter = router({
             
             <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
             
-            <p>We're inviting a small group of SA dealerships to the <strong>GrayArx pilot</strong> — Growth-level features, terms we agree on a call. Outbound AI calling is not part of the pilot.</p>
+            <p>We're inviting dealerships to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock (WhatsApp, parts, service, Monday ROI). No card. After proof, most yards close Professional OS at R14,990/mo.</p>
             
             <a href="https://www.grayarx.com/onboarding" class="cta-button">Join the Pilot</a>
             

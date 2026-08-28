@@ -1,5 +1,5 @@
 /**
- * ICP-focused SEO copy — independent SA dealership principals.
+ * ICP-focused SEO copy — Nala Dealership OS (sales + parts + service + trade-in).
  * Keep titles ≤ ~60 chars and descriptions ≤ ~155 where practical.
  */
 
@@ -7,7 +7,40 @@ export const SITE_ORIGIN = "https://www.grayarx.com";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/hero-car.jpg`;
 
 export const ICP_KEYWORDS =
-  "dealership software South Africa, WhatsApp for car dealers, after-hours leads, CSV car inventory showroom, used car dealership CRM SA, free pilot GrayArx";
+  "dealership OS, Nala WhatsApp, after-hours leads, car dealer software, CSV inventory showroom, missed-call recovery, parts and service desk, Monday ROI, free 14-day pilot GrayArx, South Africa Australia UK UAE USA New Zealand";
+
+/** Public list prices for schema.org offers — keep in sync with docs/PRICING.md. */
+export const SEO_OS_OFFERS = [
+  {
+    name: "Pilot",
+    price: "0",
+    description: "14 days, 150 WhatsApp conversations, then decide on Monday proof",
+  },
+  {
+    name: "Starter OS",
+    price: "7990",
+    description: "1,000 WhatsApp conversations / month — sales + recovery",
+  },
+  {
+    name: "Professional OS",
+    price: "14990",
+    description: "3,500 WhatsApp conversations / month — full dealership OS (hero close)",
+  },
+  {
+    name: "Enterprise OS",
+    price: "29990",
+    description: "From R29,990/mo — 12,000 WhatsApp conversations, multi-yard + SLA",
+  },
+] as const;
+
+export const SEO_AREA_SERVED = [
+  { "@type": "Country" as const, name: "South Africa" },
+  { "@type": "Country" as const, name: "Australia" },
+  { "@type": "Country" as const, name: "United Kingdom" },
+  { "@type": "Country" as const, name: "United Arab Emirates" },
+  { "@type": "Country" as const, name: "United States" },
+  { "@type": "Country" as const, name: "New Zealand" },
+];
 
 export type SeoPageKey =
   | "home"
@@ -30,58 +63,58 @@ export type SeoPageMeta = {
 export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
   home: {
     path: "/",
-    title: "GrayArx — WhatsApp + showroom for SA dealers",
+    title: "GrayArx — WhatsApp dealership OS",
     description:
-      "Stop losing after-hours WhatsApp leads. Independent SA dealerships put CSV stock live, answer buyers overnight, and book test drives. Free pilot.",
+      "Nala answers after-hours WhatsApp from live stock, books drives, parts and service. Free 14-day Pilot. Then Professional OS R14,990/mo.",
     keywords: ICP_KEYWORDS,
   },
   onboarding: {
     path: "/onboarding",
-    title: "Free dealership pilot | GrayArx South Africa",
+    title: "Free 14-day OS pilot | GrayArx",
     description:
-      "Onboard your SA dealership in one application — CSV inventory, WhatsApp Nala, leads, and bookings. Free pilot, no credit card.",
+      "Start a 14-day Pilot on your stock — Nala WhatsApp, CSV showroom, parts, service, missed-call recovery. No card. ZA, AU, UK, UAE, US, NZ.",
     keywords:
-      "dealership software free trial South Africa, car dealer CRM onboarding, WhatsApp dealership pilot",
+      "dealership OS free trial, Nala WhatsApp pilot, car dealer CRM onboarding, 14-day pilot GrayArx",
   },
   forDealers: {
     path: "/for-dealers",
-    title: "ROI for SA dealerships | GrayArx",
+    title: "Dealership OS ROI | GrayArx",
     description:
-      "Run the after-hours leakage math for your yard. One recovered deal a month usually covers GrayArx — free pilot on your CSV stock.",
+      "After-hours WhatsApp leakage vs Nala OS. 14-day Pilot, then Starter R7,990 or Professional R14,990/mo on your CSV stock.",
     keywords:
-      "dealership ROI calculator South Africa, WhatsApp leads cost, car dealer software worth it",
+      "dealership OS ROI, WhatsApp leads cost, car dealer software pricing, Nala Professional OS",
   },
   help: {
     path: "/help",
-    title: "Help for SA car dealers | GrayArx",
+    title: "Help for dealers | GrayArx OS",
     description:
-      "How GrayArx works for dealerships: CSV import, WhatsApp after hours, Mia follow-ups, test drives, and POPIA. Pilot FAQ.",
-    keywords: "GrayArx help, dealership WhatsApp setup, CSV inventory import SA",
+      "GrayArx Dealership OS: CSV import, after-hours WhatsApp, parts, service, Monday ROI, 14-day Pilot FAQ, POPIA.",
+    keywords: "GrayArx help, Nala WhatsApp setup, CSV inventory import, dealership OS FAQ",
   },
   legal: {
     path: "/legal",
     title: "POPIA & dealer legal centre | GrayArx",
     description:
-      "Dealer agreement, POPIA consent, privacy, and SA compliance docs for GrayArx dealerships — attorney-ready from day one.",
-    keywords: "POPIA dealership software, car dealer agreement South Africa",
+      "Dealer agreement, POPIA consent, privacy, and compliance docs for GrayArx Dealership OS — attorney-ready from day one.",
+    keywords: "POPIA dealership software, car dealer agreement South Africa, GrayArx legal",
   },
   showroom: {
     path: "/showroom",
     title: "Live car showroom | GrayArx",
     description:
-      "Browse live dealership stock on GrayArx. Independent SA yards with shareable filters — powered by dealer CSV inventory.",
-    keywords: "used cars South Africa showroom, dealership stock online",
+      "Browse live dealership stock on GrayArx. Shareable filters — powered by dealer CSV inventory and Nala on WhatsApp.",
+    keywords: "used cars showroom, dealership stock online, GrayArx marketplace",
   },
   tradeIn: {
     path: "/trade-in",
-    title: "Trade-in estimate SA | GrayArx",
+    title: "Trade-in estimate | GrayArx",
     description:
-      "Instant South African trade-in range from Tumi — then hand off to finance or a GrayArx dealership showroom.",
-    keywords: "car trade-in value South Africa, vehicle valuation SA",
+      "Instant trade-in range from Tumi — then hand off to finance or a GrayArx dealership showroom. Nala OS trade-in desk.",
+    keywords: "car trade-in value, vehicle valuation, GrayArx trade-in",
   },
   finance: {
     path: "/finance",
-    title: "Car finance calculator SA | GrayArx",
+    title: "Car finance calculator | GrayArx",
     description:
       "Estimate monthly instalments with SA prime and NCA VAF norms — then apply for pre-approval at a GrayArx dealership.",
     keywords: "car finance calculator South Africa, vehicle instalment estimate",
@@ -91,7 +124,7 @@ export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
     title: "Compare cars side by side | GrayArx",
     description:
       "Compare up to three vehicles from live GrayArx dealership stock — shareable link for WhatsApp.",
-    keywords: "compare used cars South Africa",
+    keywords: "compare used cars, WhatsApp car compare",
   },
 };
 
@@ -113,33 +146,44 @@ export function buildHomeJsonLd(): Record<string, unknown> {
         url: SITE_ORIGIN,
         logo: `${SITE_ORIGIN}/logo-crest.png`,
         description: home.description,
-        areaServed: {
-          "@type": "Country",
-          name: "South Africa",
-        },
+        areaServed: [...SEO_AREA_SERVED],
         sameAs: [SITE_ORIGIN],
       },
       {
         "@type": "SoftwareApplication",
         "@id": `${SITE_ORIGIN}/#software`,
         name: "GrayArx",
+        alternateName: "Nala Dealership OS",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         url: SITE_ORIGIN,
         description: home.description,
         offers: {
-          "@type": "Offer",
-          price: "0",
+          "@type": "AggregateOffer",
           priceCurrency: "ZAR",
-          description: "Free pilot for qualifying South African dealerships",
+          lowPrice: "0",
+          highPrice: "29990",
+          offerCount: String(SEO_OS_OFFERS.length),
           url: absoluteUrl("/onboarding"),
+          offers: SEO_OS_OFFERS.map((o) => ({
+            "@type": "Offer",
+            name: o.name,
+            price: o.price,
+            priceCurrency: "ZAR",
+            description: o.description,
+            url: absoluteUrl("/onboarding"),
+          })),
         },
         featureList: [
-          "WhatsApp after-hours buyer replies",
+          "WhatsApp after-hours buyer replies from live stock",
           "CSV / DMS inventory sync to live showroom",
+          "Parts desk and service bookings",
+          "Trade-in intake",
+          "Missed-call WhatsApp recovery",
+          "Monday ROI email",
           "Lead follow-up drip (Mia)",
           "Test-drive bookings",
-          "Trade-in and finance handoff",
+          "Template fallback when LLM credits run out",
           "POPIA-aware dealer workflows",
         ],
         provider: { "@id": `${SITE_ORIGIN}/#organization` },
@@ -154,7 +198,7 @@ export function buildHomeJsonLd(): Record<string, unknown> {
         potentialAction: {
           "@type": "RegisterAction",
           target: absoluteUrl("/onboarding"),
-          name: "Start free dealership pilot",
+          name: "Start 14-day dealership OS pilot",
         },
       },
     ],

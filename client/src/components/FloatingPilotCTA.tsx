@@ -37,10 +37,10 @@ export default function FloatingPilotCTA() {
           <X className="h-4 w-4" />
         </button>
         <p className="font-tech text-[9px] uppercase tracking-[0.25em] text-primary/80 mb-1 pr-6">
-          Dealership pilot
+          Dealership OS
         </p>
         <p className="font-display font-semibold text-sm mb-3 leading-snug">
-          Run your showroom + WhatsApp AI on GrayArx — free pilot, no card.
+          Nala on WhatsApp from your live stock — 14-day Pilot, no card.
         </p>
         <Button asChild className="btn-gold w-full h-10 text-xs font-semibold uppercase tracking-wider">
           <Link href="/onboarding">Apply for pilot</Link>

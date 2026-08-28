@@ -49,7 +49,7 @@ export default function IcpRoiCalculator({ compact = false }: { compact?: boolea
             Is GrayArx a no-brainer for your yard?
           </h3>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-            Use your numbers. One recovered deal a month usually covers the desk.
+            Use your numbers. Recovered after-hours deals vs Nala OS (Professional R14,990/mo).
           </p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function IcpRoiCalculator({ compact = false }: { compact?: boolea
       <div className="flex flex-wrap gap-3">
         <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
           <Link href="/onboarding">
-            Start free pilot <ArrowRight className="ml-2 h-4 w-4" />
+            Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
         <Button asChild variant="outline" className="btn-cyber h-11 bg-transparent">

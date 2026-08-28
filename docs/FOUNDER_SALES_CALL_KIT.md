@@ -1,8 +1,8 @@
 # Founder sales call kit — GrayArx (ICP)
 
-**ICP:** Independent SA dealership principal (used / multi-brand, ~30–200 cars, WhatsApp-heavy).  
-**Offer:** Free pilot → **Growth features @ Showroom price (R3 999/mo)** → paid continuation.  
-**Price ladder (internal):** Showroom R3 999 · Growth R7 999 · Multi-site R11 999. Public site keeps list prices soft (`PILOT_PRICING_HIDDEN`); say “one recovered lead covers the month.”  
+**ICP:** Independent dealership principal (used / multi-brand, WhatsApp-heavy). ZA first; also AU, UK, UAE, US, NZ.  
+**Offer:** Free **14-day Pilot** (150 WA cap) → Monday proof → **Professional OS R14,990/mo** (hero close). Starter OS R7,990 · Enterprise from R29,990.  
+**Price ladder (internal):** Pilot R0 / 14d · Starter OS R7,990 · Professional OS R14,990 · Enterprise from R29,990. Public `/` JSON-LD lists these offers. Say “recovered after-hours deals pay for the OS.”  
 **Epoch:** Experimentation Mode (founder-led). Do not hire AEs until this motion is repeatable.
 
 Pete Kazanjy framing: pre-call plan → discovery → status-quo math → objection confront → clear money ask → instrument the funnel.
@@ -54,7 +54,7 @@ On a whiteboard / chat:
 
 **Monthly leakage ≈** leads/week × 4 × close% × gross.
 
-**Punchline:** “GrayArx is less than one recovered lead a month. Status quo is already costing you more.”
+**Punchline:** “Nala OS is less than the after-hours leakage you already have. Status quo costs more than Professional at R14,990.”
 
 Use the public calculator on `/for-dealers` live on the call if helpful.
 
@@ -78,7 +78,7 @@ Use the public calculator on `/for-dealers` live on the call if helpful.
 | “AI will mess up customers.” | “Nala discloses she’s AI. You see drafts / desk. Humans stay in the loop. POPIA pack is live on /legal.” |
 | “No time to set up.” | “CSV + WhatsApp link is the setup. We do it with you on one call. Pilot is free until you see proof.” |
 | “Staff won’t use it.” | “They already live in WhatsApp and leads. Overview is one desk: after-hours → leads → drives.” |
-| “Too expensive.” | Use **their** gross: “One recovered drive at R___ gross. Pilot month is less than that. Shall we lock it after we prove one?” |
+| “Too expensive.” | Use **their** gross vs leakage: “Starter is R7,990; Professional (full OS) is R14,990. Pilot is free until Monday proof. Shall we lock Professional after we prove one recovered path?” |
 | “Call me later.” | “Makes sense. I’ll send the ROI link + a 20-min CSV slot Thu/Fri — which works?” |
 
 ---
@@ -87,7 +87,7 @@ Use the public calculator on `/for-dealers` live on the call if helpful.
 
 After proof (or strong demo with their numbers):
 
-> “Based on what we mapped — about **R___ / month** leaking after hours, and one deal at **R___** gross — does it make sense to keep GrayArx on at the pilot rate starting **Monday**, month-to-month, so we don’t lose that desk?”
+> “Based on what we mapped — about **R___ / month** leaking after hours, and one deal at **R___** gross — does it make sense to keep Nala OS on at **Professional (R14,990/mo)** starting **Monday**, month-to-month, so we don’t lose that desk?”
 
 Then **silence**.
 

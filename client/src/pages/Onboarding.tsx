@@ -129,8 +129,8 @@ export default function Onboarding() {
               Onboard your dealership
             </h1>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
-              Tell us a bit about your business. Our team reviews every application and
-              gets back within one business day.
+              14-day Pilot on your stock — Nala WhatsApp, live showroom, parts, service, missed-call
+              recovery. No card. We review every application within one business day.
             </p>
             {referredBy ? (
               <p className="mt-3 text-xs text-primary/90 font-tech uppercase tracking-wider">

@@ -15,8 +15,8 @@ export default function Footer() {
               <Logo size={36} variant="nav" className="group-hover:opacity-95 transition-opacity" />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The Dealership AI Operating System. Your 24/7 AI sales team built for South African
-              dealerships.
+              Nala Dealership OS — after-hours WhatsApp, live stock, parts, service, and Monday ROI.
+              ZA first; also AU, UK, UAE, US, and NZ.
             </p>
           </div>
 
@@ -25,6 +25,8 @@ export default function Footer() {
               Product
             </h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
+              <li><Link href="/for-dealers" className="hover:text-primary transition-colors">For dealers</Link></li>
+              <li><Link href="/onboarding" className="hover:text-primary transition-colors">14-day Pilot</Link></li>
               <li><Link href="/showroom" className="hover:text-primary transition-colors">Showroom</Link></li>
               <li><Link href="/help" className="hover:text-primary transition-colors">Help Centre</Link></li>
               <li><Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link></li>
@@ -73,7 +75,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <span>South Africa</span>
+                <span>South Africa · AU · UK · UAE · US · NZ</span>
               </li>
             </ul>
           </div>

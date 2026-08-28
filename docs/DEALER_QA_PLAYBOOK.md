@@ -7,19 +7,20 @@
 
 **Agent injection:** This playbook is loaded into `shared/dealerQaPlaybook.ts` and injected into dealer-support paths (Dealer Help chat, Kagiso/Sipho system prompts, FAQ / support chatbot). It is **not** injected into buyer-facing Nala (WhatsApp / showroom stock Q&A). Keep the shared TS module in sync when you edit answers here.
 
-**Product truths (July 2026 — ship what we have):**
-- Tiers: **Showroom / Growth / Multi-site** (DB ids `starter` / `professional` / `enterprise`). No separate “Group” SKU yet — don’t invent one.
-- Pilot: Growth features @ negotiated rate; public list prices hidden (`PILOT_PRICING_HIDDEN`). Missing Meta WA Business does **not** auto-downgrade to Showroom — Cloud API WhatsApp is just blocked until linked.
-- Nala 24/7 AI for Q&A, bookings, leads; humans optional for handoff. Showroom = web chat + click-to-chat; Growth+ = WhatsApp Cloud API bot (needs Meta WA Business number).
+**Product truths (Aug 2026 — Nala Dealership OS):**
+- Public sell packages: **Pilot / Starter OS / Professional OS / Enterprise OS**. Hero close is Professional OS at **R14,990/mo** after Monday proof.
+- Pilot: **R0 / 14 days**, 150 WhatsApp conversations (hard cap). Then Starter R7,990 (1,000 WA) · Professional R14,990 (3,500 WA) · Enterprise from R29,990 (12,000 WA).
+- Nala is the OS: WhatsApp sales from live CSV stock, parts, service, trade-in, missed-call recovery, Monday ROI. Template fallback when LLM credits/quota run out.
 - Chat LLM: **OpenAI → templates**. No Manus Forge for chat.
 - VIN: optional; if entered must be valid ISO 3779 (17 chars + check digit); masked publicly.
-- Multi-branch: one dealership row per branch + shared `groupKey` + Branch switcher (Multi-site).
+- Multi-branch: one dealership row per branch + shared `groupKey` + Branch switcher (Enterprise).
 - Pilot stock: **CSV import** — not live Cars.co.za sync yet. Sold preserved on re-import; R1 placeholders excluded from public showroom until fixed.
-- POPIA, STOP/START WhatsApp, usage caps per tier.
-- Billing: Stripe and/or bank EFT (FNB) when configured; soft public pricing. Contract: month-to-month or 12-month commit (founder rate lock).
+- POPIA, STOP/START WhatsApp, conversation caps per plan.
+- Billing: Stripe and/or bank EFT (FNB) when configured. Contract: month-to-month after Pilot.
 - Photo mirroring: optional (keep external URLs or mirror into GrayArx storage).
 - Agents improve via outcomes + dealer FAQs — **not** “we train on your customers.” Bug reports → Kagiso investigates → founder approves.
 - Pilot SLA: `docs/PILOT_SLA.md` (honest founder-led response times).
+- Regions: ZA first; also AU, UK, UAE, US, NZ.
 
 ---
 
@@ -27,11 +28,11 @@
 
 **Say this**
 
-GrayArx gives your yard a 24/7 AI assistant — Nala by default — on webchat and, on Growth+, WhatsApp. She answers from your live inventory, books viewings, and drops warm leads in your inbox. Buyers get a branded showroom and embed; you get CSV stock, shortcodes, and invoices you can pay by card or EFT.
+GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.
 
 **If they ask nothing else**
 
-We put an AI sales floor on WhatsApp and your website that never closes — priced for SA independents, not enterprise CRM theatre.
+We put an AI dealership OS on WhatsApp that never closes — 14-day Pilot, then Professional OS at R14,990/mo.
 
 ---
 
@@ -41,19 +42,19 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 #### Q1. “What does it cost?”
 
-**Say this:** Pilot partners get Growth-level features at a founder-friendly monthly rate we agree on the call — not a per-seat CRM tax. Public site keeps list prices soft until post-pilot. Packaged tiers after that: Showroom, Growth, Multi-site.
+**Say this:** 14-day Pilot is R0 with a 150 WhatsApp cap. Then Starter OS R7,990/mo (1,000 WA), Professional OS R14,990/mo (3,500 WA — the usual close), or Enterprise from R29,990/mo. Not a per-seat CRM tax.
 
-**Written:** Pilot = Growth features @ negotiated monthly. Public prices stay soft. Tiers: Showroom → Growth → Multi-site.
+**Written:** Pilot R0/14d → Starter R7,990 · Professional R14,990 · Enterprise from R29,990.
 
-**Note:** Do not invent a public ZAR figure unless founder confirmed today’s floor. Internal reference only (not on site): pilot often anchored near Showroom list while unlocking Growth.
+**Note:** Professional OS is the hero close after Monday proof. Do not quote the old Showroom R3,999 ladder.
 
 ---
 
-#### Q2. “What’s in Showroom vs Growth vs Multi-site?”
+#### Q2. “What’s in Starter vs Professional vs Enterprise OS?”
 
-**Say this:** Showroom = public showroom, inventory/CSV, leads, bookings, webchat Nala, click-to-chat WhatsApp. Growth adds Cloud API WhatsApp bot, higher AI/message caps, deal-score, photo angles. Multi-site = Growth plus multi-branch (`groupKey` + Branch switcher), highest caps, dedicated onboarding.
+**Say this:** Starter OS = sales from live stock, showroom, missed-call recovery, Monday ROI, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.
 
-**Note:** Internal ids are still starter / professional / enterprise — always say the display names to dealers.
+**Note:** Internal billing ids may still be starter / professional / enterprise — always say the OS display names to dealers.
 
 ---
 
@@ -69,7 +70,7 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 **Say this:** Each tier has fair-use caps (AI sessions and WhatsApp volume). We soft-block with a clear message so a runaway bot doesn’t blow the bill; we talk overage if you’re consistently hot.
 
-**Note (caps — say ballpark, not spreadsheet):** Showroom ~400 AI/mo, click-to-chat only; Growth ~1,200 AI + ~2,000 WA msgs; Multi-site ~3,500 AI + ~8,000 WA.
+**Note (caps — say ballpark, not spreadsheet):** Pilot 150 WA hard cap. Starter 1,000 WA + overage R0.85. Professional 3,500 WA + overage R0.75. Enterprise 12,000 WA + overage R0.55. LLM polish uses the same cap; templates still answer when credits run out.
 
 ---
 
@@ -384,13 +385,13 @@ We put an AI sales floor on WhatsApp and your website that never closes — pric
 
 ---
 
-## Quick reference — product truths (July 2026)
+## Quick reference — product truths (Aug 2026)
 
 | Truth | Dealer-facing line |
 |-------|--------------------|
-| Tiers | “Showroom, Growth, Multi-site — pilot is Growth features at a deal we agree.” |
-| Pricing | “Public prices soft during pilot.” |
-| Channels | “Webchat on Showroom; Cloud API WhatsApp on Growth+.” |
+| Tiers | “Pilot R0/14d, Starter OS R7,990, Professional OS R14,990, Enterprise from R29,990.” |
+| Pricing | “Public list: Pilot R0 · Starter R7,990 · Professional R14,990 · Enterprise from R29,990.” |
+| Channels | “Nala on WhatsApp from live stock on every OS plan; template fallback if LLM credits run out.” |
 | LLM | “OpenAI when available; templates always have a backstop. No Forge for chat.” |
 | STOP | “Buyers reply STOP — automated follow-ups stop; START resumes.” |
 | VIN | “Optional; if you enter it, it must be a real 17-character VIN; masked publicly.” |
