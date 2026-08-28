@@ -1,5 +1,5 @@
 import { createLiveCallSession, updateLiveCallSession } from "@nalaOs/call-session-store";
-import { MOCK_PROSPECTS } from "@nalaOs/prospector-data";
+import { findIcpProspect } from "@nalaOs/prospector-data";
 import { prospectToLead } from "@nalaOs/prospect-to-lead";
 import type { Prospect } from "@nalaOs/prospector-types";
 import { getTwilioClient } from "@nalaOs/twilio-client";
@@ -8,7 +8,7 @@ import { normalizeZaPhone } from "@nalaOs/twilio-voice";
 import type { LeadContext } from "@nalaOs/sales-templates";
 
 export function findProspect(prospectId: string): Prospect | undefined {
-  return MOCK_PROSPECTS.find((item) => item.id === prospectId);
+  return findIcpProspect(prospectId);
 }
 
 export async function startThembaCall(input: {

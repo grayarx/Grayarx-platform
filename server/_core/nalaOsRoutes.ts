@@ -41,7 +41,13 @@ import {
 } from "@nalaOs/billing/usage";
 import { listDealershipSettings, getDealershipSettings, updateDealershipSettings } from "@nalaOs/dealership/settings";
 import { parseProspectCsv, PROSPECT_CSV_TEMPLATE } from "@nalaOs/prospector/import";
-import { highAbilityProspects, MOCK_PROSPECTS, prospectsByRegion } from "@nalaOs/prospector-data";
+import {
+  addImportedProspects,
+  highAbilityProspects,
+  MOCK_PROSPECTS,
+  patchProspectContact,
+  prospectsByRegion,
+} from "@nalaOs/prospector-data";
 import { calculateValue, moneyFromPilot, type ValueInputs } from "@nalaOs/value/money-lost";
 import { PROCESS_PLAYBOOKS } from "@nalaOs/processes/playbooks";
 import { recoverMissedCall } from "@nalaOs/recovery/missed-call";
@@ -244,12 +250,35 @@ export function registerNalaOsRoutes(app: express.Express) {
     const csv = (req.body as { csv?: string }).csv;
     if (!csv?.trim()) return res.status(400).json({ error: "csv required" });
     const result = parseProspectCsv(csv);
+    const added = addImportedProspects(result.imported);
     res.json({
       ok: true,
       imported: result.imported.length,
+      added,
       skipped: result.skipped,
       prospects: result.imported,
     });
+  });
+
+  r.post("/prospector/contact", (req, res) => {
+    const body = req.body as {
+      prospectId?: unknown;
+      phone?: unknown;
+      email?: unknown;
+      website?: unknown;
+      contactName?: unknown;
+    };
+    if (typeof body.prospectId !== "string" || !body.prospectId.trim()) {
+      return res.status(400).json({ error: "prospectId is required." });
+    }
+    const prospect = patchProspectContact(body.prospectId.trim(), {
+      phone: typeof body.phone === "string" ? body.phone : undefined,
+      email: typeof body.email === "string" ? body.email : undefined,
+      website: typeof body.website === "string" ? body.website : undefined,
+      contactName: typeof body.contactName === "string" ? body.contactName : undefined,
+    });
+    if (!prospect) return res.status(404).json({ error: "Prospect not found." });
+    res.json({ ok: true, prospect });
   });
 
   r.get("/prospector/queue-call", (req, res) => {
