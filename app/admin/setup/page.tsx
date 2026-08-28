@@ -117,6 +117,12 @@ export default function SetupPage() {
         verify?: VerifyPayload;
         saved?: boolean;
         status?: SetupPayload;
+        debug?: {
+          accountSidPreview?: string;
+          authTokenLength?: number;
+          savedTo?: string;
+          serverTime?: string;
+        };
       };
 
       if (!response.ok) {
@@ -244,13 +250,14 @@ export default function SetupPage() {
           {saved && verify?.ok ? (
             <p className="mt-3 rounded-lg bg-emerald-950/50 p-3 text-sm text-emerald-200">
               ✅ Connected to {verify.accountName}. Balance: {verify.balance}.
-              Keys saved.
+              Keys saved on server.
             </p>
           ) : null}
           {saved && verify && !verify.ok ? (
             <p className="mt-3 rounded-lg bg-red-950/50 p-3 text-sm text-red-200">
-              Keys saved but Twilio rejected them: {verify.error}. Double-check
-              SID and Token on Twilio home page.
+              Twilio rejected these credentials: {verify.error}. If you&apos;re
+              sure they&apos;re correct, try copying again — click Show on
+              Twilio and select all before copy.
             </p>
           ) : null}
         </form>

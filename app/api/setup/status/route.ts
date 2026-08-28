@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSetupStatus } from "@/lib/setup-status";
+import { getSetupStatus, verifyTwilioConnection } from "@/lib/setup-status";
 
 export async function GET(request: Request) {
   const status = await getSetupStatus(request);

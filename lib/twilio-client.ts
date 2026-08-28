@@ -1,5 +1,6 @@
 import twilio from "twilio";
 import { getTwilioStatus } from "@/lib/twilio-status";
+import { loadTwilioEnv } from "@/lib/twilio-env";
 
 export function getTwilioClient() {
   const status = getTwilioStatus();
@@ -14,8 +15,9 @@ export function validateTwilioRequest(
   request: Request,
   params: Record<string, string>,
 ): boolean {
-  const status = getTwilioStatus();
-  if (!status.authToken) return false;
+  const env = loadTwilioEnv();
+  const authToken = env.authToken;
+  if (!authToken) return false;
 
   const signature = request.headers.get("x-twilio-signature");
   if (!signature) return process.env.NODE_ENV !== "production";
@@ -26,5 +28,5 @@ export function validateTwilioRequest(
     ? `${publicBase}${requestUrl.pathname}${requestUrl.search}`
     : request.url;
 
-  return twilio.validateRequest(status.authToken, signature, url, params);
+  return twilio.validateRequest(authToken, signature, url, params);
 }

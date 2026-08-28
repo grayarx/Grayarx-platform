@@ -1,3 +1,5 @@
+import { loadTwilioEnv } from "@/lib/twilio-env";
+
 export function getTwilioStatus(): {
   configured: boolean;
   message: string;
@@ -6,12 +8,11 @@ export function getTwilioStatus(): {
   fromNumber?: string;
   webhookBaseUrl?: string;
 } {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token =
-    process.env.TWILIO_AUTH_TOKEN ?? process.env.TWILIO_API_KEY;
-  const from =
-    process.env.TWILIO_FROM_NUMBER ?? process.env.TWILIO_PHONE_NUMBER;
-  const webhookBaseUrl = process.env.TWILIO_WEBHOOK_BASE_URL?.replace(/\/$/, "");
+  const env = loadTwilioEnv();
+  const sid = env.accountSid;
+  const token = env.authToken;
+  const from = env.fromNumber;
+  const webhookBaseUrl = env.webhookBaseUrl?.replace(/\/$/, "");
 
   if (sid && token && from && webhookBaseUrl) {
     return {
@@ -27,11 +28,9 @@ export function getTwilioStatus(): {
 
   const missing: string[] = [];
   if (!sid) missing.push("TWILIO_ACCOUNT_SID");
-  if (!token) missing.push("TWILIO_AUTH_TOKEN or TWILIO_API_KEY");
-  if (!from) missing.push("TWILIO_FROM_NUMBER or TWILIO_PHONE_NUMBER");
-  if (!webhookBaseUrl) {
-    missing.push("TWILIO_WEBHOOK_BASE_URL (public HTTPS, e.g. https://grayarx.com)");
-  }
+  if (!token) missing.push("TWILIO_AUTH_TOKEN");
+  if (!from) missing.push("TWILIO_FROM_NUMBER");
+  if (!webhookBaseUrl) missing.push("TWILIO_WEBHOOK_BASE_URL");
 
   return {
     configured: false,
@@ -39,6 +38,8 @@ export function getTwilioStatus(): {
     authToken: token,
     fromNumber: from,
     webhookBaseUrl,
-    message: `Twilio not ready (need ${missing.join(" + ")}) — playbook modal still works for manual calls.`,
+    message: sid && token && webhookBaseUrl
+      ? `Twilio connected — still need phone number (${missing.join(", ")})`
+      : `Twilio not ready (need ${missing.join(" + ")})`,
   };
 }

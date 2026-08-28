@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { verifyTwilioConnection, getSetupStatus } from "@/lib/setup-status";
+import {
+  maskSid,
+  sanitizeCredential,
+  saveTwilioEnv,
+} from "@/lib/twilio-env";
 
 type SaveCredentialsRequest = {
   accountSid?: unknown;
@@ -19,26 +22,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
 
-  const accountSid =
-    typeof body.accountSid === "string" ? body.accountSid.trim() : "";
-  const authToken =
-    typeof body.authToken === "string" ? body.authToken.trim() : "";
-  const webhookBaseUrl =
-    typeof body.webhookBaseUrl === "string"
-      ? body.webhookBaseUrl.trim().replace(/\/$/, "")
-      : "";
-  const fromNumber =
-    typeof body.fromNumber === "string" ? body.fromNumber.trim() : "";
+  const accountSid = sanitizeCredential(
+    typeof body.accountSid === "string" ? body.accountSid : "",
+  );
+  const authToken = sanitizeCredential(
+    typeof body.authToken === "string" ? body.authToken : "",
+  );
+  const webhookBaseUrl = sanitizeCredential(
+    typeof body.webhookBaseUrl === "string" ? body.webhookBaseUrl : "",
+  ).replace(/\/$/, "");
+  const fromNumber = sanitizeCredential(
+    typeof body.fromNumber === "string" ? body.fromNumber : "",
+  );
 
   if (!accountSid.startsWith("AC")) {
     return NextResponse.json(
-      { error: "Account SID must start with AC" },
+      {
+        error: `Account SID must start with AC. Got: "${accountSid.slice(0, 10)}…" (${accountSid.length} chars)`,
+      },
       { status: 400 },
     );
   }
-  if (!authToken) {
+  if (accountSid.length !== 34) {
     return NextResponse.json(
-      { error: "Auth Token is required." },
+      {
+        error: `Account SID should be 34 characters. Yours is ${accountSid.length}. Copy the full Account SID from Twilio home.`,
+      },
+      { status: 400 },
+    );
+  }
+  if (!authToken || authToken.length < 20) {
+    return NextResponse.json(
+      {
+        error: `Auth Token looks too short (${authToken.length} chars). Click Show on Twilio and copy the full token.`,
+      },
       { status: 400 },
     );
   }
@@ -49,31 +66,26 @@ export async function POST(request: Request) {
     );
   }
 
-  const lines = [
-    "# GrayArx Twilio — saved from /admin/setup",
-    `TWILIO_ACCOUNT_SID=${accountSid}`,
-    `TWILIO_AUTH_TOKEN=${authToken}`,
-    `TWILIO_WEBHOOK_BASE_URL=${webhookBaseUrl}`,
-  ];
+  const paths = saveTwilioEnv({
+    accountSid,
+    authToken,
+    webhookBaseUrl,
+    fromNumber: fromNumber || undefined,
+  });
 
-  if (fromNumber) {
-    lines.push(`TWILIO_FROM_NUMBER=${fromNumber}`);
-  }
-
-  const envPath = join(process.cwd(), ".env.local");
-  writeFileSync(envPath, `${lines.join("\n")}\n`, "utf8");
-
-  process.env.TWILIO_ACCOUNT_SID = accountSid;
-  process.env.TWILIO_AUTH_TOKEN = authToken;
-  process.env.TWILIO_WEBHOOK_BASE_URL = webhookBaseUrl;
-  if (fromNumber) process.env.TWILIO_FROM_NUMBER = fromNumber;
-
-  const verify = await verifyTwilioConnection();
+  // Verify exactly what was pasted — not stale cached env
+  const verify = await verifyTwilioConnection({ accountSid, authToken });
   const status = await getSetupStatus(request);
 
   return NextResponse.json({
     saved: true,
     verify,
     status,
+    debug: {
+      accountSidPreview: maskSid(accountSid),
+      authTokenLength: authToken.length,
+      savedTo: paths.envPath,
+      serverTime: new Date().toISOString(),
+    },
   });
 }

@@ -1,6 +1,7 @@
 import twilio from "twilio";
 import { getTwilioStatus } from "@/lib/twilio-status";
 import { getWebhookBaseUrl } from "@/lib/twilio-voice";
+import { loadTwilioEnv, maskSid } from "@/lib/twilio-env";
 
 export type SetupStatus = {
   twilio: {
@@ -12,23 +13,21 @@ export type SetupStatus = {
     webhookBaseUrl?: string;
     readyToDial: boolean;
     message: string;
+    accountSidPreview?: string;
   };
-  regulatory: {
-    note: string;
-  };
+  regulatory: { note: string };
   nextSteps: string[];
 };
 
 export async function getSetupStatus(request?: Request): Promise<SetupStatus> {
+  const env = loadTwilioEnv();
   const status = getTwilioStatus();
   const webhookResolved =
     getWebhookBaseUrl(request) ?? status.webhookBaseUrl ?? undefined;
 
-  const accountSidSet = Boolean(process.env.TWILIO_ACCOUNT_SID);
-  const authTokenSet = Boolean(
-    process.env.TWILIO_AUTH_TOKEN ?? process.env.TWILIO_API_KEY,
-  );
-  const fromNumberSet = Boolean(status.fromNumber);
+  const accountSidSet = Boolean(env.accountSid);
+  const authTokenSet = Boolean(env.authToken);
+  const fromNumberSet = Boolean(env.fromNumber);
   const webhookBaseUrlSet = Boolean(webhookResolved);
 
   const readyToDial =
@@ -41,21 +40,16 @@ export async function getSetupStatus(request?: Request): Promise<SetupStatus> {
   const nextSteps: string[] = [];
 
   if (!accountSidSet || !authTokenSet) {
-    nextSteps.push("Add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to .env.local");
+    nextSteps.push("Paste Account SID and Auth Token on /admin/setup");
   }
   if (!webhookBaseUrlSet) {
-    nextSteps.push(
-      "Set TWILIO_WEBHOOK_BASE_URL to your public HTTPS URL (e.g. https://grayarx.com)",
-    );
+    nextSteps.push("Set webhook URL to https://grayarx.com");
   }
   if (!fromNumberSet) {
-    nextSteps.push(
-      "Wait for Gray Ox regulatory bundle approval, then buy your +27 mobile number",
-    );
-    nextSteps.push("Add TWILIO_FROM_NUMBER=+27... to .env.local after purchase");
+    nextSteps.push("Wait for Gray Ox bundle → buy +27 number → save again");
   }
   if (readyToDial) {
-    nextSteps.push("Open /admin/prospector and click Hand off to Themba");
+    nextSteps.push("Open /admin/prospector → Hand off to Themba");
   }
 
   return {
@@ -63,11 +57,12 @@ export async function getSetupStatus(request?: Request): Promise<SetupStatus> {
       accountSidSet,
       authTokenSet,
       fromNumberSet,
-      fromNumber: status.fromNumber,
+      fromNumber: env.fromNumber,
       webhookBaseUrlSet,
       webhookBaseUrl: webhookResolved,
       readyToDial,
       message: status.message,
+      accountSidPreview: env.accountSid ? maskSid(env.accountSid) : undefined,
     },
     regulatory: {
       note:
@@ -77,20 +72,26 @@ export async function getSetupStatus(request?: Request): Promise<SetupStatus> {
   };
 }
 
-export async function verifyTwilioConnection(): Promise<{
+export async function verifyTwilioConnection(credentials?: {
+  accountSid: string;
+  authToken: string;
+}): Promise<{
   ok: boolean;
   accountName?: string;
   balance?: string;
   error?: string;
 }> {
-  const status = getTwilioStatus();
-  if (!status.accountSid || !status.authToken) {
+  const env = credentials ?? loadTwilioEnv();
+  const accountSid = credentials?.accountSid ?? env.accountSid;
+  const authToken = credentials?.authToken ?? env.authToken;
+
+  if (!accountSid || !authToken) {
     return { ok: false, error: "Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN" };
   }
 
   try {
-    const client = twilio(status.accountSid, status.authToken);
-    const account = await client.api.accounts(status.accountSid).fetch();
+    const client = twilio(accountSid, authToken);
+    const account = await client.api.accounts(accountSid).fetch();
     const balance = await client.balance.fetch();
     return {
       ok: true,
