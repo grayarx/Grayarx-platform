@@ -72,8 +72,15 @@ async function main() {
     const pro = body.packages?.find((p: { id: string }) => p.id === "professional");
     assert.ok(pro);
     assert.equal(pro.priceMonthlyZar, 14990);
-    assert.ok(body.modules?.every((m: { status: string }) => m.status === "live" || m.status === "shipping"));
-    ok("GET /api/os packages");
+    assert.ok(pro.grossMarginPercent >= 40);
+    assert.ok(body.economics?.packages?.length >= 4);
+    assert.ok(
+      body.modules?.every(
+        (m: { status: string }) =>
+          m.status === "live" || m.status === "shipping",
+      ),
+    );
+    ok("GET /api/os packages + economics");
   } catch (e) {
     fail("GET /api/os packages", e);
   }

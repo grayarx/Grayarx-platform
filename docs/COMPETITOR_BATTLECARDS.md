@@ -76,7 +76,7 @@ Use this when a dealer says “we already have X.”
 **They:** chat on WhatsApp.  
 **You:** live stock truth + branded showroom path + marketplace ingest + missed-call recovery + Monday proof.  
 **Price angle:** Raimond R5–10k for generic bot; you sell **viewings booked**, undercut on Convert while looking premium on ROI.  
-**Product gap to close:** Trinstel already pitches **parts + service** — build that on Growth.
+**Product gap to close:** Trinstel already pitches **parts + service** — Professional OS ships both live (dealer catalog + service calendar).
 
 ### vs Privyr / Visio
 **They:** alert humans / send templates (Visio R1.5–5k).  
@@ -143,5 +143,5 @@ Undercuts Raimond Pro (R10k) and agency typical (~R15k); sits **below** a full M
 | “We have a WhatsApp bot.” | “Does it answer from **live** stock and book viewings from AutoTrader at 9pm? Show Monday numbers.” |
 | “Too expensive.” | “One recovered weekend sale pays for months. Pilot is free. Convert is under Raimond/agency.” |
 | “We’re fine — we answer fast.” | “What’s first response after 6pm and Sundays?” (discovery script) |
-| “Come back when you have parts/service.” | “Convert sales first — parts module is next on Growth.” |
+| “Come back when you have parts/service.” | “Parts + service are live on Professional — import their catalog and we quote their prices.” |
 | “We already pay AutoTrader.” | “Good — we convert that traffic overnight. We never replace AutoTrader.” |
