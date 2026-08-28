@@ -57,7 +57,7 @@ export type InvoiceLetterheadMode = "platform" | "dealership";
 
 /**
  * Platform letterhead = GrayArx billing the dealership (subscription).
- * Dealership letterhead = dealer selling a vehicle (customer invoice), with GrayArx/Thandi credit.
+ * Dealership letterhead = dealer selling a vehicle (customer invoice), with GrayArx platform credit.
  */
 export function resolveLetterheadMode(opts: {
   leadId: number;

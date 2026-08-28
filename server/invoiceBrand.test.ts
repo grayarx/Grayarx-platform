@@ -78,6 +78,8 @@ describe("invoice brand helpers", () => {
     expect(doc.popiaFooter).toContain("POPIA");
     expect(doc.eftPayment).toBeNull();
     expect(doc.dealershipBankNote).toContain("FNB");
+    expect(doc.platformCredit).toBe("Document generated on the GrayArx platform");
+    expect(JSON.stringify(doc)).not.toMatch(/thandi/i);
   });
 
   it("includes full platform EFT block on subscription invoices", () => {
@@ -118,5 +120,54 @@ describe("invoice brand helpers", () => {
     expect(doc.eftPayment?.accountNumber).toBe("11112222333");
     expect(doc.eftPayment?.paymentReference).toBe("GRAYARX-202607-ABC12");
     expect(doc.eftPayment?.bankName).toBe("FNB");
+    expect(doc.lineItems[0].description).toContain("GrayArx Dealership OS");
+    expect(JSON.stringify(doc)).not.toMatch(/thandi/i);
+  });
+
+  function platformInvoice(subtotal: number, lineDescription?: string) {
+    return buildInvoiceDocumentView({
+      invoice: {
+        invoiceNumber: "GRAYARX-OS-TEST",
+        status: "sent",
+        invoiceDate: "2026-07-14",
+        dueDate: "2026-08-13",
+        leadId: 0,
+        vehicleId: 0,
+        subtotal,
+        vatAmount: 0,
+        totalAmount: subtotal,
+      },
+      dealership: { name: "Pilot Motors" },
+      lead: null,
+      vehicle: null,
+      payments: [],
+      lineDescription,
+    });
+  }
+
+  it("never names Thandi on platform invoice JSON or letterhead fields", () => {
+    const doc = platformInvoice(14990);
+    expect(JSON.stringify(doc)).not.toMatch(/thandi/i);
+    expect(doc.from.subtitle).toBeNull();
+    expect(doc.preparedBy).toBe("GrayArx (Pty) Ltd");
+    expect(doc.platformCredit).toBeNull();
+    expect(doc.lineItems[0].description).toContain("Professional OS");
+    expect(doc.lineItems[0].description).toContain("Pilot Motors");
+  });
+
+  it("maps OS plan line items from subtotal", () => {
+    expect(platformInvoice(7990).lineItems[0].description).toContain("Starter OS");
+    expect(platformInvoice(14990).lineItems[0].description).toContain("Professional OS");
+    expect(platformInvoice(29990).lineItems[0].description).toContain("Enterprise OS");
+  });
+
+  it("uses an explicit Professional OS line description override", () => {
+    const doc = platformInvoice(
+      14990,
+      "GrayArx Professional OS — monthly · Pilot Motors",
+    );
+    expect(doc.lineItems[0].description).toBe(
+      "GrayArx Professional OS — monthly · Pilot Motors",
+    );
   });
 });

@@ -46,7 +46,7 @@ const ADMIN_LINKS = [
   { href: "/admin/preapprovals", label: "Pre-Approvals", icon: HandCoins },
   { href: "/admin/dealerships", label: "Dealerships", icon: Building2 },
   { href: "/admin/agents", label: "Agents", icon: Bot },
-  { href: "/admin/invoices", label: "Invoices (Thandi)", icon: Receipt },
+  { href: "/admin/invoices", label: "Invoices", icon: Receipt },
   { href: "/admin/brand-kit", label: "Brand Kit", icon: Palette },
   { href: "/admin/billing", label: "Billing", icon: Wallet, founderOnly: true },
   { href: "/admin/tax-dashboard", label: "Tax Dashboard", icon: DollarSign, founderOnly: true },

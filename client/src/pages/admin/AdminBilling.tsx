@@ -13,8 +13,8 @@ export default function AdminBilling() {
           <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-display text-xl font-semibold">Billing dashboard coming soon</h3>
           <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-            Stripe integration ships next. Until then, invoices are managed by Thandi via the
-            dealership-side invoicing flow.
+            Stripe integration ships next. Until then, create and reconcile invoices on the
+            Invoices page.
           </p>
         </CardContent>
       </Card>

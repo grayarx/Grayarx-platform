@@ -45,7 +45,7 @@ export function buildInvoicePaymentEmail(opts: {
   ${renderEftPaymentInstructionsHtml(eft)}
   ${printLink}
   <p style="font-size:13px;color:#5c5c5c;line-height:1.5;margin:16px 0 0;">
-    After you pay, reply to this email or use the invoice number as reference so Thandi can mark it paid.
+    After you pay, reply to this email or use the invoice number as your payment reference so we can mark it paid.
   </p>
 `.trim();
 

@@ -1,7 +1,7 @@
 /**
- * Modal preview of an invoice document — used both for "Draft invoice"
- * (before it's persisted) and before an explicit "Send" action, so
- * Thandi/founder can eyeball the actual PDF (letterhead, VAT, totals, FNB
+ * Modal preview of an invoice document — used both for "New invoice"
+ * (before it's persisted) and before an explicit "Send" action, so a
+ * founder can eyeball the actual PDF (letterhead, VAT, totals, FNB
  * EFT details) before anything goes out.
  */
 import {
