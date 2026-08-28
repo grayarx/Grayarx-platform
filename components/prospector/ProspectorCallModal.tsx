@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CopyBlock } from "@/components/prospector/CopyBlock";
 import { fetchCallAgentReply } from "@/lib/call-agent-api";
 import { formatIntelNote } from "@/lib/call-intel";
@@ -16,14 +16,27 @@ type ProspectorCallModalProps = {
   prospect: Prospect;
   twilioMessage: string;
   twilioConfigured: boolean;
+  callPlaced?: boolean;
+  liveSessionId?: string | null;
+  callSid?: string | null;
   onClose: () => void;
   onSaveSession: (prospectId: string, session: CallSessionState) => void;
+};
+
+type LiveSessionPayload = {
+  status: string;
+  stage: CallStage;
+  intel: CallSessionState["intel"];
+  transcript: CallSessionState["transcript"];
 };
 
 export function ProspectorCallModal({
   prospect,
   twilioMessage,
   twilioConfigured,
+  callPlaced = false,
+  liveSessionId = null,
+  callSid = null,
   onClose,
   onSaveSession,
 }: ProspectorCallModalProps) {
@@ -51,6 +64,45 @@ export function ProspectorCallModal({
   ]);
 
   const accumulatedIntel = useMemo(() => formatIntelNote(intel), [intel]);
+
+  useEffect(() => {
+    if (!liveSessionId) return;
+
+    let cancelled = false;
+
+    async function pollLiveSession() {
+      try {
+        const response = await fetch(
+          `/api/prospector/call-session?sessionId=${liveSessionId}`,
+        );
+        if (!response.ok || cancelled) return;
+
+        const data = (await response.json()) as LiveSessionPayload;
+        if (cancelled) return;
+
+        setStage(data.stage);
+        setIntel(data.intel);
+        if (data.transcript.length > 0) {
+          setTranscript(data.transcript);
+        }
+
+        onSaveSession(prospect.id, {
+          stage: data.stage,
+          intel: data.intel,
+          transcript: data.transcript,
+        });
+      } catch {
+        /* ignore polling errors */
+      }
+    }
+
+    void pollLiveSession();
+    const interval = window.setInterval(pollLiveSession, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [liveSessionId, onSaveSession, prospect.id]);
 
   async function submitDealershipTurn() {
     const message = dealershipMessage.trim();
@@ -114,11 +166,21 @@ export function ProspectorCallModal({
                 id="prospector-call-title"
                 className="mt-1 text-lg font-semibold text-white"
               >
-                {twilioConfigured
-                  ? "Call queued — dialling via Twilio."
-                  : "Call queued (Twilio not dialling yet). Use the funnel below."}
+                {callPlaced
+                  ? "Themba is on the line — live Twilio call in progress."
+                  : twilioConfigured
+                    ? "Ready to dial — check Twilio env and webhook URL."
+                    : "Twilio not configured — use manual funnel below."}
               </h2>
-              <p className="mt-1 text-sm text-zinc-500">{prospect.location}</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                {prospect.location}
+                {prospect.phone ? ` · ${prospect.phone}` : ""}
+              </p>
+              {callSid ? (
+                <p className="mt-1 font-mono text-[11px] text-zinc-600">
+                  Call SID: {callSid}
+                </p>
+              ) : null}
             </div>
             <button
               type="button"
@@ -154,8 +216,9 @@ export function ProspectorCallModal({
               </span>
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Paste or type what the dealership says after each agent turn. The
-              playbook picks the next reply — diagnose first, no feature dump.
+              {liveSessionId
+                ? "Live transcript from Twilio — updates every few seconds while Themba runs the playbook on the call."
+                : "Manual mode: type what the dealership says if you are on the phone yourself."}
             </p>
 
             <div className="mt-4 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-800 bg-black/30 p-3">
@@ -176,18 +239,23 @@ export function ProspectorCallModal({
             </div>
 
             <label className="mt-4 block text-sm text-zinc-300">
-              What the dealership says
+              Manual turn (if not on live Twilio call)
             </label>
             <textarea
               value={dealershipMessage}
               onChange={(event) => setDealershipMessage(event.target.value)}
               rows={2}
-              placeholder="e.g. It usually waits until the next morning."
+              disabled={Boolean(liveSessionId)}
+              placeholder={
+                liveSessionId
+                  ? "Live call active — transcript syncs automatically."
+                  : "e.g. It usually waits until the next morning."
+              }
               className="mt-2 w-full rounded-md border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-100 outline-none ring-emerald-500 focus:ring-2"
             />
             <button
               type="button"
-              disabled={loading || !dealershipMessage.trim()}
+              disabled={loading || !dealershipMessage.trim() || Boolean(liveSessionId)}
               onClick={submitDealershipTurn}
               className="mt-2 w-full rounded-md bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
             >

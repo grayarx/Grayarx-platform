@@ -15,15 +15,19 @@ const STATUS_LABELS: Record<Prospect["status"], string> = {
 type ProspectCardProps = {
   prospect: Prospect;
   onHandOff: (prospect: Prospect) => void;
+  onPhoneChange?: (prospectId: string, phone: string) => void;
   onResendEmail?: (prospect: Prospect) => void;
   onRemove?: (prospect: Prospect) => void;
+  loading?: boolean;
 };
 
 export function ProspectCard({
   prospect,
   onHandOff,
+  onPhoneChange,
   onResendEmail,
   onRemove,
+  loading = false,
 }: ProspectCardProps) {
   return (
     <article className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
@@ -50,13 +54,26 @@ export function ProspectCard({
 
       <p className="mt-3 text-sm leading-6 text-zinc-400">{prospect.researchNote}</p>
 
+      <label className="mt-3 block text-xs text-zinc-500">
+        Call number (E.164 or 0xx — trial: must be verified in Twilio)
+        <input
+          value={prospect.phone ?? ""}
+          onChange={(event) =>
+            onPhoneChange?.(prospect.id, event.target.value)
+          }
+          placeholder="+27..."
+          className="mt-1 w-full rounded-md border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none ring-emerald-500 focus:ring-2"
+        />
+      </label>
+
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={loading || !prospect.phone?.trim()}
           onClick={() => onHandOff(prospect)}
-          className="rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200"
+          className="rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Hand off to Themba
+          {loading ? "Dialling…" : "Hand off to Themba"}
         </button>
         {prospect.status === "emailed" && onResendEmail ? (
           <button

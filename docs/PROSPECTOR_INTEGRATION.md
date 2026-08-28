@@ -55,7 +55,12 @@ status TEXT  -- queued_for_call | called | demo_booked | do_not_contact | ...
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=   # or TWILIO_API_KEY
 TWILIO_FROM_NUMBER=  # or TWILIO_PHONE_NUMBER
+TWILIO_WEBHOOK_BASE_URL=https://grayarx.com   # public HTTPS — required
 ```
+
+When all four are set, **Hand off to Themba** places a real outbound call. Twilio
+webhooks run the playbook on the line (`/api/twilio/voice/outbound` + `/turn`).
+See `docs/TWILIO_CALLING_TODAY.md` for step-by-step setup.
 
 When missing, the modal still works for manual calling with the funnel UI.
 

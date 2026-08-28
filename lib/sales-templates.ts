@@ -36,6 +36,13 @@ export function buildWhatsAppFollowUp(lead: LeadContext): string {
 }
 
 /**
+ * First spoken line on connect — permission only, then listen.
+ */
+export function buildCallOpenerSpeech(lead: LeadContext): string {
+  return `Hi, it's ${lead.agentName} from GrayArx. Did I catch you at a bad time, or do you have sixty seconds?`;
+}
+
+/**
  * Spoken call opener — permission, qualify, stop. Discovery comes next turn.
  */
 export function buildCallScript(lead: LeadContext): string {

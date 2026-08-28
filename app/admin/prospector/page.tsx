@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ProspectCard } from "@/components/prospector/ProspectCard";
 import { ProspectorCallModal } from "@/components/prospector/ProspectorCallModal";
 import { MOCK_PROSPECTS } from "@/lib/prospector-data";
+import { prospectToLead } from "@/lib/prospect-to-lead";
 import type { CallSessionState, Prospect } from "@/lib/prospector-types";
 
 export default function ProspectorAdminPage() {
@@ -13,40 +14,83 @@ export default function ProspectorAdminPage() {
   const [twilioMessage, setTwilioMessage] = useState("");
   const [twilioConfigured, setTwilioConfigured] = useState(false);
   const [queueLoading, setQueueLoading] = useState<string | null>(null);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
+  const [callSid, setCallSid] = useState<string | null>(null);
+  const [callPlaced, setCallPlaced] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/prospector/queue-call")
       .then((response) => response.json())
-      .then((data: { message?: string; configured?: boolean }) => {
-        setTwilioMessage(
-          data.message ??
-            "Twilio credentials missing — calls queue but do not dial.",
-        );
-        setTwilioConfigured(Boolean(data.configured));
-      })
+      .then(
+        (data: {
+          message?: string;
+          configured?: boolean;
+          webhookBaseUrlResolved?: string | null;
+        }) => {
+          const webhookNote = data.webhookBaseUrlResolved
+            ? ` Webhook: ${data.webhookBaseUrlResolved}`
+            : "";
+          setTwilioMessage(
+            (data.message ??
+              "Twilio not configured — see docs/TWILIO_CALLING_TODAY.md.") +
+              webhookNote,
+          );
+          setTwilioConfigured(Boolean(data.configured));
+        },
+      )
       .catch(() => {
         setTwilioMessage(
-          "Twilio credentials missing (need TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN/API_KEY + TWILIO_FROM_NUMBER/PHONE_NUMBER) — call queued but not placed.",
+          "Twilio not configured — set credentials and TWILIO_WEBHOOK_BASE_URL. See docs/TWILIO_CALLING_TODAY.md.",
         );
       });
   }, []);
 
+  const handlePhoneChange = useCallback((prospectId: string, phone: string) => {
+    setProspects((current) =>
+      current.map((item) =>
+        item.id === prospectId ? { ...item, phone } : item,
+      ),
+    );
+  }, []);
+
   const handleHandOff = useCallback(async (prospect: Prospect) => {
     setQueueLoading(prospect.id);
+    setQueueError(null);
+    setLiveSessionId(null);
+    setCallSid(null);
+    setCallPlaced(false);
+
     try {
+      const lead = prospectToLead(prospect);
       const response = await fetch("/api/prospector/queue-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prospectId: prospect.id }),
+        body: JSON.stringify({
+          prospectId: prospect.id,
+          toPhone: prospect.phone,
+          lead,
+        }),
       });
       const data = (await response.json()) as {
         twilioMessage?: string;
         twilioConfigured?: boolean;
+        placed?: boolean;
+        sessionId?: string;
+        callSid?: string;
+        error?: string;
       };
 
       if (data.twilioMessage) setTwilioMessage(data.twilioMessage);
       if (typeof data.twilioConfigured === "boolean") {
         setTwilioConfigured(data.twilioConfigured);
+      }
+      if (data.error) setQueueError(data.error);
+
+      if (data.placed && data.sessionId) {
+        setLiveSessionId(data.sessionId);
+        setCallSid(data.callSid ?? null);
+        setCallPlaced(true);
       }
 
       setProspects((current) =>
@@ -111,9 +155,10 @@ export default function ProspectorAdminPage() {
               Prospector
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Hand off to Themba — discovery funnel, live smart replies, and
-              structured intel on every turn. No feature dumps; pricing only when
-              they ask.
+              Hand off to Themba — Twilio dials the yard and runs the discovery
+              funnel on the call. Set env vars in{" "}
+              <code className="text-zinc-300">.env.local</code> — see{" "}
+              <code className="text-zinc-300">docs/TWILIO_CALLING_TODAY.md</code>.
             </p>
           </div>
           <Link
@@ -124,8 +169,9 @@ export default function ProspectorAdminPage() {
           </Link>
         </header>
 
-        <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
-          {twilioMessage}
+        <div className="mb-6 space-y-2 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
+          <p>{twilioMessage}</p>
+          {queueError ? <p className="text-red-300">{queueError}</p> : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -133,6 +179,8 @@ export default function ProspectorAdminPage() {
             <ProspectCard
               key={prospect.id}
               prospect={prospect}
+              loading={queueLoading === prospect.id}
+              onPhoneChange={handlePhoneChange}
               onHandOff={(selected) => {
                 if (queueLoading !== selected.id) {
                   void handleHandOff(selected);
@@ -152,7 +200,15 @@ export default function ProspectorAdminPage() {
           prospect={activeProspect}
           twilioMessage={twilioMessage}
           twilioConfigured={twilioConfigured}
-          onClose={() => setActiveProspect(null)}
+          callPlaced={callPlaced}
+          liveSessionId={liveSessionId}
+          callSid={callSid}
+          onClose={() => {
+            setActiveProspect(null);
+            setLiveSessionId(null);
+            setCallSid(null);
+            setCallPlaced(false);
+          }}
           onSaveSession={(prospectId, session) => {
             void handleSaveSession(prospectId, session);
           }}

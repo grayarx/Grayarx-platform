@@ -13,6 +13,8 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Prospector admin:** [http://127.0.0.1:43123/admin/prospector](http://127.0.0.1:43123/admin/prospector)
 
+**Live calling today:** see [`docs/TWILIO_CALLING_TODAY.md`](docs/TWILIO_CALLING_TODAY.md) — Twilio dials the yard; Themba runs the playbook on the call.
+
 To port into Grayarx-Final, see `docs/PROSPECTOR_INTEGRATION.md`.
 
 ## Sales funnel
