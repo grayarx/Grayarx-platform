@@ -66,11 +66,21 @@ function zar(n: number) {
 
 export default function PricingMatrixPage() {
   const [data, setData] = useState<Payload | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/os")
-      .then((r) => r.json())
-      .then((json: Payload) => setData(json));
+    void fetch("/api/pricing")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<Payload>;
+      })
+      .then((json) => {
+        setData(json);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load pricing");
+      });
   }, []);
 
   return (
@@ -85,7 +95,10 @@ export default function PricingMatrixPage() {
               GrayArx pricing that still makes profit
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              {data?.pricingStrategy.principle}
+              {data?.pricingStrategy?.principle ??
+                (error
+                  ? `Could not load pricing (${error}).`
+                  : "Loading packages…")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -109,7 +122,7 @@ export default function PricingMatrixPage() {
             What we charge (pilot stays free)
           </h2>
           <p className="mt-2 text-sm text-zinc-300">
-            {data?.pricingStrategy.whyNotCheaper}
+            {data?.pricingStrategy?.whyNotCheaper}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(data?.packages ?? []).map((p) => (
@@ -123,9 +136,11 @@ export default function PricingMatrixPage() {
                 </div>
                 <p className="mt-2 text-xs text-zinc-400">{p.headline}</p>
                 <p className="mt-2 text-[11px] text-zinc-500">
-                  {p.includedWhatsAppConversations.toLocaleString("en-ZA")} WA
-                  included
-                  {p.overagePerConversationZar > 0
+                  {(p.includedWhatsAppConversations ?? 0).toLocaleString(
+                    "en-ZA",
+                  )}{" "}
+                  WA included
+                  {(p.overagePerConversationZar ?? 0) > 0
                     ? ` · overage R${p.overagePerConversationZar}/conv`
                     : " · hard cap"}
                 </p>
@@ -210,7 +225,7 @@ export default function PricingMatrixPage() {
             Positioning vs market
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {(data?.pricingStrategy.grayArx ?? []).map((p) => (
+            {(data?.pricingStrategy?.grayArx ?? []).map((p) => (
               <div
                 key={p.plan}
                 className="rounded-lg border border-zinc-800 bg-black/20 p-3"

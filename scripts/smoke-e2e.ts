@@ -352,6 +352,20 @@ async function main() {
     fail("billing plan + usage caps", e);
   }
 
+  try {
+    const { status, body } = await json("/api/pricing");
+    assert.equal(status, 200);
+    assert.equal(body.packages?.length, 4);
+    assert.equal(
+      body.packages.find((p: { id: string }) => p.id === "professional")
+        ?.priceMonthlyZar,
+      14990,
+    );
+    ok("GET /api/pricing lean");
+  } catch (e) {
+    fail("GET /api/pricing lean", e);
+  }
+
   console.log("\n---");
   if (failures.length) {
     console.error(`${failures.length} FAILURES`);
