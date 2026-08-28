@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, Globe, Sparkles, Loader2, Send, PhoneCall, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import IcpYardsPanel from "./IcpYardsPanel";
 
 const SEGMENT_LABELS: Record<string, string> = {
   no_website_social_only: "No website — social only",
@@ -356,6 +357,8 @@ export default function AdminProspector() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <IcpYardsPanel />
 
       {isLoading && <p className="text-muted-foreground">Loading prospects…</p>}
       {!isLoading && (!data || data.length === 0) && !scoutJob?.running && (

@@ -60,6 +60,7 @@ import KPIDashboardPage from "./pages/KPIDashboardPage";
 
 // Dealer (dealer_owner / dealer_consultant)
 import Dashboard from "./pages/Dashboard";
+import DealerOsValue from "./pages/dealer/DealerOsValue";
 import Leads from "./pages/dealer/Leads";
 import Bookings from "./pages/dealer/Bookings";
 import Inventory from "./pages/dealer/Inventory";
@@ -71,6 +72,9 @@ import DealerNetwork from "./pages/dealer/DealerNetwork";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminOps from "./pages/admin/AdminOps";
 import AdminProspector from "./pages/admin/AdminProspector";
+import AdminOs from "./pages/admin/AdminOs";
+import AdminOsPricing from "./pages/admin/AdminOsPricing";
+import AdminCompetitors from "./pages/admin/AdminCompetitors";
 import AdminOnboarding from "./pages/admin/AdminOnboarding";
 import AdminPlatformDemos from "./pages/admin/AdminPlatformDemos";
 import AdminApprovals from "./pages/admin/AdminApprovals";
@@ -199,6 +203,7 @@ function Router() {
 
       {/* Dealer */}
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dealer/os" component={DealerOsValue} />
       <Route path="/dealer/leads" component={Leads} />
       <Route path="/dealer/bookings" component={Bookings} />
       <Route path="/dealer/inventory" component={Inventory} />
@@ -251,6 +256,15 @@ function Router() {
       </Route>
       <Route path="/admin/prospector">
         <AdminRouteGuard><AdminProspector /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/os">
+        <AdminRouteGuard><AdminOs /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/pricing">
+        <AdminRouteGuard><AdminOsPricing /></AdminRouteGuard>
+      </Route>
+      <Route path="/admin/competitors">
+        <AdminRouteGuard><AdminCompetitors /></AdminRouteGuard>
       </Route>
       <Route path="/admin/onboarding">
         <AdminRouteGuard><AdminOnboarding /></AdminRouteGuard>

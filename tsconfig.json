@@ -37,6 +37,9 @@
       ],
       "@shared/*": [
         "./shared/*"
+      ],
+      "@nalaOs/*": [
+        "./server/_core/nalaOs/*"
       ]
     },
     "downlevelIteration": true

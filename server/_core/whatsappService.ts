@@ -75,7 +75,7 @@ export async function sendWhatsAppMessage(
   try {
     // Priority: explicit inbound ID > DB lookup by dealership > env fallback
     let whatsappBusinessPhoneId = message.phoneNumberId || undefined;
-    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_TOKEN;
     const resolvedDealershipId = message.dealershipId ? Number(message.dealershipId) : 0;
 
     if (!whatsappBusinessPhoneId && resolvedDealershipId > 0) {
@@ -101,7 +101,9 @@ export async function sendWhatsAppMessage(
 
     if (!whatsappBusinessPhoneId) {
       whatsappBusinessPhoneId =
-        process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+        process.env.WHATSAPP_BUSINESS_PHONE_ID ||
+        process.env.WHATSAPP_PHONE_NUMBER_ID ||
+        process.env.META_WHATSAPP_PHONE_NUMBER_ID;
     }
 
     if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
@@ -111,6 +113,17 @@ export async function sendWhatsAppMessage(
 
     // Format phone number
     const formattedPhone = formatPhoneNumber(message.phone);
+
+    if (message.type === "automated_reply") {
+      const { gateWhatsAppSend, recordWhatsAppConversation } = await import("./nalaOs/billing/usage");
+      const dealerKey = String(message.dealershipId ?? "demo-yard");
+      const gate = gateWhatsAppSend({ dealershipId: dealerKey, buyerPhone: formattedPhone });
+      if (!gate.allowed) {
+        console.warn(`[WhatsApp] Pilot/plan cap blocked send: ${gate.reason}`);
+        return { success: false, error: gate.reason };
+      }
+      recordWhatsAppConversation({ dealershipId: dealerKey, buyerPhone: formattedPhone });
+    }
 
     // Get or create conversation
     if (resolvedDealershipId > 0) {
@@ -228,7 +241,7 @@ export async function sendWhatsAppTemplate(
   try {
     const whatsappBusinessPhoneId =
       process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_TOKEN;
 
     if (!whatsappBusinessPhoneId || !whatsappAccessToken) {
       console.warn("[WhatsAppService] WhatsApp credentials missing");
@@ -316,7 +329,7 @@ export async function sendVehiclePhotosViaWhatsApp(
   phoneNumberId?: string,
 ): Promise<void> {
   let whatsappBusinessPhoneId = phoneNumberId || undefined;
-  const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_TOKEN;
 
   if (!whatsappBusinessPhoneId && dealershipId && Number(dealershipId) > 0) {
     try {

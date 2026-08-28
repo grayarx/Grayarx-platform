@@ -160,6 +160,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(PROJECT_ROOT, "client", "src"),
       "@shared": path.resolve(PROJECT_ROOT, "shared"),
+      "@nalaOs": path.resolve(PROJECT_ROOT, "server", "_core", "nalaOs"),
       "@assets": path.resolve(PROJECT_ROOT, "attached_assets"),
     },
   },

@@ -30,8 +30,8 @@ build/
 ehthumbs.db
 Thumbs.db
 
-# Local pilot send log (DB is source of truth in production)
-data/pilot-email-sends.json
+# Local OS JSON store (usage meters, demo stock) — not production DB
+data/nala-os/
 
 # Logs
 logs
