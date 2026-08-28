@@ -14,6 +14,8 @@ export type TradeIn = {
   nalaReply: string;
   createdAt: string;
   estimatedBandZar?: { low: number; high: number };
+  /** Buyer WhatsApp photo attachments (data URLs or https URLs) */
+  photos: Array<{ id: string; label: string; url: string; uploadedAt: string }>;
 };
 
 type TradeInState = { intakes: TradeIn[] };
@@ -118,6 +120,7 @@ export function captureTradeIn(input: {
     nalaReply,
     createdAt: new Date().toISOString(),
     estimatedBandZar: band,
+    photos: [],
   };
 
   const state = load();
@@ -126,6 +129,33 @@ export function captureTradeIn(input: {
   return intake;
 }
 
+export function attachTradeInPhoto(input: {
+  tradeInId: string;
+  label: string;
+  /** data:image/...;base64,... or https URL */
+  url: string;
+}): TradeIn | { error: string } {
+  const state = load();
+  const intake = state.intakes.find((t) => t.id === input.tradeInId);
+  if (!intake) return { error: "Trade-in not found." };
+  if (!intake.photos) intake.photos = [];
+  intake.photos.push({
+    id: newId("ph"),
+    label: input.label.trim() || "photo",
+    url: input.url.trim(),
+    uploadedAt: new Date().toISOString(),
+  });
+  if (intake.photos.length >= 4) {
+    intake.status = "with_appraiser";
+    intake.nalaReply = `${intake.nalaReply}\n\nGot ${intake.photos.length} photos — appraiser has everything to confirm the band today.`;
+  }
+  save(state);
+  return intake;
+}
+
 export function listTradeIns(): TradeIn[] {
-  return load().intakes;
+  return load().intakes.map((t) => ({
+    ...t,
+    photos: t.photos ?? [],
+  }));
 }

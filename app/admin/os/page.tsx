@@ -188,14 +188,17 @@ export default function OsCommandCenterPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link href="/showroom/demo-yard" className="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white">
+              Showroom (parts on)
+            </Link>
+            <Link href="/showroom/yard-pta" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
+              PTA (parts off)
+            </Link>
             <Link href="/admin/pricing" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
               Pricing
             </Link>
             <Link href="/admin/conversion" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
               Sales
-            </Link>
-            <Link href="/admin/competitors" className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
-              Battlecards
             </Link>
           </div>
         </header>

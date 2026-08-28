@@ -102,3 +102,41 @@ export function bookService(input: {
 export function listServiceBookings(): ServiceBooking[] {
   return load().bookings;
 }
+
+/** Calendar view: bookings grouped by local date YYYY-MM-DD */
+export function getServiceCalendar(daysAhead = 14): Array<{
+  date: string;
+  slots: ServiceBooking[];
+}> {
+  const bookings = listServiceBookings().filter(
+    (b) => b.status === "booked" || b.status === "in_progress",
+  );
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const days: Array<{ date: string; slots: ServiceBooking[] }> = [];
+  for (let i = 0; i < daysAhead; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    days.push({
+      date: key,
+      slots: bookings.filter((b) => b.scheduledAt.slice(0, 10) === key),
+    });
+  }
+  return days;
+}
+
+export function rescheduleService(
+  bookingId: string,
+  scheduledAt: string,
+): ServiceBooking | { error: string } {
+  const state = load();
+  const booking = state.bookings.find((b) => b.id === bookingId);
+  if (!booking) return { error: "Booking not found." };
+  const when = new Date(scheduledAt);
+  if (Number.isNaN(when.getTime())) return { error: "Invalid time." };
+  booking.scheduledAt = when.toISOString();
+  booking.nalaReply = `${booking.nalaReply}\n\nRescheduled to ${when.toLocaleString("en-ZA", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.`;
+  save(state);
+  return booking;
+}

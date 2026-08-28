@@ -134,9 +134,14 @@ export async function handleOsMessage(input: {
       buyerName: input.buyerName,
       buyerPhone: input.buyerPhone,
       message: input.message,
+      dealershipId,
     });
     let held: PartsEnquiry | undefined;
-    if (input.holdPart && enquiry.partId) {
+    if (
+      input.holdPart &&
+      enquiry.partId &&
+      enquiry.status !== "module_off"
+    ) {
       const result = holdPart(enquiry.id);
       if (!("error" in result)) held = result;
     }

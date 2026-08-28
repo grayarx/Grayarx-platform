@@ -15,7 +15,9 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Competitor battlecards:** [http://127.0.0.1:43123/admin/competitors](http://127.0.0.1:43123/admin/competitors) — MotorX, WhatsApp bots, DMS pricing, talk tracks, and beat roadmap. See [`docs/COMPETITOR_BATTLECARDS.md`](docs/COMPETITOR_BATTLECARDS.md).
 
-**Dealership OS:** [http://127.0.0.1:43123/admin/os](http://127.0.0.1:43123/admin/os) — sales + parts + service + trade-in + finance + marketplace poll + missed call + Monday email. Walkthrough: [`docs/HOW_GRAYARX_WORKS.md`](docs/HOW_GRAYARX_WORKS.md). Strategy: [`docs/OS_STRATEGY.md`](docs/OS_STRATEGY.md).
+**Dealership OS:** [http://127.0.0.1:43123/admin/os](http://127.0.0.1:43123/admin/os) — full desks. Dealer explainer (parts pricing, modules): [`docs/DEALER_EXPLAINER.md`](docs/DEALER_EXPLAINER.md).
+
+**Showroom:** [http://127.0.0.1:43123/showroom/demo-yard](http://127.0.0.1:43123/showroom/demo-yard) (parts on) · [Pretoria parts off](http://127.0.0.1:43123/showroom/yard-pta)
 
 **Pricing matrix:** [http://127.0.0.1:43123/admin/pricing](http://127.0.0.1:43123/admin/pricing) — every competitor price we can document. [`docs/COMPETITOR_PRICING.md`](docs/COMPETITOR_PRICING.md).
 
