@@ -21,7 +21,7 @@ export default function LeadCaptureFormOptimized() {
   const createLead = trpc.leads.create.useMutation({
     onSuccess: () => {
       toast.success("🎉 Welcome to GrayArx!", {
-        description: "Check your inbox for your free trial setup details.",
+        description: "We'll confirm your 14-day Pilot next steps.",
       });
       setForm({
         dealershipName: "",
@@ -74,7 +74,7 @@ export default function LeadCaptureFormOptimized() {
             <Users className="h-5 w-5 text-primary" />
             <span className="font-display text-2xl font-bold text-gold-gradient">Free</span>
           </div>
-          <p className="text-xs text-muted-foreground">Pilot · no card</p>
+          <p className="text-xs text-muted-foreground">14-day Pilot · no card</p>
         </div>
       </div>
 
@@ -113,10 +113,10 @@ export default function LeadCaptureFormOptimized() {
             </span>
           </div>
           <h3 className="font-display text-3xl md:text-4xl font-bold mb-2">
-            Start Your Free Trial
+            Start your 14-day Pilot
           </h3>
           <p className="text-muted-foreground text-sm">
-            3 fields. 2 minutes. Your AI sales team ready in 24 hours.
+            3 fields. 2 minutes. Nala OS on your stock — no card.
           </p>
         </div>
 

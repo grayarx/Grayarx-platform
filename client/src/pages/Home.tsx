@@ -18,7 +18,6 @@ import HomeFeaturedDeals from "@/components/HomeFeaturedDeals";
 import IcpRoiCalculator from "@/components/IcpRoiCalculator";
 import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
-import { TIER_FEATURE_ROWS, PILOT_PARTNER } from "@shared/subscriptionTiers";
 import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
 import { SEO_PAGES, buildHomeJsonLd } from "@shared/seo";
 
@@ -33,13 +32,13 @@ const fadeUp = {
 
 const MARQUEE_ITEMS = [
   "After-hours WhatsApp",
+  "Dealership OS — Nala",
   "CSV stock live tonight",
-  "Booked test drives",
-  "Mia follow-up drip",
-  "Independent SA yards",
-  "POPIA compliant",
-  "Your cars — not classifieds",
-  "Free pilot",
+  "Parts + service desk",
+  "Missed-call recovery",
+  "Monday ROI email",
+  "Free 14-day Pilot",
+  "ZA · AU · UK · UAE · US · NZ",
 ];
 
 const PROOF_STEPS = [
@@ -56,7 +55,7 @@ const PROOF_STEPS = [
   {
     icon: MessageCircle,
     title: "WhatsApp after hours",
-    desc: "Nala answers when you are closed. Mia drips the cold ones.",
+    desc: "Nala answers when you are closed. Mia drips the cold ones. Missed calls bounce to WhatsApp.",
   },
   {
     icon: Clock,
@@ -90,14 +89,21 @@ const CAPABILITIES = [
   },
   {
     icon: Shield,
-    title: "Built for SA dealers",
-    desc: "POPIA-aware flows, 11 languages, and human control — for independent yards, not enterprise theatre.",
+    title: "Built for dealers, not theatre",
+    desc: "POPIA-aware flows, 11 SA languages, and human control — ZA first, with yards in AU, UK, UAE, US, and NZ.",
   },
 ];
 
-const PILOT_FEATURES = TIER_FEATURE_ROWS.filter((f) =>
-  f.tiers.includes(PILOT_PARTNER.featureTier),
-).map((f) => f.label);
+const PILOT_FEATURES = [
+  "Nala on WhatsApp from live stock",
+  "CSV / DMS showroom",
+  "Parts + service desk",
+  "Trade-in intake",
+  "Missed-call recovery",
+  "Monday ROI email",
+  "Mia follow-up drip",
+  "Test-drive bookings",
+];
 
 export default function Home() {
   useDocumentMeta({
@@ -152,14 +158,15 @@ export default function Home() {
               </h1>
 
               <p className="text-lg md:text-xl text-white/75 max-w-xl leading-relaxed mb-10">
-                Independent SA yards put CSV stock live — we answer buyers overnight and book the
-                test drive on <em className="not-italic text-white">your</em> cars.
+                Put CSV stock live — Nala answers buyers overnight, books the drive, and covers
+                parts, service, and missed calls on <em className="not-italic text-white">your</em>{" "}
+                cars.
               </p>
 
               <div className="flex flex-wrap gap-4 mb-8">
                 <Button asChild className="btn-gold h-12 px-10 text-sm font-semibold uppercase tracking-wider">
                   <a href="#lead-capture">
-                    Start free pilot <ArrowRight className="ml-2 h-4 w-4" />
+                    Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
                 <Button
@@ -172,7 +179,7 @@ export default function Home() {
               </div>
 
               <p className="font-tech text-[10px] uppercase tracking-[0.2em] text-white/45">
-                Free pilot · No credit card · Live on your stock
+                Free 14-day Pilot · No credit card · Live on your stock
               </p>
             </motion.div>
           </div>
@@ -206,7 +213,7 @@ export default function Home() {
               <span className="text-cyber-gradient">booked drive</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              One lost lead recovered pays for the month. This is the loop we run on your yard.
+              Recovered after-hours deals pay for the OS. This is the loop we run on your yard.
             </p>
           </motion.div>
 
@@ -260,11 +267,11 @@ export default function Home() {
                 Built for the DP who still answers their own phone
               </h2>
               <p className="text-muted-foreground text-lg leading-relaxed mb-8">
-                Independent used and multi-brand stock. Thirty to two hundred cars. Heavy WhatsApp.
-                GrayArx sits beside AutoTrader and your DMS — it does not rip them out.
+                Independent used and multi-brand stock. Heavy WhatsApp. GrayArx sits beside
+                AutoTrader and your DMS — sales, parts, and service in one OS, not a chatbot widget.
               </p>
               <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
-                <a href="#lead-capture">Start free pilot</a>
+                <a href="#lead-capture">Start 14-day Pilot</a>
               </Button>
             </motion.div>
 
@@ -310,8 +317,9 @@ export default function Home() {
               <span className="text-cyber-gradient">pays for itself</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Not another chatbot widget. A dealer OS tuned for after-hours leakage on South African
-              yards.
+              Not another chatbot widget. A dealership OS for after-hours leakage — Nala on
+              WhatsApp, with template fallback if the LLM is down. ZA first, live in AU, UK, UAE, US,
+              and NZ.
             </p>
           </motion.div>
 
@@ -382,15 +390,15 @@ export default function Home() {
             <div className="relative grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <div>
                 <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-4">
-                  Free pilot
+                  Free 14-day Pilot
                 </p>
                 <h2 className="font-display text-3xl md:text-5xl font-bold mb-5 tracking-tight leading-tight">
-                  Prove one recovered lead on{" "}
+                  Prove Monday numbers on{" "}
                   <span className="text-cyber-gradient">your stock</span>
                 </h2>
                 <p className="text-muted-foreground text-lg mb-8 leading-relaxed max-w-md">
-                  Small group of SA dealerships. You get Growth-level features — showroom, inventory,
-                  WhatsApp Nala, Mia drip, leads, trade-ins. Pricing confirmed before billing.
+                  14 days, 150 WhatsApp conversations. Nala OS — showroom, parts, service,
+                  missed-call recovery, Monday ROI. Then most yards close Professional at R14,990/mo.
                 </p>
                 <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground mb-8">
                   {PILOT_FEATURES.slice(0, 8).map((item) => (

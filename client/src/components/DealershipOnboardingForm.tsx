@@ -407,7 +407,7 @@ export function DealershipOnboardingForm({ onSuccess }: { onSuccess?: () => void
               onCheckedChange={(checked) => handleInputChange("agreeToTerms", checked)}
             />
             <label htmlFor="terms" className="text-sm text-slate-600">
-              I agree to the terms and conditions and understand that this is a 30-day free pilot program.
+              I agree to the terms and conditions and understand that this is a 14-day free Pilot of Nala Dealership OS.
             </label>
           </div>
 

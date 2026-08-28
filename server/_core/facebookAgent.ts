@@ -31,7 +31,7 @@ All agents speak all 11 South African official languages and are POPIA-compliant
 📧 Email: hello@grayarx.com
 🌐 Website: www.grayarx.com
 
-Join the GrayArx pilot — Growth-level features, terms we agree on a call.`,
+Join the GrayArx 14-day Pilot — Nala Dealership OS on your stock. Then Professional OS at R14,990/mo.`,
   },
 
   mission: {
@@ -102,11 +102,11 @@ Learn more: www.grayarx.com`,
     title: "FAQ: How Much Does GrayArx Cost?",
     content: `💰 FAQ: How Much Does GrayArx Cost?
 
-We're in a **pilot programme** with a small group of SA dealerships. Pricing is tailored to your size and usage — pilot partners get **Growth-level features** (showroom, inventory, WhatsApp Nala, leads, trade-ins, and more).
+We're an **AI dealership OS**. 14-day Pilot is R0 (150 WhatsApp conversations). After Monday proof, most yards close **Professional OS at R14,990/mo**. Starter OS is R7,990; Enterprise from R29,990.
 
-Three tiers will launch after pilot: **Showroom**, **Growth**, and **Group**. Public pricing will be on grayarx.com when we're ready.
+Nala answers after-hours WhatsApp from live stock, plus parts, service, trade-in, and missed-call recovery.
 
-Join the pilot: www.grayarx.com/#lead-capture`,
+Join the Pilot: www.grayarx.com/onboarding`,
   },
 
   compliance: {
@@ -142,7 +142,7 @@ GrayArx gives you:
 ✅ All 11 SA languages
 ✅ POPIA compliant
 
-Start your GrayArx pilot today — Growth-level features, terms we agree on a call.
+Start your GrayArx 14-day Pilot today — Nala OS on your stock, no card.`,
 
 👉 www.grayarx.com/onboarding
 

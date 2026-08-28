@@ -68,7 +68,7 @@
 - Dealer invite: `/onboarding?ref={shortcode}` stamped into onboarding notes for founder attribution.
 
 ### SEO (ICP)
-- Copy SOT: `shared/seo.ts`. Shell meta in `client/index.html` matches Home ICP. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`.
+- Copy SOT: `shared/seo.ts` (Nala Dealership OS — 14-day Pilot R0 / Starter R7,990 / Professional R14,990 / Enterprise from R29,990; ZA + AU/GB/AE/US/NZ). Shell meta + JSON-LD in `client/index.html` must match Home. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`. Do not index `/admin` or `/dealer`.
 - `useDocumentMeta` sets canonical + Twitter + optional JSON-LD.
-- Founder call kit: `docs/FOUNDER_SALES_CALL_KIT.md`. Public ROI: `/for-dealers` + home `#roi`.
+- Founder call kit: `docs/FOUNDER_SALES_CALL_KIT.md`. Public ROI: `/for-dealers` + home `#roi`. Hero close is Professional OS after Monday proof.
 - Anonymous visitors: `featureAccess.*` hooks must stay `enabled: !!user`. `main.tsx` `isPublicUnauthedPath` must include marketing routes (`/for-dealers`, showroom, etc.) so a stray UNAUTHED tRPC error does not force `/login`.

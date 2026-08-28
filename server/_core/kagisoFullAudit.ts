@@ -495,9 +495,9 @@ function walkCommercial(snap: KagisoSnapshot): Finding[] {
   const dealers = snap.dealerships ?? 0;
   const findings: Finding[] = [
     {
-      title: "Confirm pricing copy matches Showroom / Growth / Multi-site",
+      title: "Confirm public SEO pricing matches OS packages",
       description:
-        "Public /pricing is hidden during pilot (PILOT_PRICING_HIDDEN). When unhiding, confirm Showroom R3,999 / Growth R7,999 / Multi-site R11,999 and usage caps match shared/subscriptionTiers.ts.",
+        "Public /pricing currently redirects home. Public SEO + JSON-LD list Pilot R0 / Starter OS R7,990 / Professional OS R14,990 / Enterprise from R29,990 (docs/PRICING.md). Dealer-console DB tiers in shared/subscriptionTiers.ts are a separate SKU until unified.",
       rationale:
         "Pricing is a founder-only call. Agent shouldn't change numbers without sign-off.",
       category: "billing",

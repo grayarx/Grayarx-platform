@@ -30,12 +30,16 @@ export const FAQ_DATABASE: FAQItem[] = [
     category: "pricing",
     question: "What are your pricing plans?",
     keywords: ["price", "cost", "plans", "subscription", "how much"],
-    answer: `GrayArx offers three plans — Showroom, Growth, and Group — built around what dealerships actually use: inventory, showroom, leads, and AI chat.
+    answer: `GrayArx is **Nala Dealership OS** — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email.
 
-During our **pilot programme**, pricing is tailored to your dealership size and usage. Pilot partners receive **Growth-level features** (WhatsApp Nala, trade-in network, deal scores, and more).
+**Plans (ZAR):**
+- **Pilot** — R0 / 14 days, 150 WhatsApp conversations (hard cap)
+- **Starter OS** — R7,990/mo, 1,000 WA
+- **Professional OS** — R14,990/mo, 3,500 WA (usual close after Monday proof)
+- **Enterprise OS** — from R29,990/mo, 12,000 WA
 
-Public pricing will be published at grayarx.com when the pilot closes. Join the pilot at grayarx.com to discuss terms.`,
-    followUp: "Would you like to start your free trial?",
+Apply at grayarx.com/onboarding.`,
+    followUp: "Would you like to start the 14-day Pilot?",
   },
 
   {
@@ -43,12 +47,13 @@ Public pricing will be published at grayarx.com when the pilot closes. Join the 
     category: "pricing",
     question: "Is there a free trial?",
     keywords: ["free", "trial", "no credit card", "test"],
-    answer: `Yes — join the **GrayArx pilot**. Pilot partners get **Growth-level features** (Nala on web/WhatsApp, Lerato test-drive booking, inventory, leads) at terms we agree on a call.
+    answer: `Yes — a **14-day Pilot at R0**, capped at 150 WhatsApp conversations, on your own stock.
 
-✅ Themba is GrayArx’s sales caller to other yards — not a tool you get, and he never calls your buyers
-✅ WhatsApp Nala + web chat from your live stock
-✅ Test-drive requests pencilled by Lerato; you confirm the slot
-✅ Cancel month-to-month
+✅ Nala on WhatsApp + web from live CSV
+✅ Parts, service, trade-in desks on the OS
+✅ Missed-call recovery + Monday ROI email
+✅ Template fallback if LLM credits run out
+✅ No card. After proof, most yards close Professional OS at R14,990/mo
 
 Apply at: www.grayarx.com/onboarding`,
     followUp: "Ready to get started?",

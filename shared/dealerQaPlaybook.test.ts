@@ -15,11 +15,11 @@ describe("dealerQaPlaybook", () => {
     expect(DEALER_QA_ENTRIES.length).toBe(dealerQaCount());
   });
 
-  it("sample pricing answer uses Showroom / Growth / Multi-site", () => {
+  it("sample pricing answer uses OS packages", () => {
     const cost = DEALER_QA_ENTRIES.find((e) => e.id === "q1_cost");
-    expect(cost?.answer).toMatch(/Showroom/);
-    expect(cost?.answer).toMatch(/Growth/);
-    expect(cost?.answer).toMatch(/Multi-site/);
+    expect(cost?.answer).toMatch(/Starter OS/);
+    expect(cost?.answer).toMatch(/Professional OS/);
+    expect(cost?.answer).toMatch(/R14,990/);
   });
 
   it("VIN answer mentions ISO 3779 and masking", () => {
@@ -54,7 +54,7 @@ describe("dealerQaPlaybook", () => {
     const b = formatDealerQaForSystemPrompt();
     expect(a).toBe(b);
     expect(a).toContain("Dealer Q&A Playbook");
-    expect(a).toContain("Showroom / Growth / Multi-site");
+    expect(a).toContain("Pilot / Starter OS / Professional OS / Enterprise OS");
     expect(a).toContain("No Manus Forge for chat");
   });
 

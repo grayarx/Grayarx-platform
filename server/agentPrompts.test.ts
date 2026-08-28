@@ -58,7 +58,7 @@ describe("agent guardrails — system prompt", () => {
     const sipho = buildSystemPrompt("prospector", "en");
     const nala = buildSystemPrompt("whatsapp", "en");
     expect(kagiso).toContain("Dealer Q&A Playbook");
-    expect(kagiso).toContain("Showroom / Growth / Multi-site");
+    expect(kagiso).toContain("Pilot / Starter OS / Professional OS / Enterprise OS");
     expect(sipho).toContain("Dealer Q&A Playbook");
     expect(nala).not.toContain("Dealer Q&A Playbook");
   });

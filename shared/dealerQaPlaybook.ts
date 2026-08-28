@@ -66,7 +66,7 @@ export function agentGetsDealerQaPlaybook(agentId: string): boolean {
 
 /**
  * Full structured playbook (~32 Q&As + objections + truths).
- * Keep display names Showroom / Growth / Multi-site. No Manus Forge for chat.
+ * Public sell packages: Pilot / Starter OS / Professional OS / Enterprise OS. No Manus Forge for chat.
  */
 export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
   {
@@ -74,9 +74,9 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "elevator",
     question: "What is GrayArx in 30 seconds?",
     answer:
-      "GrayArx gives your yard a 24/7 AI assistant — Nala by default — on webchat and, on Growth+, WhatsApp. She answers from your live inventory, books viewings, and drops warm leads in your inbox. Buyers get a branded showroom and embed; you get CSV stock, shortcodes, and invoices you can pay by card or EFT.",
+      "GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.",
     written:
-      "AI sales floor on WhatsApp and your website that never closes — priced for SA independents.",
+      "AI dealership OS on WhatsApp — sales, parts, service — 14-day Pilot then Professional R14,990/mo.",
     keywords: ["what is grayarx", "elevator", "pitch", "overview", "in a nutshell"],
   },
   {
@@ -84,19 +84,19 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "price_billing",
     question: "What does it cost?",
     answer:
-      "Pilot partners get Growth-level features at a founder-friendly monthly rate we agree on the call — not a per-seat CRM tax. Public site keeps list prices soft until post-pilot. Packaged tiers after that: Showroom, Growth, Multi-site.",
+      "14-day Pilot is R0 with a 150 WhatsApp cap. Then Starter OS R7,990/mo (1,000 WA), Professional OS R14,990/mo (3,500 WA — the usual close), or Enterprise from R29,990/mo. Not a per-seat CRM tax.",
     written:
-      "Pilot = Growth features @ negotiated monthly. Public prices stay soft. Tiers: Showroom → Growth → Multi-site.",
-    note: "Do not invent a public ZAR figure unless founder confirmed today’s floor.",
+      "Pilot R0/14d → Starter R7,990 · Professional R14,990 · Enterprise from R29,990.",
+    note: "Professional OS is the hero close after Monday proof. Do not quote the old Showroom R3,999 ladder.",
     keywords: ["cost", "price", "pricing", "how much", "fee", "monthly", "subscription"],
   },
   {
     id: "q2_tiers",
     theme: "price_billing",
-    question: "What’s in Showroom vs Growth vs Multi-site?",
+    question: "What’s in Starter vs Professional vs Enterprise OS?",
     answer:
-      "Showroom = public showroom, inventory/CSV, leads, bookings, webchat Nala, click-to-chat WhatsApp. Growth adds Cloud API WhatsApp bot, higher AI/message caps, deal-score, photo angles. Multi-site = Growth plus multi-branch (groupKey + Branch switcher), highest caps, dedicated onboarding.",
-    note: "Internal ids are starter / professional / enterprise — always say the display names to dealers.",
+      "Starter OS = sales from live stock, showroom, missed-call recovery, Monday ROI, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.",
+    note: "Internal billing ids may still be starter / professional / enterprise — always say the OS display names to dealers.",
     keywords: [
       "showroom vs",
       "growth vs",
@@ -479,12 +479,12 @@ export const DEALER_QA_NEVER_SAY: string[] = [
 export const DEALER_QA_PRODUCT_TRUTHS: Array<{ truth: string; line: string }> = [
   {
     truth: "Tiers",
-    line: "Showroom, Growth, Multi-site — pilot is Growth features at a deal we agree.",
+    line: "Pilot R0/14d, Starter OS R7,990, Professional OS R14,990, Enterprise from R29,990.",
   },
-  { truth: "Pricing", line: "Public prices soft during pilot." },
+  { truth: "Pricing", line: "Public list: Pilot R0 · Starter R7,990 · Professional R14,990 · Enterprise from R29,990." },
   {
     truth: "Channels",
-    line: "Webchat on Showroom; Cloud API WhatsApp on Growth+.",
+    line: "Nala on WhatsApp from live stock on every OS plan; template fallback if LLM credits run out.",
   },
   {
     truth: "LLM",
@@ -547,7 +547,7 @@ export function formatDealerQaForSystemPrompt(): string {
     `## GrayArx Dealer Q&A Playbook (${DEALER_QA_VERSION})`,
     "Use these answers for dealer / founder / sales questions about product, pricing, WhatsApp, POPIA, contracts, SLA, VIN, multi-branch, inventory.",
     "Tone: SA dealer — confident, plain, no hype. Answers ≤ 2–3 sentences. Lead with the win.",
-    "Display names only: Showroom / Growth / Multi-site. Chat LLM: OpenAI → templates. No Manus Forge for chat.",
+    "Display names: Pilot / Starter OS / Professional OS / Enterprise OS. Chat LLM: OpenAI → templates. No Manus Forge for chat.",
     "",
   ];
 

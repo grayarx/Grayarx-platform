@@ -24,15 +24,15 @@ import { SEO_PAGES } from "@shared/seo";
 const FAQS = [
   {
     q: "What does the pilot include?",
-    a: "Pilot partners receive Growth-level features: public showroom, CSV inventory import, web + WhatsApp Nala, lead pipeline, test-drive bookings, deal scores, 8-angle photos, and trade-in network. Pricing is tailored — we confirm terms before billing goes live.",
+    a: "A 14-day Pilot at R0 with a hard cap of 150 WhatsApp conversations. Nala Dealership OS on your stock: live showroom, after-hours WhatsApp, parts and service desks, trade-in intake, missed-call recovery, and a Monday ROI email. After proof, most yards close Professional OS at R14,990/mo (3,500 WA included). Starter OS is R7,990/mo; Enterprise is from R29,990/mo.",
   },
   {
     q: "How do I add vehicles to my showroom?",
-    a: "Go to Dashboard → Inventory → Add vehicle. You can also bulk-import via Import CSV using your DMS or stock export file. Imported stock feeds your web showroom and chatbot automatically.",
+    a: "Go to Dashboard → Inventory → Add vehicle. You can also bulk-import via Import CSV using your DMS or stock export file. Imported stock feeds your web showroom and Nala on WhatsApp automatically.",
   },
   {
     q: "How do the AI agents work?",
-    a: "AI agents (Nala on WhatsApp/web, Mia on email, Lerato on bookings, Naledi on finance forms, Tumi on trade-ins, Bongi after hours) run in the background 24/7. You don’t manage an agent roster — you work Leads, Bookings, Inventory, and Pre-approvals. GrayArx founder tools (Sipho, Themba, Kagiso, Thandi) are not part of the dealership console. Themba phones dealerships to join GrayArx — he never calls your buyers.",
+    a: "Nala is the dealership OS — sales, parts, service, and trade-in on WhatsApp and web. Mia drips email, Lerato books test drives, Naledi handles finance forms, Tumi trade-ins, Bongi after hours. You work Leads, Bookings, Inventory, and Pre-approvals — not an agent roster. GrayArx founder tools (Sipho, Themba, Kagiso, Thandi) are not part of the dealership console. Themba phones dealerships to join GrayArx — he never calls your buyers.",
   },
   {
     q: "Why didn't I receive a confirmation email?",
@@ -56,7 +56,7 @@ const FAQS = [
   },
   {
     q: "How does the WhatsApp AI agent handle customer data?",
-    a: "WhatsApp messages are processed via Meta's Cloud API under Meta's data processing terms. AI responses are generated using OpenAI (with template fallbacks if the API is unavailable). Conversation logs are stored encrypted and accessible only to your dealership. Customers should always be informed — either at the start of the conversation or via a disclosure — that they may be interacting with an AI assistant.",
+    a: "Nala drafts a template from live stock or parts first. Optional OpenAI polish uses a credit; when credits or quota run out she stays in template mode so the buyer is still answered. WhatsApp messages go via Meta Cloud API. Conversation logs are stored encrypted and accessible only to your dealership. Customers should be informed they may be interacting with an AI assistant.",
   },
   {
     q: "Where are the legal documents and agreements?",
@@ -64,14 +64,14 @@ const FAQS = [
   },
   {
     q: "What languages are supported?",
-    a: "All 11 South African official languages plus Portuguese for cross-border customers.",
+    a: "All 11 South African official languages plus Portuguese. English-first for AU, UK, UAE, US, and NZ yards.",
   },
 ];
 
 const QUICK_LINKS = [
   { href: "/dealer/inventory", label: "Manage Inventory", icon: Car, desc: "Add or import vehicles" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, desc: "Test drives & demos" },
-  { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, desc: "Bulk upload for chatbots" },
+  { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, desc: "Bulk upload for Nala + showroom" },
   { href: "/legal", label: "Legal centre", icon: Scale, desc: "Agreements & POPIA forms" },
 ];
 

@@ -34,8 +34,8 @@ Your role is to:
 
 Key Information:
 - GrayArx is an AI-powered dealership operating system
-- Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: small group of SA dealerships get Growth-level features at agreed terms (no outbound AI calling)
+- Features: WhatsApp Nala from live stock, CSV showroom, parts, service, trade-in, missed-call recovery, Monday ROI
+- Pilot: 14 days at R0, 150 WhatsApp cap; then Starter OS R7,990 / Professional OS R14,990 / Enterprise from R29,990
 - Apply at: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com or 079 491 5187
 - Available 24/7 in 7 South African languages
@@ -171,7 +171,7 @@ Seswantshong sa ka ke:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ke AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Pilot: 14 days at R0 (150 WA cap); then Starter OS R7,990 / Professional OS R14,990
 - Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
@@ -205,7 +205,7 @@ Seswantshong sa ka ke:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ke AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Pilot: 14 days at R0 (150 WA cap); then Starter OS R7,990 / Professional OS R14,990
 - Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
@@ -239,7 +239,7 @@ Mushumo wa nne u ndi:
 Tshedimosetso ya Botlhokwa:
 - GrayArx ndi AI-powered dealership operating system
 - Features: web chatbots, WhatsApp integration, inventory management, test drive booking, pre-approval
-- Pilot: small group of SA dealerships get Growth-level features (no outbound AI calling)
+- Pilot: 14 days at R0 (150 WA cap); then Starter OS R7,990 / Professional OS R14,990
 - Araba ka: https://www.grayarx.com/onboarding
 - Support: support@grayarx.com kgotsa 079 491 5187
 - E teng 24/7 ka dipuo tse 7 tsa South Africa
