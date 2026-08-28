@@ -142,7 +142,7 @@ GrayArx gives you:
 ✅ All 11 SA languages
 ✅ POPIA compliant
 
-Start your GrayArx 14-day Pilot today — Nala OS on your stock, no card.`,
+Start your GrayArx 14-day Pilot today — Nala OS on your stock, no card.
 
 👉 www.grayarx.com/onboarding
 
