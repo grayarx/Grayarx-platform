@@ -60,21 +60,45 @@ export default function SetupPage() {
     void refresh();
   }, [refresh]);
 
-  async function saveAndTest() {
-    setLoading(true);
+  const sidOk = accountSid.trim().startsWith("AC");
+  const tokenOk = authToken.trim().length > 0;
+
+  async function saveAndTest(event?: React.FormEvent) {
+    event?.preventDefault();
     setError(null);
     setVerify(null);
     setSaved(false);
+
+    const sid = accountSid.trim();
+    const token = authToken.trim();
+    const webhook = webhookBaseUrl.trim() || "https://grayarx.com";
+
+    if (!sid) {
+      setError("Paste your Account SID first (starts with AC).");
+      return;
+    }
+    if (!sid.startsWith("AC")) {
+      setError(
+        "That doesn't look like an Account SID. On Twilio home, copy Account SID — it starts with AC. (Not API Key SID — that starts with SK.)",
+      );
+      return;
+    }
+    if (!token) {
+      setError("Paste your Auth Token first (Twilio home → Show).");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await fetch("/api/setup/save-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accountSid,
-          authToken,
-          webhookBaseUrl,
-          fromNumber: fromNumber || undefined,
+          accountSid: sid,
+          authToken: token,
+          webhookBaseUrl: webhook,
+          fromNumber: fromNumber.trim() || undefined,
         }),
       });
 
@@ -95,7 +119,7 @@ export default function SetupPage() {
       if (data.status) setStatus(data.status);
       await refresh();
     } catch {
-      setError("Network error — is the dev server running?");
+      setError("Network error — refresh the page and try again.");
     } finally {
       setLoading(false);
     }
@@ -112,11 +136,16 @@ export default function SetupPage() {
             Twilio setup for Themba
           </h1>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Copy from Twilio → paste below → click Save. No files, no searching.
+            Twilio Console → Account Dashboard → copy{" "}
+            <strong className="text-white">Account SID</strong> (AC…) and{" "}
+            <strong className="text-white">Auth Token</strong>.
           </p>
         </header>
 
-        <section className="rounded-xl border-2 border-emerald-600/50 bg-zinc-950 p-5 shadow-lg shadow-emerald-950/30">
+        <form
+          onSubmit={saveAndTest}
+          className="rounded-xl border-2 border-emerald-600 bg-zinc-950 p-5"
+        >
           <h2 className="text-lg font-semibold text-white">
             Paste your Twilio credentials
           </h2>
@@ -124,34 +153,33 @@ export default function SetupPage() {
           <div className="mt-4 space-y-4">
             <label className="block">
               <span className="text-sm font-medium text-zinc-300">
-                Account SID
-              </span>
-              <span className="ml-2 text-xs text-zinc-500">
-                (Twilio home → starts with AC)
+                Account SID (must start with AC)
               </span>
               <input
                 type="text"
                 value={accountSid}
                 onChange={(e) => setAccountSid(e.target.value)}
                 placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-black px-3 py-3 font-mono text-sm text-white outline-none ring-emerald-500 focus:ring-2"
+                className="mt-1.5 w-full rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-3 font-mono text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
                 autoComplete="off"
               />
+              {accountSid.trim() && !sidOk ? (
+                <p className="mt-1 text-xs text-amber-300">
+                  Must start with AC — you may have copied the wrong field.
+                </p>
+              ) : null}
             </label>
 
             <label className="block">
               <span className="text-sm font-medium text-zinc-300">
                 Auth Token
               </span>
-              <span className="ml-2 text-xs text-zinc-500">
-                (Twilio home → click Show)
-              </span>
               <input
                 type="text"
                 value={authToken}
                 onChange={(e) => setAuthToken(e.target.value)}
-                placeholder="paste your auth token here"
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-black px-3 py-3 font-mono text-sm text-white outline-none ring-emerald-500 focus:ring-2"
+                placeholder="paste auth token here"
+                className="mt-1.5 w-full rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-3 font-mono text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
                 autoComplete="off"
               />
             </label>
@@ -161,52 +189,61 @@ export default function SetupPage() {
                 Webhook URL
               </span>
               <input
-                type="url"
+                type="text"
                 value={webhookBaseUrl}
                 onChange={(e) => setWebhookBaseUrl(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-black px-3 py-3 font-mono text-sm text-white outline-none ring-emerald-500 focus:ring-2"
+                className="mt-1.5 w-full rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-3 font-mono text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
               />
             </label>
 
             <label className="block">
               <span className="text-sm font-medium text-zinc-300">
-                Phone number
-              </span>
-              <span className="ml-2 text-xs text-zinc-500">
-                (optional — add after Gray Ox bundle approved)
+                Phone number (optional for now)
               </span>
               <input
                 type="text"
                 value={fromNumber}
                 onChange={(e) => setFromNumber(e.target.value)}
-                placeholder="+2760xxxxxxx"
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-black px-3 py-3 font-mono text-sm text-white outline-none ring-emerald-500 focus:ring-2"
+                placeholder="+2760xxxxxxx — after Gray Ox approved"
+                className="mt-1.5 w-full rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-3 font-mono text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
               />
             </label>
           </div>
 
           <button
-            type="button"
-            onClick={saveAndTest}
-            disabled={loading || !accountSid.trim() || !authToken.trim()}
-            className="mt-6 w-full rounded-lg bg-emerald-500 px-4 py-3.5 text-base font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+            type="submit"
+            className="mt-6 w-full cursor-pointer rounded-lg border-2 border-white bg-emerald-500 px-4 py-4 text-lg font-bold text-white shadow-lg hover:bg-emerald-400"
+            style={{ color: "#ffffff", backgroundColor: "#10b981" }}
           >
-            {loading ? "Saving & testing…" : "Save & test connection"}
+            {loading ? "Saving & testing…" : "SAVE & TEST CONNECTION"}
           </button>
 
+          <p className="mt-2 text-center text-xs text-zinc-500">
+            {sidOk && tokenOk
+              ? "Ready — click the green button above."
+              : !sidOk
+                ? "Waiting for Account SID (starts with AC)…"
+                : "Waiting for Auth Token…"}
+          </p>
+
           {error ? (
-            <p className="mt-3 text-sm text-red-300">{error}</p>
+            <p className="mt-3 rounded-lg bg-red-950/50 p-3 text-sm text-red-200">
+              {error}
+            </p>
           ) : null}
           {saved && verify?.ok ? (
-            <p className="mt-3 text-sm text-emerald-300">
-              Connected to {verify.accountName}. Balance: {verify.balance}. Keys
-              saved.
+            <p className="mt-3 rounded-lg bg-emerald-950/50 p-3 text-sm text-emerald-200">
+              ✅ Connected to {verify.accountName}. Balance: {verify.balance}.
+              Keys saved.
             </p>
           ) : null}
           {saved && verify && !verify.ok ? (
-            <p className="mt-3 text-sm text-red-300">{verify.error}</p>
+            <p className="mt-3 rounded-lg bg-red-950/50 p-3 text-sm text-red-200">
+              Keys saved but Twilio rejected them: {verify.error}. Double-check
+              SID and Token on Twilio home page.
+            </p>
           ) : null}
-        </section>
+        </form>
 
         <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
           <h2 className="text-lg font-semibold text-white">Checklist</h2>
@@ -224,14 +261,6 @@ export default function SetupPage() {
               />
             </ul>
           ) : null}
-        </section>
-
-        <section className="mt-6 rounded-xl border border-amber-900/40 bg-amber-950/20 p-5">
-          <h2 className="font-semibold text-amber-100">Still waiting on</h2>
-          <p className="mt-2 text-sm text-amber-200/80">
-            Gray Ox regulatory bundle approval → then buy +27 mobile number → paste
-            it in Phone number above → Save again.
-          </p>
         </section>
 
         <Link
