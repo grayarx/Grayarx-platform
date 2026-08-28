@@ -366,6 +366,28 @@ async function main() {
     fail("GET /api/pricing lean", e);
   }
 
+  try {
+    const { status, body } = await json(
+      "/api/prospector/prospects?region=ZA&highAbility=1",
+    );
+    assert.equal(status, 200);
+    assert.ok(body.count >= 15);
+    assert.ok(body.totalSeeded >= 45);
+    ok("prospector ICP pool");
+  } catch (e) {
+    fail("prospector ICP pool", e);
+  }
+
+  try {
+    const { status, body } = await json("/api/regions?region=US");
+    assert.equal(status, 200);
+    assert.equal(body.region.currency, "USD");
+    assert.ok(body.region.packages.professional.amount > 0);
+    ok("multi-currency regions");
+  } catch (e) {
+    fail("multi-currency regions", e);
+  }
+
   console.log("\n---");
   if (failures.length) {
     console.error(`${failures.length} FAILURES`);

@@ -49,6 +49,21 @@ export function ProspectCard({
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300">
           {STATUS_LABELS[prospect.status]}
         </span>
+        {"regionId" in prospect && prospect.regionId ? (
+          <span className="rounded-full border border-emerald-900/50 px-2.5 py-1 text-emerald-300/90">
+            {prospect.regionId}
+          </span>
+        ) : null}
+        {"abilityToPay" in prospect && prospect.abilityToPay ? (
+          <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">
+            Pay: {prospect.abilityToPay}
+          </span>
+        ) : null}
+        {"segment" in prospect && prospect.segment ? (
+          <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-zinc-500">
+            {String(prospect.segment).replace(/_/g, " ")}
+          </span>
+        ) : null}
         {prospect.emailedAt ? (
           <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-zinc-500">
             Emailed {new Date(prospect.emailedAt).toLocaleDateString()}

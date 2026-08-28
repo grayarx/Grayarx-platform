@@ -28,8 +28,12 @@ export async function startThembaCall(input: {
         id: input.prospectId,
         name: input.lead?.dealershipName ?? "Dealership",
         location: input.lead?.location ?? "South Africa",
+        regionId: "ZA",
+        city: "Johannesburg",
         score: 0,
         status: "queued_for_call",
+        segment: "volume_used",
+        abilityToPay: "medium",
         researchNote:
           input.lead?.researchNote ??
           "I had a look at your stock online and had one question about after-hours enquiries",

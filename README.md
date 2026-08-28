@@ -13,7 +13,9 @@ npm run smoke     # live HTTP against :43123
 
 Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
-**Prospector admin:** [http://127.0.0.1:43123/admin/prospector](http://127.0.0.1:43123/admin/prospector)
+**Prospector (50+ ICP yards, CSV import, regions):** [http://127.0.0.1:43123/admin/prospector](http://127.0.0.1:43123/admin/prospector)
+
+**Merge into Grayarx-Final:** [`docs/MERGE_INTO_GRAYARX_FINAL.md`](docs/MERGE_INTO_GRAYARX_FINAL.md) · Global: [`docs/GLOBAL_EXPANSION.md`](docs/GLOBAL_EXPANSION.md)
 
 **Competitor battlecards:** [http://127.0.0.1:43123/admin/competitors](http://127.0.0.1:43123/admin/competitors) — MotorX, WhatsApp bots, DMS pricing, talk tracks, and beat roadmap. See [`docs/COMPETITOR_BATTLECARDS.md`](docs/COMPETITOR_BATTLECARDS.md).
 
