@@ -43,15 +43,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (accountSid.length !== 34) {
-    return NextResponse.json(
-      {
-        error: `Account SID should be 34 characters. Yours is ${accountSid.length}. Copy the full Account SID from Twilio home.`,
-      },
-      { status: 400 },
-    );
-  }
-  if (!authToken || authToken.length < 20) {
+  if (!authToken || authToken.length < 16) {
     return NextResponse.json(
       {
         error: `Auth Token looks too short (${authToken.length} chars). Click Show on Twilio and copy the full token.`,
