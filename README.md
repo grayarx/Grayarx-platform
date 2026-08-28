@@ -13,6 +13,10 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Prospector admin:** [http://127.0.0.1:43123/admin/prospector](http://127.0.0.1:43123/admin/prospector)
 
+**Competitor battlecards:** [http://127.0.0.1:43123/admin/competitors](http://127.0.0.1:43123/admin/competitors) — MotorX, WhatsApp bots, DMS pricing, talk tracks, and beat roadmap. See [`docs/COMPETITOR_BATTLECARDS.md`](docs/COMPETITOR_BATTLECARDS.md).
+
+**Conversion engine:** [http://127.0.0.1:43123/admin/conversion](http://127.0.0.1:43123/admin/conversion)
+
 **Live calling today:** see [`docs/TWILIO_CALLING_TODAY.md`](docs/TWILIO_CALLING_TODAY.md) — Twilio dials the yard; Themba runs the playbook on the call.
 
 To port into Grayarx-Final, see `docs/PROSPECTOR_INTEGRATION.md`.
@@ -36,6 +40,7 @@ To port into Grayarx-Final, see `docs/PROSPECTOR_INTEGRATION.md`.
 | `lib/call-stages.ts` | Stage transitions |
 | `lib/call-intel.ts` | Structured CRM/product intel schema |
 | `lib/call-intents.ts` | Shared types |
+| `lib/competitors/` | Competitor catalog, pricing bands, battlecard talk tracks |
 
 ## Playbook coverage
 

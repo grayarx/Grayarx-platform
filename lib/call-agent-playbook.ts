@@ -8,6 +8,11 @@ import type {
 } from "@/lib/call-intents";
 import type { LeadContext } from "@/lib/sales-templates";
 import { defaultStage, nextStage } from "@/lib/call-stages";
+import {
+  battlecardFromMessage,
+  competitorIntentPattern,
+  findCompetitor,
+} from "@/lib/competitors";
 
 export type { CallContext, CallIntent, SmartReply, SmartReplyResult } from "@/lib/call-intents";
 
@@ -152,18 +157,35 @@ const replies: Record<CallIntent, ReplyBuilder> = {
     intel: { outcome: "ongoing" },
     endCall: false,
   }),
-  "competitor-named": (_lead, message) => ({
-    situation: "Named competitor or alternative — don't trash, compare",
-    reply:
-      "Makes sense — a lot of yards already have something in place. We usually run a free parallel pilot so you can compare on your own stock without switching anything off. Would that kind of side-by-side look be fair?",
-    nextStep: "Log competitor name for product intel. Never criticize them.",
-    intel: {
-      competitorMentioned: extractCompetitor(message),
-      objections: ["competitor"],
-      pilotInterest: "maybe",
-    },
-    endCall: false,
-  }),
+  "competitor-named": (_lead, message) => {
+    const card = battlecardFromMessage(message);
+    if (card) {
+      return {
+        situation: `${card.competitor.name} named — coexistence + wedge`,
+        reply: card.spokenReply,
+        nextStep: `${card.nextStep} Beat lines: ${card.beatBullets.slice(0, 3).join(" | ")} Pricing: ${card.pricingContrast}`,
+        intel: {
+          competitorMentioned: card.competitor.name,
+          objections: ["competitor"],
+          pilotInterest: "maybe",
+          productFeedback: card.competitor.productLessons[0],
+        },
+        endCall: false,
+      };
+    }
+    return {
+      situation: "Named competitor or alternative — don't trash, compare",
+      reply:
+        "Makes sense — a lot of yards already have something in place. We usually run a free parallel pilot so you can compare on your own stock without switching anything off. Would that kind of side-by-side look be fair?",
+      nextStep: "Log competitor name for product intel. Never criticize them.",
+      intel: {
+        competitorMentioned: extractCompetitor(message),
+        objections: ["competitor"],
+        pilotInterest: "maybe",
+      },
+      endCall: false,
+    };
+  },
   "not-now": (lead) => ({
     situation: "Timing off — capture reactivation trigger",
     reply: `No problem — timing matters. Before I go: what would make this worth revisiting — more leads, faster response, or less admin for your team? You can reach us on ${lead.phoneNumber} when it suits.`,
@@ -359,7 +381,7 @@ const intentMatchers: Array<{ intent: CallIntent; pattern: RegExp }> = [
   {
     intent: "already-customer",
     pattern:
-      /\b(already (use|using|on|with)|we'?re (a )?customer|already signed up|already have grayarx)\b/i,
+      /\b(already (have|using|on|with) grayarx|we'?re (a |an )?(grayarx )?customer|already signed up (with|for) (you|grayarx)|already have grayarx|existing (grayarx )?client)\b/i,
   },
   {
     intent: "gatekeeper",
@@ -453,8 +475,7 @@ const intentMatchers: Array<{ intent: CallIntent; pattern: RegExp }> = [
   },
   {
     intent: "competitor-named",
-    pattern:
-      /\b(AutoTrader|Cars\.co\.za|CarShop|DealerStudio|ClickaCar|Ignition|iLead|Leadtrekker|Car Dealer 5|Revup)\b/i,
+    pattern: competitorIntentPattern(),
   },
   {
     intent: "weekend-gap",
@@ -525,6 +546,8 @@ const intentMatchers: Array<{ intent: CallIntent; pattern: RegExp }> = [
 
 function extractTools(message: string): string[] {
   const tools: string[] = [];
+  const named = findCompetitor(message);
+  if (named) tools.push(named.name);
   const patterns: Array<[RegExp, string]> = [
     [/\bAutoTrader\b/i, "AutoTrader"],
     [/\bCars\.co\.za\b/i, "Cars.co.za"],
@@ -535,16 +558,13 @@ function extractTools(message: string): string[] {
     [/\bdealer management\b/i, "DMS"],
   ];
   for (const [pattern, label] of patterns) {
-    if (pattern.test(message)) tools.push(label);
+    if (pattern.test(message) && !tools.includes(label)) tools.push(label);
   }
   return tools;
 }
 
 function extractCompetitor(message: string): string | undefined {
-  const match = intentMatchers
-    .find(({ intent }) => intent === "competitor-named")
-    ?.pattern.exec(message);
-  return match?.[0];
+  return findCompetitor(message)?.name;
 }
 
 function refineIntent(
@@ -574,6 +594,15 @@ function refineIntent(
 
   if (intent === "not-interested" && /\bthink about\b/i.test(message)) {
     return "think-about-it";
+  }
+
+  if (
+    (intent === "existing-tools" ||
+      intent === "objection-no-need" ||
+      intent === "already-customer") &&
+    findCompetitor(message)
+  ) {
+    return "competitor-named";
   }
 
   return intent;
