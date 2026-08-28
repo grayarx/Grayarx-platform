@@ -2,12 +2,21 @@
 
 ## What we charge (updated)
 
-| Plan | Price | Included WA | Overage | Who |
-| --- | --- | --- | --- | --- |
-| **Pilot** | **R0 / 14 days** | 150 cap | — | Prove Monday numbers |
-| **Starter OS** | **R7,990/mo** | 1,000 | R0.85/conv | Sales + recovery yards |
-| **Professional OS** | **R14,990/mo** | 3,500 | R0.75/conv | Full OS (hero) |
-| **Enterprise OS** | **From R29,990/mo** | 12,000 | R0.55/conv | Multi-yard + SLA |
+| Plan | Price | Included WA | LLM polish | Overage | Who |
+| --- | --- | --- | --- | --- | --- |
+| **Pilot** | **R0 / 14 days** | 150 hard cap | 150 | — | Prove Monday numbers |
+| **Starter OS** | **R7,990/mo** | 1,000 | 1,000 | R0.85/conv | Sales + recovery yards |
+| **Professional OS** | **R14,990/mo** | 3,500 | 3,500 | R0.75/conv | Full OS (hero) |
+| **Enterprise OS** | **From R29,990/mo** | 12,000 | 12,000 | R0.55/conv | Multi-yard + SLA |
+
+### How caps implement (not just marketing numbers)
+1. Choosing a plan on the dealership (`planId`) **loads these caps automatically**.
+2. Each unique buyer WhatsApped that month burns 1 WA conversation.
+3. Nala always drafts a **template** from live stock/parts first.
+4. Optional OpenAI **polish** burns 1 polish credit; when credits/quota run out → **auto template mode** (buyer still answered).
+5. Pilot hard-stops WA. Paid plans continue with overage so we stay profitable.
+
+See `docs/HOW_GRAYARX_WORKS.md` and `GET /api/billing/usage`.
 
 ## What it costs us (est. ZAR / yard / month)
 

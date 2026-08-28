@@ -24,6 +24,10 @@ export async function POST(request: Request) {
     name: typeof body.name === "string" ? body.name : undefined,
     showroomSlug:
       typeof body.showroomSlug === "string" ? body.showroomSlug : undefined,
+    planId:
+      typeof body.planId === "string"
+        ? (body.planId as Parameters<typeof updateDealershipSettings>[1]["planId"])
+        : undefined,
     modules:
       typeof body.modules === "object" && body.modules
         ? (body.modules as Parameters<typeof updateDealershipSettings>[1]["modules"])

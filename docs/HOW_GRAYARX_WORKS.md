@@ -75,13 +75,42 @@ GrayArx is the **dealership operating system**. Nala is the AI that talks to buy
 | Email | Mock outbox `data/email-outbox.json` | Resend |
 | CRM | `mock://` deliveries | Real HTTP webhooks |
 | Twilio missed call | JSON POST works | Signed Twilio form POST |
+| LLM polish | Templates only (always works) | `OPENAI_API_KEY` optional rewrite |
+
+---
+
+## Plans, WhatsApp caps, and OpenAI polish (how metering works)
+
+1. **Dealer chooses a plan** (Pilot / Starter / Professional / Enterprise)  
+   → `POST /api/billing/usage` `{ "action":"set_plan", "dealershipId":"demo-yard", "planId":"professional" }`  
+   → Caps load automatically from that package (no manual credit config).
+
+2. **WhatsApp conversation meter**  
+   - 1 unique buyer phone messaged in the calendar month = 1 conversation.  
+   - Pilot: hard stop at 150 (we don’t bleed free forever).  
+   - Paid: keep sending; overage accrues (e.g. Professional R0.75/conv).
+
+3. **LLM polish meter (separate from WhatsApp)**  
+   - Nala **always** builds a locked **template** first (real stock/prices — never invented).  
+   - If polish credits remain **and** `OPENAI_API_KEY` works → optional tone rewrite.  
+   - If polish credits are used up, OpenAI returns `insufficient_quota`, or there is no key → **auto-swap to templates**. Buyer still gets answered; we stop burning margin.
+
+4. **Check usage anytime** → `GET /api/billing/usage?dealershipId=demo-yard`
+
+| Plan | WA included | Polish credits | Overage |
+| --- | --- | --- | --- |
+| Pilot | 150 (hard stop) | 150 | — |
+| Starter | 1,000 | 1,000 | R0.85 |
+| Professional | 3,500 | 3,500 | R0.75 |
+| Enterprise | 12,000 | 12,000 | R0.55 |
+
+This is the Growth-Plus-style “X replies included” model — except we meter **conversations** (unique buyers/month) plus **polish credits**, and templates keep the OS alive when AI budget is gone.
 
 ---
 
 ## Still upgrade next
 
-- Live AutoTrader/Cars **API keys** (fixtures work today)
-- Meta WhatsApp **token** in production
-- Branded **showroom embed** on dealer website
-- Deeper photo upload for trade-in
-- Calendar sync for service
+- Live AutoTrader/Cars **dealer webhook secrets** (fixture poll + webhook shape work today)
+- Meta WhatsApp **token** + Twilio SA **Gray Ox** number for live voice
+- Dealer website showroom embed snippet
+- Stripe/PayFast invoice for overage lines

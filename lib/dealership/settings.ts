@@ -15,9 +15,17 @@ export type PartsPricingSource =
   | "dms_feed"
   | "supplier_feed";
 
+export type DealershipPlanId =
+  | "pilot"
+  | "starter"
+  | "professional"
+  | "enterprise";
+
 export type DealershipSettings = {
   dealershipId: string;
   name: string;
+  /** Active sell package — drives WA + LLM polish caps automatically */
+  planId: DealershipPlanId;
   modules: DealershipModules;
   parts: {
     enabled: boolean;
@@ -52,6 +60,7 @@ function defaultSettings(dealershipId: string, name: string): DealershipSettings
   return {
     dealershipId,
     name,
+    planId: "pilot",
     modules: { ...DEFAULT_MODULES },
     parts: {
       enabled: true,
@@ -66,7 +75,7 @@ function defaultSettings(dealershipId: string, name: string): DealershipSettings
 }
 
 function load(): State {
-  return readJsonFile(FILE, {
+  const state = readJsonFile(FILE, {
     settings: [
       defaultSettings("demo-yard", "Sandton Motors"),
       {
@@ -86,6 +95,11 @@ function load(): State {
       },
     ],
   });
+  // Migrate older settings files missing planId
+  for (const s of state.settings) {
+    if (!s.planId) s.planId = "pilot";
+  }
+  return state;
 }
 
 function save(state: State) {
@@ -115,6 +129,7 @@ export function updateDealershipSettings(
   > & {
     modules?: Partial<DealershipModules>;
     parts?: Partial<DealershipSettings["parts"]>;
+    planId?: DealershipPlanId;
   },
 ): DealershipSettings {
   const state = load();
@@ -125,6 +140,7 @@ export function updateDealershipSettings(
   }
   if (patch.name) settings.name = patch.name;
   if (patch.showroomSlug) settings.showroomSlug = patch.showroomSlug;
+  if (patch.planId) settings.planId = patch.planId;
   if (patch.modules) settings.modules = { ...settings.modules, ...patch.modules };
   if (patch.parts) {
     settings.parts = { ...settings.parts, ...patch.parts };

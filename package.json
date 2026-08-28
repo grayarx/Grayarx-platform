@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversion/conversion.test.ts lib/competitors/competitors.test.ts lib/os/os.test.ts lib/os/parts-integration.test.ts lib/platform/platform.test.ts lib/marketplace/webhook.test.ts lib/value/value.test.ts lib/os/unit-economics.test.ts",
+    "test": "node --import tsx --test lib/conversion/conversion.test.ts lib/competitors/competitors.test.ts lib/os/os.test.ts lib/os/parts-integration.test.ts lib/platform/platform.test.ts lib/marketplace/webhook.test.ts lib/value/value.test.ts lib/os/unit-economics.test.ts lib/billing/usage.test.ts",
     "smoke": "npx tsx scripts/smoke-e2e.ts",
     "test:all": "npm test && npm run smoke",
     "sync:twilio": "node scripts/sync-twilio-env.mjs",

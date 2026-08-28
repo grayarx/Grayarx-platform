@@ -7,17 +7,28 @@ import { sendWhatsApp, type WhatsAppMessage } from "@/lib/whatsapp/send";
 import { emitCrmEvent, type CrmDelivery } from "@/lib/crm/webhooks";
 import { routeBranchByCity } from "@/lib/branches/store";
 import { formatVehicleLine, findVehicle } from "@/lib/conversion/stock";
+import { polishNalaReply } from "@/lib/billing/polish";
+import {
+  gateWhatsAppSend,
+  recordWhatsAppConversation,
+  usageSnapshot,
+  type WhatsAppGate,
+} from "@/lib/billing/usage";
 
 export type OsIntent =
   | "sales"
   | "parts"
   | "service"
   | "trade_in"
-  | "finance";
+  | "finance"
+  | "blocked";
 
 export type OsDelivery = {
   whatsapp: WhatsAppMessage;
   crm: CrmDelivery[];
+  polishMode: "llm_polish" | "template";
+  polishReason: string;
+  usageGate: WhatsAppGate;
 };
 
 export type OsTurnResult =
@@ -26,6 +37,7 @@ export type OsTurnResult =
       reply: string;
       lead: Lead;
       delivery: OsDelivery;
+      usage: ReturnType<typeof usageSnapshot>;
     }
   | {
       intent: "parts";
@@ -33,24 +45,34 @@ export type OsTurnResult =
       enquiry: PartsEnquiry;
       held?: PartsEnquiry;
       delivery: OsDelivery;
+      usage: ReturnType<typeof usageSnapshot>;
     }
   | {
       intent: "service";
       reply: string;
       booking: ServiceBooking;
       delivery: OsDelivery;
+      usage: ReturnType<typeof usageSnapshot>;
     }
   | {
       intent: "trade_in";
       reply: string;
       tradeIn: TradeIn;
       delivery: OsDelivery;
+      usage: ReturnType<typeof usageSnapshot>;
     }
   | {
       intent: "finance";
       reply: string;
       application: FinanceApplication;
       delivery: OsDelivery;
+      usage: ReturnType<typeof usageSnapshot>;
+    }
+  | {
+      intent: "blocked";
+      reply: string;
+      reason: string;
+      usage: ReturnType<typeof usageSnapshot>;
     };
 
 export function detectOsIntent(message: string): OsIntent {
@@ -90,6 +112,7 @@ async function deliver(input: {
   to: string;
   body: string;
   dealershipId: string;
+  buyerMessage?: string;
   leadId?: string;
   event:
     | "lead.answered"
@@ -98,19 +121,50 @@ async function deliver(input: {
     | "tradein.captured"
     | "viewing.booked";
   payload: Record<string, unknown>;
-}): Promise<OsDelivery> {
+}): Promise<OsDelivery | { blocked: true; reason: string; usageGate: WhatsAppGate }> {
+  const usageGate = gateWhatsAppSend({
+    dealershipId: input.dealershipId,
+    buyerPhone: input.to,
+  });
+  if (!usageGate.allowed) {
+    return { blocked: true, reason: usageGate.reason, usageGate };
+  }
+
+  const polished = await polishNalaReply({
+    dealershipId: input.dealershipId,
+    templateReply: input.body,
+    buyerMessage: input.buyerMessage,
+  });
+
   const whatsapp = await sendWhatsApp({
     to: input.to,
-    body: input.body,
+    body: polished.reply,
     dealershipId: input.dealershipId,
     leadId: input.leadId,
   });
+  if (whatsapp.status === "sent" && usageGate.isNewConversation) {
+    recordWhatsAppConversation({
+      dealershipId: input.dealershipId,
+      buyerPhone: input.to,
+    });
+  }
   const crm = await emitCrmEvent({
     event: input.event,
     dealershipId: input.dealershipId,
-    payload: { ...input.payload, whatsappMessageId: whatsapp.id },
+    payload: {
+      ...input.payload,
+      whatsappMessageId: whatsapp.id,
+      polishMode: polished.mode,
+      usageOverage: usageGate.overage,
+    },
   });
-  return { whatsapp, crm };
+  return {
+    whatsapp,
+    crm,
+    polishMode: polished.mode,
+    polishReason: polished.reason,
+    usageGate,
+  };
 }
 
 /**
@@ -129,6 +183,32 @@ export async function handleOsMessage(input: {
   const dealershipId =
     input.dealershipId ?? routeBranchByCity(input.message);
 
+  async function finishDeliver(
+    template: string,
+    event: Parameters<typeof deliver>[0]["event"],
+    payload: Record<string, unknown>,
+    leadId?: string,
+  ): Promise<OsDelivery | OsTurnResult> {
+    const delivery = await deliver({
+      to: input.buyerPhone,
+      body: template,
+      dealershipId,
+      buyerMessage: input.message,
+      leadId,
+      event,
+      payload,
+    });
+    if ("blocked" in delivery && delivery.blocked) {
+      return {
+        intent: "blocked",
+        reply: delivery.reason,
+        reason: delivery.reason,
+        usage: usageSnapshot(dealershipId),
+      };
+    }
+    return delivery;
+  }
+
   if (intent === "parts") {
     const { enquiry } = quotePart({
       buyerName: input.buyerName,
@@ -146,23 +226,19 @@ export async function handleOsMessage(input: {
       if (!("error" in result)) held = result;
     }
     const reply = held?.nalaReply ?? enquiry.nalaReply;
-    const delivery = await deliver({
-      to: input.buyerPhone,
-      body: reply,
-      dealershipId,
-      event: "parts.quoted",
-      payload: {
-        enquiryId: enquiry.id,
-        partId: enquiry.partId,
-        status: held?.status ?? enquiry.status,
-      },
+    const delivery = await finishDeliver(reply, "parts.quoted", {
+      enquiryId: enquiry.id,
+      partId: enquiry.partId,
+      status: held?.status ?? enquiry.status,
     });
+    if ("intent" in delivery) return delivery;
     return {
       intent: "parts",
-      reply,
+      reply: delivery.whatsapp.body,
       enquiry: held ?? enquiry,
       held,
       delivery,
+      usage: usageSnapshot(dealershipId),
     };
   }
 
@@ -172,14 +248,19 @@ export async function handleOsMessage(input: {
       buyerPhone: input.buyerPhone,
       message: input.message,
     });
-    const delivery = await deliver({
-      to: input.buyerPhone,
-      body: booking.nalaReply,
-      dealershipId,
-      event: "service.booked",
-      payload: { bookingId: booking.id, serviceType: booking.serviceType },
-    });
-    return { intent: "service", reply: booking.nalaReply, booking, delivery };
+    const delivery = await finishDeliver(
+      booking.nalaReply,
+      "service.booked",
+      { bookingId: booking.id, serviceType: booking.serviceType },
+    );
+    if ("intent" in delivery) return delivery;
+    return {
+      intent: "service",
+      reply: delivery.whatsapp.body,
+      booking,
+      delivery,
+      usage: usageSnapshot(dealershipId),
+    };
   }
 
   if (intent === "trade_in") {
@@ -188,19 +269,24 @@ export async function handleOsMessage(input: {
       buyerPhone: input.buyerPhone,
       message: input.message,
     });
-    const delivery = await deliver({
-      to: input.buyerPhone,
-      body: tradeIn.nalaReply,
-      dealershipId,
-      event: "tradein.captured",
-      payload: {
+    const delivery = await finishDeliver(
+      tradeIn.nalaReply,
+      "tradein.captured",
+      {
         tradeInId: tradeIn.id,
         make: tradeIn.make,
         model: tradeIn.model,
         band: tradeIn.estimatedBandZar,
       },
-    });
-    return { intent: "trade_in", reply: tradeIn.nalaReply, tradeIn, delivery };
+    );
+    if ("intent" in delivery) return delivery;
+    return {
+      intent: "trade_in",
+      reply: delivery.whatsapp.body,
+      tradeIn,
+      delivery,
+      usage: usageSnapshot(dealershipId),
+    };
   }
 
   if (intent === "finance") {
@@ -208,7 +294,6 @@ export async function handleOsMessage(input: {
       make: undefined,
       model: undefined,
     });
-    // Prefer vehicle mentioned in message via stock hints from sales path
     const { lead } = ingestLead({
       buyerName: input.buyerName,
       buyerPhone: input.buyerPhone,
@@ -226,22 +311,22 @@ export async function handleOsMessage(input: {
       vehicleLabel: matched ? formatVehicleLine(matched) : undefined,
       dealershipId,
     });
-    const delivery = await deliver({
-      to: input.buyerPhone,
-      body: application.nalaReply,
-      dealershipId,
-      leadId: lead.id,
-      event: "lead.answered",
-      payload: {
+    const delivery = await finishDeliver(
+      application.nalaReply,
+      "lead.answered",
+      {
         financeApplicationId: application.id,
         partnerUrl: application.partnerUrl,
       },
-    });
+      lead.id,
+    );
+    if ("intent" in delivery) return delivery;
     return {
       intent: "finance",
-      reply: application.nalaReply,
+      reply: delivery.whatsapp.body,
       application,
       delivery,
+      usage: usageSnapshot(dealershipId),
     };
   }
 
@@ -252,15 +337,20 @@ export async function handleOsMessage(input: {
     source: input.source === "website" ? "website" : "whatsapp",
     dealershipId,
   });
-  const delivery = await deliver({
-    to: input.buyerPhone,
-    body: nalaReply,
-    dealershipId,
-    leadId: lead.id,
-    event: "lead.answered",
-    payload: { leadId: lead.id, vehicleId: lead.vehicleId },
-  });
-  return { intent: "sales", reply: nalaReply, lead, delivery };
+  const delivery = await finishDeliver(
+    nalaReply,
+    "lead.answered",
+    { leadId: lead.id, vehicleId: lead.vehicleId },
+    lead.id,
+  );
+  if ("intent" in delivery) return delivery;
+  return {
+    intent: "sales",
+    reply: delivery.whatsapp.body,
+    lead,
+    delivery,
+    usage: usageSnapshot(dealershipId),
+  };
 }
 
 export async function bookViewingAndNotify(input: {
@@ -286,6 +376,9 @@ export async function bookViewingAndNotify(input: {
       vehicleId: result.booking.vehicleId,
     },
   });
+  if ("blocked" in delivery && delivery.blocked) {
+    return { error: delivery.reason };
+  }
 
   return { ...result, delivery };
 }

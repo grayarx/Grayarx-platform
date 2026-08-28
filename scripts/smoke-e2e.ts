@@ -331,6 +331,27 @@ async function main() {
     fail("MotorX battlecard pricing", e);
   }
 
+  try {
+    const setPlan = await json("/api/billing/usage", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "set_plan",
+        dealershipId: "demo-yard",
+        planId: "professional",
+      }),
+    });
+    assert.equal(setPlan.status, 200);
+    assert.equal(setPlan.body.package.id, "professional");
+    assert.equal(setPlan.body.snapshot.whatsapp.included, 3500);
+    assert.equal(setPlan.body.snapshot.llmPolish.included, 3500);
+    const snap = await json("/api/billing/usage?dealershipId=demo-yard");
+    assert.equal(snap.status, 200);
+    assert.ok(snap.body.snapshot.howItWorks.length >= 4);
+    ok("billing plan + usage caps");
+  } catch (e) {
+    fail("billing plan + usage caps", e);
+  }
+
   console.log("\n---");
   if (failures.length) {
     console.error(`${failures.length} FAILURES`);
