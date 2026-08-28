@@ -15,6 +15,10 @@ Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
 **Competitor battlecards:** [http://127.0.0.1:43123/admin/competitors](http://127.0.0.1:43123/admin/competitors) — MotorX, WhatsApp bots, DMS pricing, talk tracks, and beat roadmap. See [`docs/COMPETITOR_BATTLECARDS.md`](docs/COMPETITOR_BATTLECARDS.md).
 
+**Dealership OS:** [http://127.0.0.1:43123/admin/os](http://127.0.0.1:43123/admin/os) — sales + parts + service + trade-in router. Strategy: [`docs/OS_STRATEGY.md`](docs/OS_STRATEGY.md).
+
+**Pricing matrix:** [http://127.0.0.1:43123/admin/pricing](http://127.0.0.1:43123/admin/pricing) — every competitor price we can document. [`docs/COMPETITOR_PRICING.md`](docs/COMPETITOR_PRICING.md).
+
 **Conversion engine:** [http://127.0.0.1:43123/admin/conversion](http://127.0.0.1:43123/admin/conversion)
 
 **Live calling today:** see [`docs/TWILIO_CALLING_TODAY.md`](docs/TWILIO_CALLING_TODAY.md) — Twilio dials the yard; Themba runs the playbook on the call.

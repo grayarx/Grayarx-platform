@@ -64,7 +64,7 @@ export function buildBattlecard(competitor: Competitor): BattlecardView {
         )
       : competitor.gaps.map((g) => `Gap we exploit: ${g}`);
 
-  const pricingContrast = `They: ${competitor.pricing.public}. We: free 14-day pilot, then Convert R2,490–R3,990/mo for conversion-only (keep their stack).`;
+  const pricingContrast = `They: ${competitor.pricing.public}. We: free 14-day pilot, then Starter OS R5,990 / Professional OS R11,990 / Enterprise from R19,990 — AI dealership OS (sales + parts + service), not a cheap chatbot.`;
 
   return {
     competitor,

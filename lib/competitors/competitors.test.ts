@@ -20,7 +20,7 @@ describe("competitor battlecards", () => {
     assert.equal(c?.id, "motorx");
     const card = battlecardFromMessage("We use Motor X");
     assert.ok(card);
-    assert.match(card!.spokenReply, /keep MotorX/i);
+    assert.match(card!.spokenReply, /dealership OS/i);
     assert.ok(card!.beatBullets.length >= 3);
   });
 
@@ -33,6 +33,6 @@ describe("competitor battlecards", () => {
   it("price-anchors Raimond", () => {
     const card = battlecardFromMessage("We looked at Raimond at ten thousand");
     assert.equal(card?.competitor.id, "raimond");
-    assert.match(card!.pricingContrast, /R2,490/);
+    assert.match(card!.pricingContrast, /R11,990/);
   });
 });

@@ -1,7 +1,8 @@
 /**
  * Competitive intel for GrayArx sales (Themba) and product planning.
  * Prices: public figures where known; otherwise bands / "quote only".
- * Rule: never trash competitors — sell the conversion layer beside them.
+ * Rule: never trash competitors. GrayArx is the AI-native dealership OS —
+ * sales, parts, service, recovery, proof. Coexist with DMS/CRM when needed.
  */
 
 export type CompetitorCategory =
@@ -108,18 +109,24 @@ export const COMPETITORS: Competitor[] = [
     ],
     sameAsGrayArx: "no",
     coexistence:
-      "Keep MotorX as the dealership OS. GrayArx sits on top of their leads and converts after-hours → booked viewing.",
+      "GrayArx is the AI OS that runs buyer conversations across sales, parts, and service. MotorX can remain a system of record for CRM/feeds — or yards can run GrayArx as the primary OS.",
     oneLiner:
-      "MotorX runs the dealership. GrayArx never lets an AutoTrader lead go cold overnight.",
+      "MotorX assists your team. GrayArx is the OS that answers, books, and proves ROI — sales, parts, and service.",
     talkTrack:
-      "Perfect — keep MotorX. We don't replace your CRM or stock feeds. We sit on the leads MotorX and AutoTrader already collect and turn after-hours enquiries into booked viewings before your team opens. Free parallel pilot — nothing to switch off.",
-    sayNever: "Cancel MotorX / we're better at everything.",
+      "MotorX is a strong ops platform — keep the CRM and feeds if you want. GrayArx is the dealership OS that actually owns the buyer: Nala answers from live stock after hours, quotes parts, books service, captures trade-ins, and shows Monday ROI. Free 14-day pilot on your stock — then Professional OS at R11,990/mo for the full stack.",
+    sayNever: "Cancel MotorX or trash their product.",
     categories: [
       {
         category: "After-hours buyer chat",
         they: "WhatsApp inbox + AI suggestions for staff",
         we: "Nala answers alone from live stock",
         beat: "Own the first response when nobody is online",
+      },
+      {
+        category: "Parts & service",
+        they: "Not the core AI product",
+        we: "Parts quotes + service booking in the same OS",
+        beat: "One OS vs bolt-on bots",
       },
       {
         category: "Marketplace lead at 21:00",
@@ -136,20 +143,20 @@ export const COMPETITORS: Competitor[] = [
       {
         category: "Proof",
         they: "Platform feature list",
-        we: "Monday ROI: recovered leads + viewings booked",
+        we: "Monday ROI across sales, parts, service",
         beat: "Outcome report, not a module tour",
       },
       {
-        category: "Risk & price",
-        they: "Full suite (custom multi-module)",
-        we: "Conversion-only tier + free pilot",
-        beat: "Cheaper lane, zero cancel of MotorX",
+        category: "Price",
+        they: "Full suite custom (demo-priced)",
+        we: "Pilot free → Starter R5,990 / Professional R11,990 / Enterprise from R19,990",
+        beat: "Transparent OS pricing vs opaque custom",
       },
     ],
     productLessons: [
-      "Must integrate / webhook into MotorX CRM — friend the platform",
-      "Never rebuild stock syndication or e-sign first",
-      "Win on autonomous after-hours + Monday proof",
+      "Ship CRM webhooks so MotorX users feel zero rip-and-replace risk",
+      "Win on autonomous AI OS + parts/service — not e-sign/DMS",
+      "Price as OS (Professional R11,990+), never as cheap chatbot",
     ],
   },
   {
@@ -463,17 +470,17 @@ export const COMPETITORS: Competitor[] = [
     coexistence: "Price under Raimond Pro while selling outcomes not chat counts.",
     oneLiner: "They sell chats. We sell booked viewings — usually cheaper.",
     talkTrack:
-      "Raimond-style bots often sit at R5–10k for chat volume. Our Convert package is typically R2.5–4k for live-stock recovery and booked viewings — and the pilot is free so you only pay if Monday looks good.",
+      "Raimond-style bots sit at R5–10k for chat volume. GrayArx Professional OS is R11,990/mo for sales + parts + service + recovery + Monday proof — an OS, not a chat counter. Pilot is free so Monday decides.",
     sayNever: "",
     categories: [
       {
         category: "Pricing",
         they: "R5k–R10k chat tiers",
-        we: "R2.5k–R4k conversion tier + free pilot",
-        beat: "Cheaper + outcome-priced",
+        we: "Starter R5,990 / Professional R11,990 OS",
+        beat: "Priced as OS; more modules than a bot",
       },
     ],
-    productLessons: ["Publish clear ZAR packages vs chat-volume competitors"],
+    productLessons: ["Publish clear ZAR OS packages vs chat-volume competitors"],
   },
   {
     id: "visio_bdc",
@@ -506,7 +513,7 @@ export const COMPETITORS: Competitor[] = [
         beat: "First mile done before staff open WhatsApp",
       },
     ],
-    productLessons: ["Price Convert above Visio Starter, below their Scale + Raimond"],
+    productLessons: ["Price Starter OS at/above Visio Scale — we do more than templates"],
   },
   {
     id: "privyr",
@@ -597,16 +604,16 @@ export const COMPETITORS: Competitor[] = [
     strengths: ["Flexible custom builds", "Broad automation menu"],
     gaps: ["Agency pricing / project risk", "Not a fixed dealer product"],
     sameAsGrayArx: "partial",
-    coexistence: "Undercut agency retainers with a productised Convert tier.",
-    oneLiner: "Custom agency vs productised conversion — we win on price clarity and pilot.",
+    coexistence: "Productised OS vs custom agency retainers.",
+    oneLiner: "Fixed OS product vs R15k agency builds.",
     talkTrack:
-      "Custom AI builds often land R15k/mo. Our Convert package is a fixed product at a fraction of that, free pilot, Monday ROI — no project scope creep.",
+      "Custom AI builds often land around R14,900/mo and climb to R26–50k. GrayArx Professional OS is R11,990 fixed — sales, parts, service, trade-in, Monday ROI — free pilot, no scope creep.",
     sayNever: "",
     categories: [
       {
         category: "Pricing clarity",
         they: "R2.5k–R26k / ~R15k typical",
-        we: "R2.5–4k Convert + free pilot",
+        we: "Pilot free → Professional R11,990 OS",
         beat: "Product price vs agency quote",
       },
     ],
@@ -663,83 +670,88 @@ export const GRAYARX_PACKAGES = [
     id: "pilot",
     name: "Pilot",
     price: "R0 / 14 days",
-    target: "Any yard (esp. MotorX / bot users)",
+    target: "Any yard — prove the OS on their stock",
     includes: [
-      "Nala on their live stock",
-      "Web + one channel",
-      "Monday recovery report",
+      "Nala sales + parts + service + trade-in",
+      "Live stock",
+      "Monday ROI report",
     ],
   },
   {
-    id: "convert",
-    name: "Convert",
-    price: "R2,490–R3,990/mo",
-    target: "MotorX / Adas / Visio users who need conversion only",
+    id: "starter",
+    name: "Starter OS",
+    price: "R5,990/mo",
+    target: "Single-yard independents (replace chatbot + nurture)",
     includes: [
-      "Web + WhatsApp",
-      "Marketplace lead recovery",
-      "Missed-call → WhatsApp",
+      "AI sales from live stock",
+      "Marketplace + missed-call recovery",
       "Monday ROI",
     ],
   },
   {
-    id: "growth",
-    name: "Growth",
-    price: "R4,990–R7,990/mo",
-    target: "Yards without a full platform / higher volume",
+    id: "professional",
+    name: "Professional OS",
+    price: "R11,990/mo",
+    target: "Full AI dealership OS — sales, parts, service",
     includes: [
-      "Everything in Convert",
-      "Branded showroom / embed",
-      "Higher volume",
-      "Invoice / pay links",
-      "Parts & service WhatsApp (roadmap)",
+      "Everything in Starter",
+      "Parts desk + service booking",
+      "Trade-in intake",
+      "Branded showroom path",
     ],
   },
   {
-    id: "group",
-    name: "Group",
-    price: "Custom",
-    target: "Multi-yard groups",
-    includes: ["Multi-branch", "SSO", "SLA", "CRM webhooks (MotorX/CarLeads)"],
+    id: "enterprise",
+    name: "Enterprise OS",
+    price: "From R19,990/mo",
+    target: "Multi-yard / MotorX-class groups",
+    includes: [
+      "Multi-branch + SLA",
+      "CRM/DMS webhooks",
+      "Finance partner link",
+      "Group ROI",
+    ],
   },
 ] as const;
 
-/** Ordered product bets to win every category without becoming MotorX */
+/** Ordered product bets to stay the best OS */
 export const BEAT_ROADMAP = [
   {
-    phase: "Now (table stakes)",
+    phase: "Live now",
+    items: [
+      "Sales conversion (Nala + live stock)",
+      "Parts desk (quote + hold)",
+      "Service booking",
+      "Trade-in intake → appraiser",
+      "Monday ROI + competitor/OS desks",
+    ],
+  },
+  {
+    phase: "Ship next (table stakes)",
     items: [
       "Live AutoTrader + Cars.co.za lead ingest",
       "Production Meta WhatsApp send",
-      "Missed-call → WhatsApp recovery (Twilio)",
-      "Auto Monday email ROI report",
-      "CRM webhook into MotorX / CarLeads",
+      "Missed-call → WhatsApp (Twilio production)",
+      "Auto Monday email across sales/parts/service",
+      "CRM webhook into MotorX / CarLeads / Adas",
     ],
   },
   {
-    phase: "Next (close cousin gaps)",
+    phase: "Then (Enterprise depth)",
     items: [
-      "Parts & service WhatsApp (beat Trinstel pitch)",
-      "Trade-in capture → appraiser handoff",
-      "Finance pre-qual partner link (don't build a bank)",
-      "Multi-branch stock routing",
-    ],
-  },
-  {
-    phase: "Later (premium, still not DMS)",
-    items: [
-      "Buyer showroom embed / branded site",
+      "Multi-branch stock routing + group ROI",
+      "Finance pre-qual partner (don't build a bank)",
+      "Buyer showroom embed",
       "No-show reminders + rebook",
-      "Group reporting / SSO",
     ],
   },
   {
     phase: "Do not build first",
     items: [
-      "Full DMS (Adas/Autosoft already cheap & deep)",
+      "Full accounting DMS (Adas already R1,260/mo)",
       "Cancel-AutoTrader features",
-      "Social Shorts / marketing factory until conversion proven",
-      "E-sign + full finance OS (MotorX lane)",
+      "Social Shorts / marketing factory before OS proof",
+      "In-house e-sign + lender OS (partner instead)",
     ],
   },
 ] as const;
@@ -752,27 +764,27 @@ export const PRICE_BANDS = [
   },
   {
     band: "WhatsApp AI / chatbots",
-    range: "~R4,000–R12,000/mo (often quote-only; Raimond R5–10k)",
+    range: "R5,000–R10,000/mo public (Raimond); others quote-only ~R4–12k",
     examples: "DealershipIQ, Trinstel, Conversio, Raimond",
   },
   {
     band: "Custom AI agency builds",
-    range: "R2,500–R26,000/mo (typical ~R14,900)",
+    range: "R2,500–R26,000/mo (typical ~R14,900); complex R50k+",
     examples: "AI Automated Solutions",
   },
   {
     band: "DMS / back-office",
-    range: "~R179–R1,500+/mo entry; Autosoft packages from ~R9,500",
+    range: "Adas R1,260 + cloud; Autosoft from ~R9,500; Jouver from R179",
     examples: "Jouver, Adas, Autosoft, VMG",
   },
   {
     band: "Full dealership platform",
-    range: "Custom ZAR (Starter → Enterprise)",
+    range: "Custom ZAR (Starter → Enterprise) — demo only",
     examples: "MotorX",
   },
   {
-    band: "GrayArx Convert (suggested)",
-    range: "R2,490–R3,990/mo (+ free 14-day pilot)",
-    examples: "Undercuts Raimond & agencies; sits under full MotorX",
+    band: "GrayArx Dealership OS",
+    range: "Pilot R0 → Starter R5,990 → Professional R11,990 → Enterprise from R19,990",
+    examples: "Priced as OS above bots; below opaque agency/MotorX custom",
   },
 ] as const;
