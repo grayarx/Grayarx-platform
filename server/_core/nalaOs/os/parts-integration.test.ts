@@ -14,31 +14,46 @@ import { attachTradeInPhoto, captureTradeIn } from "@nalaOs/os/tradein";
 import { getServiceCalendar, bookService } from "@nalaOs/os/service";
 
 describe("parts catalog + optional module", () => {
-  it("imports dealer SKUs and retail prices; never invents blanks", () => {
+  it("imports dealer SKUs and retail prices; never invents blanks", async () => {
     const csv = [
       "sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier",
       "ALT-POLO,06H903023,Alternator Polo,Volkswagen Polo,Volkswagen,Polo,2018,2024,2200,3899,3,Bosch Dist",
       "BAD-ROW,,,,,",
     ].join("\n");
     const rows = parsePartsCsv(csv);
-    const result = importPartsCatalog({
+    const result = await importPartsCatalog({
       dealershipId: "demo-yard",
       rows,
       source: "csv_import",
     });
     assert.ok(result.imported + result.updated >= 1);
     assert.ok(result.skipped.some((s) => s.sku === "BAD-ROW" || s.reason.includes("Missing")));
-    const alt = listAllParts("demo-yard").find((p) => p.sku === "ALT-POLO");
+    const alt = (await listAllParts("demo-yard")).find((p) => p.sku === "ALT-POLO");
     assert.ok(alt);
     assert.equal(alt!.retailPrice, 3899);
     assert.equal(alt!.oemNumber, "06H903023");
   });
 
-  it("marks up cost-only rows using dealer markup settings", () => {
+  it("skips CSV rows that have neither retail nor cost price", async () => {
+    const csv = [
+      "sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier",
+      "NO-PRICE,,Mystery gasket,Toyota Hilux,Toyota,Hilux,2016,2024,,,2,",
+    ].join("\n");
+    const result = await importPartsCatalog({
+      dealershipId: "demo-yard",
+      rows: parsePartsCsv(csv),
+    });
+    assert.equal(result.imported, 0);
+    assert.ok(result.skipped.some((s) => s.sku === "NO-PRICE" && /pricing|costPrice|retailPrice/i.test(s.reason)));
+    const ghost = (await listAllParts("demo-yard")).find((p) => p.sku === "NO-PRICE");
+    assert.equal(ghost, undefined);
+  });
+
+  it("marks up cost-only rows using dealer markup settings", async () => {
     updateDealershipSettings("demo-yard", {
       parts: { defaultMarkupPercent: 50 },
     });
-    const result = importPartsCatalog({
+    const result = await importPartsCatalog({
       dealershipId: "demo-yard",
       rows: [
         {
@@ -51,15 +66,48 @@ describe("parts catalog + optional module", () => {
       ],
     });
     assert.equal(result.skipped.length, 0);
-    const part = listAllParts("demo-yard").find((p) => p.sku === "COST-ONLY-1");
+    const part = (await listAllParts("demo-yard")).find((p) => p.sku === "COST-ONLY-1");
     assert.equal(part!.retailPrice, 150);
   });
 
-  it("does not quote parts when module is off", () => {
+  it("keeps catalogs tenant-isolated — dealer A cannot see dealer B SKUs", async () => {
+    await importPartsCatalog({
+      dealershipId: "dealer-a",
+      rows: [
+        {
+          sku: "A-ONLY-SKU",
+          name: "Dealer A pad",
+          retailPrice: 500,
+          qty: 3,
+          fits: "Toyota Hilux",
+        },
+      ],
+    });
+    await importPartsCatalog({
+      dealershipId: "dealer-b",
+      rows: [
+        {
+          sku: "B-ONLY-SKU",
+          name: "Dealer B filter",
+          retailPrice: 220,
+          qty: 6,
+          fits: "Volkswagen Polo",
+        },
+      ],
+    });
+    const a = await listAllParts("dealer-a");
+    const b = await listAllParts("dealer-b");
+    assert.ok(a.some((p) => p.sku === "A-ONLY-SKU"));
+    assert.ok(b.some((p) => p.sku === "B-ONLY-SKU"));
+    assert.equal(a.some((p) => p.sku === "B-ONLY-SKU"), false);
+    assert.equal(b.some((p) => p.sku === "A-ONLY-SKU"), false);
+  });
+
+  it("does not quote parts when module is off", async () => {
     updateDealershipSettings("yard-pta", {
       modules: { parts: false },
     });
-    const { enquiry } = quotePart({
+    const { enquiry } = await quotePart({
       buyerName: "Buyer",
       buyerPhone: "+27820001111",
       message: "brake pads for Hilux",
@@ -69,10 +117,10 @@ describe("parts catalog + optional module", () => {
     assert.match(enquiry.nalaReply, /don't run a parts counter/i);
   });
 
-  it("quotes from imported catalog when module on", () => {
+  it("quotes from imported catalog when module on", async () => {
     updateDealershipSettings("demo-yard", { modules: { parts: true } });
     assert.equal(getDealershipSettings("demo-yard").parts.enabled, true);
-    const { enquiry, part } = quotePart({
+    const { enquiry, part } = await quotePart({
       buyerName: "Buyer",
       buyerPhone: "+27820002222",
       message: "oil filter for Polo",
@@ -81,6 +129,22 @@ describe("parts catalog + optional module", () => {
     assert.equal(enquiry.status, "quoted");
     assert.ok(part);
     assert.match(enquiry.nalaReply, /R/);
+  });
+
+  it("tells the buyer honestly when the yard catalog is empty", async () => {
+    updateDealershipSettings("empty-yard-parts", { modules: { parts: true } });
+    const listed = await listAllParts("empty-yard-parts");
+    assert.equal(listed.length, 0);
+    const { enquiry, part } = await quotePart({
+      buyerName: "Sipho",
+      buyerPhone: "+27820003333",
+      message: "brake pads for Hilux",
+      dealershipId: "empty-yard-parts",
+    });
+    assert.equal(part, undefined);
+    assert.equal(enquiry.status, "quoted");
+    assert.match(enquiry.nalaReply, /catalog for this yard is empty/i);
+    assert.match(enquiry.nalaReply, /import their SKUs/i);
   });
 });
 

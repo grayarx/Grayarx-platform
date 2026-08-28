@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import express from "express";
 import { registerNalaOsRoutes } from "../server/_core/nalaOsRoutes";
 
+process.env.NALA_OS_SMOKE = "1";
+
 async function json(base: string, path: string, init?: RequestInit) {
   const res = await fetch(`${base}${path}`, {
     ...init,

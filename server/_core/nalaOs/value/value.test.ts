@@ -37,9 +37,9 @@ describe("dealer value + onboarding", () => {
     assert.ok(result.skipped.length >= 1);
   });
 
-  it("advances onboarding steps", () => {
+  it("advances onboarding steps", async () => {
     advanceOnboarding("demo-yard", "yard", { name: "Value Motors" });
-    const g = getOnboardingGuides("demo-yard");
+    const g = await getOnboardingGuides("demo-yard");
     assert.ok(g.steps.some((s) => s.id === "yard" && s.isDone));
     assert.ok(g.percentComplete > 0);
   });

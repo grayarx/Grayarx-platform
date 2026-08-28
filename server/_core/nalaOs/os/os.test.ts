@@ -28,7 +28,7 @@ describe("GrayArx dealership OS", () => {
 
   it("quotes, holds a part, and delivers WhatsApp + CRM", async () => {
     updateDealershipSettings("demo-yard", { modules: { parts: true } });
-    importPartsCatalog({
+    await importPartsCatalog({
       dealershipId: "demo-yard",
       rows: [
         {
@@ -47,7 +47,7 @@ describe("GrayArx dealership OS", () => {
       ],
     });
 
-    const before = listParts("demo-yard").find((p) => /brake/i.test(p.name));
+    const before = (await listParts("demo-yard")).find((p) => /brake/i.test(p.name));
     assert.ok(before, "seed brake pads must be in stock for this test");
     const waBefore = listWhatsAppOutbox().length;
     const crmBefore = listCrmDeliveries().length;
@@ -64,7 +64,7 @@ describe("GrayArx dealership OS", () => {
     assert.equal(result.delivery.whatsapp.status, "sent");
     assert.ok(result.delivery.crm.length >= 1);
 
-    const after = listParts("demo-yard").find((p) => /brake/i.test(p.name))!;
+    const after = (await listParts("demo-yard")).find((p) => /brake/i.test(p.name))!;
     assert.equal(after.qty, before!.qty - 1);
     assert.ok(listWhatsAppOutbox().length > waBefore);
     assert.ok(listCrmDeliveries().length > crmBefore);

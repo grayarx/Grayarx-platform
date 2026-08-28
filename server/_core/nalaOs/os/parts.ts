@@ -1,8 +1,16 @@
+import { and, desc, eq, sql } from "drizzle-orm";
 import { newId, readJsonFile, writeJsonFile } from "@nalaOs/conversion/store";
 import {
   getDealershipSettings,
   updateDealershipSettings,
 } from "@nalaOs/dealership/settings";
+import { getDb } from "../../../db";
+import {
+  dealershipParts,
+  dealershipPartsEnquiries,
+  type DealershipPart,
+  type DealershipPartEnquiry,
+} from "../../../../drizzle/schema";
 
 /**
  * Dealer parts catalog row — their numbers, their prices.
@@ -63,6 +71,17 @@ export type PartImportRow = {
 type PartsState = { parts: Part[]; enquiries: PartsEnquiry[] };
 
 const FILE = "parts.json";
+
+export const PARTS_CSV_HEADERS =
+  "sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier";
+
+export const PARTS_CSV_TEMPLATE = `# GrayArx parts template
+# Re-import any time — rows match on SKU for this dealership. fits is pipe-separated.
+# Pricing: retailPrice as-is, OR costPrice × (1 + your markup %). Rows with neither are skipped.
+${PARTS_CSV_HEADERS}
+OA-OF-POLO,03C115561H,Oil filter,Volkswagen Polo|Hyundai i20,Volkswagen,Polo,2018,2024,95,189,24,Local OEM
+BR-PAD-HILUX,04465-0K290,Front brake pads — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2024,780,1450,8,
+`;
 
 const DEFAULT: PartsState = {
   parts: [
@@ -129,6 +148,13 @@ const DEFAULT: PartsState = {
   enquiries: [],
 };
 
+/** Vitest + OS smoke stay on the JSON/memory seed. Production uses MySQL. */
+function useDurableDb(): boolean {
+  if (process.env.VITEST) return false;
+  if (process.env.NALA_OS_SMOKE === "1") return false;
+  return Boolean(process.env.DATABASE_URL);
+}
+
 function load(): PartsState {
   const state = readJsonFile(FILE, DEFAULT);
   // Migrate old `price` field if present
@@ -146,26 +172,112 @@ function save(state: PartsState) {
   writeJsonFile(FILE, state);
 }
 
-export function listParts(dealershipId = "demo-yard"): Part[] {
-  return load().parts.filter(
-    (p) => p.dealershipId === dealershipId && p.qty > 0,
-  );
+function asIso(value: Date | string | null | undefined): string {
+  if (!value) return new Date().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
 }
 
-export function listAllParts(dealershipId = "demo-yard"): Part[] {
-  return load().parts.filter((p) => p.dealershipId === dealershipId);
+function numOrUndef(value: unknown): number | undefined {
+  if (value == null || value === "") return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function parseFits(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    } catch {
+      return value
+        .split("|")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function rowToPart(row: DealershipPart): Part {
+  return {
+    id: row.id,
+    sku: row.sku,
+    oemNumber: row.oemNumber ?? undefined,
+    name: row.name,
+    fits: parseFits(row.fits),
+    make: row.make ?? undefined,
+    model: row.model ?? undefined,
+    yearFrom: row.yearFrom ?? undefined,
+    yearTo: row.yearTo ?? undefined,
+    costPrice: numOrUndef(row.costPrice),
+    retailPrice: Number(row.retailPrice),
+    qty: row.qty,
+    supplier: row.supplier ?? undefined,
+    dealershipId: row.dealershipId,
+    updatedAt: asIso(row.updatedAt),
+    source: (row.source as Part["source"]) || "csv_import",
+  };
+}
+
+function rowToEnquiry(row: DealershipPartEnquiry): PartsEnquiry {
+  return {
+    id: row.id,
+    buyerName: row.buyerName,
+    buyerPhone: row.buyerPhone,
+    message: row.message,
+    partId: row.partId ?? undefined,
+    status: row.status as PartsEnquiry["status"],
+    nalaReply: row.nalaReply,
+    createdAt: asIso(row.createdAt),
+    holdUntil: row.holdUntil ? asIso(row.holdUntil) : undefined,
+    dealershipId: row.dealershipId,
+  };
+}
+
+async function requireDb() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error(
+      "Parts catalog database is unavailable. Stock is not written to disk — try again shortly.",
+    );
+  }
+  return db;
+}
+
+export function lastImportAtFromParts(parts: Part[]): string | null {
+  if (parts.length === 0) return null;
+  return parts.reduce((max, p) => (p.updatedAt > max ? p.updatedAt : max), parts[0]!.updatedAt);
+}
+
+export async function listParts(dealershipId = "demo-yard"): Promise<Part[]> {
+  return (await listAllParts(dealershipId)).filter((p) => p.qty > 0);
+}
+
+export async function listAllParts(dealershipId = "demo-yard"): Promise<Part[]> {
+  if (!useDurableDb()) {
+    return load().parts.filter((p) => p.dealershipId === dealershipId);
+  }
+  const db = await requireDb();
+  const rows = await db
+    .select()
+    .from(dealershipParts)
+    .where(eq(dealershipParts.dealershipId, dealershipId))
+    .orderBy(dealershipParts.name);
+  return rows.map(rowToPart);
 }
 
 function retailOf(p: Part): number {
   return p.retailPrice;
 }
 
-export function findPart(
+export async function findPart(
   message: string,
   dealershipId = "demo-yard",
-): Part | undefined {
+): Promise<Part | undefined> {
   const lower = message.toLowerCase();
-  const parts = listParts(dealershipId);
+  const parts = await listParts(dealershipId);
 
   // Exact SKU / OEM in message
   const skuHit = parts.find(
@@ -201,101 +313,182 @@ export function findPart(
   });
 }
 
+function resolveRetail(
+  row: PartImportRow,
+  markupPercent: number,
+): { retail: number } | { skip: string } {
+  let retail = row.retailPrice;
+  if (retail == null && row.costPrice != null) {
+    retail = Math.round(row.costPrice * (1 + markupPercent / 100));
+  }
+  if (retail == null || retail <= 0) {
+    return {
+      skip: "No retailPrice and no costPrice to markup — dealer must supply pricing",
+    };
+  }
+  return { retail };
+}
+
+function fitsFromRow(row: PartImportRow): string[] {
+  return (
+    row.fits
+      ?.split("|")
+      .map((s) => s.trim())
+      .filter(Boolean) ??
+    (row.make && row.model ? [`${row.make} ${row.model}`] : [])
+  );
+}
+
 /**
  * Import dealer catalog. Pricing rules:
  * - If retailPrice provided → use it (dealer's sell price)
  * - Else if costPrice + markup settings → retail = cost * (1 + markup%)
  * - Else skip row (we never invent prices)
  */
-export function importPartsCatalog(input: {
+export async function importPartsCatalog(input: {
   dealershipId?: string;
   rows: PartImportRow[];
   source?: Part["source"];
-}): {
+}): Promise<{
   imported: number;
   updated: number;
   skipped: Array<{ sku: string; reason: string }>;
   parts: Part[];
-} {
+}> {
   const dealershipId = input.dealershipId ?? "demo-yard";
   const settings = getDealershipSettings(dealershipId);
-  const state = load();
+  const markup = settings.parts.defaultMarkupPercent;
+  const source = input.source ?? "csv_import";
+  const now = new Date().toISOString();
   let imported = 0;
   let updated = 0;
   const skipped: Array<{ sku: string; reason: string }> = [];
-  const now = new Date().toISOString();
 
-  for (const row of input.rows) {
-    const sku = row.sku?.trim();
-    if (!sku || !row.name?.trim()) {
-      skipped.push({ sku: sku || "(blank)", reason: "Missing sku or name" });
-      continue;
+  if (useDurableDb()) {
+    const db = await requireDb();
+    for (const row of input.rows) {
+      const sku = row.sku?.trim();
+      if (!sku || !row.name?.trim()) {
+        skipped.push({ sku: sku || "(blank)", reason: "Missing sku or name" });
+        continue;
+      }
+      const priced = resolveRetail(row, markup);
+      if ("skip" in priced) {
+        skipped.push({ sku, reason: priced.skip });
+        continue;
+      }
+      const fits = fitsFromRow(row);
+      const existing = await db
+        .select()
+        .from(dealershipParts)
+        .where(
+          and(
+            eq(dealershipParts.dealershipId, dealershipId),
+            eq(dealershipParts.sku, sku),
+          ),
+        )
+        .limit(1);
+      const prev = existing[0];
+      if (prev) {
+        await db
+          .update(dealershipParts)
+          .set({
+            oemNumber: row.oemNumber ?? prev.oemNumber,
+            name: row.name.trim(),
+            fits: fits.length ? fits : parseFits(prev.fits),
+            make: row.make ?? prev.make,
+            model: row.model ?? prev.model,
+            yearFrom: row.yearFrom ?? prev.yearFrom,
+            yearTo: row.yearTo ?? prev.yearTo,
+            costPrice:
+              row.costPrice != null ? String(row.costPrice) : prev.costPrice,
+            retailPrice: String(priced.retail),
+            qty: row.qty ?? prev.qty,
+            supplier: row.supplier ?? prev.supplier,
+            source,
+            updatedAt: new Date(now),
+          })
+          .where(eq(dealershipParts.id, prev.id));
+        updated += 1;
+      } else {
+        await db.insert(dealershipParts).values({
+          id: newId("part"),
+          sku,
+          oemNumber: row.oemNumber,
+          name: row.name.trim(),
+          fits,
+          make: row.make,
+          model: row.model,
+          yearFrom: row.yearFrom,
+          yearTo: row.yearTo,
+          costPrice: row.costPrice != null ? String(row.costPrice) : null,
+          retailPrice: String(priced.retail),
+          qty: row.qty ?? 0,
+          supplier: row.supplier,
+          dealershipId,
+          source,
+          updatedAt: new Date(now),
+        });
+        imported += 1;
+      }
     }
-
-    let retail = row.retailPrice;
-    if (retail == null && row.costPrice != null) {
-      retail = Math.round(
-        row.costPrice * (1 + settings.parts.defaultMarkupPercent / 100),
+  } else {
+    const state = load();
+    for (const row of input.rows) {
+      const sku = row.sku?.trim();
+      if (!sku || !row.name?.trim()) {
+        skipped.push({ sku: sku || "(blank)", reason: "Missing sku or name" });
+        continue;
+      }
+      const priced = resolveRetail(row, markup);
+      if ("skip" in priced) {
+        skipped.push({ sku, reason: priced.skip });
+        continue;
+      }
+      const fits = fitsFromRow(row);
+      const existing = state.parts.find(
+        (p) => p.dealershipId === dealershipId && p.sku === sku,
       );
+      if (existing) {
+        existing.oemNumber = row.oemNumber ?? existing.oemNumber;
+        existing.name = row.name.trim();
+        existing.fits = fits.length ? fits : existing.fits;
+        existing.make = row.make ?? existing.make;
+        existing.model = row.model ?? existing.model;
+        existing.yearFrom = row.yearFrom ?? existing.yearFrom;
+        existing.yearTo = row.yearTo ?? existing.yearTo;
+        existing.costPrice = row.costPrice ?? existing.costPrice;
+        existing.retailPrice = priced.retail;
+        existing.qty = row.qty ?? existing.qty;
+        existing.supplier = row.supplier ?? existing.supplier;
+        existing.updatedAt = now;
+        existing.source = source;
+        updated += 1;
+      } else {
+        state.parts.push({
+          id: newId("part"),
+          sku,
+          oemNumber: row.oemNumber,
+          name: row.name.trim(),
+          fits,
+          make: row.make,
+          model: row.model,
+          yearFrom: row.yearFrom,
+          yearTo: row.yearTo,
+          costPrice: row.costPrice,
+          retailPrice: priced.retail,
+          qty: row.qty ?? 0,
+          supplier: row.supplier,
+          dealershipId,
+          updatedAt: now,
+          source,
+        });
+        imported += 1;
+      }
     }
-    if (retail == null || retail <= 0) {
-      skipped.push({
-        sku,
-        reason: "No retailPrice and no costPrice to markup — dealer must supply pricing",
-      });
-      continue;
-    }
-
-    const fits =
-      row.fits
-        ?.split("|")
-        .map((s) => s.trim())
-        .filter(Boolean) ??
-      (row.make && row.model ? [`${row.make} ${row.model}`] : []);
-
-    const existing = state.parts.find(
-      (p) => p.dealershipId === dealershipId && p.sku === sku,
-    );
-
-    if (existing) {
-      existing.oemNumber = row.oemNumber ?? existing.oemNumber;
-      existing.name = row.name.trim();
-      existing.fits = fits.length ? fits : existing.fits;
-      existing.make = row.make ?? existing.make;
-      existing.model = row.model ?? existing.model;
-      existing.yearFrom = row.yearFrom ?? existing.yearFrom;
-      existing.yearTo = row.yearTo ?? existing.yearTo;
-      existing.costPrice = row.costPrice ?? existing.costPrice;
-      existing.retailPrice = retail;
-      existing.qty = row.qty ?? existing.qty;
-      existing.supplier = row.supplier ?? existing.supplier;
-      existing.updatedAt = now;
-      existing.source = input.source ?? "csv_import";
-      updated += 1;
-    } else {
-      state.parts.push({
-        id: newId("part"),
-        sku,
-        oemNumber: row.oemNumber,
-        name: row.name.trim(),
-        fits,
-        make: row.make,
-        model: row.model,
-        yearFrom: row.yearFrom,
-        yearTo: row.yearTo,
-        costPrice: row.costPrice,
-        retailPrice: retail,
-        qty: row.qty ?? 0,
-        supplier: row.supplier,
-        dealershipId,
-        updatedAt: now,
-        source: input.source ?? "csv_import",
-      });
-      imported += 1;
-    }
+    save(state);
   }
 
-  save(state);
   updateDealershipSettings(dealershipId, {
     parts: {
       lastImportAt: now,
@@ -308,7 +501,7 @@ export function importPartsCatalog(input: {
     imported,
     updated,
     skipped,
-    parts: listAllParts(dealershipId),
+    parts: await listAllParts(dealershipId),
   };
 }
 
@@ -317,7 +510,7 @@ export function parsePartsCsv(csv: string): PartImportRow[] {
   const lines = csv
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter(Boolean);
+    .filter((l) => l && !l.startsWith("#"));
   if (lines.length < 2) return [];
   const headers = lines[0]!.split(",").map((h) => h.trim().toLowerCase());
   const idx = (name: string) => headers.indexOf(name);
@@ -351,12 +544,34 @@ export function parsePartsCsv(csv: string): PartImportRow[] {
   });
 }
 
-export function quotePart(input: {
+async function persistEnquiry(enquiry: PartsEnquiry): Promise<void> {
+  if (!useDurableDb()) {
+    const state = load();
+    state.enquiries.unshift(enquiry);
+    save(state);
+    return;
+  }
+  const db = await requireDb();
+  await db.insert(dealershipPartsEnquiries).values({
+    id: enquiry.id,
+    dealershipId: enquiry.dealershipId,
+    buyerName: enquiry.buyerName,
+    buyerPhone: enquiry.buyerPhone,
+    message: enquiry.message,
+    partId: enquiry.partId ?? null,
+    status: enquiry.status,
+    nalaReply: enquiry.nalaReply,
+    holdUntil: enquiry.holdUntil ? new Date(enquiry.holdUntil) : null,
+    createdAt: new Date(enquiry.createdAt),
+  });
+}
+
+export async function quotePart(input: {
   buyerName: string;
   buyerPhone: string;
   message: string;
   dealershipId?: string;
-}): { enquiry: PartsEnquiry; part?: Part } {
+}): Promise<{ enquiry: PartsEnquiry; part?: Part }> {
   const dealershipId = input.dealershipId ?? "demo-yard";
   const settings = getDealershipSettings(dealershipId);
   const name = input.buyerName.split(" ")[0] || "there";
@@ -372,13 +587,11 @@ export function quotePart(input: {
       createdAt: new Date().toISOString(),
       dealershipId,
     };
-    const state = load();
-    state.enquiries.unshift(enquiry);
-    save(state);
+    await persistEnquiry(enquiry);
     return { enquiry };
   }
 
-  const part = findPart(input.message, dealershipId);
+  const part = await findPart(input.message, dealershipId);
   let nalaReply: string;
 
   if (part && part.qty > 0) {
@@ -390,7 +603,7 @@ export function quotePart(input: {
   } else if (part && part.qty <= 0 && settings.parts.allowBackorderMessage) {
     nalaReply = `Hi ${name} — I'm Nala on parts. ${part.name} (SKU ${part.sku}) is temporarily out of stock. I can order it in or book a service slot once it arrives — which do you prefer?`;
   } else {
-    const sample = listParts(dealershipId)
+    const sample = (await listParts(dealershipId))
       .slice(0, 3)
       .map(
         (p) =>
@@ -414,13 +627,63 @@ export function quotePart(input: {
     dealershipId,
   };
 
-  const state = load();
-  state.enquiries.unshift(enquiry);
-  save(state);
+  await persistEnquiry(enquiry);
   return { enquiry, part };
 }
 
-export function holdPart(enquiryId: string): PartsEnquiry | { error: string } {
+export async function holdPart(
+  enquiryId: string,
+): Promise<PartsEnquiry | { error: string }> {
+  if (useDurableDb()) {
+    const db = await requireDb();
+    const enqRows = await db
+      .select()
+      .from(dealershipPartsEnquiries)
+      .where(eq(dealershipPartsEnquiries.id, enquiryId))
+      .limit(1);
+    const enquiryRow = enqRows[0];
+    if (!enquiryRow) return { error: "Enquiry not found." };
+    const enquiry = rowToEnquiry(enquiryRow);
+    if (enquiry.status === "module_off") {
+      return { error: "Parts module is off for this dealership." };
+    }
+    if (!enquiry.partId) return { error: "No part matched to hold." };
+    const partRows = await db
+      .select()
+      .from(dealershipParts)
+      .where(eq(dealershipParts.id, enquiry.partId))
+      .limit(1);
+    const partRow = partRows[0];
+    if (!partRow || partRow.qty < 1) return { error: "Part out of stock." };
+
+    await db
+      .update(dealershipParts)
+      .set({
+        qty: sql`${dealershipParts.qty} - 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(dealershipParts.id, partRow.id), sql`${dealershipParts.qty} >= 1`),
+      );
+
+    const holdUntil = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+    const nalaReply = `${enquiry.nalaReply}\n\nHeld until ${new Date(holdUntil).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })} — bring ID to the parts counter. SKU ${partRow.sku}.`;
+    await db
+      .update(dealershipPartsEnquiries)
+      .set({
+        status: "held",
+        holdUntil: new Date(holdUntil),
+        nalaReply,
+      })
+      .where(eq(dealershipPartsEnquiries.id, enquiry.id));
+    return {
+      ...enquiry,
+      status: "held",
+      holdUntil,
+      nalaReply,
+    };
+  }
+
   const state = load();
   const enquiry = state.enquiries.find((e) => e.id === enquiryId);
   if (!enquiry) return { error: "Enquiry not found." };
@@ -440,9 +703,27 @@ export function holdPart(enquiryId: string): PartsEnquiry | { error: string } {
   return enquiry;
 }
 
-export function listPartsEnquiries(dealershipId?: string): PartsEnquiry[] {
-  const all = load().enquiries;
-  return dealershipId
-    ? all.filter((e) => e.dealershipId === dealershipId)
-    : all;
+export async function listPartsEnquiries(
+  dealershipId?: string,
+): Promise<PartsEnquiry[]> {
+  if (!useDurableDb()) {
+    const all = load().enquiries;
+    return dealershipId
+      ? all.filter((e) => e.dealershipId === dealershipId)
+      : all;
+  }
+  const db = await requireDb();
+  const rows = dealershipId
+    ? await db
+        .select()
+        .from(dealershipPartsEnquiries)
+        .where(eq(dealershipPartsEnquiries.dealershipId, dealershipId))
+        .orderBy(desc(dealershipPartsEnquiries.createdAt))
+        .limit(100)
+    : await db
+        .select()
+        .from(dealershipPartsEnquiries)
+        .orderBy(desc(dealershipPartsEnquiries.createdAt))
+        .limit(100);
+  return rows.map(rowToEnquiry);
 }

@@ -13,7 +13,7 @@ import {
   OS_MODULES,
   pricingEconomicsSummary,
 } from "@nalaOs/os/pricing";
-import { listParts, listPartsEnquiries, importPartsCatalog, parsePartsCsv, quotePart, holdPart, listAllParts } from "@nalaOs/os/parts";
+import { listParts, listPartsEnquiries, importPartsCatalog, parsePartsCsv, quotePart, holdPart, listAllParts, PARTS_CSV_TEMPLATE, PARTS_CSV_HEADERS, lastImportAtFromParts } from "@nalaOs/os/parts";
 import { handleOsMessage, bookViewingAndNotify } from "@nalaOs/os/router";
 import { listServiceBookings, getServiceCalendar, rescheduleService } from "@nalaOs/os/service";
 import { listTradeIns, captureTradeIn, attachTradeInPhoto } from "@nalaOs/os/tradein";
@@ -76,6 +76,37 @@ import { getSetupStatus, verifyTwilioConnection } from "@nalaOs/setup-status";
 import { validateTwilioRequest } from "@nalaOs/twilio-client";
 import { agentTurnTwiml, gatherSpeech, hangup, say, twimlDocument } from "@nalaOs/twiml";
 import type { CallSessionState } from "@nalaOs/prospector-types";
+import { sdk } from "./sdk";
+
+const DEALER_PARTS_ROLES = new Set([
+  "dealer_owner",
+  "dealer_consultant",
+  "founder",
+  "admin",
+]);
+
+async function authenticateDealer(req: Request): Promise<{
+  dealershipId: string;
+  role: string;
+} | null> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user || !DEALER_PARTS_ROLES.has(user.role)) return null;
+    if (user.dealershipId != null) {
+      return { dealershipId: String(user.dealershipId), role: user.role };
+    }
+    if (user.role === "founder" || user.role === "admin") {
+      return { dealershipId: "1", role: user.role };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function allowUnauthedOsDemo(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
 
 function asFetchRequest(req: Request): globalThis.Request {
   const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http");
@@ -113,7 +144,7 @@ function formParams(req: Request): Record<string, string> {
 export function registerNalaOsRoutes(app: express.Express) {
   const r = express.Router();
 
-  r.get("/os", (_req, res) => {
+  r.get("/os", async (_req, res) => {
     ensureBranches();
     seedMultiBranchStock();
     res.json({
@@ -122,8 +153,10 @@ export function registerNalaOsRoutes(app: express.Express) {
       economics: pricingEconomicsSummary(),
       pricingStrategy: PRICING_STRATEGY,
       competitorPrices: COMPETITOR_PRICE_MATRIX,
-      parts: listParts(),
-      partsEnquiries: listPartsEnquiries().slice(0, 20),
+      parts: await listParts().catch(() => []),
+      partsEnquiries: await listPartsEnquiries()
+        .then((rows) => rows.slice(0, 20))
+        .catch(() => []),
       serviceBookings: listServiceBookings().slice(0, 20),
       tradeIns: listTradeIns().slice(0, 20),
       finance: listFinanceApplications().slice(0, 20),
@@ -380,44 +413,126 @@ export function registerNalaOsRoutes(app: express.Express) {
     });
   });
 
-  r.get("/parts", (req, res) => {
-    const dealershipId = String(req.query.dealershipId || "demo-yard");
+  r.get("/parts", async (req, res) => {
+    const auth = await authenticateDealer(req);
+    const requested = String(req.query.dealershipId || "");
+    let dealershipId: string;
+    if (auth) {
+      const isFounder = auth.role === "founder" || auth.role === "admin";
+      dealershipId = isFounder && requested ? requested : auth.dealershipId;
+    } else if (allowUnauthedOsDemo() && (!requested || requested === "demo-yard")) {
+      dealershipId = requested || "demo-yard";
+    } else {
+      return res.status(401).json({ error: "Sign in as a dealer to view the parts catalog." });
+    }
     const settings = getDealershipSettings(dealershipId);
-    res.json({
-      settings: settings.parts,
-      modules: settings.modules,
-      parts: listAllParts(dealershipId),
-      enquiries: listPartsEnquiries(dealershipId).slice(0, 30),
-      csvTemplate: "sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier",
-      howPricingWorks: [
-        "GrayArx never invents part prices.",
-        "Dealer imports their catalog with retailPrice and/or costPrice.",
-        "If only costPrice is sent, we apply the dealer's defaultMarkupPercent.",
-        "Turn parts module OFF if the yard does not sell parts.",
-      ],
-    });
+    try {
+      const parts = await listAllParts(dealershipId);
+      res.json({
+        settings: settings.parts,
+        modules: settings.modules,
+        parts,
+        enquiries: (await listPartsEnquiries(dealershipId)).slice(0, 30),
+        lastImportAt: settings.parts.lastImportAt ?? lastImportAtFromParts(parts),
+        csvTemplate: PARTS_CSV_HEADERS,
+        csvTemplateFile: PARTS_CSV_TEMPLATE,
+        howPricingWorks: [
+          "GrayArx never invents part prices.",
+          "Dealer imports their catalog with retailPrice and/or costPrice.",
+          "If only costPrice is sent, we apply the dealer's defaultMarkupPercent.",
+          "Turn parts module OFF if the yard does not sell parts.",
+        ],
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not load parts catalog";
+      res.status(500).json({ error: message });
+    }
   });
 
-  r.post("/parts", (req, res) => {
+  r.post("/parts", async (req, res) => {
     const body = req.body as Record<string, unknown>;
-    const dealershipId = typeof body.dealershipId === "string" ? body.dealershipId : "demo-yard";
-    if (body.action === "import_json") {
-      const rows = Array.isArray(body.rows) ? body.rows : [];
-      return res.json({ ok: true, ...importPartsCatalog({ dealershipId, rows: rows as Parameters<typeof importPartsCatalog>[0]["rows"], source: "csv_import" }) });
-    }
-    if (body.action === "import_csv") {
+    const action = String(body.action || "");
+    const auth = await authenticateDealer(req);
+    const requestedId = typeof body.dealershipId === "string" ? body.dealershipId : "";
+
+    const resolveTenant = (): string | Response => {
+      if (auth) {
+        const isFounder = auth.role === "founder" || auth.role === "admin";
+        return isFounder && requestedId ? requestedId : auth.dealershipId;
+      }
+      if (allowUnauthedOsDemo() && (!requestedId || requestedId === "demo-yard")) {
+        return "demo-yard";
+      }
+      return res.status(401).json({ error: "Sign in as a dealer to import parts." });
+    };
+
+    if (action === "import_json" || action === "import_csv" || action === "add_one") {
+      const tenant = resolveTenant();
+      if (typeof tenant !== "string") return tenant;
+      const dealershipId = tenant;
+      try {
+        if (action === "import_json" || action === "add_one") {
+        const rows = Array.isArray(body.rows)
+          ? body.rows
+          : action === "add_one"
+            ? [
+                {
+                  sku: String(body.sku || ""),
+                  oemNumber: typeof body.oemNumber === "string" ? body.oemNumber : undefined,
+                  name: String(body.name || ""),
+                  fits: typeof body.fits === "string" ? body.fits : undefined,
+                  make: typeof body.make === "string" ? body.make : undefined,
+                  model: typeof body.model === "string" ? body.model : undefined,
+                  yearFrom: typeof body.yearFrom === "number" ? body.yearFrom : Number(body.yearFrom) || undefined,
+                  yearTo: typeof body.yearTo === "number" ? body.yearTo : Number(body.yearTo) || undefined,
+                  costPrice: typeof body.costPrice === "number" ? body.costPrice : Number(body.costPrice) || undefined,
+                  retailPrice: typeof body.retailPrice === "number" ? body.retailPrice : Number(body.retailPrice) || undefined,
+                  qty: typeof body.qty === "number" ? body.qty : Number(body.qty) || undefined,
+                  supplier: typeof body.supplier === "string" ? body.supplier : undefined,
+                },
+              ]
+            : [];
+        return res.json({
+          ok: true,
+          ...await importPartsCatalog({
+            dealershipId,
+            rows: rows as Parameters<typeof importPartsCatalog>[0]["rows"],
+            source: action === "add_one" ? "manual" : "csv_import",
+          }),
+        });
+      }
       const csv = typeof body.csv === "string" ? body.csv : "";
-      return res.json({ ok: true, ...importPartsCatalog({ dealershipId, rows: parsePartsCsv(csv), source: "csv_import" }) });
+      return res.json({
+        ok: true,
+        ...await importPartsCatalog({
+          dealershipId,
+          rows: parsePartsCsv(csv),
+          source: "csv_import",
+        }),
+      });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Parts import failed";
+        return res.status(500).json({ error: message });
+      }
     }
-    if (body.action === "quote") {
-      return res.json({ ok: true, ...quotePart({ buyerName: String(body.buyerName || ""), buyerPhone: String(body.buyerPhone || ""), message: String(body.message || ""), dealershipId }) });
+    const dealershipId = requestedId || "demo-yard";
+    if (action === "quote") {
+      return res.json({
+        ok: true,
+        ...await quotePart({
+          buyerName: String(body.buyerName || ""),
+          buyerPhone: String(body.buyerPhone || ""),
+          message: String(body.message || ""),
+          dealershipId,
+        }),
+      });
     }
-    if (body.action === "hold") {
-      const result = holdPart(String(body.enquiryId || ""));
+    if (action === "hold") {
+      const result = await holdPart(String(body.enquiryId || ""));
       if ("error" in result) return res.status(400).json(result);
       return res.json({ ok: true, enquiry: result });
     }
-    res.status(400).json({ error: "action must be import_json | import_csv | quote | hold" });
+    res.status(400).json({ error: "action must be import_json | import_csv | add_one | quote | hold" });
   });
 
   r.post("/conversion/book", async (req, res) => {
@@ -649,10 +764,10 @@ export function registerNalaOsRoutes(app: express.Express) {
     });
   });
 
-  r.get("/onboarding", (req, res) => {
-    res.json(getOnboardingGuides(String(req.query.dealershipId || "demo-yard")));
+  r.get("/onboarding", async (req, res) => {
+    res.json(await getOnboardingGuides(String(req.query.dealershipId || "demo-yard")));
   });
-  r.post("/onboarding", (req, res) => {
+  r.post("/onboarding", async (req, res) => {
     const body = req.body as { dealershipId?: string; step?: OnboardStepId; name?: string; modules?: Record<string, boolean> };
     const dealershipId = body.dealershipId || "demo-yard";
     if (!body.step) return res.status(400).json({ error: "step required" });
@@ -660,7 +775,7 @@ export function registerNalaOsRoutes(app: express.Express) {
       name: body.name,
       modules: body.modules as Parameters<typeof advanceOnboarding>[2]["modules"],
     });
-    res.json({ ok: true, state, ...getOnboardingGuides(dealershipId) });
+    res.json({ ok: true, state, ...(await getOnboardingGuides(dealershipId)) });
   });
 
   r.get("/competitors", (req, res) => {

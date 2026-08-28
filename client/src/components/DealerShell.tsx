@@ -16,6 +16,7 @@ import {
   Handshake,
   Scale,
   MessageSquare,
+  Wrench,
 } from "lucide-react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -58,6 +59,7 @@ const DEALER_LINKS = [
   { href: "/dealer/leads", label: "Leads", icon: Users, tip: "Inbound enquiries from web, email, WhatsApp" },
   { href: "/dealer/bookings", label: "Bookings", icon: Calendar, tip: "Your dealership's test-drive requests" },
   { href: "/dealer/inventory", label: "Inventory", icon: Car, tip: "Add, edit, and publish vehicles" },
+  { href: "/dealer/parts", label: "Parts", icon: Wrench, tip: "Import SKUs — Nala quotes this catalog on WhatsApp" },
   { href: "/dealer/trade-ins", label: "Trade-In Network", icon: Handshake, tip: "Seller listings — invite for inspection" },
   { href: "/dealer/inventory/import", label: "CSV Import", icon: Upload, tip: "Bulk import stock — feeds showroom + chatbots" },
   { href: "/dealer/csv-photo", label: "Photos", icon: Camera, tip: "8-angle uploads, save external listing images, photo health" },
