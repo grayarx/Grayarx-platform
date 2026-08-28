@@ -1,5 +1,8 @@
 import type { IcpSegment, Prospect } from "@nalaOs/prospector-types";
 import type { RegionId } from "@nalaOs/regions/config";
+import { SA_PROSPECT_POOL } from "../saProspectPool";
+import { isOutreachReadyForDealership } from "../../../shared/prospectEmailQuality";
+import { mergeDiscoveredPhone } from "../../../shared/prospectPhone";
 
 type Seed = {
   id: string;
@@ -40,14 +43,16 @@ function build(seed: Seed): Prospect {
     phone: seed.phone,
     email: seed.email,
     website: seed.website,
-    researchNote: `${seed.stockHint} · ICP: ${seed.segment.replace(/_/g, " ")} · ${pay}. Fill phone/email from their AutoTrader or site before dialling.`,
+    researchNote: `${seed.stockHint} · ICP: ${seed.segment.replace(/_/g, " ")} · ${pay}. Sipho researches the dealer site for a named inbox and switchboard — paste still overrides info@.`,
     callReason: `I had a look at ${seed.name}'s online stock — curious what happens when a buyer enquires after your team has gone home.`,
   };
 }
 
 /**
  * High-ICP pool: yards that feel after-hours lead loss AND can pay Professional+.
- * Phones intentionally blank — paste real switchboard from public listings (compliance).
+ * Phones/emails stay blank until research finds them on the dealer site (never invented).
+ * ZA seeds get real websites from the Sipho research pool at hydrate so Generate can scrape.
+ * Paste remains an override when the site only lists info@.
  */
 const SEEDS: Seed[] = [
   // ——— South Africa (priority) ———
@@ -616,8 +621,93 @@ const SEEDS: Seed[] = [
 
 export const MOCK_PROSPECTS: Prospect[] = SEEDS.map(build);
 
+function normalizeCity(s: string): string {
+  return s.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function citiesMatch(a: string, b: string): boolean {
+  const na = normalizeCity(a);
+  const nb = normalizeCity(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const a0 = na.split(" ")[0] ?? "";
+  const b0 = (nb.split(",")[0] ?? nb).split(" ")[0] ?? "";
+  return a0.length >= 4 && b0.length >= 4 && (a0 === b0);
+}
+
+/**
+ * Attach real dealer websites (and matching names) from the Sipho SA pool
+ * so ICP cards can be researched — never invent emails or phones here.
+ */
+export function hydrateIcpResearchTargets(): void {
+  const usedSites = new Set<string>();
+  for (const p of MOCK_PROSPECTS) {
+    if (p.website?.trim()) usedSites.add(p.website.trim().toLowerCase());
+  }
+
+  const takePool = (want: (entry: (typeof SA_PROSPECT_POOL)[number]) => boolean) =>
+    SA_PROSPECT_POOL.find((entry) => {
+      if (!entry.website?.trim()) return false;
+      if (usedSites.has(entry.website.trim().toLowerCase())) return false;
+      return want(entry);
+    });
+
+  for (const prospect of MOCK_PROSPECTS) {
+    if (prospect.website?.trim()) continue;
+    if (prospect.regionId !== "ZA") continue;
+    const match =
+      takePool((entry) => citiesMatch(prospect.city, entry.city)) ??
+      takePool(() => true);
+    if (!match?.website) continue;
+    usedSites.add(match.website.trim().toLowerCase());
+    prospect.name = match.name;
+    prospect.website = match.website;
+    prospect.city = match.city.split(",")[0]!.trim();
+    prospect.location = `${match.city}, ${match.province}, ZA`;
+    prospect.callReason = `I had a look at ${match.name}'s online stock — curious what happens when a buyer enquires after your team has gone home.`;
+  }
+}
+
+hydrateIcpResearchTargets();
+
 export function findIcpProspect(id: string): Prospect | undefined {
   return MOCK_PROSPECTS.find((p) => p.id === id);
+}
+
+/**
+ * Apply scraped phone/email onto an ICP card.
+ * Never overwrites a good existing phone with empty.
+ * Never stores info@ — only outreach-ready named@dealer-domain.
+ * Paste (patchProspectContact) remains the override path.
+ */
+export function applyResearchedContact(
+  id: string,
+  hit: {
+    phone?: string | null;
+    email?: string | null;
+    contactName?: string | null;
+    website?: string | null;
+  },
+): Prospect | undefined {
+  const prospect = findIcpProspect(id);
+  if (!prospect) return undefined;
+  const site = hit.website?.trim() || prospect.website;
+  if (hit.phone?.trim()) {
+    prospect.phone = mergeDiscoveredPhone(prospect.phone, hit.phone) ?? prospect.phone;
+  }
+  if (hit.email?.trim() && isOutreachReadyForDealership(hit.email, site)) {
+    const existingReady = isOutreachReadyForDealership(prospect.email, prospect.website);
+    if (!existingReady) {
+      prospect.email = hit.email.trim();
+    }
+  }
+  if (hit.contactName?.trim()) {
+    const placeholder = !prospect.contactName || /sales manager|gm|^owner$/i.test(prospect.contactName);
+    if (placeholder) prospect.contactName = hit.contactName.trim();
+  }
+  if (site && !prospect.website) prospect.website = site;
+  return prospect;
 }
 
 /** Paste public switchboard / named email onto a seeded yard (in-memory). */

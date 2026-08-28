@@ -48,6 +48,10 @@ import {
   patchProspectContact,
   prospectsByRegion,
 } from "@nalaOs/prospector-data";
+import {
+  getIcpResearchMeta,
+  startIcpResearchJob,
+} from "./icpContactResearch";
 import { calculateValue, moneyFromPilot, type ValueInputs } from "@nalaOs/value/money-lost";
 import { PROCESS_PLAYBOOKS } from "@nalaOs/processes/playbooks";
 import { recoverMissedCall } from "@nalaOs/recovery/missed-call";
@@ -279,6 +283,25 @@ export function registerNalaOsRoutes(app: express.Express) {
     });
     if (!prospect) return res.status(404).json({ error: "Prospect not found." });
     res.json({ ok: true, prospect });
+  });
+
+  r.get("/prospector/research-contacts", (_req, res) => {
+    res.json(getIcpResearchMeta());
+  });
+
+  r.post("/prospector/research-contacts", (req, res) => {
+    const body = (req.body ?? {}) as { limit?: unknown; deep?: unknown };
+    const limit =
+      typeof body.limit === "number" && Number.isFinite(body.limit)
+        ? Math.min(Math.max(body.limit, 1), 12)
+        : 6;
+    const deep = body.deep !== false;
+    const started = startIcpResearchJob({ limit, deep });
+    res.json({
+      ok: true,
+      ...started,
+      job: getIcpResearchMeta(),
+    });
   });
 
   r.get("/prospector/queue-call", (req, res) => {

@@ -1167,6 +1167,7 @@ export async function deleteAllProspects(): Promise<{ deletedProspects: number; 
 
 export type UpdateProspectContactInput = {
   email?: string | null;
+  phone?: string | null;
   contactName?: string | null;
   contactRole?: string | null;
   emailVerified?: number;
@@ -1206,6 +1207,10 @@ export async function updateProspectContact(
 
   const updates: Record<string, unknown> = {};
   if (patch.email !== undefined) updates.email = patch.email;
+  if (patch.phone !== undefined) {
+    const trimmed = patch.phone?.trim() ?? "";
+    if (trimmed) updates.phone = trimmed;
+  }
   if (patch.contactName !== undefined) updates.contactName = patch.contactName;
   if (patch.contactRole !== undefined) updates.contactRole = patch.contactRole;
   if (patch.emailVerified !== undefined) updates.emailVerified = patch.emailVerified;

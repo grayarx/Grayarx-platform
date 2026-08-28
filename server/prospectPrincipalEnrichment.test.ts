@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { extractEmailsFromHtml } from "./_core/prospectPrincipalEnrichment";
-import { assessProspectEmail } from "../shared/prospectEmailQuality";
+import {
+  CONTACT_PATHS,
+  CONTACT_PATHS_FAST,
+  extractEmailsFromHtml,
+} from "./_core/prospectPrincipalEnrichment";
+import { assessProspectEmail, isOutreachReadyForDealership } from "../shared/prospectEmailQuality";
 
 describe("principal email HTML extraction", () => {
   it("extracts mailto and plain emails, prefers ignoring trackers", () => {
@@ -21,6 +25,24 @@ describe("principal email HTML extraction", () => {
 
   it("returns empty for pages with no emails", () => {
     expect(extractEmailsFromHtml("<html><body>Hello</body></html>")).toEqual([]);
+  });
+
+  it("deep mode uses the full CONTACT_PATHS list, not the 5-page fast cap", () => {
+    expect(CONTACT_PATHS_FAST).toHaveLength(5);
+    expect(CONTACT_PATHS.length).toBeGreaterThan(CONTACT_PATHS_FAST.length);
+    expect(CONTACT_PATHS).toContain("/directors");
+    expect(CONTACT_PATHS).toContain("/meet-the-team");
+  });
+
+  it("rejects generic info@ and accepts named firstname@ on the dealer domain", () => {
+    expect(isOutreachReadyForDealership("info@jubileemotors.co.za", "https://jubileemotors.co.za")).toBe(
+      false,
+    );
+    expect(assessProspectEmail("info@jubileemotors.co.za").quality).toBe("generic");
+    expect(
+      isOutreachReadyForDealership("darius@jubileemotors.co.za", "https://jubileemotors.co.za"),
+    ).toBe(true);
+    expect(assessProspectEmail("darius@jubileemotors.co.za").quality).toBe("named");
   });
 });
 

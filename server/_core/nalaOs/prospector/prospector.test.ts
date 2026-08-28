@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { MOCK_PROSPECTS, highAbilityProspects, patchProspectContact } from "@nalaOs/prospector-data";
+import {
+  MOCK_PROSPECTS,
+  highAbilityProspects,
+  patchProspectContact,
+  applyResearchedContact,
+} from "@nalaOs/prospector-data";
 import { parseProspectCsv } from "@nalaOs/prospector/import";
 import { REGIONS, listRegions } from "@nalaOs/regions/config";
+import { isOutreachReadyForDealership } from "../../../../shared/prospectEmailQuality";
 
 describe("prospector ICP + regions", () => {
   it("seeds many high-ability dealerships across regions", () => {
@@ -43,6 +49,36 @@ describe("prospector ICP + regions", () => {
     });
     assert.equal(patched?.phone, "+27115550100");
     assert.equal(patched?.email, "gm@example-yard.co.za");
+    patchProspectContact(seed.id, { phone: prevPhone ?? "", email: prevEmail ?? "" });
+  });
+
+  it("hydrates ZA ICP yards with real research websites", () => {
+    const za = MOCK_PROSPECTS.filter((p) => p.regionId === "ZA");
+    assert.ok(za.length >= 20);
+    assert.ok(za.filter((p) => Boolean(p.website?.trim())).length >= 15);
+  });
+
+  it("research apply rejects info@ and keeps a good phone", () => {
+    const seed = MOCK_PROSPECTS.find((p) => p.website?.includes("http")) ?? MOCK_PROSPECTS[0]!;
+    const site = seed.website?.startsWith("http") ? seed.website : `https://${seed.website ?? "jubileemotors.co.za"}`;
+    const host = new URL(site).hostname.replace(/^www\./, "");
+    const prevPhone = seed.phone;
+    const prevEmail = seed.email;
+    applyResearchedContact(seed.id, {
+      email: `info@${host}`,
+      website: site,
+      phone: "0118114008",
+    });
+    assert.equal(isOutreachReadyForDealership(`info@${host}`, site), false);
+    assert.notEqual((seed.email ?? "").toLowerCase(), `info@${host}`);
+    assert.equal(seed.phone, "011 811 4008");
+    applyResearchedContact(seed.id, {
+      email: `thabo@${host}`,
+      website: site,
+      phone: "",
+    });
+    assert.equal(seed.email, `thabo@${host}`);
+    assert.equal(seed.phone, "011 811 4008", "must not overwrite switchboard with empty");
     patchProspectContact(seed.id, { phone: prevPhone ?? "", email: prevEmail ?? "" });
   });
 });
