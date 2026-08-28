@@ -83,9 +83,49 @@ export default function SetupPage() {
           </p>
         </header>
 
+        <section className="mb-6 rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-5">
+          <h2 className="text-lg font-semibold text-emerald-100">
+            Where to paste (pick ONE place)
+          </h2>
+          <div className="mt-3 space-y-4 text-sm leading-6 text-emerald-100/90">
+            <div>
+              <p className="font-semibold text-white">
+                ✅ Easiest — Cursor secrets popup (recommended)
+              </p>
+              <p className="mt-1">
+                In this Cursor agent chat, look for the{" "}
+                <strong>Twilio credentials for Themba</strong> form that appeared
+                above. Paste your Account SID, Auth Token, and webhook URL there.
+                The agent saves them securely — you do not create any file yourself.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-white">
+                Alternative — Cursor file explorer
+              </p>
+              <p className="mt-1">
+                Left sidebar → open this project&apos;s root folder → New file →
+                name it exactly <code className="text-emerald-200">.env.local</code>{" "}
+                (same level as <code className="text-emerald-200">package.json</code>
+                , not inside <code className="text-emerald-200">app/</code>).
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-white">
+                ❌ Not on grayarx.com yet
+              </p>
+              <p className="mt-1">
+                The live GrayArx website does not have a settings page for Twilio
+                yet. Production keys go in your host (e.g. Vercel env vars) when
+                we deploy — not in the browser.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
           <h2 className="text-lg font-semibold text-white">
-            1 · Paste your Twilio keys (you do this once)
+            1 · Paste your Twilio keys
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
             In the project folder, create or edit{" "}
