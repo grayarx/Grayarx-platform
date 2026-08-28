@@ -20,17 +20,27 @@ export default function Home() {
     <div className="min-h-screen bg-black text-zinc-100">
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <header className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            GrayArx outreach
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-            Sales scripts
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Stage-aware discovery funnel — permission, diagnose, quantify, close
-            on a free pilot. Structured intel on every turn feeds CRM and product.
-            Pricing and tiers only when they ask.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                GrayArx outreach
+              </p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                Sales scripts
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Stage-aware discovery funnel — permission, diagnose, quantify, close
+                on a free pilot. Structured intel on every turn feeds CRM and product.
+                Pricing and tiers only when they ask.
+              </p>
+            </div>
+            <a
+              href="/admin/prospector"
+              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
+            >
+              Open prospector
+            </a>
+          </div>
         </header>
 
         <div className="space-y-6">
