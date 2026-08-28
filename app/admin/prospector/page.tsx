@@ -162,6 +162,12 @@ export default function ProspectorAdminPage() {
             </p>
           </div>
           <Link
+            href="/admin/setup"
+            className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400"
+          >
+            Twilio setup
+          </Link>
+          <Link
             href="/"
             className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900"
           >
