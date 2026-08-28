@@ -31,8 +31,8 @@ export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
         </p>
         <h2 className="mt-1 text-lg font-semibold text-white">Smart replies</h2>
         <p className="mt-1 text-sm leading-6 text-zinc-400">
-          The agent says one short response, asks one question, and then stops to
-          listen. It never runs through the full pitch without the dealership.
+          Diagnose before prescribing — one question per turn, no feature lists.
+          Log intel for GrayArx; close on a free pilot, not a brochure.
         </p>
       </div>
 
@@ -101,6 +101,17 @@ export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
             “{result.reply}”
           </blockquote>
 
+          {result.intelNote ? (
+            <div className="mt-4 rounded-md bg-blue-950/30 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-400">
+                Log to CRM
+              </p>
+              <p className="mt-1 text-sm leading-6 text-blue-100/90">
+                {result.intelNote}
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-5 rounded-md bg-black/40 p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
               Next action
@@ -114,9 +125,9 @@ export function SmartReplyPlaybook({ lead }: SmartReplyPlaybookProps) {
 
       <div className="grid gap-px border-t border-zinc-800 bg-zinc-800 sm:grid-cols-3">
         {[
-          ["One turn at a time", "Never deliver the entire script."],
-          ["No made-up answers", "Unknown questions go to a human."],
-          ["Respect the contact", "Say goodbye before ending every call."],
+          ["Diagnose first", "Ask about their process before mentioning GrayArx."],
+          ["One question per turn", "Never dump features, tiers, or legal terms."],
+          ["Log what you learn", "Tools, volume, and pain feed product and CRM."],
         ].map(([title, detail]) => (
           <div key={title} className="bg-zinc-950 p-4">
             <p className="text-sm font-medium text-zinc-200">{title}</p>

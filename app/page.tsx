@@ -27,8 +27,9 @@ export default function Home() {
             Sales scripts
           </h1>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Outcome-focused copy for dealerships — after-hours enquiries, booked
-            test drives, live stock, and warm leads — without product jargon.
+            Discovery-first outreach — diagnose the yard&apos;s pain, quantify
+            the cost of inaction, offer a free pilot. No feature dumps; pricing
+            and tiers only when they ask.
           </p>
         </header>
 

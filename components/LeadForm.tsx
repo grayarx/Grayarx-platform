@@ -16,8 +16,8 @@ const fields: Array<{
   { key: "location", label: "Location" },
   { key: "agentName", label: "Agent name" },
   { key: "phoneNumber", label: "Callback number" },
-  { key: "researchNote", label: "WhatsApp opener note", multiline: true },
-  { key: "callReason", label: "Call reason (spoken)", multiline: true },
+  { key: "researchNote", label: "WhatsApp hook (curiosity, not product)", multiline: true },
+  { key: "callReason", label: "Discovery opener (one line, spoken)", multiline: true },
 ];
 
 export function LeadForm({ lead, onChange }: LeadFormProps) {

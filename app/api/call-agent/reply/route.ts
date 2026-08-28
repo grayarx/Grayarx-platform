@@ -56,6 +56,7 @@ export async function POST(request: Request) {
         ? "speak_then_escalate"
         : "speak_then_listen",
     nextStep: result.nextStep,
+    intelNote: result.intelNote ?? null,
     suppressContact: result.intent === "do-not-call",
   });
 }
