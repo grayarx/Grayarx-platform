@@ -70,6 +70,19 @@ describe("liveness health (Railway healthcheck)", () => {
     }
   });
 
+  it("production liveness entry loads the app via a runtime URL (not a static import)", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = await readFile(join(here, "..", "livenessEntry.ts"), "utf8");
+    expect(src).toContain('new URL("./app.js", import.meta.url)');
+    expect(src).toContain('GRAYARX_LIVENESS_BOOT');
+    expect(src).toContain("/api/webhooks/health");
+    expect(src).not.toMatch(/from\s+["']\.\/_core\/index/);
+    expect(src).not.toMatch(/livenessHealth/);
+  });
+
   it("GET /api/health returns 200 immediately", async () => {
     const app = express();
     registerLivenessHealthRoutes(app);
