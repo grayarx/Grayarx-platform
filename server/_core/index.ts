@@ -12,9 +12,13 @@ import { registerStorageProxy } from "./storageProxy";
 import { registerScheduledRoutes } from "./scheduled";
 import { attachAutonomousAuditMiddleware } from "./autonomousAudit";
 import { attachMarketGuideRefreshMiddleware } from "./marketGuideScheduler";
-import { attachPrincipalEnrichmentMiddleware } from "./principalEnrichmentScheduler";
+import {
+  attachPrincipalEnrichmentMiddleware,
+  startAlwaysOnPrincipalEnrichment,
+} from "./principalEnrichmentScheduler";
 import { registerSitemapRoutes } from "./sitemap";
 import { registerWebhookRoutes } from "./webhookRoutes";
+import { registerLivenessHealthRoutes, startBackgroundHealthProbes } from "./livenessHealth";
 import { registerNalaOsRoutes } from "./nalaOsRoutes";
 import { registerEmbedRoutes } from "./embedRoutes";
 import { registerSecurityHeaders, registerCanonicalRedirect } from "./securityHeaders";
@@ -110,6 +114,8 @@ async function startServer() {
   const server = createServer(app);
   registerSecurityHeaders(app);
   registerCanonicalRedirect(app);
+  // Railway healthcheck hits these before Sipho/OpenAI/DNS are warm.
+  registerLivenessHealthRoutes(app);
   // Configure body parser — capture raw body so webhook HMAC validation uses
   // the exact bytes Meta signed (not a re-serialized JSON.stringify).
   app.use(express.json({
@@ -184,8 +190,14 @@ async function startServer() {
     });
   });
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  const preferredPort = parseInt(process.env.PORT || "3000", 10);
+  // Railway assigns PORT exclusively — bind/close probing can delay listen past healthcheck.
+  const onRailway = Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RAILWAY_SERVICE_NAME,
+  );
+  const port = onRailway ? preferredPort : await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
     console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead.`);
@@ -196,6 +208,8 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
     console.log(`WebSocket server available at ws://0.0.0.0:${port}/api/ws`);
+    startAlwaysOnPrincipalEnrichment();
+    startBackgroundHealthProbes();
   });
 
   // ── Self-healing: sync whatsappPhoneNumberId from env to DB on startup ──

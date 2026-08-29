@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import {
   researchKeyFrom,
   isResearchOnCooldown,
@@ -62,5 +62,25 @@ describe("prospect research cooldown persistence (in-memory adapter)", () => {
     expect(until - now).toBe(RESEARCH_COOLDOWN_MS);
     expect(isResearchOnCooldown("host:demo.co.za", now + 1000)).toBe(true);
     expect(isResearchOnCooldown("host:demo.co.za", now + RESEARCH_COOLDOWN_MS + 1)).toBe(false);
+  });
+});
+
+describe("hydrateResearchCooldownsFromDb", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    _clearResearchCooldownsForTests();
+  });
+
+  it("returns 0 and keeps memory empty when the table is missing", async () => {
+    vi.doMock("./db", () => ({
+      listActiveProspectResearchAttempts: async () => {
+        throw new Error("Table 'prospect_research_attempts' doesn't exist");
+      },
+    }));
+    const { hydrateResearchCooldownsFromDb, isResearchOnCooldown } = await import(
+      "./_core/prospectResearchCooldown"
+    );
+    expect(await hydrateResearchCooldownsFromDb()).toBe(0);
+    expect(isResearchOnCooldown("host:any.co.za")).toBe(false);
   });
 });

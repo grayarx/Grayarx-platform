@@ -6,6 +6,7 @@
  */
 
 import type { Express, NextFunction, Request, Response } from "express";
+import { isLivenessPath } from "./livenessHealth";
 
 /** Steady drip cadence. */
 export const PRINCIPAL_ENRICH_INTERVAL_MS = 10 * 60 * 1000;
@@ -26,7 +27,7 @@ export type EnrichTriggerResult =
       updated: number;
       importedReady: number;
     }
-  | { ran: false; reason: "running" | "fresh" | "scout_busy"; lastRunAt: Date | null };
+  | { ran: false; reason: "running" | "fresh" | "scout_busy" | "error"; lastRunAt: Date | null };
 
 export async function triggerPrincipalEnrichmentIfDue(
   force = false,
@@ -84,7 +85,11 @@ export async function triggerPrincipalEnrichmentIfDue(
     };
   } catch (err) {
     console.error("[PrincipalEnrich] tick failed", err);
-    throw err;
+    return {
+      ran: false,
+      reason: "error",
+      lastRunAt: lastRunCache ? new Date(lastRunCache) : null,
+    };
   } finally {
     isRunning = false;
   }
@@ -107,8 +112,12 @@ export function startAlwaysOnPrincipalEnrichment(): void {
 }
 
 export function attachPrincipalEnrichmentMiddleware(app: Express): void {
-  startAlwaysOnPrincipalEnrichment();
-  app.use((_req: Request, _res: Response, next: NextFunction) => {
+  // Timer starts after listen() so the first Railway probe is not competing with Sipho.
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (isLivenessPath(req.originalUrl || req.url || "")) {
+      next();
+      return;
+    }
     void triggerPrincipalEnrichmentIfDue(false).catch(() => {
       /* logged inside */
     });
