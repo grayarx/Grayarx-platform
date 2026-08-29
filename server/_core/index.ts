@@ -4,7 +4,7 @@ import "dotenv/config";
 import { attachSentryErrorHandler, captureException } from "./sentry";
 import express from "express";
 import path from "path";
-import { createServer } from "http";
+import { createServer, type Server as HttpServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerCustomAuthRoutes } from "./customAuth";
@@ -98,7 +98,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-async function startServer() {
+export async function startServer(existing?: { app: express.Express; server: HttpServer }) {
   // Apply idempotent SQL migrations (compliance inbox, etc.)
   try {
     const { spawn } = await import("child_process");
@@ -110,11 +110,12 @@ async function startServer() {
     /* non-fatal */
   }
 
-  const app = express();
-  const server = createServer(app);
+  const app = existing?.app ?? express();
+  const server = existing?.server ?? createServer(app);
   registerSecurityHeaders(app);
   registerCanonicalRedirect(app);
-  // Railway healthcheck hits these before Sipho/OpenAI/DNS are warm.
+  // Always register the full health handler. The liveness entry's stub answers
+  // Railway first; `?full=1` calls next() into this handler after boot.
   registerLivenessHealthRoutes(app);
   // Configure body parser — capture raw body so webhook HMAC validation uses
   // the exact bytes Meta signed (not a re-serialized JSON.stringify).
@@ -197,20 +198,28 @@ async function startServer() {
       process.env.RAILWAY_PROJECT_ID ||
       process.env.RAILWAY_SERVICE_NAME,
   );
-  const port = onRailway ? preferredPort : await findAvailablePort(preferredPort);
 
-  if (port !== preferredPort) {
-    console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead.`);
-  }
-
-  // Bind to 0.0.0.0 so Railway's proxy can route traffic to the container.
-  // Binding to localhost/127.0.0.1 only is invisible to Railway's ingress and causes 522.
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${port}/`);
-    console.log(`WebSocket server available at ws://0.0.0.0:${port}/api/ws`);
+  const onListening = (boundPort: number) => {
+    console.log(`Server running on http://0.0.0.0:${boundPort}/`);
+    console.log(`WebSocket server available at ws://0.0.0.0:${boundPort}/api/ws`);
     startAlwaysOnPrincipalEnrichment();
     startBackgroundHealthProbes();
-  });
+  };
+
+  if (server.listening) {
+    const addr = server.address();
+    const bound =
+      typeof addr === "object" && addr && "port" in addr ? addr.port : preferredPort;
+    onListening(bound);
+  } else {
+    const port = onRailway ? preferredPort : await findAvailablePort(preferredPort);
+    if (port !== preferredPort) {
+      console.warn(`⚠️  Port ${preferredPort} is busy — using port ${port} instead.`);
+    }
+    // Bind to 0.0.0.0 so Railway's proxy can route traffic to the container.
+    // Binding to localhost/127.0.0.1 only is invisible to Railway's ingress and causes 522.
+    server.listen(port, "0.0.0.0", () => onListening(port));
+  }
 
   // ── Self-healing: sync whatsappPhoneNumberId from env to DB on startup ──
   // Only fills an empty DB field — never overwrites a value set by webhook sync.
@@ -418,7 +427,9 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error("Failed to start server:", err);
-  process.exit(1);
-});
+if (process.env.GRAYARX_LIVENESS_BOOT !== "1") {
+  startServer().catch((err) => {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  });
+}
