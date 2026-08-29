@@ -66,6 +66,7 @@ async function main() {
     database: url.pathname.replace(/^\//, ""),
     ssl: { rejectUnauthorized: true },
     multipleStatements: true,
+    connectTimeout: 15_000,
   });
 
   const migrationsDir = path.join(__dirname, "..", "drizzle", "migrations");
@@ -86,7 +87,8 @@ async function main() {
       if (
         msg.includes("Duplicate column") ||
         msg.includes("Duplicate key") ||
-        msg.includes("already exists")
+        msg.includes("already exists") ||
+        msg.includes("Duplicate entry")
       ) {
         console.log(`[migrate] ~ ${file} (already applied)`);
       } else {

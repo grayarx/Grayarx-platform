@@ -11,6 +11,7 @@ import { getDb } from "../db";
 import { alertFounder } from "./founderAlert";
 import { checkRateLimit, callerIp } from "./rateLimit";
 import { resolveDealershipIdFromPhoneNumberId } from "./whatsappDealershipLink";
+import { sendWebhookHealth } from "./livenessHealth";
 
 function timingSafeStringEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -247,51 +248,11 @@ export function registerWebhookRoutes(app: Express): void {
   });
 
   /**
-   * Health check endpoint for webhooks
+   * Health check — Railway liveness (no outbound I/O). Use ?full=1 for live MX/OpenAI.
+   * Primary registration is registerLivenessHealthRoutes (before warming middleware).
    */
-  app.get("/api/webhooks/health", async (_req: Request, res: Response) => {
-    const phoneIdConfigured = !!(
-      process.env.WHATSAPP_BUSINESS_PHONE_ID || process.env.WHATSAPP_PHONE_NUMBER_ID
-    );
-    const tokenConfigured = !!process.env.WHATSAPP_ACCESS_TOKEN;
-    const { getPlatformHealth } = await import("./platformHealth");
-    const { getResilienceStatus } = await import("./agentResilience");
-    const { checkInboundMxHealth } = await import("./complianceMailbox");
-    const platform = await getPlatformHealth();
-    const inboundMx = await checkInboundMxHealth("grayarx.com");
-    res.status(200).json({
-      status: "ok",
-      openai: platform.openai,
-      resilience: getResilienceStatus(),
-      inboundEmail: {
-        domain: inboundMx.domain,
-        hasMx: inboundMx.hasMx,
-        canReceiveMail: inboundMx.canReceiveMail,
-        mxRecords: inboundMx.records,
-        detail: inboundMx.detail,
-      },
-      webhooks: {
-        whatsapp: {
-          url: "/api/webhooks/whatsapp",
-          status: "active",
-          verifyToken: process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ? "configured" : "not configured",
-          appSecret: process.env.WHATSAPP_APP_SECRET ? "configured" : "not configured",
-          phoneNumberId: phoneIdConfigured ? "configured" : "not configured",
-          accessToken: tokenConfigured ? "configured" : "not configured",
-          canAutoReply: phoneIdConfigured && tokenConfigured,
-        },
-        resendInbound: {
-          url: "/api/webhooks/resend-inbound",
-          status: "active",
-          webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET
-            ? "configured"
-            : process.env.NODE_ENV === "production"
-              ? "missing — set RESEND_INBOUND_WEBHOOK_SECRET"
-              : "optional_dev",
-          note: "Receives hello@ / privacy@ / legal@ / mia@ / prospector@ / pilot@ when Resend Receiving MX is configured. Fetches email body via Receiving API. Alerts FOUNDER_ALERT_EMAIL.",
-        },
-      },
-    });
+  app.get("/api/webhooks/health", (req: Request, res: Response) => {
+    void sendWebhookHealth(req, res);
   });
 
   /**

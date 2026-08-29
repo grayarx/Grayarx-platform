@@ -71,6 +71,9 @@ export async function getDb() {
         waitForConnections: true,
         connectionLimit: 10,
       });
+      pool.on("error", (err) => {
+        console.warn("[Database] pool error (non-fatal):", err);
+      });
       _db = drizzle(pool) as unknown as ReturnType<typeof drizzle>;
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
@@ -1257,18 +1260,22 @@ export async function upsertProspectResearchAttempt(
     cooldownUntil: input.cooldownUntil,
     notes: input.notes ?? null,
   };
-  await db
-    .insert(prospectResearchAttempts)
-    .values(values)
-    .onDuplicateKeyUpdate({
-      set: {
-        dealershipName: values.dealershipName,
-        lastAttemptAt: values.lastAttemptAt,
-        lastStatus: values.lastStatus,
-        cooldownUntil: values.cooldownUntil,
-        notes: values.notes,
-      },
-    });
+  try {
+    await db
+      .insert(prospectResearchAttempts)
+      .values(values)
+      .onDuplicateKeyUpdate({
+        set: {
+          dealershipName: values.dealershipName,
+          lastAttemptAt: values.lastAttemptAt,
+          lastStatus: values.lastStatus,
+          cooldownUntil: values.cooldownUntil,
+          notes: values.notes,
+        },
+      });
+  } catch (err) {
+    console.warn("[ResearchCooldown] upsert failed", err);
+  }
 }
 
 export async function listActiveProspectResearchAttempts(): Promise<
@@ -1283,26 +1290,31 @@ export async function listActiveProspectResearchAttempts(): Promise<
 > {
   const db = await getDb();
   if (!db) return [];
-  const now = new Date();
-  const rows = await db
-    .select({
-      researchKey: prospectResearchAttempts.researchKey,
-      dealershipName: prospectResearchAttempts.dealershipName,
-      lastAttemptAt: prospectResearchAttempts.lastAttemptAt,
-      lastStatus: prospectResearchAttempts.lastStatus,
-      cooldownUntil: prospectResearchAttempts.cooldownUntil,
-      notes: prospectResearchAttempts.notes,
-    })
-    .from(prospectResearchAttempts)
-    .where(gte(prospectResearchAttempts.cooldownUntil, now));
-  return rows.map((r) => ({
-    researchKey: r.researchKey,
-    dealershipName: r.dealershipName ?? null,
-    lastAttemptAt: r.lastAttemptAt,
-    lastStatus: (r.lastStatus as "no_named_email" | "fetch_failed" | "hit") ?? "no_named_email",
-    cooldownUntil: r.cooldownUntil ?? null,
-    notes: r.notes ?? null,
-  }));
+  try {
+    const now = new Date();
+    const rows = await db
+      .select({
+        researchKey: prospectResearchAttempts.researchKey,
+        dealershipName: prospectResearchAttempts.dealershipName,
+        lastAttemptAt: prospectResearchAttempts.lastAttemptAt,
+        lastStatus: prospectResearchAttempts.lastStatus,
+        cooldownUntil: prospectResearchAttempts.cooldownUntil,
+        notes: prospectResearchAttempts.notes,
+      })
+      .from(prospectResearchAttempts)
+      .where(gte(prospectResearchAttempts.cooldownUntil, now));
+    return rows.map((r) => ({
+      researchKey: r.researchKey,
+      dealershipName: r.dealershipName ?? null,
+      lastAttemptAt: r.lastAttemptAt,
+      lastStatus: (r.lastStatus as "no_named_email" | "fetch_failed" | "hit") ?? "no_named_email",
+      cooldownUntil: r.cooldownUntil ?? null,
+      notes: r.notes ?? null,
+    }));
+  } catch (err) {
+    console.warn("[ResearchCooldown] list active attempts failed", err);
+    return [];
+  }
 }
 
 // === Aggregates / KPIs ===
