@@ -41,6 +41,13 @@ export const OS_TIER_PRICES_ZAR: Record<OsInvoicePlanId, number> = {
   enterprise: OS_INVOICE_PLANS[2].priceMonthlyZar,
 };
 
+/** Included WhatsApp conversations (and LLM polish credits) — docs/PRICING.md. */
+export const OS_INCLUDED_WHATSAPP: Record<OsInvoicePlanId, number> = {
+  starter: 1000,
+  professional: 3500,
+  enterprise: 12000,
+};
+
 /** Pre-OS Showroom / Growth / Multi-site list prices — never bill these. */
 export const LEGACY_SKU_AMOUNTS_ZAR = new Set([3999, 7999, 11999]);
 

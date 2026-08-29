@@ -43,7 +43,7 @@ const PRICING_TIERS: PricingTier[] = [
       { name: "Essential Reporting", included: true },
       { name: "Unlimited Team Members", included: true },
       { name: "Email Support", included: true },
-      { name: "WhatsApp Chatbot", included: false },
+      { name: "WhatsApp Nala (1,000 conversations)", included: true },
       { name: "Test Drive Booking", included: false },
       { name: "Advanced Reporting", included: false },
       { name: "Multi-Location (5+)", included: false },
