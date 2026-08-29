@@ -16,6 +16,8 @@ import {
   SA_PROSPECT_POOL,
   isOnResearchCooldown,
   markProspectResearchAttempted,
+  persistResearchAttempt,
+  hydrateResearchCooldownsFromDb,
 } from "./saProspectPool";
 import { PILOT_PROSPECTS } from "../../shared/pilotProspectSegments";
 import {
@@ -148,6 +150,7 @@ export async function importOutreachReadyKnownProspects(): Promise<{
 export async function collectPrincipalEnrichmentTargets(
   limit = DEFAULT_LIMIT,
 ): Promise<EnrichmentCandidate[]> {
+  await hydrateResearchCooldownsFromDb();
   const now = Date.now();
   const existing = await listProspects(1000);
   const byName = new Map(
@@ -166,7 +169,7 @@ export async function collectPrincipalEnrichmentTargets(
           ? p.enrichedAt
           : (p as { enrichedAt?: Date | null }).enrichedAt ?? null;
       if (!staleEnrichment(enrichedAt, now)) return false;
-      if (isOnResearchCooldown(p.dealershipName)) return false;
+      if (isOnResearchCooldown(p.dealershipName, p.website)) return false;
       return true;
     }),
   );
@@ -212,7 +215,7 @@ export async function collectPrincipalEnrichmentTargets(
     SA_PROSPECT_POOL.filter((p) => {
       if (!p.website?.trim()) return false;
       if (!needsEnrichmentEmail(p.email, p.website)) return false; // ready ones imported separately
-      if (isOnResearchCooldown(p.name)) return false;
+      if (isOnResearchCooldown(p.name, p.website)) return false;
       const existingRow = byName.get(p.name.toLowerCase().trim());
       if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
         return false;
@@ -247,7 +250,7 @@ export async function collectPrincipalEnrichmentTargets(
     PILOT_PROSPECTS.filter((p) => {
       if (!p.website?.trim()) return false;
       if (!needsEnrichmentEmail(p.email, p.website) && p.emailVerified) return false;
-      if (isOnResearchCooldown(p.dealershipName)) return false;
+      if (isOnResearchCooldown(p.dealershipName, p.website)) return false;
       const existingRow = byName.get(p.dealershipName.toLowerCase().trim());
       if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
         return false;
@@ -320,7 +323,16 @@ export async function runPrincipalEnrichmentTick(
     results.push(result);
 
     if (result.status !== "enriched" || !result.hit) {
-      markProspectResearchAttempted(target.dealershipName);
+      const persistStatus =
+        result.status === "fetch_failed" ? "fetch_failed" : "no_named_email";
+      markProspectResearchAttempted(target.dealershipName, target.website);
+      await persistResearchAttempt({
+        name: target.dealershipName,
+        website: target.website,
+        prospectId: target.prospectId,
+        status: persistStatus,
+        notes: result.notes,
+      });
       if (target.prospectId) {
         try {
           await updateProspectContact(target.prospectId, {
@@ -356,6 +368,14 @@ export async function runPrincipalEnrichmentTick(
     ]
       .filter(Boolean)
       .join(" | ");
+    await persistResearchAttempt({
+      name: target.dealershipName,
+      website: target.website,
+      prospectId: target.prospectId,
+      status: "hit",
+      notes: sourceNotes,
+      cooldownMs: 0,
+    });
 
     if (target.prospectId) {
       await updateProspectContact(target.prospectId, {

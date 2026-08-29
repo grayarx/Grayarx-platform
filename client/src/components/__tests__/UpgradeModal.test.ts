@@ -70,15 +70,15 @@ describe("UpgradeModal Component", () => {
 
   describe("Pricing Display", () => {
     it("should display correct pricing for each tier", () => {
-      expect(TIER_PRICES_ZAR.starter).toBe(3999);
-      expect(TIER_PRICES_ZAR.professional).toBe(7999);
-      expect(TIER_PRICES_ZAR.enterprise).toBe(11999);
+      expect(TIER_PRICES_ZAR.starter).toBe(7990);
+      expect(TIER_PRICES_ZAR.professional).toBe(14990);
+      expect(TIER_PRICES_ZAR.enterprise).toBe(29990);
     });
 
-    it("uses Showroom / Growth / Multi-site display names", () => {
-      expect(TIER_DISPLAY_NAMES.starter).toBe("Showroom");
-      expect(TIER_DISPLAY_NAMES.professional).toBe("Growth");
-      expect(TIER_DISPLAY_NAMES.enterprise).toBe("Multi-site");
+    it("uses Starter / Professional / Enterprise display names", () => {
+      expect(TIER_DISPLAY_NAMES.starter).toBe("Starter");
+      expect(TIER_DISPLAY_NAMES.professional).toBe("Professional");
+      expect(TIER_DISPLAY_NAMES.enterprise).toBe("Enterprise");
     });
 
     it("should format prices with currency symbol", () => {

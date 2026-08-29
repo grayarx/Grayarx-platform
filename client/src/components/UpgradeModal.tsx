@@ -108,7 +108,7 @@ export function UpgradeModal({
                 <div>
                   <h3 className="font-semibold text-primary">{PILOT_PARTNER.label}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Pilot dealerships get <strong className="text-foreground">Growth</strong> features
+                    Pilot dealerships get <strong className="text-foreground">Professional</strong> features
                     while we polish WhatsApp and inventory. Pricing is tailored —{" "}
                     <Link href="/#lead-capture" className="text-primary hover:underline">
                       join the pilot
@@ -312,7 +312,7 @@ export function UpgradeModal({
 
           <p className="text-xs text-muted-foreground text-center">
             {PILOT_PRICING_HIDDEN
-              ? "Pilot partners receive Growth features. Final tier pricing is confirmed before billing goes live."
+              ? "Pilot partners receive Professional features. Final tier pricing is confirmed before billing goes live."
               : "Your billing cycle will be adjusted accordingly. Immediate access to all features in your new tier."}
           </p>
         </div>

@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 import { TIER_PRICES_ZAR } from "../../shared/subscriptionTiers";
+import { billedOsAmountZar } from "../../shared/osPlans";
 
 const PRICING_TIERS = {
   starter: TIER_PRICES_ZAR.starter,
@@ -68,8 +69,10 @@ export const billingRouter = router({
         });
       }
 
-      const monthlyPrice =
-        input.monthlyPriceZar || PRICING_TIERS[input.plan] || 0;
+      const monthlyPrice = billedOsAmountZar(
+        input.plan,
+        input.monthlyPriceZar ?? PRICING_TIERS[input.plan],
+      );
 
       // Check if subscription already exists
       const existing = await db
@@ -186,7 +189,14 @@ export const billingRouter = router({
       const dueDate = new Date(today);
       dueDate.setDate(dueDate.getDate() + 30); // Net 30
 
-      const subtotal = parseFloat(sub[0].monthlyPriceZar.toString());
+      const storedPrice = parseFloat(sub[0].monthlyPriceZar.toString());
+      const subtotal = billedOsAmountZar(sub[0].plan, storedPrice);
+      if (subtotal <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Pilot (R0) is not invoiced. Choose Starter, Professional, or Enterprise first.",
+        });
+      }
       const vatAmount = 0; // No VAT (not VAT registered)
       const totalAmount = subtotal;
 

@@ -187,6 +187,23 @@ export type Prospect = typeof prospects.$inferSelect;
 export type InsertProspect = typeof prospects.$inferInsert;
 
 /**
+ * Sipho research cooldowns — survives Railway restarts.
+ * Key is stable: website host, else prospect:{id}, else name:{dealership}.
+ */
+export const prospectResearchAttempts = mysqlTable("prospect_research_attempts", {
+  id: int("id").autoincrement().primaryKey(),
+  researchKey: varchar("researchKey", { length: 320 }).notNull().unique(),
+  dealershipName: varchar("dealershipName", { length: 255 }),
+  lastAttemptAt: timestamp("lastAttemptAt").defaultNow().notNull(),
+  lastStatus: varchar("lastStatus", { length: 32 }).notNull(),
+  cooldownUntil: timestamp("cooldownUntil"),
+  notes: text("notes"),
+});
+
+export type ProspectResearchAttempt = typeof prospectResearchAttempts.$inferSelect;
+export type InsertProspectResearchAttempt = typeof prospectResearchAttempts.$inferInsert;
+
+/**
  * Outbound call attempts placed by the Calling Agent on behalf of the dealer.
  * One row per attempt; linked to a prospect.
  */

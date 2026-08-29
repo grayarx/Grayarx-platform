@@ -27,6 +27,7 @@ const MIGRATIONS = [
   "0074_prospect_principal_enrichment.sql",
   "0075_tier3_google_review_url.sql",
   "0076_dealership_parts.sql",
+  "0077_prospect_research_attempts.sql",
 ];
 
 /** Run once: wipe Sipho prospects so only named/principal emails are re-added. */

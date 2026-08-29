@@ -28,7 +28,9 @@ describe("principal email HTML extraction", () => {
   });
 
   it("deep mode uses the full CONTACT_PATHS list, not the 5-page fast cap", () => {
-    expect(CONTACT_PATHS_FAST).toHaveLength(5);
+    expect(CONTACT_PATHS_FAST.length).toBeGreaterThanOrEqual(5);
+    expect(CONTACT_PATHS_FAST).toContain("/about-us");
+    expect(CONTACT_PATHS_FAST).toContain("/meet-the-team");
     expect(CONTACT_PATHS.length).toBeGreaterThan(CONTACT_PATHS_FAST.length);
     expect(CONTACT_PATHS).toContain("/directors");
     expect(CONTACT_PATHS).toContain("/meet-the-team");

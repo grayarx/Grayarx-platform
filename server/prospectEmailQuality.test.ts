@@ -138,7 +138,7 @@ describe("prospect email quality", () => {
     const before = countResearchableProspects([]);
     const { batch } = pickNextProspectsForResearch([], 5);
     expect(batch.length).toBe(5);
-    for (const p of batch) markProspectResearchAttempted(p.name);
+    for (const p of batch) markProspectResearchAttempted(p.name, p.website);
     const after = countResearchableProspects([]);
     expect(after).toBe(before - 5);
     const next = pickNextProspectsForResearch([], 5);

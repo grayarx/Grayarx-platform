@@ -2,15 +2,15 @@
  * ICP "no-brainer" ROI math — after-hours leakage vs recovering one deal.
  * Used on /for-dealers and founder call kits. Keep assumptions editable.
  *
- * "Covers the month" anchors to Showroom list / pilot bill (R3 999) — the
- * cheapest plan. Pilot partners get Growth features at that same price.
- * Growth list (R7 999) still clears on ~one deal at default gross.
+ * "Covers the month" anchors to Starter OS list (R7,990) — the cheapest
+ * billed plan. Pilot is R0 / 14 days and is not invoiced. Professional OS
+ * (R14,990) is the usual close after Monday proof.
  */
 
 import { PILOT_PARTNER, TIER_PRICES_ZAR } from "./subscriptionTiers";
 
-/** Cheapest billable month: Showroom list === pilot partner rate. */
-export const CHEAPEST_MONTHLY_ZAR = TIER_PRICES_ZAR.starter; // 3999
+/** Cheapest billed month: Starter OS list. */
+export const CHEAPEST_MONTHLY_ZAR = TIER_PRICES_ZAR.starter;
 
 export const ICP_ROI_DEFAULTS = {
   deadLeadsPerWeek: 8,
@@ -19,12 +19,13 @@ export const ICP_ROI_DEFAULTS = {
   /** Typical gross profit on one closed used-car deal (ZAR) */
   grossProfitPerDealZar: 12_000,
   /**
-   * Public "covers the month" threshold — Showroom / pilot (not Growth list).
+   * Public "covers the month" threshold — Starter OS list.
    * Soft-rounded display still uses formatZarWhole; compare against exact rand.
    */
   coversMonthBelowZar: CHEAPEST_MONTHLY_ZAR,
-  /** Growth list — use on calls when upselling off pilot */
+  /** Professional OS list — use on calls when closing after pilot */
   growthListZar: TIER_PRICES_ZAR.professional,
+  /** Pilot is R0 — do not invoice */
   pilotBillZar: PILOT_PARTNER.monthlyPriceZar,
 } as const;
 

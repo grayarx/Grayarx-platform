@@ -2,14 +2,14 @@
  * Per-dealership OpenAI model tiers.
  *
  * Plan mapping (DB enum: starter / professional / enterprise):
- *   starter      (Showroom)  → gpt-4o-mini
- *   professional (Growth)    → gpt-4o-mini  (cost-safe; not GPT-4o for all)
- *   enterprise   (Multi-site)→ stronger model (gpt-4o by default)
+ *   starter      (Starter OS)       → gpt-4o-mini
+ *   professional (Professional OS)  → gpt-4o-mini  (cost-safe; not GPT-4o for all)
+ *   enterprise   (Enterprise OS)    → stronger model (gpt-4o by default)
  *
  * Env overrides (optional):
- *   OPENAI_MODEL           — Showroom / default
- *   OPENAI_MODEL_GROWTH    — Growth tier (defaults to mini)
- *   OPENAI_MODEL_PREMIUM   — Multi-site tier
+ *   OPENAI_MODEL           — Starter / default
+ *   OPENAI_MODEL_GROWTH    — Professional tier (defaults to mini)
+ *   OPENAI_MODEL_PREMIUM   — Enterprise tier
  *
  * Explicit `llmModel` on the dealership row always wins when set.
  */
