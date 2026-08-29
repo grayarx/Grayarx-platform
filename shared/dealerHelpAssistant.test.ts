@@ -32,8 +32,8 @@ describe("dealerHelpAssistant", () => {
   it("answers product Q&A from the dealer playbook", () => {
     const res = buildDealerHelpReply({ message: "What does it cost?" });
     expect(res.intent).toBe("product_qa");
-    expect(res.reply).toMatch(/Growth/);
-    expect(res.reply).toMatch(/Showroom/);
+    expect(res.reply).toMatch(/Starter/);
+    expect(res.reply).toMatch(/Professional/);
   });
 
   it("answers WhatsApp Business from the playbook", () => {

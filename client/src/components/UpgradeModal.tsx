@@ -40,19 +40,19 @@ export interface UpgradeModalProps {
 const TIER_HIGHLIGHTS: Record<SubscriptionTierId, string[]> = {
   starter: [
     "150 vehicles · 3 users",
-    "Web chat Nala — 400 AI sessions/mo",
-    "Click-to-chat WhatsApp (no Cloud API bot)",
+    "1,000 AI polish · 1,000 WhatsApp conversations",
+    "WhatsApp Nala Cloud API + web chat",
     "300 emails/mo · no SMS",
   ],
   professional: [
     "500 vehicles · 10 users",
-    "1,200 AI sessions · 2,000 WhatsApp msgs/mo",
-    "WhatsApp Nala Cloud API + deal scores",
+    "3,500 AI polish · 3,500 WhatsApp conversations",
+    "WhatsApp Nala Cloud API + deal scores + parts",
     "1,500 emails/mo · SMS allowed",
   ],
   enterprise: [
     "Unlimited vehicles* · unlimited users",
-    "3,500 AI sessions · 8,000 WhatsApp msgs/mo",
+    "12,000 AI polish · 12,000 WhatsApp conversations",
     "5,000 emails/mo · dedicated onboarding",
     "Phone + named contact",
   ],

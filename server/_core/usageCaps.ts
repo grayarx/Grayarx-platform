@@ -181,7 +181,7 @@ const WA_MSG_SOFT_BLOCK =
   "Thanks for your message — this dealership has reached its WhatsApp message allowance for the month. Please try again next month, or visit the showroom / website to continue. We've logged your interest.";
 
 const WA_STARTER_BLOCK =
-  "WhatsApp AI (Cloud API) is available on the Growth plan and above. This showroom uses click-to-chat / web chat on Showroom. Please visit the dealership website to chat with Nala, or ask the dealer about upgrading.";
+  "WhatsApp AI (Cloud API) is included on Starter OS and above. This yard is not set up for Cloud API yet — please visit the dealership website to chat with Nala, or ask the dealer to finish WhatsApp setup.";
 
 /**
  * Check before OpenAI polish / heavy AI paths.
@@ -222,7 +222,7 @@ export async function checkAiSessionCap(
 
 /**
  * Check before WhatsApp Cloud API bot handling.
- * Blocks Starter entirely; soft-blocks when message cap exceeded.
+ * Soft-blocks when the monthly conversation cap is exceeded.
  */
 export async function checkWhatsAppUsageCap(
   dealershipId: number,
@@ -231,7 +231,7 @@ export async function checkWhatsAppUsageCap(
 
   if (!snapshot.cloudWhatsAppAllowed) {
     console.info(
-      `[UsageCap] Cloud WhatsApp blocked for dealership=${dealershipId} tier=${snapshot.tier} (Showroom = click-to-chat only)`,
+      `[UsageCap] Cloud WhatsApp blocked for dealership=${dealershipId} tier=${snapshot.tier} (Cloud API not enabled on this plan)`,
     );
     return {
       blocked: true,
@@ -262,7 +262,7 @@ export async function checkWhatsAppUsageCap(
   return { blocked: false, snapshot };
 }
 
-/** Whether plan may use WhatsApp Cloud API bot (Growth+). */
+/** Whether plan may use WhatsApp Cloud API bot (Starter OS and up). */
 export function planAllowsCloudWhatsApp(tier: SubscriptionTierId): boolean {
   return tierAtLeast(tier, "professional");
 }

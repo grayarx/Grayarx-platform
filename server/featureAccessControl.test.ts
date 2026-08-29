@@ -21,14 +21,13 @@ describe("Feature Access Control System", () => {
       expect(apiAccess.tiers).not.toContain("starter");
     });
 
-    it("Cloud API WhatsApp chatbot is Growth+ only (not Showroom/starter)", () => {
+    it("Cloud API WhatsApp chatbot is on Starter OS and up", () => {
       const whatsappChatbot = FEATURE_DEFINITIONS["whatsapp_chatbot"];
-      expect(whatsappChatbot.tiers).not.toContain("starter");
+      expect(whatsappChatbot.tiers).toContain("starter");
       expect(whatsappChatbot.tiers).toContain("professional");
       expect(whatsappChatbot.tiers).toContain("enterprise");
       const whatsappApi = FEATURE_DEFINITIONS["whatsapp_api"];
-      expect(whatsappApi.tiers).not.toContain("starter");
-      expect(whatsappApi.tiers).toEqual(["professional", "enterprise"]);
+      expect(whatsappApi.tiers).toEqual(["starter", "professional", "enterprise"]);
     });
 
     it("should have professional features in professional and enterprise", () => {

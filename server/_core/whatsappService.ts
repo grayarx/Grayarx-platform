@@ -528,7 +528,7 @@ export async function handleIncomingWhatsAppMessage(
       return { success: true, response: reply };
     }
 
-    // Enforce tier caps (Starter: no Cloud API bot; Growth+: monthly msg soft-block)
+    // Enforce OS plan caps (Starter 1,000 / Professional 3,500 / Enterprise 12,000 WA)
     const { checkWhatsAppUsageCap } = await import("./usageCaps");
     const usage = await checkWhatsAppUsageCap(dealershipIdNum);
     if (usage.blocked && usage.message) {

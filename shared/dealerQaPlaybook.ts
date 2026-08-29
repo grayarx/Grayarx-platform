@@ -123,7 +123,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     question: "What happens if we go over the message / AI cap?",
     answer:
       "Each tier has fair-use caps (AI sessions and WhatsApp volume). We soft-block with a clear message so a runaway bot doesn’t blow the bill; we talk overage if you’re consistently hot.",
-    note: "Showroom ~400 AI/mo, click-to-chat only; Growth ~1,200 AI + ~2,000 WA msgs; Multi-site ~3,500 AI + ~8,000 WA.",
+    note: "Starter 1,000 WA + polish; Professional 3,500; Enterprise 12,000 (docs/PRICING.md). Soft-block, then talk overage.",
     keywords: ["cap", "overage", "limit", "quota", "message limit", "ai cap", "fair use"],
   },
   {
@@ -131,9 +131,9 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "whatsapp_meta",
     question: "Do we need a WhatsApp Business number / Meta?",
     answer:
-      "For the Cloud API bot: yes — a verified WhatsApp Business number on Meta, webhooks subscribed, then we link phone_number_id. Pilot partners still get Growth features at the pilot price even before Meta is done — you’re not dropped to Showroom. Without WA Business you just can’t run Cloud API Nala on WhatsApp yet; webchat + wa.me click-to-chat still work.",
+      "For the Cloud API bot: yes — a verified WhatsApp Business number on Meta, webhooks subscribed, then we link phone_number_id. Pilot partners still get Professional OS features at R0 for 14 days even before Meta is done — you’re not dropped to a lesser plan. Without WA Business you just can’t run Cloud API Nala on WhatsApp yet; webchat + wa.me click-to-chat still work.",
     written:
-      "Pilot = Growth features @ pilot price. Cloud API WhatsApp needs Meta WA Business. No Meta yet → still Growth web/showroom/leads/webchat; only the WhatsApp bot waits.",
+      "Pilot = Professional features @ R0 / 14 days. Cloud API WhatsApp needs Meta WA Business. No Meta yet → still showroom, leads, webchat; only the WhatsApp bot waits.",
     note: "Auto-link works when Meta’s display number matches exactly one unbound dealership’s contactPhone.",
     keywords: [
       "whatsapp business",
@@ -168,7 +168,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "ai_nala",
     question: "What exactly do we get?",
     answer:
-      "A public showroom, AI on webchat (all tiers) and WhatsApp Cloud API on Growth+, live stock answers from your DB, booking links, lead inbox, website embed. Default assistant name Nala — rename in Settings. Shortcode powers /book, /apply, /embed/{shortcode}.",
+      "A public showroom, AI on webchat (all tiers) and WhatsApp Cloud API on Starter OS and up, live stock answers from your DB, booking links, lead inbox, website embed. Default assistant name Nala — rename in Settings. Shortcode powers /book, /apply, /embed/{shortcode}.",
     note: "Humans are optional for handoff — not required for every reply.",
     keywords: ["what do we get", "what exactly", "features", "what’s included", "capabilities"],
   },
@@ -274,7 +274,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "multi_branch",
     question: "We have three branches.",
     answer:
-      "Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by one groupKey. Staff with sibling branches get a Branch switcher in the console. That’s the Multi-site packaging.",
+      "Each branch is its own dealership record — own stock, WhatsApp, shortcode — linked by one groupKey. Staff with sibling branches get a Branch switcher in the console. That’s Enterprise OS packaging.",
     note: "Import stock per branch — never mix yards in one CSV.",
     keywords: ["branch", "branches", "multi-branch", "groupkey", "group key", "multi site", "locations"],
   },
@@ -312,7 +312,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "support_contract",
     question: "Who do we call when something breaks?",
     answer:
-      "Founder-led support for pilots — hello@grayarx.com / founder cell on the onboarding pack. In Dealer Help chat, say Report a bug: … — that opens a ticket and Kagiso starts investigating, proposing a fix for founder approval (no silent prod writes). Growth and Multi-site get priority paths; Multi-site includes phone + named contact packaging.",
+      "Founder-led support for pilots — hello@grayarx.com / founder cell on the onboarding pack. In Dealer Help chat, say Report a bug: … — that opens a ticket and Kagiso starts investigating, proposing a fix for founder approval (no silent prod writes). Professional and Enterprise get priority paths; Enterprise includes phone + named contact packaging.",
     note: "Check webhook health first on WhatsApp issues. See docs/PILOT_SLA.md for honest response targets.",
     keywords: ["support", "breaks", "bug", "help desk", "who do we call", "contact support", "sla"],
   },
@@ -342,7 +342,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     question: "Email / SMS?",
     answer:
       "Transactional lead and booking mail is live (Resend). Twilio SMS is optional later — don’t sell it as included today.",
-    note: "Never promise SMS as default on Showroom.",
+    note: "Never promise SMS as default on Starter OS.",
     keywords: ["sms", "email", "twilio", "resend", "text message"],
     neverSay: ["Twilio SMS is included and live"],
   },
@@ -369,7 +369,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "objections",
     question: "Do I need a new WhatsApp number?",
     answer:
-      "Only if your current number can’t sit on Meta WhatsApp Business / Cloud API. Ideal path: same Business number buyers already use, verified, webhooks on, we link it (auto-link if contact phone matches Meta display). Until then you keep Growth webchat + click-to-chat — not a Showroom downgrade.",
+      "Only if your current number can’t sit on Meta WhatsApp Business / Cloud API. Ideal path: same Business number buyers already use, verified, webhooks on, we link it (auto-link if contact phone matches Meta display). Until then you keep webchat + click-to-chat — not a plan downgrade.",
     neverSay: ["Live on Meta tonight", "No WA Business = you’re on Showroom"],
     keywords: ["need a new whatsapp", "new whatsapp number"],
   },
