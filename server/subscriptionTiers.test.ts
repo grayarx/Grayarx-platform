@@ -48,15 +48,15 @@ describe("subscriptionTiers", () => {
     }
   });
 
-  it("enforces Starter without Cloud WhatsApp / SMS and numeric AI caps", () => {
-    expect(TIER_USAGE_CAPS.starter.cloudWhatsApp).toBe(false);
+  it("enforces OS WhatsApp conversation caps and Cloud API on Starter+", () => {
+    expect(TIER_USAGE_CAPS.starter.cloudWhatsApp).toBe(true);
     expect(TIER_USAGE_CAPS.starter.smsEnabled).toBe(false);
-    expect(TIER_USAGE_CAPS.starter.aiSessionsPerMonth).toBe(400);
-    expect(TIER_USAGE_CAPS.starter.whatsappMessagesPerMonth).toBe(0);
+    expect(TIER_USAGE_CAPS.starter.aiSessionsPerMonth).toBe(1000);
+    expect(TIER_USAGE_CAPS.starter.whatsappMessagesPerMonth).toBe(1000);
     expect(TIER_USAGE_CAPS.professional.cloudWhatsApp).toBe(true);
-    expect(TIER_USAGE_CAPS.professional.aiSessionsPerMonth).toBe(1200);
-    expect(TIER_USAGE_CAPS.professional.whatsappMessagesPerMonth).toBe(2000);
-    expect(TIER_USAGE_CAPS.enterprise.aiSessionsPerMonth).toBe(3500);
-    expect(TIER_USAGE_CAPS.enterprise.whatsappMessagesPerMonth).toBe(8000);
+    expect(TIER_USAGE_CAPS.professional.aiSessionsPerMonth).toBe(3500);
+    expect(TIER_USAGE_CAPS.professional.whatsappMessagesPerMonth).toBe(3500);
+    expect(TIER_USAGE_CAPS.enterprise.aiSessionsPerMonth).toBe(12000);
+    expect(TIER_USAGE_CAPS.enterprise.whatsappMessagesPerMonth).toBe(12000);
   });
 });

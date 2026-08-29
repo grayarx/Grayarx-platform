@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  OS_INCLUDED_WHATSAPP,
   OS_INVOICE_PLANS,
   OS_TIER_PRICES_ZAR,
   billedOsAmountZar,
@@ -13,6 +14,11 @@ describe("osPlans billed amounts", () => {
     expect(OS_TIER_PRICES_ZAR.professional).toBe(14990);
     expect(OS_TIER_PRICES_ZAR.enterprise).toBe(29990);
     expect(OS_INVOICE_PLANS.map((p) => p.priceMonthlyZar)).toEqual([7990, 14990, 29990]);
+    expect(OS_INCLUDED_WHATSAPP).toEqual({
+      starter: 1000,
+      professional: 3500,
+      enterprise: 12000,
+    });
   });
 
   it("keeps dealer-console TIER_PRICES_ZAR in lockstep with invoices", () => {

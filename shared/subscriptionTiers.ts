@@ -5,6 +5,7 @@
  */
 
 import {
+  OS_INCLUDED_WHATSAPP,
   OS_TIER_DISPLAY_NAMES,
   OS_TIER_PRICES_ZAR,
 } from "./osPlans";
@@ -55,7 +56,7 @@ export const TIER_FEATURE_ROWS: TierFeatureRow[] = [
   { key: "bookings", label: "Test-drive bookings", tiers: ["starter", "professional", "enterprise"] },
   { key: "web_nala", label: "Web chat Nala on showroom", tiers: ["starter", "professional", "enterprise"] },
   { key: "deal_scores", label: "Deal-score badges", tiers: ["professional", "enterprise"] },
-  { key: "whatsapp_api", label: "WhatsApp Nala (Cloud API)", tiers: ["professional", "enterprise"] },
+  { key: "whatsapp_api", label: "WhatsApp Nala (Cloud API)", tiers: ["starter", "professional", "enterprise"] },
   { key: "photo_angles", label: "8-angle photo uploader", tiers: ["professional", "enterprise"] },
   { key: "trade_network", label: "Trade-in dealer network", tiers: ["professional", "enterprise"] },
   { key: "priority_support", label: "Priority support", tiers: ["professional", "enterprise"] },
@@ -69,22 +70,22 @@ export const TIER_LIMITS: Record<
 > = {
   starter: {
     vehicles: "150",
-    aiSessions: "400/mo",
-    whatsapp: "Click-to-chat only",
+    aiSessions: "1,000/mo",
+    whatsapp: "1,000 WhatsApp conversations",
     users: "3",
     emails: "300/mo",
   },
   professional: {
     vehicles: "500",
-    aiSessions: "1,200/mo",
-    whatsapp: "2,000 msgs/mo",
+    aiSessions: "3,500/mo",
+    whatsapp: "3,500 WhatsApp conversations",
     users: "10",
     emails: "1,500/mo",
   },
   enterprise: {
     vehicles: "Unlimited*",
-    aiSessions: "3,500/mo",
-    whatsapp: "8,000 msgs/mo",
+    aiSessions: "12,000/mo",
+    whatsapp: "12,000 WhatsApp conversations",
     users: "Unlimited",
     emails: "5,000/mo",
   },
@@ -97,7 +98,7 @@ export const TIER_LIMITS: Record<
 export type TierUsageCaps = {
   vehicles: number | null; // null = unlimited
   aiSessionsPerMonth: number;
-  /** 0 = no Cloud API WhatsApp bot (Starter click-to-chat only) */
+  /** OS included WhatsApp conversations (soft-block when reached). */
   whatsappMessagesPerMonth: number;
   emailsPerMonth: number;
   users: number | null;
@@ -108,17 +109,17 @@ export type TierUsageCaps = {
 export const TIER_USAGE_CAPS: Record<SubscriptionTierId, TierUsageCaps> = {
   starter: {
     vehicles: 150,
-    aiSessionsPerMonth: 400,
-    whatsappMessagesPerMonth: 0,
+    aiSessionsPerMonth: OS_INCLUDED_WHATSAPP.starter,
+    whatsappMessagesPerMonth: OS_INCLUDED_WHATSAPP.starter,
     emailsPerMonth: 300,
     users: 3,
-    cloudWhatsApp: false,
+    cloudWhatsApp: true,
     smsEnabled: false,
   },
   professional: {
     vehicles: 500,
-    aiSessionsPerMonth: 1200,
-    whatsappMessagesPerMonth: 2000,
+    aiSessionsPerMonth: OS_INCLUDED_WHATSAPP.professional,
+    whatsappMessagesPerMonth: OS_INCLUDED_WHATSAPP.professional,
     emailsPerMonth: 1500,
     users: 10,
     cloudWhatsApp: true,
@@ -126,8 +127,8 @@ export const TIER_USAGE_CAPS: Record<SubscriptionTierId, TierUsageCaps> = {
   },
   enterprise: {
     vehicles: null,
-    aiSessionsPerMonth: 3500,
-    whatsappMessagesPerMonth: 8000,
+    aiSessionsPerMonth: OS_INCLUDED_WHATSAPP.enterprise,
+    whatsappMessagesPerMonth: OS_INCLUDED_WHATSAPP.enterprise,
     emailsPerMonth: 5000,
     users: null,
     cloudWhatsApp: true,
