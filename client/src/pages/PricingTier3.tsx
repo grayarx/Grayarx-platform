@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Check, X, ArrowRight } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { OS_TIER_PRICES_ZAR } from "@shared/osPlans";
 
 /**
- * Tier 3 Pricing Page - Enterprise Edition
- * Simplified 3-tier model with clear upgrade path
+ * Public-ish pricing page — list prices must match OS invoices.
+ * (Routed /pricing currently redirects home; keep amounts in sync anyway.)
  */
 
 interface PricingTier {
@@ -28,9 +29,9 @@ interface PricingTier {
 
 const PRICING_TIERS: PricingTier[] = [
   {
-    id: "essentials",
-    name: "ESSENTIALS",
-    price: 2999,
+    id: "starter",
+    name: "STARTER OS",
+    price: OS_TIER_PRICES_ZAR.starter,
     currency: "R",
     period: "/month",
     description: "Perfect for single-location dealerships",
@@ -53,8 +54,8 @@ const PRICING_TIERS: PricingTier[] = [
   },
   {
     id: "professional",
-    name: "PROFESSIONAL",
-    price: 5999,
+    name: "PROFESSIONAL OS",
+    price: OS_TIER_PRICES_ZAR.professional,
     currency: "R",
     period: "/month",
     description: "For growing dealership networks",
@@ -78,8 +79,8 @@ const PRICING_TIERS: PricingTier[] = [
   },
   {
     id: "enterprise",
-    name: "ENTERPRISE",
-    price: 9999,
+    name: "ENTERPRISE OS",
+    price: OS_TIER_PRICES_ZAR.enterprise,
     currency: "R",
     period: "/month",
     description: "For large dealership groups",
@@ -202,7 +203,7 @@ export default function PricingTier3() {
                     <span className="text-slate-400">{tier.period}</span>
                   </div>
                   <p className="text-sm text-slate-400 mt-2">
-                    {tier.id === "essentials" && "Best for service-focused dealerships"}
+                    {tier.id === "starter" && "Best for service-focused dealerships"}
                     {tier.id === "professional" && "Best for growing networks"}
                     {tier.id === "enterprise" && "Best for large groups"}
                   </p>
@@ -252,7 +253,7 @@ export default function PricingTier3() {
                     Feature
                   </th>
                   <th className="px-6 py-4 text-center text-white font-semibold">
-                    Essentials
+                    Starter
                   </th>
                   <th className="px-6 py-4 text-center text-white font-semibold">
                     Professional
@@ -341,7 +342,7 @@ export default function PricingTier3() {
               },
               {
                 q: "What's included in support?",
-                a: "Email support (Essentials), Priority support (Professional), 24/7 support (Enterprise).",
+                a: "Email support (Starter), Priority support (Professional), 24/7 support (Enterprise).",
               },
               {
                 q: "Can I add more team members?",

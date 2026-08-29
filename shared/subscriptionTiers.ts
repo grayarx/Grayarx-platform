@@ -1,7 +1,13 @@
 /**
- * GrayArx subscription tiers — single source of truth.
+ * GrayArx subscription tiers — dealer-console feature flags + OS list prices.
  * Internal IDs (starter/professional/enterprise) match the DB schema.
+ * Commercial SKU names and ZAR amounts come from shared/osPlans.ts (invoice SOT).
  */
+
+import {
+  OS_TIER_DISPLAY_NAMES,
+  OS_TIER_PRICES_ZAR,
+} from "./osPlans";
 
 export type SubscriptionTierId = "starter" | "professional" | "enterprise";
 
@@ -11,26 +17,25 @@ export const PILOT_PRICING_HIDDEN = true;
 export const TIER_ORDER: SubscriptionTierId[] = ["starter", "professional", "enterprise"];
 
 export const TIER_DISPLAY_NAMES: Record<SubscriptionTierId, string> = {
-  starter: "Showroom",
-  professional: "Growth",
-  /** Multi-branch / multi-site independents. A separate "Group" SKU stays future (needs enum migration). */
-  enterprise: "Multi-site",
+  starter: OS_TIER_DISPLAY_NAMES.starter,
+  professional: OS_TIER_DISPLAY_NAMES.professional,
+  enterprise: OS_TIER_DISPLAY_NAMES.enterprise,
 };
 
-/** Monthly list price in ZAR (cents not used — whole rand for billing). */
+/** Monthly list price in ZAR — same amounts as OS invoices. */
 export const TIER_PRICES_ZAR: Record<SubscriptionTierId, number> = {
-  starter: 3999,
-  professional: 7999,
-  enterprise: 11999,
+  starter: OS_TIER_PRICES_ZAR.starter,
+  professional: OS_TIER_PRICES_ZAR.professional,
+  enterprise: OS_TIER_PRICES_ZAR.enterprise,
 };
 
-/** Pilot partners get Growth features at Showroom price. */
+/** Pilot partners get Professional features at R0 for 14 days — do not invoice Pilot. */
 export const PILOT_PARTNER = {
   maxDealers: 20,
   /** Feature tier unlocked during pilot */
   featureTier: "professional" as SubscriptionTierId,
-  /** Internal billing reference — not shown publicly while PILOT_PRICING_HIDDEN */
-  monthlyPriceZar: 3999,
+  /** Pilot is R0 / 14 days — never a billed SKU */
+  monthlyPriceZar: 0,
   label: "Pilot Partner",
 };
 
@@ -92,7 +97,7 @@ export const TIER_LIMITS: Record<
 export type TierUsageCaps = {
   vehicles: number | null; // null = unlimited
   aiSessionsPerMonth: number;
-  /** 0 = no Cloud API WhatsApp bot (Showroom click-to-chat only) */
+  /** 0 = no Cloud API WhatsApp bot (Starter click-to-chat only) */
   whatsappMessagesPerMonth: number;
   emailsPerMonth: number;
   users: number | null;
@@ -144,11 +149,8 @@ export function tierAtLeast(current: SubscriptionTierId, required: SubscriptionT
   return tierIndex(current) >= tierIndex(required);
 }
 
-export function formatTierPrice(tier: SubscriptionTierId, opts?: { showCents?: boolean }): string {
+export function formatTierPrice(tier: SubscriptionTierId, _opts?: { showCents?: boolean }): string {
   const amount = TIER_PRICES_ZAR[tier];
-  if (opts?.showCents) {
-    return `R ${amount.toLocaleString("en-ZA")}.99`;
-  }
   return `R ${amount.toLocaleString("en-ZA")}`;
 }
 

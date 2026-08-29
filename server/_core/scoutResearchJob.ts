@@ -16,6 +16,8 @@ import {
   countResearchableProspects,
   countCooldownProspects,
   markProspectResearchAttempted,
+  persistResearchAttempt,
+  hydrateResearchCooldownsFromDb,
 } from "./saProspectPool";
 import { enrichDealershipPrincipal } from "./prospectPrincipalEnrichment";
 import { persistHitToIcpYard, researchIcpContacts } from "./icpContactResearch";
@@ -58,6 +60,7 @@ export async function runScoutResearchJob(input: {
   scoutJobRunning = true;
   lastScoutJobAt = Date.now();
   try {
+    await hydrateResearchCooldownsFromDb();
     let existingRows = await listProspects(1000);
     let existingNames = existingRows.map((r) => r.dealershipName);
 
@@ -116,7 +119,7 @@ export async function runScoutResearchJob(input: {
         if (created >= target) break;
 
         researched += 1;
-        markProspectResearchAttempted(p.name);
+        markProspectResearchAttempted(p.name, p.website);
 
         const useDeep = loopDeepLeft > 0;
         if (useDeep) loopDeepLeft -= 1;
@@ -154,6 +157,21 @@ export async function runScoutResearchJob(input: {
         if (existingMatch && result.phone) {
           await updateProspectContact(existingMatch.id, { phone: result.phone });
         }
+
+        const persistStatus =
+          result.status === "enriched"
+            ? "hit"
+            : result.status === "fetch_failed"
+              ? "fetch_failed"
+              : "no_named_email";
+        await persistResearchAttempt({
+          name: p.name,
+          website: p.website,
+          prospectId: existingMatch?.id,
+          status: persistStatus,
+          notes: result.notes,
+          cooldownMs: persistStatus === "hit" ? 0 : undefined,
+        });
 
         if (result.status !== "enriched" || !result.hit) continue;
         const hit = result.hit;

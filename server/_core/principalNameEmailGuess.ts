@@ -10,7 +10,8 @@
  * Email order (no paid Hunter required):
  *   1) Optional Hunter.io if HUNTER_API_KEY actually works
  *   2) Public web / directory pages publishing named@dealer-domain
- *   3) SMTP RCPT of pattern guesses when outbound :25 is open
+ *      (Brave Search API when BRAVE_SEARCH_API_KEY is set; else DuckDuckGo HTML)
+ *   3) SMTP RCPT of pattern guesses when outbound :25 is open (skipped on Railway)
  */
 
 import dns from "node:dns/promises";
@@ -31,6 +32,47 @@ export type DiscoveredPerson = {
 };
 
 export type EmailFindMethod = "hunter" | "web_publish" | "smtp";
+
+/** DuckDuckGo HTML often serves a bot-challenge on Railway — skip further DDG this process. */
+let ddgUnusableThisProcess = false;
+/** After one failed :25 connect, skip remaining SMTP guesses this process. */
+let smtpPort25Usable: boolean | null = null;
+
+export function _resetSearchBackoffForTests(): void {
+  ddgUnusableThisProcess = false;
+  smtpPort25Usable = null;
+}
+
+/** Railway (and similar PaaS) block outbound SMTP :25 — never hang 8s per guess. */
+export function smtpVerificationEnabled(): boolean {
+  if (process.env.SKIP_SMTP_VERIFY === "1") return false;
+  if (
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_ENVIRONMENT_NAME ||
+    process.env.RAILWAY_SERVICE_NAME ||
+    process.env.RAILWAY_PROJECT_ID
+  ) {
+    return false;
+  }
+  if (smtpPort25Usable === false) return false;
+  return true;
+}
+
+export function looksLikeSearchBotChallenge(html: string): boolean {
+  if (!html || html.trim().length < 80) return true;
+  const lower = html.toLowerCase();
+  if (
+    /unfortunately, bots|anomaly-modal|challenge-form|enable javascript and cookies|please complete the security check|captcha|access denied/.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
+  if (!/uddg=|result__a|result__url|web-result/i.test(html) && html.length < 4000) {
+    return true;
+  }
+  return false;
+}
 
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 
@@ -159,6 +201,69 @@ export function extractSearchResultUrls(html: string): string[] {
   return [...urls].slice(0, 16);
 }
 
+type BraveWebResult = { title?: string; url?: string; description?: string };
+
+export function extractBraveSearchBundle(data: {
+  web?: { results?: BraveWebResult[] };
+}): { urls: string[]; text: string } {
+  const results = data.web?.results ?? [];
+  const urls: string[] = [];
+  const texts: string[] = [];
+  for (const r of results) {
+    const u = (r.url ?? "").split("#")[0]!;
+    if (/^https?:\/\//i.test(u) && !/duckduckgo\.com|brave\.com\/search/i.test(u)) {
+      urls.push(u);
+    }
+    texts.push([r.title, r.description, r.url].filter(Boolean).join(" "));
+  }
+  return { urls: urls.slice(0, 16), text: texts.join("\n") };
+}
+
+type SearchBundle = { urls: string[]; text: string; engine: "brave" | "ddg" | "none" };
+
+async function braveWebSearch(query: string, timeoutMs: number): Promise<SearchBundle | null> {
+  const key = process.env.BRAVE_SEARCH_API_KEY?.trim();
+  if (!key) return null;
+  try {
+    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=10`;
+    const res = await fetch(url, {
+      method: "GET",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        Accept: "application/json",
+        "X-Subscription-Token": key,
+      },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { web?: { results?: BraveWebResult[] } };
+    const bundle = extractBraveSearchBundle(data);
+    if (!bundle.urls.length && bundle.text.length < 40) return null;
+    return { ...bundle, engine: "brave" };
+  } catch (err) {
+    console.warn("[PrincipalNames] Brave search failed", err);
+    return null;
+  }
+}
+
+async function searchWeb(query: string, timeoutMs: number): Promise<SearchBundle> {
+  const brave = await braveWebSearch(query, timeoutMs);
+  if (brave) return brave;
+  if (ddgUnusableThisProcess) return { urls: [], text: "", engine: "none" };
+  const html = await fetchDuckDuckGoHtml(query, timeoutMs);
+  if (looksLikeSearchBotChallenge(html)) {
+    ddgUnusableThisProcess = true;
+    console.warn(
+      "[PrincipalNames] DuckDuckGo bot-challenge/empty — skipping further DDG this process",
+    );
+    return { urls: [], text: "", engine: "none" };
+  }
+  return {
+    urls: extractSearchResultUrls(html),
+    text: stripHtml(html),
+    engine: "ddg",
+  };
+}
+
 function peopleFromSearchText(
   text: string,
   dealershipName: string,
@@ -239,11 +344,11 @@ export async function searchWebForPrincipalNames(
   for (const q of queries) {
     if (merged.length >= 8) break;
     try {
-      const html = await fetchDuckDuckGoHtml(q, fast ? 5_000 : 8_000);
-      if (!html) continue;
-      addPeople(peopleFromSearchText(stripHtml(html), dealershipName));
+      const bundle = await searchWeb(q, fast ? 5_000 : 8_000);
+      if (!bundle.text && !bundle.urls.length) continue;
+      addPeople(peopleFromSearchText(bundle.text, dealershipName));
       if (fast) continue; // snippets only — page follows are for full enrich ticks
-      const followUrls = extractSearchResultUrls(html).slice(0, 4);
+      const followUrls = bundle.urls.slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
           const text = await fetchPageText(url, 5_000);
@@ -304,6 +409,7 @@ async function smtpRcptCheck(email: string): Promise<"ok" | "bad" | "unknown"> {
       } catch {
         /* ignore */
       }
+      smtpPort25Usable = false;
       resolve("unknown");
     }, 8_000);
 
@@ -362,6 +468,7 @@ async function smtpRcptCheck(email: string): Promise<"ok" | "bad" | "unknown"> {
     });
     socket.on("error", () => {
       clearTimeout(timer);
+      smtpPort25Usable = false;
       resolve("unknown");
     });
   });
@@ -369,6 +476,7 @@ async function smtpRcptCheck(email: string): Promise<"ok" | "bad" | "unknown"> {
 
 /** True if domain accepts any random local-part (pattern guesses are unsafe). */
 export async function domainLooksLikeCatchAll(website: string): Promise<boolean> {
+  if (!smtpVerificationEnabled()) return true;
   const host = websiteHost(website);
   if (!host) return true;
   const probe = `zznope${Date.now().toString(36)}@${host}`;
@@ -504,11 +612,10 @@ export async function searchWebForPublishedEmails(input: {
   for (const q of queries) {
     if (found.size >= 6) break;
     try {
-      const html = await fetchDuckDuckGoHtml(q, fast ? 5_000 : 8_000);
-      if (!html) continue;
-      ingest(stripHtml(html));
+      const bundle = await searchWeb(q, fast ? 5_000 : 8_000);
+      if (bundle.text) ingest(bundle.text);
       if (fast) continue; // snippets only on Generate path
-      const followUrls = extractSearchResultUrls(html).slice(0, 4);
+      const followUrls = bundle.urls.slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
           const text = await fetchPageText(url, 5_000);
@@ -625,8 +732,11 @@ export async function verifyGuessedPrincipalEmail(input: {
     };
   }
 
-  // 3) SMTP RCPT of pattern guesses (often blocked on Railway — skip on fast Generate path)
+  // 3) SMTP RCPT of pattern guesses — skip on Railway / after a failed :25 probe /
+  //    when DDG is bot-blocked and we have no HTTPS search (don't hang 8s per guess).
   if (input.fast || !people.length) return null;
+  if (!smtpVerificationEnabled()) return null;
+  if (ddgUnusableThisProcess && !process.env.BRAVE_SEARCH_API_KEY?.trim()) return null;
   const catchAll = await domainLooksLikeCatchAll(input.website);
   if (catchAll) return null;
 

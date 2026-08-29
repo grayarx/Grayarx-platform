@@ -11,16 +11,19 @@ import {
 } from "../shared/subscriptionTiers";
 
 describe("subscriptionTiers", () => {
-  it("uses R3,999 / R7,999 / R11,999 floor", () => {
-    expect(TIER_PRICES_ZAR.starter).toBe(3999);
-    expect(TIER_PRICES_ZAR.professional).toBe(7999);
-    expect(TIER_PRICES_ZAR.enterprise).toBe(11999);
+  it("uses OS list prices Starter R7,990 / Professional R14,990 / Enterprise R29,990", () => {
+    expect(TIER_PRICES_ZAR.starter).toBe(7990);
+    expect(TIER_PRICES_ZAR.professional).toBe(14990);
+    expect(TIER_PRICES_ZAR.enterprise).toBe(29990);
+    expect([3999, 7999, 11999].some((n) => Object.values(TIER_PRICES_ZAR).includes(n))).toBe(
+      false,
+    );
   });
 
-  it("maps internal IDs to marketing names", () => {
-    expect(TIER_DISPLAY_NAMES.starter).toBe("Showroom");
-    expect(TIER_DISPLAY_NAMES.professional).toBe("Growth");
-    expect(TIER_DISPLAY_NAMES.enterprise).toBe("Multi-site");
+  it("maps internal IDs to OS display names", () => {
+    expect(TIER_DISPLAY_NAMES.starter).toBe("Starter");
+    expect(TIER_DISPLAY_NAMES.professional).toBe("Professional");
+    expect(TIER_DISPLAY_NAMES.enterprise).toBe("Enterprise");
   });
 
   it("orders tiers correctly", () => {
@@ -29,9 +32,9 @@ describe("subscriptionTiers", () => {
     expect(tierAtLeast("enterprise", "professional")).toBe(true);
   });
 
-  it("pilot unlocks Growth features", () => {
+  it("pilot unlocks Professional features at R0 (not invoiced)", () => {
     expect(PILOT_PARTNER.featureTier).toBe("professional");
-    expect(PILOT_PARTNER.monthlyPriceZar).toBe(3999);
+    expect(PILOT_PARTNER.monthlyPriceZar).toBe(0);
   });
 
   it("hides public prices during pilot", () => {
@@ -45,7 +48,7 @@ describe("subscriptionTiers", () => {
     }
   });
 
-  it("enforces Showroom without Cloud WhatsApp / SMS and numeric AI caps", () => {
+  it("enforces Starter without Cloud WhatsApp / SMS and numeric AI caps", () => {
     expect(TIER_USAGE_CAPS.starter.cloudWhatsApp).toBe(false);
     expect(TIER_USAGE_CAPS.starter.smsEnabled).toBe(false);
     expect(TIER_USAGE_CAPS.starter.aiSessionsPerMonth).toBe(400);

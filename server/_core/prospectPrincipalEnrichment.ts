@@ -43,14 +43,21 @@ export const CONTACT_PATHS = [
   "/contact",
   "/contact-us",
   "/contactus",
+  "/contact-me",
+  "/get-in-touch",
   "/about",
   "/about-us",
+  "/about-the-team",
   "/who-we-are",
+  "/our-company",
+  "/company",
   "/team",
   "/our-team",
   "/meet-the-team",
   "/meet-us",
+  "/the-team",
   "/staff",
+  "/our-staff",
   "/management",
   "/leadership",
   "/directors",
@@ -58,8 +65,17 @@ export const CONTACT_PATHS = [
   "/people",
 ];
 
-/** Fewer pages for interactive / budgeted runs */
-export const CONTACT_PATHS_FAST = ["", "/contact", "/contact-us", "/about", "/team"];
+/** Fewer pages for interactive / budgeted runs — still covers common SA dealer contact URLs */
+export const CONTACT_PATHS_FAST = [
+  "",
+  "/contact",
+  "/contact-us",
+  "/about",
+  "/about-us",
+  "/team",
+  "/our-team",
+  "/meet-the-team",
+];
 export const CONTACT_PATHS_DEEP = CONTACT_PATHS;
 
 const CONTACTISH_PATH = /contact|about|team|people|staff|leadership|directors/i;

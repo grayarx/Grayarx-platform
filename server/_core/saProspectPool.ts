@@ -1,4 +1,13 @@
 import { assessProspectEmail, isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
+import {
+  RESEARCH_COOLDOWN_MS,
+  hydrateResearchCooldownsFromDb,
+  isResearchOnCooldown,
+  markResearchAttemptedInMemory,
+  persistResearchAttempt,
+  researchKeyFrom,
+  _clearResearchCooldownsForTests as _clearCooldownMemory,
+} from "./prospectResearchCooldown";
 
 export interface SAProspectEntry {
   name: string;
@@ -870,7 +879,7 @@ export function pickNextProspectsForResearch(
     (p) =>
       !existing.has(p.name.toLowerCase().trim()) &&
       Boolean(p.website?.trim()) &&
-      !isOnResearchCooldown(p.name),
+      !isOnResearchCooldown(p.name, p.website),
   );
 
   const shuffled = [...available];
@@ -917,7 +926,7 @@ export function countResearchableProspects(existingNames: string[]): number {
     (p) =>
       !existing.has(p.name.toLowerCase().trim()) &&
       Boolean(p.website?.trim()) &&
-      !isOnResearchCooldown(p.name),
+      !isOnResearchCooldown(p.name, p.website),
   ).length;
 }
 
@@ -928,32 +937,37 @@ export function countCooldownProspects(existingNames: string[]): number {
     (p) =>
       !existing.has(p.name.toLowerCase().trim()) &&
       Boolean(p.website?.trim()) &&
-      isOnResearchCooldown(p.name),
+      isOnResearchCooldown(p.name, p.website),
   ).length;
 }
 
-/** After a failed/empty research pass — don't re-hit the same sites for a bit. */
-const RESEARCH_COOLDOWN_MS = 2 * 60 * 60 * 1000;
-const researchCooldownUntil = new Map<string, number>();
-
-export function markProspectResearchAttempted(name: string): void {
-  researchCooldownUntil.set(
-    name.toLowerCase().trim(),
-    Date.now() + RESEARCH_COOLDOWN_MS,
-  );
+export function markProspectResearchAttempted(
+  name: string,
+  website?: string | null,
+): void {
+  const primary = researchKeyFrom({ name, website });
+  markResearchAttemptedInMemory(primary, { status: "no_named_email" });
+  const nameKey = researchKeyFrom({ name });
+  if (nameKey !== primary) {
+    markResearchAttemptedInMemory(nameKey, { status: "no_named_email" });
+  }
 }
 
-export function isOnResearchCooldown(name: string): boolean {
-  const until = researchCooldownUntil.get(name.toLowerCase().trim());
-  if (!until) return false;
-  if (until <= Date.now()) {
-    researchCooldownUntil.delete(name.toLowerCase().trim());
-    return false;
-  }
-  return true;
+export function isOnResearchCooldown(name: string, website?: string | null): boolean {
+  const primary = researchKeyFrom({ name, website });
+  if (isResearchOnCooldown(primary)) return true;
+  const nameKey = researchKeyFrom({ name });
+  return nameKey !== primary && isResearchOnCooldown(nameKey);
 }
 
 /** Test helper */
 export function _clearResearchCooldownsForTests(): void {
-  researchCooldownUntil.clear();
+  _clearCooldownMemory();
 }
+
+export {
+  hydrateResearchCooldownsFromDb,
+  persistResearchAttempt,
+  researchKeyFrom,
+  RESEARCH_COOLDOWN_MS,
+};

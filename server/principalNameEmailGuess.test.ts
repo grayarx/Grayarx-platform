@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrincipalNameSearchQueries,
   buildPublishedEmailSearchQueries,
+  extractBraveSearchBundle,
   extractEmailsFromText,
   extractPrincipalNamesFromText,
   extractSearchResultUrls,
   guessEmailsForPerson,
+  looksLikeSearchBotChallenge,
   pickBestPublishedEmail,
+  smtpVerificationEnabled,
 } from "./_core/principalNameEmailGuess";
 
 describe("principal name → email guess", () => {
@@ -117,5 +120,41 @@ describe("principal name → email guess", () => {
     expect(urls).toContain("https://brabys.com/voncal");
     expect(urls).toContain("https://example.com/about");
     expect(urls.every((u) => !u.includes("duckduckgo.com"))).toBe(true);
+  });
+
+  it("detects DuckDuckGo bot-challenge / empty HTML", () => {
+    expect(looksLikeSearchBotChallenge("")).toBe(true);
+    expect(looksLikeSearchBotChallenge("<html>Unfortunately, bots use DuckDuckGo too</html>")).toBe(
+      true,
+    );
+    expect(
+      looksLikeSearchBotChallenge(
+        `<html><a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fbrabys.com%2Fx">Voncal Auto Dealer Principal</a></html>`,
+      ),
+    ).toBe(false);
+  });
+
+  it("extracts Brave Search JSON results", () => {
+    const { urls, text } = extractBraveSearchBundle({
+      web: {
+        results: [
+          {
+            title: "Thabo Molefe — Dealer Principal",
+            url: "https://voncalauto.co.za/about",
+            description: "Email thabo@voncalauto.co.za",
+          },
+        ],
+      },
+    });
+    expect(urls).toContain("https://voncalauto.co.za/about");
+    expect(text).toMatch(/thabo@voncalauto\.co\.za/i);
+  });
+
+  it("skips SMTP verification on Railway", () => {
+    const prev = process.env.RAILWAY_ENVIRONMENT;
+    process.env.RAILWAY_ENVIRONMENT = "production";
+    expect(smtpVerificationEnabled()).toBe(false);
+    if (prev === undefined) delete process.env.RAILWAY_ENVIRONMENT;
+    else process.env.RAILWAY_ENVIRONMENT = prev;
   });
 });

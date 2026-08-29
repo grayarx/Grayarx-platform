@@ -182,7 +182,7 @@ export async function calculateKPIMetrics(
   // Estimate financial metrics
   const estimatedLeadValue = 10000; // R10,000 average
   const estimatedMonthlyRevenue = testDriveConversions * estimatedLeadValue;
-  const subscriptionCost = 7999; // Growth tier default (see shared/subscriptionTiers.ts)
+  const subscriptionCost = TIER_PRICES_ZAR.professional;
   const estimatedROI =
     subscriptionCost > 0
       ? ((estimatedMonthlyRevenue - subscriptionCost) / subscriptionCost) * 100

@@ -97,9 +97,9 @@ describe("invoice brand helpers", () => {
         dueDate: "2026-08-13",
         leadId: 0,
         vehicleId: 0,
-        subtotal: 3999,
+        subtotal: 14990,
         vatAmount: 0,
-        totalAmount: 3999,
+        totalAmount: 14990,
       },
       dealership: {
         name: "Pilot Motors",
@@ -120,7 +120,7 @@ describe("invoice brand helpers", () => {
     expect(doc.eftPayment?.accountNumber).toBe("11112222333");
     expect(doc.eftPayment?.paymentReference).toBe("GRAYARX-202607-ABC12");
     expect(doc.eftPayment?.bankName).toBe("FNB");
-    expect(doc.lineItems[0].description).toContain("GrayArx Dealership OS");
+    expect(doc.lineItems[0].description).toContain("GrayArx Professional OS");
     expect(JSON.stringify(doc)).not.toMatch(/thandi/i);
   });
 

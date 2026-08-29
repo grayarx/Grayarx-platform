@@ -107,7 +107,7 @@ describe("Dashboard Service", () => {
       const roi = await calculateROIMetrics("1", "professional");
 
       expect(roi).toBeDefined();
-      expect(roi.monthlySubscriptionCost).toBe(7999);
+      expect(roi.monthlySubscriptionCost).toBe(14990);
       expect(roi.estimatedMonthlyRevenue).toBeGreaterThanOrEqual(0);
       expect(roi.netMonthlyProfit).toBeDefined();
       expect(roi.profitMargin).toBeGreaterThanOrEqual(-100);

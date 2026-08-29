@@ -11,6 +11,7 @@ import {
   leadFollowups,
   conversations,
   prospects,
+  prospectResearchAttempts,
   agentActivity,
   invoices,
   payments,
@@ -1232,6 +1233,76 @@ export async function updateProspectContact(
 
   if (Object.keys(updates).length === 0) return;
   await db.update(prospects).set(updates).where(eq(prospects.id, id));
+}
+
+export type UpsertProspectResearchAttemptInput = {
+  researchKey: string;
+  dealershipName?: string | null;
+  lastStatus: string;
+  cooldownUntil: Date;
+  notes?: string | null;
+};
+
+export async function upsertProspectResearchAttempt(
+  input: UpsertProspectResearchAttemptInput,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const now = new Date();
+  const values = {
+    researchKey: input.researchKey,
+    dealershipName: input.dealershipName ?? null,
+    lastAttemptAt: now,
+    lastStatus: input.lastStatus,
+    cooldownUntil: input.cooldownUntil,
+    notes: input.notes ?? null,
+  };
+  await db
+    .insert(prospectResearchAttempts)
+    .values(values)
+    .onDuplicateKeyUpdate({
+      set: {
+        dealershipName: values.dealershipName,
+        lastAttemptAt: values.lastAttemptAt,
+        lastStatus: values.lastStatus,
+        cooldownUntil: values.cooldownUntil,
+        notes: values.notes,
+      },
+    });
+}
+
+export async function listActiveProspectResearchAttempts(): Promise<
+  Array<{
+    researchKey: string;
+    dealershipName: string | null;
+    lastAttemptAt: Date;
+    lastStatus: "no_named_email" | "fetch_failed" | "hit";
+    cooldownUntil: Date | null;
+    notes: string | null;
+  }>
+> {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  const rows = await db
+    .select({
+      researchKey: prospectResearchAttempts.researchKey,
+      dealershipName: prospectResearchAttempts.dealershipName,
+      lastAttemptAt: prospectResearchAttempts.lastAttemptAt,
+      lastStatus: prospectResearchAttempts.lastStatus,
+      cooldownUntil: prospectResearchAttempts.cooldownUntil,
+      notes: prospectResearchAttempts.notes,
+    })
+    .from(prospectResearchAttempts)
+    .where(gte(prospectResearchAttempts.cooldownUntil, now));
+  return rows.map((r) => ({
+    researchKey: r.researchKey,
+    dealershipName: r.dealershipName ?? null,
+    lastAttemptAt: r.lastAttemptAt,
+    lastStatus: (r.lastStatus as "no_named_email" | "fetch_failed" | "hit") ?? "no_named_email",
+    cooldownUntil: r.cooldownUntil ?? null,
+    notes: r.notes ?? null,
+  }));
 }
 
 // === Aggregates / KPIs ===
