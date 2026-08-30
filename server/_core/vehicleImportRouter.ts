@@ -1,5 +1,46 @@
+import { mapCsvRows, parseFlexibleNumber } from "@shared/smartCsv";
 import { router, protectedProcedure } from "./trpc";
 import { z } from "zod";
+
+const VEHICLE_CSV_FIELDS: Record<string, readonly string[]> = {
+  make: ["make", "manufacturer", "brand"],
+  model: ["model", "series"],
+  year: ["year", "model year", "yr"],
+  price: ["price", "retail", "asking"],
+  mileage: ["mileage", "km", "kms", "odometer"],
+  color: ["color", "colour"],
+  fuelType: ["fueltype", "fuel", "fuel type"],
+  transmission: ["transmission", "gearbox"],
+  vin: ["vin"],
+  externalRef: ["externalref", "stock", "stock number", "ref"],
+};
+
+function parseVehicleCsvRows(csvContent: string) {
+  return mapCsvRows(csvContent, VEHICLE_CSV_FIELDS, {
+    defaultOrder: [
+      "make",
+      "model",
+      "year",
+      "price",
+      "mileage",
+      "color",
+      "fuelType",
+      "transmission",
+      "externalRef",
+    ],
+  }).map((row) => ({
+    make: row.make || "",
+    model: row.model || "",
+    year: parseFlexibleNumber(row.year) || 0,
+    price: parseFlexibleNumber(row.price) || 0,
+    mileage: parseFlexibleNumber(row.mileage) || 0,
+    color: row.color || "",
+    fuelType: (row.fuelType || "petrol") as "petrol" | "diesel" | "hybrid" | "electric",
+    transmission: (row.transmission || "automatic") as "manual" | "automatic",
+    vin: row.vin || undefined,
+    externalRef: row.externalRef || undefined,
+  }));
+}
 
 const vehicleSchema = z.object({
   make: z.string(),
@@ -23,38 +64,19 @@ export const vehicleImportRouter = router({
   validateCSV: protectedProcedure
     .input(csvImportSchema)
     .mutation(async ({ ctx, input }: any) => {
-      const lines = input.csvContent.split("\n").filter((l: string) => l.trim());
-      const headers = lines[0].split(",").map((h: string) => h.trim().toLowerCase());
-
-      const requiredHeaders = [
-        "make",
-        "model",
-        "year",
-        "price",
-        "mileage",
-        "color",
-      ];
-      const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
-
-      if (missingHeaders.length > 0) {
+      const parsed = parseVehicleCsvRows(input.csvContent);
+      if (parsed.length === 0) {
         return {
           success: false,
-          error: `Missing required columns: ${missingHeaders.join(", ")}`,
-          validationErrors: missingHeaders.map((h) => ({
+          error: "Missing required columns: make, model, year, price",
+          validationErrors: ["make", "model", "year", "price"].map((h) => ({
             field: h,
             error: "Required column missing",
           })),
         };
       }
 
-      const vehicles = lines.slice(1).map((line: string, idx: number) => {
-        const values = line.split(",").map((v: string) => v.trim());
-        const vehicle: Record<string, any> = {};
-
-        headers.forEach((header: string, i: number) => {
-          vehicle[header] = values[i];
-        });
-
+      const vehicles = parsed.map((vehicle, idx) => {
         return {
           rowNumber: idx + 2,
           vehicle,
@@ -132,30 +154,7 @@ export const vehicleImportRouter = router({
   parseAutotraderCSV: protectedProcedure
     .input(z.object({ csvContent: z.string() }))
     .mutation(async ({ ctx, input }: any) => {
-      const lines = input.csvContent.split("\n").filter((l: string) => l.trim());
-      const vehicles = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(",");
-        vehicles.push({
-          make: parts[0]?.trim() || "",
-          model: parts[1]?.trim() || "",
-          year: parseInt(parts[2]?.trim() || "0"),
-          price: parseFloat(parts[3]?.trim() || "0"),
-          mileage: parseFloat(parts[4]?.trim() || "0"),
-          color: parts[5]?.trim() || "",
-          fuelType: (parts[6]?.trim() || "petrol") as
-            | "petrol"
-            | "diesel"
-            | "hybrid"
-            | "electric",
-          transmission: (parts[7]?.trim() || "automatic") as
-            | "manual"
-            | "automatic",
-          externalRef: parts[8]?.trim() || undefined,
-        });
-      }
-
+      const vehicles = parseVehicleCsvRows(input.csvContent);
       return {
         success: true,
         vehicles,
@@ -166,30 +165,7 @@ export const vehicleImportRouter = router({
   parseCarsCoZACSV: protectedProcedure
     .input(z.object({ csvContent: z.string() }))
     .mutation(async ({ ctx, input }: any) => {
-      const lines = input.csvContent.split("\n").filter((l: string) => l.trim());
-      const vehicles = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(",");
-        vehicles.push({
-          make: parts[0]?.trim() || "",
-          model: parts[1]?.trim() || "",
-          year: parseInt(parts[2]?.trim() || "0"),
-          price: parseFloat(parts[3]?.trim() || "0"),
-          mileage: parseFloat(parts[4]?.trim() || "0"),
-          color: parts[5]?.trim() || "",
-          fuelType: (parts[6]?.trim() || "petrol") as
-            | "petrol"
-            | "diesel"
-            | "hybrid"
-            | "electric",
-          transmission: (parts[7]?.trim() || "automatic") as
-            | "manual"
-            | "automatic",
-          externalRef: parts[8]?.trim() || undefined,
-        });
-      }
-
+      const vehicles = parseVehicleCsvRows(input.csvContent);
       return {
         success: true,
         vehicles,

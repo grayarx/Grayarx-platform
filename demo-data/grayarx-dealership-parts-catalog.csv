@@ -1,0 +1,289 @@
+sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier
+OA-OF-POLO,03C115561H,Oil filter,Volkswagen Polo|Volkswagen Polo Vivo|Hyundai i20,Volkswagen,Polo,2018,2024,95,189,24,Local OEM
+BR-PAD-HILUX,04465-0K290,Front brake pads — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,780,1450,8,Toyota Genuine
+BAT-60AH,YUASA-60,60Ah maintenance-free battery,Volkswagen Polo|Hyundai i20|Toyota Hilux|Ford Ranger,Universal,Battery,2010,2026,1100,1899,5,Yuasa
+WIP-SET-UNI,BOSCH-A5545,Wiper blade set universal 55/45cm,Most hatchbacks|Volkswagen Polo|Hyundai i20,Universal,Wiper,2010,2026,140,320,15,Bosch Dist
+OA-OF-HILUX,90915-YZZD4,Oil filter — Hilux GD-6 / Fortuner,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,118,229,30,Toyota Genuine
+OA-OF-COROL,90915-YZZE2,Oil filter — Corolla / Cross,Toyota Corolla|Toyota Corolla Cross,Toyota,Corolla,2014,2026,88,179,22,Toyota Genuine
+OA-OF-QUANT,90915-YZZF1,Oil filter — Quantum 2.7 / 2.5D,Toyota Quantum,Toyota,Quantum,2010,2026,125,249,12,Toyota Genuine
+OA-OF-STARL,04152-0D070,Oil filter — Starlet / Etios,Toyota Starlet|Toyota Etios,Toyota,Starlet,2018,2026,72,149,14,Toyota Genuine
+OA-OF-VIVO,03C115561B,Oil filter — Polo Vivo 1.4 / 1.6,Volkswagen Polo Vivo,Volkswagen,Polo Vivo,2018,2024,90,179,20,Mann Filter
+OA-OF-GOLF,04E115561H,Oil filter — Golf 7 / 8 1.4 TSI,Volkswagen Golf,Volkswagen,Golf,2013,2026,110,219,10,Mann Filter
+OA-OF-TIG,04E115561A,Oil filter — Tiguan 1.4 TSI,Volkswagen Tiguan,Volkswagen,Tiguan,2017,2026,118,235,8,Mann Filter
+OA-OF-AMRK,03N115562,Oil filter — Amarok 2.0 TDI,Volkswagen Amarok,Volkswagen,Amarok,2011,2022,145,289,6,Mann Filter
+OA-OF-I20,26320-2B000,Oil filter — i20 / Grand i10,Hyundai i20|Hyundai Grand i10,Hyundai,i20,2015,2026,78,159,18,Hyundai Mobis
+OA-OF-I10,26320-03001,Oil filter — i10,Hyundai i10,Hyundai,i10,2014,2026,68,139,10,Hyundai Mobis
+OA-OF-TUC,26320-2A000,Oil filter — Tucson / Sportage,Hyundai Tucson|Kia Sportage,Hyundai,Tucson,2016,2026,105,209,8,Hyundai Mobis
+OA-OF-CRETA,26320-2E000,Oil filter — Creta / Seltos,Hyundai Creta|Kia Seltos,Hyundai,Creta,2017,2026,92,185,8,Hyundai Mobis
+OA-OF-RANG,AB39-6714-AA,Oil filter — Ranger 2.0 / 2.2,Ford Ranger|Ford Everest,Ford,Ranger,2012,2026,135,269,20,Motorcraft
+OA-OF-FIGO,C1BZ-6731-A,Oil filter — Figo / EcoSport,Ford Figo|Ford EcoSport,Ford,Figo,2015,2024,70,145,12,Motorcraft
+OA-OF-NP200,15208-65F0C,Oil filter — NP200 1.6,Nissan NP200,Nissan,NP200,2009,2022,65,135,16,Nissan Genuine
+OA-OF-NAVAR,15208-EB70A,Oil filter — Navara 2.3 / 2.5,Nissan Navara,Nissan,Navara,2015,2026,128,255,8,Nissan Genuine
+OA-OF-DMAX,8-94445-470-1,Oil filter — D-Max 1.9 / 3.0,Isuzu D-Max|Isuzu KB,Isuzu,D-Max,2013,2026,122,245,14,Isuzu Genuine
+OA-OF-SWIFT,16510-84A10,Oil filter — Swift / Baleno,Suzuki Swift|Suzuki Baleno,Suzuki,Swift,2018,2026,75,155,12,Suzuki Genuine
+OA-OF-PICA,26320-1Y000,Oil filter — Picanto / Rio,Kia Picanto|Kia Rio,Kia,Picanto,2017,2026,68,139,12,Kia Genuine
+OA-OF-JAZZ,15400-PLM-A02,Oil filter — Jazz / Ballade,Honda Jazz|Honda Ballade,Honda,Jazz,2014,2026,95,189,8,Honda Genuine
+OA-OF-CX5,PE01-14-302,Oil filter — CX-5 / Mazda3,Mazda CX-5|Mazda Mazda3,Mazda,CX-5,2017,2026,108,215,6,Mazda Genuine
+OA-OF-KWID,15208-64J0A,Oil filter — Kwid / Triber,Renault Kwid|Renault Triber,Renault,Kwid,2016,2026,62,129,10,Renault Genuine
+OA-OF-DUST,15208-8463R,Oil filter — Duster 1.5 dCi,Renault Duster,Renault,Duster,2018,2026,98,195,6,Renault Genuine
+OA-OF-C200,A2711800009,Oil filter — C-Class W205,Mercedes-Benz C-Class,Mercedes-Benz,C-Class,2015,2021,210,399,4,Mercedes Genuine
+OA-OF-E90,11427512300,Oil filter — 3 Series F30,BMW 3 Series,BMW,3 Series,2012,2019,195,379,4,BMW Genuine
+OA-OF-TRIT,1230A184,Oil filter — Triton 2.4,Mitsubishi Triton,Mitsubishi,Triton,2015,2026,115,229,6,Mitsubishi Genuine
+OA-OF-JIMNY,16510-80J00,Oil filter — Jimny 1.5,Suzuki Jimny,Suzuki,Jimny,2019,2026,82,165,6,Suzuki Genuine
+OA-AF-HILUX,17801-0L040,Air filter — Hilux / Fortuner,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,185,349,16,Toyota Genuine
+OA-AF-COROL,17801-21050,Air filter — Corolla,Toyota Corolla,Toyota,Corolla,2014,2019,145,279,10,Toyota Genuine
+OA-AF-POLO,6R0129620,Air filter — Polo / Polo Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,135,265,14,Mann Filter
+OA-AF-I20,28113-1R000,Air filter — i20,Hyundai i20,Hyundai,i20,2015,2026,120,239,10,Hyundai Mobis
+OA-AF-RANG,AB39-9601-AB,Air filter — Ranger 2.2 / 3.2,Ford Ranger,Ford,Ranger,2012,2022,210,399,12,Motorcraft
+OA-AF-NP200,16546-00Q0A,Air filter — NP200,Nissan NP200,Nissan,NP200,2009,2022,95,189,10,Nissan Genuine
+OA-AF-DMAX,8-97361-680-1,Air filter — D-Max,Isuzu D-Max,Isuzu,D-Max,2013,2026,175,339,8,Isuzu Genuine
+OA-AF-SWIFT,13780-80J00,Air filter — Swift,Suzuki Swift,Suzuki,Swift,2018,2026,98,195,8,Suzuki Genuine
+OA-AF-GOLF,5Q0129620B,Air filter — Golf 7,Volkswagen Golf,Volkswagen,Golf,2013,2020,155,299,6,Mann Filter
+OA-AF-QUANT,17801-75020,Air filter — Quantum,Toyota Quantum,Toyota,Quantum,2010,2026,165,319,6,Toyota Genuine
+OA-CF-HILUX,87139-0K090,Cabin filter — Hilux / Fortuner,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,145,289,12,Toyota Genuine
+OA-CF-POLO,6R0819653,Cabin filter — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,110,219,14,Mann Filter
+OA-CF-I20,97133-1R000,Cabin filter — i20 / i10,Hyundai i20|Hyundai i10,Hyundai,i20,2015,2026,95,189,10,Hyundai Mobis
+OA-CF-RANG,AB39-19N619-AA,Cabin filter — Ranger / Everest,Ford Ranger|Ford Everest,Ford,Ranger,2012,2026,155,299,10,Motorcraft
+OA-CF-COROL,87139-02150,Cabin filter — Corolla,Toyota Corolla,Toyota,Corolla,2014,2026,125,249,8,Toyota Genuine
+OA-CF-UNI,CUK26009,Cabin filter — universal carbon,Most hatchbacks|Most sedans,Universal,Cabin,2010,2026,85,175,20,Mann Filter
+OA-FF-HILUX,23390-0L090,Fuel filter — Hilux GD-6 diesel,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,245,469,10,Toyota Genuine
+OA-FF-RANG,AB39-9155-AC,Fuel filter — Ranger diesel,Ford Ranger|Ford Everest,Ford,Ranger,2012,2026,265,499,8,Motorcraft
+OA-FF-DMAX,8-98171-558-0,Fuel filter — D-Max diesel,Isuzu D-Max,Isuzu,D-Max,2013,2026,255,489,8,Isuzu Genuine
+OA-FF-AMRK,2E0127401C,Fuel filter — Amarok 2.0 TDI,Volkswagen Amarok,Volkswagen,Amarok,2011,2022,280,529,4,Mann Filter
+OA-FF-NP200,16400-00Q0B,Fuel filter — NP200,Nissan NP200,Nissan,NP200,2009,2022,95,189,8,Nissan Genuine
+OA-FF-NAVAR,16400-EB70A,Fuel filter — Navara diesel,Nissan Navara,Nissan,Navara,2015,2026,275,519,4,Nissan Genuine
+BR-PAD-HILUX-R,04466-0K290,Rear brake pads — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,620,1199,6,Toyota Genuine
+BR-PAD-FORT,04465-0K280,Front brake pads — Fortuner,Toyota Fortuner,Toyota,Fortuner,2016,2026,820,1550,5,Toyota Genuine
+BR-PAD-COROL,04465-02280,Front brake pads — Corolla,Toyota Corolla,Toyota,Corolla,2014,2019,480,899,8,Toyota Genuine
+BR-PAD-POLO,1K0698151,Front brake pads — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,420,799,12,ATE
+BR-PAD-POLO-R,6R0698451,Rear brake pads — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,380,729,8,ATE
+BR-PAD-GOLF,5Q0698151,Front brake pads — Golf 7,Volkswagen Golf,Volkswagen,Golf,2013,2020,520,989,6,ATE
+BR-PAD-I20,58101-1R000,Front brake pads — i20,Hyundai i20,Hyundai,i20,2015,2026,390,749,10,Hyundai Mobis
+BR-PAD-RANG,FB3Z-2001-A,Front brake pads — Ranger,Ford Ranger,Ford,Ranger,2012,2026,680,1299,8,Motorcraft
+BR-PAD-RANG-R,FB3Z-2200-A,Rear brake pads — Ranger,Ford Ranger,Ford,Ranger,2012,2026,540,1049,6,Motorcraft
+BR-PAD-NP200,41060-00Q0A,Front brake pads — NP200,Nissan NP200,Nissan,NP200,2009,2022,310,599,10,Nissan Genuine
+BR-PAD-DMAX,8-98016-080-1,Front brake pads — D-Max,Isuzu D-Max,Isuzu,D-Max,2013,2026,650,1249,6,Isuzu Genuine
+BR-PAD-SWIFT,55810-68L00,Front brake pads — Swift,Suzuki Swift,Suzuki,Swift,2018,2026,360,699,8,Suzuki Genuine
+BR-PAD-PICA,58101-1Y000,Front brake pads — Picanto,Kia Picanto,Kia,Picanto,2017,2026,290,559,8,Kia Genuine
+BR-PAD-TUC,58101-D3000,Front brake pads — Tucson,Hyundai Tucson,Hyundai,Tucson,2016,2026,560,1079,5,Hyundai Mobis
+BR-PAD-CX5,G26Y-33-28Z,Front brake pads — CX-5,Mazda CX-5,Mazda,CX-5,2017,2026,590,1129,4,Mazda Genuine
+BR-PAD-C200,A0004209000,Front brake pads — C-Class,Mercedes-Benz C-Class,Mercedes-Benz,C-Class,2015,2021,980,1899,3,Mercedes Genuine
+BR-PAD-E90,34116792209,Front brake pads — 3 Series,BMW 3 Series,BMW,3 Series,2012,2019,890,1699,3,BMW Genuine
+BR-DSC-HILUX,43512-0K080,Front brake disc — Hilux (each),Toyota Hilux,Toyota,Hilux,2016,2026,620,1199,8,Toyota Genuine
+BR-DSC-POLO,6R0615301,Front brake disc — Polo (each),Volkswagen Polo,Volkswagen,Polo,2010,2024,380,749,10,ATE
+BR-DSC-RANG,EB3Z-1102-A,Front brake disc — Ranger (each),Ford Ranger,Ford,Ranger,2012,2026,680,1299,6,Motorcraft
+BR-DSC-I20,51712-1R000,Front brake disc — i20 (each),Hyundai i20,Hyundai,i20,2015,2026,320,629,8,Hyundai Mobis
+BR-DSC-DMAX,8-97318-215-1,Front brake disc — D-Max (each),Isuzu D-Max,Isuzu,D-Max,2013,2026,590,1129,4,Isuzu Genuine
+BR-DSC-COROL,43512-02140,Front brake disc — Corolla (each),Toyota Corolla,Toyota,Corolla,2014,2019,350,689,6,Toyota Genuine
+BR-SHO-NP200,44060-00Q0A,Rear brake shoes — NP200,Nissan NP200,Nissan,NP200,2009,2022,280,549,6,Nissan Genuine
+BR-SHO-PICA,58305-1Y000,Rear brake shoes — Picanto,Kia Picanto,Kia,Picanto,2017,2026,240,479,6,Kia Genuine
+BR-FLD-DOT4,DOT4-500,Brake fluid DOT4 500ml,All vehicles,Universal,Brake fluid,2010,2026,45,89,40,ATE
+BR-FLD-DOT4L,DOT4-1L,Brake fluid DOT4 1L,All vehicles,Universal,Brake fluid,2010,2026,78,149,24,ATE
+BR-HBC-HILUX,46410-0K070,Handbrake cable — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,320,619,4,Toyota Genuine
+BR-CAL-POLO,6R0615124,Front caliper rebuilt — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,850,1599,2,ATE
+BAT-45AH,YUASA-45,45Ah battery — city hatch,Kia Picanto|Hyundai i10|Renault Kwid|Suzuki Swift,Universal,Battery,2010,2026,820,1499,6,Yuasa
+BAT-55AH,YUASA-55,55Ah battery — Polo / i20 / Figo,Volkswagen Polo|Hyundai i20|Ford Figo,Universal,Battery,2010,2026,980,1749,6,Yuasa
+BAT-70AH,YUASA-70,70Ah battery — Corolla / Golf / Tucson,Toyota Corolla|Volkswagen Golf|Hyundai Tucson,Universal,Battery,2010,2026,1280,2199,4,Yuasa
+BAT-90AH,YUASA-90,90Ah battery — bakkie / SUV,Toyota Hilux|Ford Ranger|Isuzu D-Max|Toyota Fortuner,Universal,Battery,2010,2026,1680,2899,4,Yuasa
+BAT-100AH,YUASA-100,100Ah dual-purpose bakkie battery,Toyota Hilux|Ford Ranger|Volkswagen Amarok,Universal,Battery,2010,2026,1980,3399,3,Yuasa
+BAT-AGM70,VARTA-AGM70,70Ah AGM start-stop battery,Volkswagen Golf|BMW 3 Series|Mercedes-Benz C-Class,Universal,Battery,2015,2026,2450,4199,2,Varta
+WIP-HILUX,85212-0K090,Wiper blade set — Hilux / Fortuner,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,210,399,8,Bosch Dist
+WIP-POLO,6R1955425,Wiper blade set — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,165,319,10,Bosch Dist
+WIP-RANG,AB39-17528-AA,Wiper blade set — Ranger,Ford Ranger,Ford,Ranger,2012,2026,195,379,6,Bosch Dist
+WIP-I20,98350-1R000,Wiper blade set — i20,Hyundai i20,Hyundai,i20,2015,2026,145,289,8,Bosch Dist
+WIP-REAR-UNI,H406,Rear wiper blade universal 14in,Most hatchbacks|Hyundai i20|Volkswagen Polo|Suzuki Swift,Universal,Wiper,2010,2026,55,119,20,Bosch Dist
+WIP-24,AEROTWIN-24,Wiper blade 24 inch (each),Most sedans|Toyota Corolla,Universal,Wiper,2010,2026,95,189,12,Bosch Dist
+OIL-5W30-5L,CAST-5W30-5,Engine oil 5W-30 synthetic 5L,Most petrol hatches|Volkswagen Polo|Hyundai i20|Toyota Corolla,Universal,Oil,2010,2026,320,579,18,Castrol
+OIL-5W40-5L,CAST-5W40-5,Engine oil 5W-40 synthetic 5L,Most petrol / light diesel|Ford Ranger|Volkswagen Golf,Universal,Oil,2010,2026,345,619,16,Castrol
+OIL-10W40-5L,CAST-10W40-5,Engine oil 10W-40 semi-synth 5L,Older petrol|Nissan NP200|Toyota Quantum,Universal,Oil,2005,2026,245,449,14,Castrol
+OIL-5W30-D5,TOTAL-5W30D-5,Diesel oil 5W-30 C3 5L,Toyota Hilux|Isuzu D-Max|Ford Ranger,Universal,Oil,2012,2026,380,699,12,Total
+OIL-15W40-5L,CAST-15W40-5,Engine oil 15W-40 mineral 5L,Commercial / Quantum / NP200,Universal,Oil,2000,2026,195,359,10,Castrol
+OIL-ATF-1L,DEX3-1L,ATF Dexron III 1L,Most automatics,Universal,ATF,2010,2026,85,169,20,Castrol
+OIL-ATF-CVT,CVT-1L,CVT fluid 1L,Toyota Corolla|Honda Jazz|Nissan Almera,Universal,ATF,2014,2026,145,279,8,Toyota Genuine
+OIL-GEAR-75,75W90-1L,Gear oil 75W-90 1L,Manual gearboxes|Nissan NP200|Suzuki Swift,Universal,Gear oil,2010,2026,95,189,12,Castrol
+OIL-DIFF-80,80W90-1L,Diff oil 80W-90 1L,Toyota Hilux|Ford Ranger|Isuzu D-Max,Universal,Diff oil,2010,2026,78,155,12,Castrol
+OIL-COOL-5L,G12-5L,Coolant concentrate G12 5L,Most vehicles,Universal,Coolant,2010,2026,165,319,16,Total
+OIL-COOL-1L,G12-1L,Coolant concentrate G12 1L,Most vehicles,Universal,Coolant,2010,2026,48,95,24,Total
+OIL-PS-1L,CHF11S-1L,Power steering fluid 1L,Most hydraulics,Universal,PS fluid,2010,2026,85,169,10,Pentosin
+OIL-ADBLUE,ADBLUE-10L,AdBlue DEF 10L,Modern diesels|Ford Ranger|Volkswagen Amarok,Universal,AdBlue,2016,2026,145,279,8,Total
+OIL-WASH-5L,WASH-5L,Screenwash concentrate 5L,All vehicles,Universal,Screenwash,2010,2026,55,109,20,Local OEM
+OIL-2T-1L,2T-1L,2-stroke oil 1L (small engines),Workshop / generators,Universal,2-stroke,2010,2026,65,129,6,Castrol
+PLG-HILUX,FK20HR11,Spark plug set — Hilux petrol 2.7 (4),Toyota Hilux,Toyota,Hilux,2016,2026,280,549,6,NGK
+PLG-POLO,04C905601,Spark plug set — Polo 1.0 TSI (3),Volkswagen Polo,Volkswagen,Polo,2018,2024,320,619,6,NGK
+PLG-VIVO,101905601,Spark plug set — Polo Vivo 1.4 (4),Volkswagen Polo Vivo,Volkswagen,Polo Vivo,2018,2024,180,359,8,NGK
+PLG-I20,18844-11061,Spark plug set — i20 1.2 (4),Hyundai i20,Hyundai,i20,2015,2026,165,329,8,NGK
+PLG-COROL,90919-01253,Spark plug set — Corolla 1.6 / 1.8 (4),Toyota Corolla,Toyota,Corolla,2014,2019,195,389,8,Denso
+PLG-SWIFT,09482-00584,Spark plug set — Swift 1.2 (4),Suzuki Swift,Suzuki,Swift,2018,2026,155,309,6,NGK
+PLG-PICA,18844-11051,Spark plug set — Picanto 1.0 (3),Kia Picanto,Kia,Picanto,2017,2026,140,279,6,NGK
+PLG-GLOW-HIL,19850-0L070,Glow plug — Hilux GD-6 (each),Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,185,359,12,Denso
+PLG-GLOW-RNG,BK2Q-6M090-AA,Glow plug — Ranger 2.2 (each),Ford Ranger,Ford,Ranger,2012,2022,195,379,8,Motorcraft
+COIL-POLO,04C905110B,Ignition coil — Polo 1.0 TSI (each),Volkswagen Polo,Volkswagen,Polo,2018,2024,420,799,6,Bosch Dist
+COIL-I20,27301-2B200,Ignition coil — i20 (each),Hyundai i20,Hyundai,i20,2015,2026,310,599,6,Hyundai Mobis
+COIL-COROL,90919-02278,Ignition coil — Corolla (each),Toyota Corolla,Toyota,Corolla,2014,2019,380,729,4,Denso
+BLT-SERP-HIL,90916-02718,Serpentine belt — Hilux GD-6,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,320,619,6,Gates
+BLT-SERP-POLO,6Q0260849,Serpentine belt — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,185,359,8,Gates
+BLT-SERP-RANG,AB39-8620-AA,Serpentine belt — Ranger 2.2,Ford Ranger,Ford,Ranger,2012,2022,295,569,5,Gates
+BLT-TIM-POLO,03C109119E,Timing belt kit — Polo 1.4 / 1.6,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,980,1899,3,Gates
+BLT-TIM-I20,24312-2B000,Timing belt kit — i20 1.2,Hyundai i20,Hyundai,i20,2015,2020,720,1399,3,Gates
+BLT-FAN-NP,11720-00Q0A,Fan belt — NP200,Nissan NP200,Nissan,NP200,2009,2022,95,189,8,Gates
+HOS-RAD-HIL,16571-0K080,Top radiator hose — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,210,409,5,Toyota Genuine
+HOS-RAD-POLO,6R0121101,Top radiator hose — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,165,319,5,Local OEM
+HOS-HEAT-UNI,HEAT-16MM,Heater hose 16mm per metre,Most vehicles,Universal,Hose,2010,2026,35,69,30,Local OEM
+CLU-HILUX,31230-0K080,Clutch kit — Hilux 2.4 / 2.8,Toyota Hilux,Toyota,Hilux,2016,2026,2850,5299,3,Luk
+CLU-RANG,AB3Z-7B546-A,Clutch kit — Ranger 2.2,Ford Ranger,Ford,Ranger,2012,2022,2650,4899,2,Luk
+CLU-POLO,0A3141067,Clutch kit — Polo / Vivo 1.4,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,1450,2799,3,Luk
+CLU-I20,41300-1R000,Clutch kit — i20 1.2 / 1.4,Hyundai i20,Hyundai,i20,2015,2026,1280,2499,2,Valeo
+CLU-NP200,30100-00Q0A,Clutch kit — NP200 1.6,Nissan NP200,Nissan,NP200,2009,2022,980,1899,3,Valeo
+CLU-DMAX,8-97345-120-1,Clutch kit — D-Max 2.5 / 3.0,Isuzu D-Max,Isuzu,D-Max,2013,2026,2450,4599,2,Luk
+CLU-SWIFT,21200-63J00,Clutch kit — Swift 1.2,Suzuki Swift,Suzuki,Swift,2018,2026,1100,2149,2,Valeo
+CV-HILUX-L,43420-0K080,CV joint outer — Hilux left,Toyota Hilux,Toyota,Hilux,2016,2026,780,1499,4,GKN
+CV-HILUX-R,43410-0K080,CV joint outer — Hilux right,Toyota Hilux,Toyota,Hilux,2016,2026,780,1499,4,GKN
+CV-POLO,6R0498103,CV joint outer — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,520,999,4,GKN
+CV-RANG,AB3Z-3A427-A,CV joint outer — Ranger,Ford Ranger,Ford,Ranger,2012,2026,850,1649,3,GKN
+WB-HILUX,90369-40064,Front wheel bearing — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,420,819,6,SKF
+WB-POLO,6R0498625,Front wheel bearing — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,310,599,6,SKF
+WB-RANG,AB3Z-1215-A,Front wheel bearing — Ranger,Ford Ranger,Ford,Ranger,2012,2026,480,929,4,SKF
+SUS-SHK-HIL-F,48510-0K080,Front shock — Hilux (each),Toyota Hilux,Toyota,Hilux,2016,2026,720,1399,8,KYB
+SUS-SHK-HIL-R,48530-0K090,Rear shock — Hilux (each),Toyota Hilux,Toyota,Hilux,2016,2026,580,1129,8,KYB
+SUS-SHK-POLO,6R0413031,Front strut — Polo (each),Volkswagen Polo,Volkswagen,Polo,2010,2024,650,1249,6,Monroe
+SUS-SHK-RANG,AB3Z-18124-A,Front shock — Ranger (each),Ford Ranger,Ford,Ranger,2012,2026,780,1499,6,KYB
+SUS-SHK-I20,54651-1R000,Front strut — i20 (each),Hyundai i20,Hyundai,i20,2015,2026,540,1049,4,Monroe
+SUS-BSH-HIL,48654-0K080,Front lower arm bush — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,185,359,10,Febi
+SUS-BSH-POLO,6R0407181,Front wishbone bush — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,95,189,12,Febi
+SUS-BJ-HILUX,43330-0K080,Ball joint — Hilux (each),Toyota Hilux,Toyota,Hilux,2016,2026,245,479,8,Febi
+SUS-TR-HILUX,45503-0K080,Tie rod end — Hilux (each),Toyota Hilux,Toyota,Hilux,2016,2026,165,319,10,Febi
+SUS-TR-POLO,6R0422811,Tie rod end — Polo (each),Volkswagen Polo,Volkswagen,Polo,2010,2024,125,249,8,Febi
+SUS-ARB-HIL,48815-0K080,Anti-roll bar bush kit — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,145,289,6,Febi
+SUS-LINK-POLO,6R0411317,Drop link — Polo (each),Volkswagen Polo,Volkswagen,Polo,2010,2024,95,189,8,Febi
+ST-RACK-POLO,6R0422055,Steering rack — Polo (exchange),Volkswagen Polo,Volkswagen,Polo,2010,2024,2450,4599,1,Febi
+ST-PUMP-HIL,44320-0K080,Power steering pump — Hilux,Toyota Hilux,Toyota,Hilux,2016,2020,1450,2799,2,Toyota Genuine
+ST-RACK-HIL,44250-0K080,Steering rack — Hilux (exchange),Toyota Hilux,Toyota,Hilux,2016,2026,3200,5999,1,Toyota Genuine
+RAD-HILUX,16400-0K080,Radiator — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,1650,3149,3,Denso
+RAD-POLO,6R0121251,Radiator — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,980,1899,3,Nissens
+RAD-RANG,AB39-8005-AB,Radiator — Ranger 2.2,Ford Ranger,Ford,Ranger,2012,2022,1480,2799,2,Motorcraft
+RAD-I20,25310-1R000,Radiator — i20,Hyundai i20,Hyundai,i20,2015,2026,720,1399,3,Hyundai Mobis
+RAD-DMAX,8-98155-214-0,Radiator — D-Max,Isuzu D-Max,Isuzu,D-Max,2013,2026,1550,2949,2,Isuzu Genuine
+WP-HILUX,16100-0L070,Water pump — Hilux GD-6,Toyota Hilux|Toyota Fortuner,Toyota,Hilux,2016,2026,780,1499,4,Denso
+WP-POLO,03C121004,Water pump — Polo 1.4 TSI,Volkswagen Polo,Volkswagen,Polo,2018,2024,620,1199,3,Gates
+WP-RANG,AB39-8501-AA,Water pump — Ranger 2.2,Ford Ranger,Ford,Ranger,2012,2022,690,1329,3,Motorcraft
+THM-HILUX,90916-03100,Thermostat — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,185,359,6,Denso
+THM-POLO,03C121113,Thermostat — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,165,319,6,Wahler
+FAN-HILUX,6600A,Radiator fan motor — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,850,1649,2,Denso
+ALT-HILUX,27060-0K080,Alternator — Hilux 12V 80A,Toyota Hilux,Toyota,Hilux,2016,2026,2450,4599,2,Denso
+ALT-POLO,06H903023,Alternator — Polo 1.0 / 1.4,Volkswagen Polo,Volkswagen,Polo,2018,2024,2200,3899,3,Bosch Dist
+ALT-RANG,AB39-10300-AA,Alternator — Ranger,Ford Ranger,Ford,Ranger,2012,2026,2350,4399,2,Motorcraft
+ALT-I20,37300-2B010,Alternator — i20,Hyundai i20,Hyundai,i20,2015,2026,1650,3149,2,Hyundai Mobis
+STR-HILUX,28100-0K080,Starter motor — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,1850,3499,2,Denso
+STR-POLO,02T911023,Starter motor — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,1450,2749,2,Bosch Dist
+STR-NP200,23300-00Q0A,Starter motor — NP200,Nissan NP200,Nissan,NP200,2009,2022,980,1899,2,Nissan Genuine
+LMP-H4,H4-12V,Headlamp bulb H4 12V 60/55W (pair),Most older vehicles|Nissan NP200|Toyota Quantum,Universal,Bulb,2000,2026,45,95,40,Osram
+LMP-H7,H7-12V,Headlamp bulb H7 12V 55W (pair),Volkswagen Polo|Hyundai i20|Toyota Corolla,Universal,Bulb,2010,2026,55,119,36,Osram
+LMP-H11,H11-12V,Fog / projector bulb H11 (pair),Ford Ranger|Toyota Hilux|Hyundai Tucson,Universal,Bulb,2012,2026,85,169,20,Osram
+LMP-LED-H7,LED-H7,LED headlamp conversion H7 (pair),Most projectors,Universal,Bulb,2015,2026,280,549,8,Osram
+LMP-W5W,W5W-10,Park / number-plate bulb W5W (10-pack),All vehicles,Universal,Bulb,2010,2026,25,55,30,Osram
+LMP-P21,P21W-10,Indicator / brake bulb P21W (10-pack),All vehicles,Universal,Bulb,2010,2026,28,59,30,Osram
+LMP-PY21,PY21W-10,Amber indicator bulb PY21W (10-pack),All vehicles,Universal,Bulb,2010,2026,32,65,24,Osram
+FUSE-MINI,FUSE-MINI-ASST,Mini blade fuse assortment 120pc,Workshop,Universal,Fuse,2010,2026,85,169,8,Local OEM
+FUSE-STD,FUSE-STD-ASST,Standard blade fuse assortment 100pc,Workshop,Universal,Fuse,2010,2026,75,149,8,Local OEM
+REL-4PIN,REL-4PIN,Relay 12V 40A 4-pin,Most vehicles,Universal,Relay,2010,2026,35,69,20,Hella
+REL-5PIN,REL-5PIN,Relay 12V 40A 5-pin,Most vehicles,Universal,Relay,2010,2026,42,85,16,Hella
+LMP-HL-POLO-L,6R1941005,Headlamp left — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2017,1450,2799,2,Hella
+LMP-HL-POLO-R,6R1941006,Headlamp right — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2017,1450,2799,2,Hella
+LMP-HL-I20-L,92101-1R000,Headlamp left — i20,Hyundai i20,Hyundai,i20,2015,2020,980,1899,2,Hyundai Mobis
+LMP-TL-HILUX,81550-0K080,Tail lamp left — Hilux,Toyota Hilux,Toyota,Hilux,2016,2020,620,1199,2,Toyota Genuine
+LMP-FOG-RANG,AB39-15200-AA,Fog lamp — Ranger (each),Ford Ranger,Ford,Ranger,2012,2022,380,749,4,Motorcraft
+LMP-MIR-IND,IND-MIR-UNI,Mirror indicator repeater (each),Most hatches,Universal,Indicator,2010,2026,85,169,10,Local OEM
+FUL-PMP-POLO,6C0919051,Fuel pump in-tank — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,1450,2749,2,VDO
+FUL-PMP-HIL,23221-0K080,Fuel pump — Hilux petrol,Toyota Hilux,Toyota,Hilux,2016,2026,1650,3149,2,Denso
+FUL-PMP-I20,31110-1R000,Fuel pump — i20,Hyundai i20,Hyundai,i20,2015,2026,980,1899,2,Hyundai Mobis
+FUL-INJ-HIL,23670-0L070,Diesel injector — Hilux GD-6 (each),Toyota Hilux,Toyota,Hilux,2016,2026,2450,4599,4,Denso
+FUL-INJ-RNG,BK2Q-9K546-AG,Diesel injector — Ranger 2.2 (each),Ford Ranger,Ford,Ranger,2012,2022,2280,4299,3,Bosch Dist
+FUL-CAP-UNI,FCAP-LOCK,Locking fuel cap universal,Most vehicles,Universal,Fuel cap,2010,2026,85,169,12,Local OEM
+AC-COMP-POLO,6R0820803,A/C compressor — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,2450,4599,1,Sanden
+AC-COMP-HIL,88320-0K080,A/C compressor — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,2850,5299,1,Denso
+AC-COND-POLO,6R0820411,A/C condenser — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,980,1899,2,Nissens
+AC-GAS-R134,R134A-CAN,A/C gas R134a 340g can,Older systems,Universal,A/C gas,2000,2018,95,189,16,Local OEM
+AC-GAS-R123,R1234YF-CAN,A/C gas R1234yf 170g can,Newer systems,Universal,A/C gas,2017,2026,245,479,8,Local OEM
+AC-DYE,AC-DYE,A/C leak-detect dye,Workshop,Universal,A/C,2010,2026,65,129,10,Local OEM
+AC-DRY-UNI,RXD-UNI,A/C receiver drier universal,Most vehicles,Universal,A/C,2010,2026,185,359,4,Nissens
+BDY-MIR-POLO-L,6R1857501,Side mirror left — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2017,620,1199,3,Local OEM
+BDY-MIR-POLO-R,6R1857502,Side mirror right — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2017,620,1199,3,Local OEM
+BDY-MIR-HIL-L,87940-0K080,Side mirror left — Hilux,Toyota Hilux,Toyota,Hilux,2016,2020,780,1499,2,Toyota Genuine
+BDY-HND-POLO,6R0837885,Door handle outer — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,185,359,6,Local OEM
+BDY-HND-HIL,69205-0K080,Door handle outer — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,210,409,4,Toyota Genuine
+BDY-REG-POLO,6R0837461,Window regulator front left — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,480,929,3,Local OEM
+BDY-REG-I20,82401-1R000,Window regulator front left — i20,Hyundai i20,Hyundai,i20,2015,2020,420,819,2,Hyundai Mobis
+BDY-LOCK-POLO,6R0837015,Door lock actuator — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,380,749,3,Local OEM
+WSC-POLO,6R1845011,Windscreen — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,1450,2799,2,Shatterprufe
+WSC-HILUX,56111-0K080,Windscreen — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,1850,3499,2,Shatterprufe
+WSC-RANG,AB39-6300310-A,Windscreen — Ranger,Ford Ranger,Ford,Ranger,2012,2022,1750,3349,1,Shatterprufe
+WSC-I20,86111-1R000,Windscreen — i20,Hyundai i20,Hyundai,i20,2015,2020,1100,2149,2,Shatterprufe
+BDY-BMP-CLP,CLIP-BMP-50,Bumper clip assortment 50pc,Most vehicles,Universal,Clips,2010,2026,45,95,15,Local OEM
+BDY-MUD-HIL,76622-0K080,Mud flap set — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,280,549,4,Toyota Genuine
+EXH-MUF-POLO,6R0253609,Rear muffler — Polo 1.4,Volkswagen Polo,Volkswagen,Polo,2010,2024,780,1499,2,Bosal
+EXH-MUF-HIL,17430-0K080,Rear muffler — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,1250,2399,2,Bosal
+EXH-FLEX-50,FLEX-50-200,Exhaust flex 50mm x 200mm,Most 1.4-2.0,Universal,Exhaust,2010,2026,145,289,8,Local OEM
+EXH-FLEX-60,FLEX-60-200,Exhaust flex 60mm x 200mm,Bakkies / 2.0+,Universal,Exhaust,2010,2026,165,319,6,Local OEM
+EXH-GASK-UNI,EGASK-ASST,Exhaust gasket assortment,Workshop,Universal,Exhaust,2010,2026,85,169,10,Local OEM
+EXH-RB-HIL,17560-0K080,Rubber exhaust hanger — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,45,89,12,Toyota Genuine
+TYR-195-65-15,P1956515,Tyre 195/65R15 91H,Toyota Corolla|Volkswagen Polo|Hyundai i20,Universal,Tyre,2010,2026,850,1399,16,Goodyear
+TYR-185-60-15,P1856015,Tyre 185/60R15 84H,Volkswagen Polo Vivo|Hyundai i20|Suzuki Swift,Universal,Tyre,2010,2026,720,1199,12,Goodyear
+TYR-175-70-14,P1757014,Tyre 175/70R14 84T,Kia Picanto|Hyundai i10|Renault Kwid,Universal,Tyre,2010,2026,580,999,10,Dunlop
+TYR-205-55-16,P2055516,Tyre 205/55R16 91V,Volkswagen Golf|Toyota Corolla|Hyundai Tucson,Universal,Tyre,2010,2026,980,1649,12,Continental
+TYR-215-60-17,P2156017,Tyre 215/60R17 96H,Hyundai Tucson|Kia Sportage|Mazda CX-5,Universal,Tyre,2015,2026,1250,2099,8,Continental
+TYR-265-65-17,P2656517,Tyre 265/65R17 112T A/T,Toyota Hilux|Ford Ranger|Isuzu D-Max,Universal,Tyre,2012,2026,1850,3099,12,Goodyear
+TYR-255-70-16,P2557016,Tyre 255/70R16 111T,Toyota Hilux|Nissan Navara,Universal,Tyre,2012,2026,1650,2749,8,Dunlop
+TYR-265-60-18,P2656018,Tyre 265/60R18 110H,Ford Ranger Wildtrak|Toyota Fortuner,Universal,Tyre,2016,2026,2100,3499,6,Continental
+TYR-SPARE-16,SPARE-16-STEEL,Space-saver spare 16 inch,Most sedans,Universal,Tyre,2010,2026,980,1699,3,Local OEM
+ACC-TOW-HIL,TOW-HILUX-GD6,Towbar fixed — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,2200,3999,3,Safari Centre
+ACC-TOW-RNG,TOW-RANGER-T6,Towbar fixed — Ranger T6/T7,Ford Ranger,Ford,Ranger,2012,2022,2100,3849,2,Safari Centre
+ACC-TOW-POLO,TOW-POLO,Towbar detachable — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,1850,3399,1,Local OEM
+ACC-NUDGE-HIL,NUDGE-HILUX,Nudge bar — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,2450,4499,2,Safari Centre
+ACC-NUDGE-RNG,NUDGE-RANGER,Nudge bar — Ranger,Ford Ranger,Ford,Ranger,2012,2026,2350,4299,2,Safari Centre
+ACC-MAT-HIL,MAT-HILUX,Rubber floor mat set — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,380,749,6,Toyota Genuine
+ACC-MAT-POLO,MAT-POLO,Rubber floor mat set — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,280,549,6,Local OEM
+ACC-MAT-RANG,MAT-RANGER,Rubber floor mat set — Ranger,Ford Ranger,Ford,Ranger,2012,2026,360,699,4,Motorcraft
+ACC-LINER-HIL,LINER-HILUX,Load-bin liner — Hilux DC,Toyota Hilux,Toyota,Hilux,2016,2026,1850,3399,3,Safari Centre
+ACC-LINER-RNG,LINER-RANGER,Load-bin liner — Ranger DC,Ford Ranger,Ford,Ranger,2012,2026,1750,3249,2,Safari Centre
+ACC-BAR-HIL,LOADBAR-HIL,Load bars — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,980,1899,3,Safari Centre
+ACC-SEAT-UNI,SEAT-CANVAS,Canvas seat cover set universal,Bakkies|Toyota Hilux|Ford Ranger|Nissan NP200,Universal,Seat cover,2010,2026,450,899,8,Local OEM
+ACC-LOCK-DIFF,DIFFLOCK-HIL,Aftermarket locker — Hilux (enquire),Toyota Hilux,Toyota,Hilux,2016,2026,8500,14500,0,Safari Centre
+ACC-CANOPY-HIL,CANOPY-HIL-DC,Fibreglass canopy — Hilux DC,Toyota Hilux,Toyota,Hilux,2016,2026,12500,21999,1,Safari Centre
+ACC-SNORK-HIL,SNORK-HILUX,Snorkel — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,1850,3399,2,Safari Centre
+KIT-MIN-HIL,KIT-HIL-MIN,Minor service kit — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,620,1199,8,Toyota Genuine
+KIT-MAJ-HIL,KIT-HIL-MAJ,Major service kit — Hilux GD-6,Toyota Hilux,Toyota,Hilux,2016,2026,1450,2749,4,Toyota Genuine
+KIT-MIN-POLO,KIT-POLO-MIN,Minor service kit — Polo / Vivo,Volkswagen Polo|Volkswagen Polo Vivo,Volkswagen,Polo,2010,2024,420,799,10,Mann Filter
+KIT-MAJ-POLO,KIT-POLO-MAJ,Major service kit — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,980,1899,4,Mann Filter
+KIT-MIN-RANG,KIT-RNG-MIN,Minor service kit — Ranger diesel,Ford Ranger,Ford,Ranger,2012,2026,680,1299,6,Motorcraft
+KIT-MIN-I20,KIT-I20-MIN,Minor service kit — i20,Hyundai i20,Hyundai,i20,2015,2026,340,649,8,Hyundai Mobis
+KIT-MIN-COR,KIT-COR-MIN,Minor service kit — Corolla,Toyota Corolla,Toyota,Corolla,2014,2019,380,729,6,Toyota Genuine
+KIT-MIN-DMAX,KIT-DMX-MIN,Minor service kit — D-Max,Isuzu D-Max,Isuzu,D-Max,2013,2026,620,1199,4,Isuzu Genuine
+SEN-O2-POLO,03C906262,Oxygen sensor — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,620,1199,3,Bosch Dist
+SEN-O2-HIL,89465-0K080,Oxygen sensor — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,680,1299,3,Denso
+SEN-MAF-POLO,03C906461,MAF sensor — Polo,Volkswagen Polo,Volkswagen,Polo,2010,2024,850,1649,2,Bosch Dist
+SEN-ABS-HIL,89542-0K080,ABS wheel speed sensor — Hilux,Toyota Hilux,Toyota,Hilux,2016,2026,320,619,4,Toyota Genuine
+SEN-CKP-I20,39180-2B000,Crank sensor — i20,Hyundai i20,Hyundai,i20,2015,2026,245,479,3,Hyundai Mobis
+SEN-MAP-RANG,AB39-9F479-AA,MAP sensor — Ranger,Ford Ranger,Ford,Ranger,2012,2022,380,749,3,Motorcraft
+SEN-TEMP-UNI,WTH-UNI,Coolant temp sensor universal,Most vehicles,Universal,Sensor,2010,2026,85,169,10,Febi
+SEN-PDC-UNI,PDC-UNI,Park-distance sensor (each),Most later models,Universal,Sensor,2015,2026,185,359,8,Hella
+CON-GREASE,GREASE-500,Multipurpose grease 500g,Workshop,Universal,Consumable,2010,2026,45,89,20,Castrol
+CON-SIL,SIL-CLR,RTV silicone gasket 85g,Workshop,Universal,Consumable,2010,2026,38,75,24,Local OEM
+CON-LOC,LOC-243,Threadlocker medium 10ml,Workshop,Universal,Consumable,2010,2026,55,109,16,Local OEM
+CON-BRAKECLN,BCLN-500,Brake cleaner 500ml,Workshop,Universal,Consumable,2010,2026,42,85,30,Local OEM
+CON-PENET,WD-400ML,Penetrating oil 400ml,Workshop,Universal,Consumable,2010,2026,48,95,20,Local OEM
+CON-TAPE,TAPE-HARNESS,Wiring harness tape 19mm,Workshop,Universal,Consumable,2010,2026,28,55,15,Local OEM
+CON-TIE,TIE-200,Cable tie pack 200pc,Workshop,Universal,Consumable,2010,2026,22,45,20,Local OEM
+CON-RAG,RAG-10KG,Workshop rags 10kg,Workshop,Universal,Consumable,2010,2026,85,159,8,Local OEM
+CON-GLOVE,GLOVE-100,Nitrile gloves 100-box,Workshop,Universal,Consumable,2010,2026,65,129,12,Local OEM
+CON-JACKPAD,JACK-PAD,Jacking-point pad (pair),Workshop / bakkies,Universal,Consumable,2010,2026,95,189,6,Local OEM
+WAS-PMP-UNI,WASHER-PMP,Windscreen washer pump,Most vehicles,Universal,Washer,2010,2026,85,169,8,Local OEM
+WAS-JET-UNI,WASHER-JET,Washer jet pair,Most vehicles,Universal,Washer,2010,2026,35,69,16,Local OEM
+HORN-UNI,HORN-12V,Electric horn 12V (pair),Most vehicles,Universal,Horn,2010,2026,95,189,8,Hella
+JACK-SCIS,JACK-SCIS,Scissor jack 1.5t,Most hatches,Universal,Jack,2010,2026,185,359,4,Local OEM
+OA-OF-AVAN,90915-YZZA1,Oil filter — Avanza / Rumion,Toyota Avanza|Toyota Rumion,Toyota,Avanza,2012,2026,78,159,8,Toyota Genuine
+BR-PAD-QUANT,04465-26040,Front brake pads — Quantum,Toyota Quantum,Toyota,Quantum,2010,2026,520,999,6,Toyota Genuine
+BR-DSC-QUANT,43512-26040,Front brake disc — Quantum (each),Toyota Quantum,Toyota,Quantum,2010,2026,420,819,6,Toyota Genuine
+BAT-90AH-Q,YUASA-90Q,90Ah battery — Quantum / taxi,Toyota Quantum,Toyota,Quantum,2010,2026,1680,2899,4,Yuasa
+KIT-MIN-QNT,KIT-QNT-MIN,Minor service kit — Quantum,Toyota Quantum,Toyota,Quantum,2010,2026,520,999,6,Toyota Genuine
+BDY-BON-POLO,6R0823031,Bonnet — Polo (special order),Volkswagen Polo,Volkswagen,Polo,2010,2017,1850,3499,0,Local OEM
+RAD-AMRK,2H0121251C,Radiator — Amarok 2.0 (on order),Volkswagen Amarok,Volkswagen,Amarok,2011,2022,2100,3999,0,Nissens

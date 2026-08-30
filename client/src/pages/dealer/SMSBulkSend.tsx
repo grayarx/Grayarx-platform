@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { parseCsvGrid } from "@shared/smartCsv";
 import { Upload, Send, CheckCircle2, AlertCircle, Loader2, Copy, Download } from "lucide-react";
 
 interface BulkRecipient {
@@ -44,25 +45,18 @@ export function SMSBulkSendPage() {
 
   // Parse CSV input
   const parseCSV = (csv: string): BulkRecipient[] => {
-    const lines = csv.trim().split("\n");
+    const { rows } = parseCsvGrid(csv);
+    if (rows.length === 0) return [];
+    const first = (rows[0]?.[0] || "").toLowerCase();
+    const start = /^(phone|mobile|cell|number|tel)$/.test(first) ? 1 : 0;
     const parsed: BulkRecipient[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      // Support formats: "phone,message" or just "phone" (with default message)
-      const parts = line.split(",");
-      if (parts.length >= 1) {
-        const phone = parts[0].trim();
-        const message = parts.slice(1).join(",").trim() || "Hi! We have a special offer for you. Would you like to hear more?";
-
-        if (phone) {
-          parsed.push({ phone, message });
-        }
-      }
+    for (let i = start; i < rows.length; i++) {
+      const phone = rows[i]?.[0]?.trim() || "";
+      const message =
+        rows[i]?.slice(1).join(", ").trim() ||
+        "Hi! We have a special offer for you. Would you like to hear more?";
+      if (phone) parsed.push({ phone, message });
     }
-
     return parsed;
   };
 

@@ -8,6 +8,7 @@
  * Supports: quoted fields, embedded commas inside quotes, escaped quotes ("").
  */
 
+import { parseCsvGrid, parseFlexibleNumber, resolveHeaderMap, normalizeHeaderKey } from "../../shared/smartCsv";
 import { parseMultiPhotoField } from "../../shared/imagePipeline";
 import { validatePhotoSet } from "../../shared/photoStandards";
 import { validateVin } from "../../shared/validateVin";
@@ -56,7 +57,7 @@ export type ImportPreview = {
 };
 
 const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record<string, string[]> = {
-  title: ["title", "vehicle", "listing", "name", "listing title", "vehicle title", "advert title"],
+  title: ["title", "titel", "vehicle", "listing", "name", "listing title", "vehicle title", "advert title"],
   make: ["make", "manufacturer", "brand"],
   model: ["model", "variant", "series"],
   year: ["year", "model year", "year_of_manufacture", "yr"],
@@ -86,8 +87,9 @@ const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record
     "sale price",
     "total price",
     "value",
+    "prce",
   ],
-  km: ["km", "kms", "mileage", "mileage km", "odometer", "odometer km", "odo"],
+  km: ["km", "kms", "mileage", "milage", "mileage km", "odometer", "odometer km", "odo"],
   fuel: ["fuel", "fuel type", "fueltype"],
   bodyType: ["body", "body type", "bodytype", "body_type", "vehicle type", "segment"],
   transmission: ["transmission", "gearbox"],
@@ -105,61 +107,13 @@ const HEADER_ALIASES: Partial<Record<keyof ParsedVehicleRow, string[]>> & Record
   dataWarnings: [],
 };
 
-/** Split a single CSV line respecting quotes. */
-function splitCsvLine(line: string): string[] {
-  const cells: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        cur += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      cells.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  cells.push(cur);
-  return cells.map((c) => c.trim());
-}
-
 function normaliseHeader(h: string) {
-  return h.toLowerCase().replace(/[_\-]/g, " ").trim();
-}
-
-function resolveColumn(headerCells: string[], aliases: string[]): number | null {
-  for (let i = 0; i < headerCells.length; i++) {
-    const h = normaliseHeader(headerCells[i]);
-    if (aliases.includes(h)) return i;
-  }
-  return null;
+  return normalizeHeaderKey(h);
 }
 
 function toNumber(raw: string | undefined): number | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  // Handle SA formats: "R 329 900", "329k", "329,900"
-  const lower = trimmed.toLowerCase();
-  const hasK = /\d\s*k\b/i.test(lower) || /\d+k\b/i.test(lower);
-  const cleaned = trimmed.replace(/[r\s,]/gi, "").replace(/[^\d.\-k]/gi, "");
-  if (!cleaned) return null;
-  const withoutK = cleaned.replace(/k$/i, "");
-  const n = Number(withoutK);
-  if (!Number.isFinite(n)) return null;
-  const resolved = hasK && n < 10000 ? n * 1000 : n;
-  return resolved > 0 ? resolved : null;
+  const n = parseFlexibleNumber(raw);
+  return n != null && n > 0 ? n : null;
 }
 
 /** Parse vehicle price — rejects POA placeholders and R1 junk values. */
@@ -225,14 +179,9 @@ function inferPriceColumnIndex(header: string[], sampleRows: string[][]): number
 }
 
 export function parseInventoryCsv(csv: string): ImportPreview {
-  const lines = csv
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((l) => l.trim())
-    // Strip comment lines (lines starting with #) — used in template files
-    .filter((l) => l.length > 0 && !l.startsWith("#"));
+  const { rows: grid } = parseCsvGrid(csv);
 
-  if (lines.length === 0) {
+  if (grid.length === 0) {
     return {
       totalRows: 0,
       validRows: [],
@@ -242,14 +191,10 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     };
   }
 
-  const header = splitCsvLine(lines[0]);
-  const colIndex: Partial<Record<keyof ParsedVehicleRow, number>> = {};
-  (Object.keys(HEADER_ALIASES) as Array<keyof ParsedVehicleRow>).forEach((key) => {
-    const aliases = HEADER_ALIASES[key];
-    if (!aliases || aliases.length === 0) return;
-    const idx = resolveColumn(header, aliases);
-    if (idx !== null) colIndex[key] = idx;
-  });
+  const header = grid[0] ?? [];
+  const dataRows = grid.slice(1);
+  const mapped = resolveHeaderMap(header, HEADER_ALIASES);
+  const colIndex: Partial<Record<keyof ParsedVehicleRow, number>> = { ...mapped };
 
   // Detect numbered photo columns: "Photo 1", "Photo 2 (Rear Angle)", etc.
   // Collect all their column indices so we can merge them per row.
@@ -265,7 +210,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     }
   }
 
-  const sampleRows = lines.slice(1, Math.min(lines.length, 12)).map((l) => splitCsvLine(l));
+  const sampleRows = dataRows.slice(0, 11);
   if (colIndex.price === undefined) {
     const inferred = inferPriceColumnIndex(header, sampleRows);
     if (inferred !== null) colIndex.price = inferred;
@@ -277,7 +222,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
   const hasMakeModel = colIndex.make !== undefined && colIndex.model !== undefined;
   if (!hasTitle && !hasMakeModel) {
     return {
-      totalRows: lines.length - 1,
+      totalRows: dataRows.length,
       validRows: [],
       skippedRows: [
         {
@@ -296,8 +241,8 @@ export function parseInventoryCsv(csv: string): ImportPreview {
   const seenRefs = new Set<string>();
   const duplicateRefs: string[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitCsvLine(lines[i]);
+  for (let i = 0; i < dataRows.length; i++) {
+    const cells = dataRows[i] ?? [];
     const get = (key: keyof ParsedVehicleRow) => {
       const idx = colIndex[key];
       return idx === undefined ? undefined : cells[idx];
@@ -314,7 +259,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     }
     // Truly un-importable — no identity at all
     if (!title) {
-      skippedRows.push({ index: i, reason: "No title and no make/model — cannot identify this vehicle" });
+      skippedRows.push({ index: i + 1, reason: "No title and no make/model — cannot identify this vehicle" });
       continue;
     }
 
@@ -366,7 +311,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     const imageUrl = imageUrls[0] ?? null;
     const photoCheck = validatePhotoSet(imageUrls);
 
-    const externalRef = get("externalRef")?.trim() || null;
+    const externalRef = get("externalRef")?.trim() || get("vin")?.trim() || null;
     if (externalRef) {
       const refLower = externalRef.toLowerCase();
       if (seenRefs.has(refLower)) {
@@ -440,7 +385,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
     scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
   return {
-    totalRows: lines.length - 1,
+    totalRows: dataRows.length,
     validRows,
     skippedRows,
     duplicateRefs,
