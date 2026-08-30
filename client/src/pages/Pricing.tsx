@@ -34,7 +34,7 @@ export default function Pricing() {
             14-day Pilot, then a <span className="text-gold-gradient">fixed OS desk</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-            Pilot is R0 for 14 days (150 WhatsApp conversations). After Monday proof, most yards
+            Pilot is R0 for 14 days (150 WhatsApp conversations). After they see this week's numbers, most yards
             close Professional OS at R14,990/mo.
           </p>
           <ul className="text-left space-y-3 mb-10 max-w-md mx-auto text-sm text-muted-foreground">

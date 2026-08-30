@@ -15,7 +15,7 @@ Use this when the first paying / pilot dealership signs. Target: **live in 48 ho
 ## Day 0 — Provision (30 min)
 
 - [ ] Create dealership row in admin
-- [ ] Assign **Professional OS** features for the 14-day Pilot (R0 — do not invoice). After Monday proof, usual close is Professional OS R14,990/mo.
+- [ ] Assign **Professional OS** features for the 14-day Pilot (R0 — do not invoice). After they see this week's numbers, usual close is Professional OS R14,990/mo.
 - [ ] Generate shortcode for public showroom URL
 - [ ] Set `WHATSAPP_DEALERSHIP_ID` if using shared Meta number initially
 - [ ] Upload brand kit: logo, accent colour, email signature

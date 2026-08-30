@@ -21,6 +21,14 @@ export {
   listPartsEnquiries,
   quotePart,
   holdPart,
+  bookOutPart,
 } from "@nalaOs/os/parts";
-export { bookService, listServiceBookings } from "@nalaOs/os/service";
+export {
+  bookService,
+  createServiceJob,
+  listServiceBookings,
+  listOpenServiceJobs,
+  getServiceJob,
+  getServiceCalendar,
+} from "@nalaOs/os/service";
 export { captureTradeIn, listTradeIns } from "@nalaOs/os/tradein";

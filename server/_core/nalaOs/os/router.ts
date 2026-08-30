@@ -243,10 +243,11 @@ export async function handleOsMessage(input: {
   }
 
   if (intent === "service") {
-    const booking = bookService({
+    const booking = await bookService({
       buyerName: input.buyerName,
       buyerPhone: input.buyerPhone,
       message: input.message,
+      dealershipId,
     });
     const delivery = await finishDeliver(
       booking.nalaReply,

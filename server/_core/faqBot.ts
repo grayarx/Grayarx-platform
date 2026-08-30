@@ -30,12 +30,12 @@ export const FAQ_DATABASE: FAQItem[] = [
     category: "pricing",
     question: "What are your pricing plans?",
     keywords: ["price", "cost", "plans", "subscription", "how much"],
-    answer: `GrayArx is **Nala Dealership OS** — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email.
+    answer: `GrayArx is **Nala Dealership OS** — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and this week's numbers.
 
 **Plans (ZAR):**
 - **Pilot** — R0 / 14 days, 150 WhatsApp conversations (hard cap)
 - **Starter OS** — R7,990/mo, 1,000 WA
-- **Professional OS** — R14,990/mo, 3,500 WA (usual close after Monday proof)
+- **Professional OS** — R14,990/mo, 3,500 WA (usual close after they see this week's numbers)
 - **Enterprise OS** — from R29,990/mo, 12,000 WA
 
 Apply at grayarx.com/onboarding.`,
@@ -51,9 +51,9 @@ Apply at grayarx.com/onboarding.`,
 
 ✅ Nala on WhatsApp + web from live CSV
 ✅ Parts, service, trade-in desks on the OS
-✅ Missed-call recovery + Monday ROI email
+✅ Missed-call recovery + this week's numbers
 ✅ Template fallback if LLM credits run out
-✅ No card. After proof, most yards close Professional OS at R14,990/mo
+✅ No card. After they see this week's numbers, most yards close Professional OS at R14,990/mo
 
 Apply at: www.grayarx.com/onboarding`,
     followUp: "Ready to get started?",

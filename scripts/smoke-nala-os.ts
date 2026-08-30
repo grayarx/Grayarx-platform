@@ -236,9 +236,9 @@ async function main() {
     });
     assert.equal(status, 200);
     assert.equal(body.email.status, "sent");
-    ok("Monday ROI email");
+    ok("This week's numbers email");
   } catch (e) {
-    fail("Monday ROI email", e);
+    fail("This week's numbers email", e);
   }
 
   try {

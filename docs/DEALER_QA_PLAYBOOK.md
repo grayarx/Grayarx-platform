@@ -8,9 +8,9 @@
 **Agent injection:** This playbook is loaded into `shared/dealerQaPlaybook.ts` and injected into dealer-support paths (Dealer Help chat, Kagiso/Sipho system prompts, FAQ / support chatbot). It is **not** injected into buyer-facing Nala (WhatsApp / showroom stock Q&A). Keep the shared TS module in sync when you edit answers here.
 
 **Product truths (Aug 2026 — Nala Dealership OS):**
-- Public sell packages: **Pilot / Starter OS / Professional OS / Enterprise OS**. Hero close is Professional OS at **R14,990/mo** after Monday proof.
+- Public sell packages: **Pilot / Starter OS / Professional OS / Enterprise OS**. Hero close is Professional OS at **R14,990/mo** after they see this week's numbers.
 - Pilot: **R0 / 14 days**, 150 WhatsApp conversations (hard cap). Then Starter R7,990 (1,000 WA) · Professional R14,990 (3,500 WA) · Enterprise from R29,990 (12,000 WA).
-- Nala is the OS: WhatsApp sales from live CSV stock, parts, service, trade-in, missed-call recovery, Monday ROI. Template fallback when LLM credits/quota run out.
+- Nala is the OS: WhatsApp sales from live CSV stock, parts, service, trade-in, missed-call recovery, this week's numbers. Template fallback when LLM credits/quota run out.
 - Chat LLM: **OpenAI → templates**. No Manus Forge for chat.
 - VIN: optional; if entered must be valid ISO 3779 (17 chars + check digit); masked publicly.
 - Multi-branch: one dealership row per branch + shared `groupKey` + Branch switcher (Enterprise).
@@ -28,7 +28,7 @@
 
 **Say this**
 
-GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.
+GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and this week's numbers. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.
 
 **If they ask nothing else**
 
@@ -46,13 +46,13 @@ We put an AI dealership OS on WhatsApp that never closes — 14-day Pilot, then 
 
 **Written:** Pilot R0/14d → Starter R7,990 · Professional R14,990 · Enterprise from R29,990.
 
-**Note:** Professional OS is the hero close after Monday proof. Do not quote the old Showroom R3,999 ladder.
+**Note:** Professional OS is the hero close after they see this week's numbers. Do not quote the old Showroom R3,999 ladder.
 
 ---
 
 #### Q2. “What’s in Starter vs Professional vs Enterprise OS?”
 
-**Say this:** Starter OS = sales from live stock, showroom, missed-call recovery, Monday ROI, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.
+**Say this:** Starter OS = sales from live stock, showroom, missed-call recovery, this week's numbers, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.
 
 **Note:** Internal billing ids may still be starter / professional / enterprise — always say the OS display names to dealers.
 

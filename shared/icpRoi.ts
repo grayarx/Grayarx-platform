@@ -4,7 +4,7 @@
  *
  * "Covers the month" anchors to Starter OS list (R7,990) — the cheapest
  * billed plan. Pilot is R0 / 14 days and is not invoiced. Professional OS
- * (R14,990) is the usual close after Monday proof.
+ * (R14,990) is the usual close after they see this week's numbers.
  */
 
 import { PILOT_PARTNER, TIER_PRICES_ZAR } from "./subscriptionTiers";

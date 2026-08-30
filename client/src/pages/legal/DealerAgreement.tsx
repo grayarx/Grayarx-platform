@@ -35,7 +35,7 @@ export default function DealerAgreement() {
       <h2>2. Subscription & pilot pricing</h2>
       <p>
         GrayArx provides the Nala Dealership OS (inventory, showroom, WhatsApp sales, parts,
-        service, trade-in, missed-call recovery, Monday ROI). The Pilot is fourteen days at no
+        service, trade-in, missed-call recovery, this week's numbers). The Pilot is fourteen days at no
         charge, capped at 150 WhatsApp conversations. After the Pilot, the monthly fee is
         confirmed in writing before billing begins — typically Starter OS (R7,990/month),
         Professional OS (R14,990/month, the usual close), or Enterprise OS (from R29,990/month)

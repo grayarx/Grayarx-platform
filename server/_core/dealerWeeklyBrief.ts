@@ -1,5 +1,5 @@
 /**
- * Weekly DP brief — email each active dealership their yard desk numbers.
+ * This week's numbers — email each active dealership their yard desk numbers.
  */
 import { eq } from "drizzle-orm";
 import { getDb, getDashboardStats, getDealershipById, listAllDealerships } from "../db";
@@ -52,7 +52,7 @@ export async function sendDealerWeeklyBriefEmail(
 
   const result = await sendEmailViaResend({
     to,
-    subject: `GrayArx weekly brief — ${brief.dealershipName}`,
+    subject: `This week's numbers — ${brief.dealershipName}`,
     html,
   });
 

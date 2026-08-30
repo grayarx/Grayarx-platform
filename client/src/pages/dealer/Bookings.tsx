@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Loader2,
   Car as CarIcon,
@@ -6,12 +6,14 @@ import {
   XCircle,
   RotateCcw,
   Pencil,
+  Wrench,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -34,17 +36,29 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Bookings() {
   return (
     <DealerShell
       title="Bookings"
-      subtitle="Customer test-drive requests for your dealership, handled by Lerato."
+      subtitle="Test drives (Lerato) and the workshop diary for this yard — WhatsApp and the counter share one list."
     >
-      {/* Platform SaaS demos are founder-only under /admin/platform-demos — never here. */}
-      <TestDrivesTab />
+      <Tabs defaultValue="drives" className="gap-4">
+        <TabsList>
+          <TabsTrigger value="drives">Test drives</TabsTrigger>
+          <TabsTrigger value="workshop">Workshop</TabsTrigger>
+        </TabsList>
+        <TabsContent value="drives">
+          <TestDrivesTab />
+        </TabsContent>
+        <TabsContent value="workshop">
+          <WorkshopTab />
+        </TabsContent>
+      </Tabs>
     </DealerShell>
   );
 }
@@ -362,6 +376,382 @@ function TestDrivesTab() {
             >
               {reclassify.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save reclassification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+type WorkshopJob = {
+  id: string;
+  buyerName: string;
+  buyerPhone: string;
+  vehicleDesc: string;
+  serviceType: string;
+  scheduledAt: string;
+  status: string;
+  source: string;
+  notes?: string;
+};
+
+type JobPartLine = {
+  id: string;
+  serviceJobId: string;
+  sku: string;
+  name: string;
+  qty: number;
+  retailPrice: number;
+};
+
+type CalendarDay = { date: string; slots: WorkshopJob[] };
+
+const SERVICE_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "minor_service", label: "Minor service" },
+  { value: "major_service", label: "Major service" },
+  { value: "brakes", label: "Brakes" },
+  { value: "diagnostics", label: "Diagnostics" },
+  { value: "other", label: "Other / waiting on client" },
+];
+
+function formatJobType(type: string) {
+  return SERVICE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+}
+
+function formatZar(n: number) {
+  return `R${Number(n).toLocaleString("en-ZA")}`;
+}
+
+function WorkshopTab() {
+  const [loading, setLoading] = useState(true);
+  const [calendar, setCalendar] = useState<CalendarDay[]>([]);
+  const [openJobs, setOpenJobs] = useState<WorkshopJob[]>([]);
+  const [jobParts, setJobParts] = useState<JobPartLine[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [openJob, setOpenJob] = useState<WorkshopJob | null>(null);
+  const [form, setForm] = useState({
+    buyerName: "",
+    buyerPhone: "",
+    vehicleDesc: "",
+    serviceType: "other",
+    notes: "",
+  });
+
+  const loadDiary = useCallback(async () => {
+    const res = await fetch("/api/service/calendar", { credentials: "include" });
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) {
+      throw new Error(typeof body.error === "string" ? body.error : "Could not load workshop diary");
+    }
+    setCalendar(Array.isArray(body.calendar) ? (body.calendar as CalendarDay[]) : []);
+    setOpenJobs(Array.isArray(body.openJobs) ? (body.openJobs as WorkshopJob[]) : []);
+    setJobParts(Array.isArray(body.jobParts) ? (body.jobParts as JobPartLine[]) : []);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadDiary()
+      .catch((e: Error) => toast.error(e.message))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadDiary]);
+
+  const handleCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!form.buyerName.trim() || !form.vehicleDesc.trim()) {
+      toast.error("Client name and vehicle are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/service/calendar", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          buyerName: form.buyerName.trim(),
+          buyerPhone: form.buyerPhone.trim() || undefined,
+          vehicleDesc: form.vehicleDesc.trim(),
+          serviceType: form.serviceType,
+          notes: form.notes.trim() || undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(body.error || "Could not create job");
+      toast.success("Workshop job booked on this yard");
+      setCreating(false);
+      setForm({ buyerName: "", buyerPhone: "", vehicleDesc: "", serviceType: "other", notes: "" });
+      await loadDiary();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create job");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const partsFor = (jobId: string) => jobParts.filter((p) => p.serviceJobId === jobId);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground max-w-xl">
+          14-day diary for this yard. Nala “book a minor service” lands here too. Attach parts
+          from the Parts counter after the client says yes.
+        </p>
+        <Button type="button" className="btn-gold" onClick={() => setCreating(true)}>
+          <Wrench className="mr-2 h-4 w-4" />
+          Create job
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading workshop diary…
+        </div>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Next 14 days</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {calendar.map((day) => (
+                  <div
+                    key={day.date}
+                    className="rounded-lg border border-border px-3 py-2 min-h-[88px]"
+                  >
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {new Date(`${day.date}T12:00:00`).toLocaleDateString("en-ZA", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                    {day.slots.length === 0 ? (
+                      <p className="text-xs text-muted-foreground/70 mt-2">—</p>
+                    ) : (
+                      <ul className="mt-1 space-y-1">
+                        {day.slots.map((slot) => (
+                          <li key={slot.id}>
+                            <button
+                              type="button"
+                              className="text-left text-sm text-foreground hover:text-primary w-full"
+                              onClick={() => setOpenJob(slot)}
+                            >
+                              <span className="font-medium">{slot.vehicleDesc}</span>
+                              <span className="block text-xs text-muted-foreground">
+                                {slot.buyerName} · {formatJobType(slot.serviceType)}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Open jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {openJobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No open workshop jobs. Create one at the counter or wait for Nala to book from WhatsApp.
+                </p>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2.5">Client</th>
+                        <th className="px-3 py-2.5">Vehicle</th>
+                        <th className="px-3 py-2.5">Job</th>
+                        <th className="px-3 py-2.5">When</th>
+                        <th className="px-3 py-2.5">Parts</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {openJobs.map((job) => {
+                        const lines = partsFor(job.id);
+                        return (
+                          <tr key={job.id} className="hover:bg-muted/20">
+                            <td className="px-3 py-2.5">
+                              <button
+                                type="button"
+                                className="text-left font-medium text-foreground hover:text-primary"
+                                onClick={() => setOpenJob(job)}
+                              >
+                                {job.buyerName}
+                              </button>
+                              <div className="text-[11px] text-muted-foreground uppercase">
+                                {job.source}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5">{job.vehicleDesc}</td>
+                            <td className="px-3 py-2.5">{formatJobType(job.serviceType)}</td>
+                            <td className="px-3 py-2.5 text-muted-foreground text-xs whitespace-nowrap">
+                              {new Date(job.scheduledAt).toLocaleString("en-ZA", {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </td>
+                            <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                              {lines.length === 0
+                                ? "None yet"
+                                : lines.map((l) => `${l.qty}× ${l.sku}`).join(", ")}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      <Dialog open={creating} onOpenChange={(open) => !open && setCreating(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create workshop job</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="grid gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="job-client">Client name</Label>
+              <Input
+                id="job-client"
+                value={form.buyerName}
+                onChange={(e) => setForm((f) => ({ ...f, buyerName: e.target.value }))}
+                placeholder="Thabo"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="job-phone">Phone (optional)</Label>
+              <Input
+                id="job-phone"
+                value={form.buyerPhone}
+                onChange={(e) => setForm((f) => ({ ...f, buyerPhone: e.target.value }))}
+                placeholder="082…"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="job-vehicle">Vehicle</Label>
+              <Input
+                id="job-vehicle"
+                value={form.vehicleDesc}
+                onChange={(e) => setForm((f) => ({ ...f, vehicleDesc: e.target.value }))}
+                placeholder="Hilux in for cooling — waiting on client"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Job type</Label>
+              <Select
+                value={form.serviceType}
+                onValueChange={(v) => setForm((f) => ({ ...f, serviceType: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="job-notes">Notes</Label>
+              <Textarea
+                id="job-notes"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                className="h-20"
+                placeholder="Waiting on client to approve the radiator"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreating(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="btn-gold" disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Book job
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!openJob} onOpenChange={(open) => !open && setOpenJob(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{openJob?.vehicleDesc}</DialogTitle>
+          </DialogHeader>
+          {openJob ? (
+            <div className="space-y-3 text-sm">
+              <p>
+                <span className="text-muted-foreground">Client · </span>
+                {openJob.buyerName}
+                {openJob.buyerPhone && openJob.buyerPhone !== "counter"
+                  ? ` · ${openJob.buyerPhone}`
+                  : ""}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Job · </span>
+                {formatJobType(openJob.serviceType)} · {openJob.status} · {openJob.source}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground">Ref {openJob.id}</p>
+              {openJob.notes ? (
+                <p className="text-muted-foreground">{openJob.notes}</p>
+              ) : null}
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                  Parts on this job
+                </p>
+                {partsFor(openJob.id).length === 0 ? (
+                  <p className="text-muted-foreground">
+                    None yet — book out from Parts and pick this job.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {partsFor(openJob.id).map((line) => (
+                      <li key={line.id} className="flex justify-between gap-3">
+                        <span>
+                          {line.qty}× {line.name}{" "}
+                          <span className="font-mono text-xs text-muted-foreground">{line.sku}</span>
+                        </span>
+                        <span className="tabular-nums">{formatZar(line.retailPrice)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpenJob(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

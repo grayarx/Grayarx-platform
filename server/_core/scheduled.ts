@@ -363,7 +363,7 @@ export function registerScheduledRoutes(app: Express) {
   });
 
   /**
-   * Weekly DP brief — emails each active dealership their yard desk numbers
+   * This week's numbers — emails each active dealership their yard desk numbers
    * (after-hours, leads, bookings, Mia). Honours modulesEnabled.weekly_brief.
    */
   app.post("/api/scheduled/weekly-dealer-brief", async (req: Request, res: Response) => {

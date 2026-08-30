@@ -20,7 +20,7 @@ const PROOF = [
   "CSV / DMS stock live on your showroom the same day",
   "WhatsApp after hours — Nala answers; missed calls bounce to WhatsApp",
   "Parts desk, service bookings, and trade-in intake on Professional OS",
-  "Monday ROI email so you see recovered deals vs the R14,990 desk",
+  "This week's numbers so you see recovered deals vs the R14,990 desk",
   "14-day Pilot (150 WA cap) — then Starter R7,990 or Professional R14,990/mo",
 ];
 
@@ -49,7 +49,7 @@ export default function ForDealers() {
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl">
               Yards lose deals after 6pm on WhatsApp. Put your stock live, catch those leads
-              overnight, and book the drive — 14-day Pilot until you see Monday proof on your cars.
+              overnight, and book the drive — 14-day Pilot until you see this week's numbers on your cars.
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Button asChild className="btn-gold h-12 px-8 font-semibold uppercase tracking-wider text-sm">

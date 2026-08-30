@@ -21,6 +21,7 @@ describe("dealer weekly brief", () => {
     expect(brief.talkingPoints.some((t) => t.includes("after-hours"))).toBe(true);
     expect(brief.talkingPoints.some((t) => t.includes("4 new leads"))).toBe(true);
     expect(formatDealerWeeklyBriefText(brief)).toContain("Jubilee Motors");
+    expect(formatDealerWeeklyBriefText(brief)).toContain("This week's numbers");
   });
 
   it("review + aftercare drafts include dealership name", () => {

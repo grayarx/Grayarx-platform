@@ -1,7 +1,7 @@
 # Founder sales call kit — GrayArx (ICP)
 
 **ICP:** Independent dealership principal (used / multi-brand, WhatsApp-heavy). ZA first; also AU, UK, UAE, US, NZ.  
-**Offer:** Free **14-day Pilot** (150 WA cap) → Monday proof → **Professional OS R14,990/mo** (hero close). Starter OS R7,990 · Enterprise from R29,990.  
+**Offer:** Free **14-day Pilot** (150 WA cap) → this week's numbers → **Professional OS R14,990/mo** (hero close). Starter OS R7,990 · Enterprise from R29,990.  
 **Price ladder (internal):** Pilot R0 / 14d · Starter OS R7,990 · Professional OS R14,990 · Enterprise from R29,990. Public `/` JSON-LD lists these offers. Say “recovered after-hours deals pay for the OS.”  
 **Epoch:** Experimentation Mode (founder-led). Do not hire AEs until this motion is repeatable.
 
@@ -78,7 +78,7 @@ Use the public calculator on `/for-dealers` live on the call if helpful.
 | “AI will mess up customers.” | “Nala discloses she’s AI. You see drafts / desk. Humans stay in the loop. POPIA pack is live on /legal.” |
 | “No time to set up.” | “CSV + WhatsApp link is the setup. We do it with you on one call. Pilot is free until you see proof.” |
 | “Staff won’t use it.” | “They already live in WhatsApp and leads. Overview is one desk: after-hours → leads → drives.” |
-| “Too expensive.” | Use **their** gross vs leakage: “Starter is R7,990; Professional (full OS) is R14,990. Pilot is free until Monday proof. Shall we lock Professional after we prove one recovered path?” |
+| “Too expensive.” | Use **their** gross vs leakage: “Starter is R7,990; Professional (full OS) is R14,990. Pilot is free until they see this week's numbers. Shall we lock Professional after we prove one recovered path?” |
 | “Call me later.” | “Makes sense. I’ll send the ROI link + a 20-min CSV slot Thu/Fri — which works?” |
 
 ---
