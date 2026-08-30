@@ -13,9 +13,18 @@ import {
   OS_MODULES,
   pricingEconomicsSummary,
 } from "@nalaOs/os/pricing";
-import { listParts, listPartsEnquiries, importPartsCatalog, parsePartsCsv, quotePart, holdPart, listAllParts, PARTS_CSV_TEMPLATE, PARTS_CSV_HEADERS, lastImportAtFromParts } from "@nalaOs/os/parts";
+import { listParts, listPartsEnquiries, importPartsCatalog, parsePartsCsv, quotePart, holdPart, bookOutPart, listAllParts, PARTS_CSV_TEMPLATE, PARTS_CSV_HEADERS, lastImportAtFromParts } from "@nalaOs/os/parts";
 import { handleOsMessage, bookViewingAndNotify } from "@nalaOs/os/router";
-import { listServiceBookings, getServiceCalendar, rescheduleService } from "@nalaOs/os/service";
+import {
+  listServiceBookings,
+  getServiceCalendar,
+  rescheduleService,
+  createServiceJob,
+  listOpenServiceJobs,
+  getServiceJob,
+  listJobParts,
+  listJobPartsForYard,
+} from "@nalaOs/os/service";
 import { listTradeIns, captureTradeIn, attachTradeInPhoto } from "@nalaOs/os/tradein";
 import { buildMondayRoiReport } from "@nalaOs/conversion/roi";
 import { ingestLead, listLeads, type LeadSource } from "@nalaOs/conversion/leads";
@@ -161,7 +170,7 @@ export function registerNalaOsRoutes(app: express.Express) {
       partsEnquiries: await listPartsEnquiries()
         .then((rows) => rows.slice(0, 20))
         .catch(() => []),
-      serviceBookings: listServiceBookings().slice(0, 20),
+      serviceBookings: (await listServiceBookings()).slice(0, 20),
       tradeIns: listTradeIns().slice(0, 20),
       finance: listFinanceApplications().slice(0, 20),
       branches: listBranches(),
@@ -452,6 +461,8 @@ export function registerNalaOsRoutes(app: express.Express) {
     try {
       const parts = await listAllParts(dealershipId);
       res.json({
+        dealershipId,
+        tenantScoped: true,
         settings: settings.parts,
         modules: settings.modules,
         parts,
@@ -538,7 +549,31 @@ export function registerNalaOsRoutes(app: express.Express) {
         return res.status(500).json({ error: message });
       }
     }
-    const dealershipId = requestedId || "demo-yard";
+    const tenant = resolveTenant();
+    if (typeof tenant !== "string") return tenant;
+    const dealershipId = tenant;
+    if (action === "book_out") {
+      const result = await bookOutPart({
+        dealershipId,
+        sku: typeof body.sku === "string" ? body.sku : undefined,
+        partId: typeof body.partId === "string" ? body.partId : undefined,
+        units: typeof body.units === "number" ? body.units : Number(body.units) || 1,
+        customerName: typeof body.customerName === "string" ? body.customerName : undefined,
+        customerPhone: typeof body.customerPhone === "string" ? body.customerPhone : undefined,
+        vehicleDesc: typeof body.vehicleDesc === "string" ? body.vehicleDesc : undefined,
+        notes: typeof body.notes === "string" ? body.notes : undefined,
+        serviceJobId: typeof body.serviceJobId === "string" ? body.serviceJobId : undefined,
+        yardName: getDealershipSettings(dealershipId).name,
+      });
+      if ("error" in result) return res.status(400).json(result);
+      return res.json({
+        ok: true,
+        dealershipId,
+        ...result,
+        parts: await listAllParts(dealershipId),
+        enquiries: (await listPartsEnquiries(dealershipId)).slice(0, 30),
+      });
+    }
     if (action === "quote") {
       return res.json({
         ok: true,
@@ -551,11 +586,11 @@ export function registerNalaOsRoutes(app: express.Express) {
       });
     }
     if (action === "hold") {
-      const result = await holdPart(String(body.enquiryId || ""));
+      const result = await holdPart(String(body.enquiryId || ""), dealershipId);
       if ("error" in result) return res.status(400).json(result);
       return res.json({ ok: true, enquiry: result });
     }
-    res.status(400).json({ error: "action must be import_json | import_csv | add_one | quote | hold" });
+    res.status(400).json({ error: "action must be import_json | import_csv | add_one | book_out | quote | hold" });
   });
 
   r.post("/conversion/book", async (req, res) => {
@@ -762,17 +797,90 @@ export function registerNalaOsRoutes(app: express.Express) {
     res.status(400).json({ error: "action must be import_csv or import_json" });
   });
 
-  r.get("/service/calendar", (_req, res) => {
-    res.json({ calendar: getServiceCalendar(14), bookings: listServiceBookings().slice(0, 50) });
-  });
-  r.post("/service/calendar", (req, res) => {
-    const body = req.body as { bookingId?: string; scheduledAt?: string };
-    if (!body.bookingId || !body.scheduledAt) {
-      return res.status(400).json({ error: "bookingId and scheduledAt required" });
+  const resolveServiceTenant = async (
+    req: Request,
+    res: Response,
+    requestedId: string,
+  ): Promise<string | Response> => {
+    const auth = await authenticateDealer(req);
+    if (auth) {
+      const isFounder = auth.role === "founder" || auth.role === "admin";
+      return isFounder && requestedId ? requestedId : auth.dealershipId;
     }
-    const result = rescheduleService(body.bookingId, body.scheduledAt);
-    if ("error" in result) return res.status(400).json(result);
-    res.json({ ok: true, booking: result, calendar: getServiceCalendar(14) });
+    if (allowUnauthedOsDemo() && (!requestedId || requestedId === "demo-yard")) {
+      return requestedId || "demo-yard";
+    }
+    return res.status(401).json({ error: "Sign in as a dealer to view the workshop diary." });
+  };
+
+  r.get("/service/calendar", async (req, res) => {
+    const requested = String(req.query.dealershipId || "");
+    const tenant = await resolveServiceTenant(req, res, requested);
+    if (typeof tenant !== "string") return tenant;
+    const jobId = typeof req.query.jobId === "string" ? req.query.jobId : "";
+    try {
+      const [calendar, bookings, openJobs, jobParts] = await Promise.all([
+        getServiceCalendar(14, tenant),
+        listServiceBookings(tenant),
+        listOpenServiceJobs(tenant),
+        listJobPartsForYard(tenant),
+      ]);
+      const opened = jobId ? await getServiceJob(jobId, tenant) : null;
+      res.json({
+        dealershipId: tenant,
+        yardName: getDealershipSettings(tenant).name,
+        calendar,
+        bookings: bookings.slice(0, 80),
+        openJobs,
+        jobParts,
+        job: opened,
+        jobLineItems: opened ? await listJobParts(opened.id, tenant) : [],
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not load workshop diary";
+      res.status(500).json({ error: message });
+    }
+  });
+  r.post("/service/calendar", async (req, res) => {
+    const body = req.body as Record<string, unknown>;
+    const requestedId = typeof body.dealershipId === "string" ? body.dealershipId : "";
+    const tenant = await resolveServiceTenant(req, res, requestedId);
+    if (typeof tenant !== "string") return tenant;
+    const action = String(body.action || "");
+    try {
+      if (action === "create") {
+        const result = await createServiceJob({
+          dealershipId: tenant,
+          buyerName: String(body.buyerName || ""),
+          buyerPhone: typeof body.buyerPhone === "string" ? body.buyerPhone : undefined,
+          vehicleDesc: String(body.vehicleDesc || ""),
+          serviceType:
+            typeof body.serviceType === "string"
+              ? (body.serviceType as "minor_service" | "major_service" | "brakes" | "diagnostics" | "other")
+              : undefined,
+          scheduledAt: typeof body.scheduledAt === "string" ? body.scheduledAt : undefined,
+          notes: typeof body.notes === "string" ? body.notes : undefined,
+        });
+        if ("error" in result) return res.status(400).json(result);
+        return res.json({
+          ok: true,
+          booking: result,
+          calendar: await getServiceCalendar(14, tenant),
+          openJobs: await listOpenServiceJobs(tenant),
+        });
+      }
+      const bookingId = typeof body.bookingId === "string" ? body.bookingId : "";
+      const scheduledAt = typeof body.scheduledAt === "string" ? body.scheduledAt : "";
+      if (!bookingId || !scheduledAt) {
+        return res.status(400).json({ error: "action create, or bookingId and scheduledAt required" });
+      }
+      const result = await rescheduleService(bookingId, scheduledAt, tenant);
+      if ("error" in result) return res.status(400).json(result);
+      res.json({ ok: true, booking: result, calendar: await getServiceCalendar(14, tenant) });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Workshop diary update failed";
+      res.status(500).json({ error: message });
+    }
   });
 
   r.get("/branches", (_req, res) => {

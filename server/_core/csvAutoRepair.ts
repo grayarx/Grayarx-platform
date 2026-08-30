@@ -1,3 +1,4 @@
+import { headerSimilarity, parseCsvGrid } from '@shared/smartCsv';
 import { z } from 'zod';
 
 /**
@@ -50,7 +51,10 @@ function detectColumnPurpose(
 
   for (const [purpose, { keywords }] of Object.entries(patterns)) {
     for (const keyword of keywords) {
-      const similarity = calculateStringSimilarity(name, keyword);
+      const similarity = Math.max(
+        calculateStringSimilarity(name, keyword),
+        headerSimilarity(name, keyword),
+      );
       if (similarity > bestMatch.confidence) {
         bestMatch = { purpose, confidence: similarity };
       }
@@ -176,71 +180,8 @@ function repairValue(value: any, purpose: string): any {
 /**
  * Detect and repair CSV encoding issues
  */
-function repairEncoding(csvText: string): string {
-  // Remove BOM if present
-  if (csvText.charCodeAt(0) === 0xFEFF) {
-    csvText = csvText.slice(1);
-  }
-
-  // Replace common encoding artifacts
-  csvText = csvText
-    .replace(/â€™/g, "'") // Smart quote
-    .replace(/â€œ/g, '"') // Smart quote
-    .replace(/â€\u009d/g, '"') // Smart quote
-    .replace(/Â/g, ''); // Non-breaking space artifact
-
-  return csvText;
-}
-
-/**
- * Parse CSV with robust error handling
- */
 function parseCSV(csvText: string): string[][] {
-  csvText = repairEncoding(csvText);
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentCell = '';
-  let insideQuotes = false;
-
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
-
-    if (char === '"') {
-      if (insideQuotes && nextChar === '"') {
-        currentCell += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (char === ',' && !insideQuotes) {
-      currentRow.push(currentCell.trim());
-      currentCell = '';
-    } else if ((char === '\n' || char === '\r') && !insideQuotes) {
-      if (currentCell || currentRow.length > 0) {
-        currentRow.push(currentCell.trim());
-        if (currentRow.some(cell => cell)) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        currentCell = '';
-      }
-      if (char === '\r' && nextChar === '\n') {
-        i++;
-      }
-    } else {
-      currentCell += char;
-    }
-  }
-
-  if (currentCell || currentRow.length > 0) {
-    currentRow.push(currentCell.trim());
-    if (currentRow.some(cell => cell)) {
-      rows.push(currentRow);
-    }
-  }
-
-  return rows;
+  return parseCsvGrid(csvText).rows;
 }
 
 /**
@@ -273,9 +214,9 @@ export function autoRepairCSV(csvText: string): RepairedData {
       const sampleValues = samples.map(row => row[i] || '');
       const { purpose, confidence } = detectColumnPurpose(header, sampleValues, headers);
       
-      if (confidence > 0.5) {
+      if (confidence > 0.72) {
         columnMappings[header] = purpose;
-        if (confidence < 0.7) {
+        if (confidence < 0.86) {
           warnings.push(`Column "${header}" mapped to "${purpose}" with low confidence (${(confidence * 100).toFixed(0)}%)`);
         }
       } else {

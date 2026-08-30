@@ -1,3 +1,4 @@
+import { mapCsvRows, parseFlexibleNumber } from "@shared/smartCsv";
 import type { Prospect, ProspectStatus, IcpSegment } from "@nalaOs/prospector-types";
 import type { RegionId } from "@nalaOs/regions/config";
 import { REGIONS } from "@nalaOs/regions/config";
@@ -29,26 +30,20 @@ function slug(s: string): string {
     .slice(0, 48);
 }
 
-function parseCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      inQ = !inQ;
-      continue;
-    }
-    if (ch === "," && !inQ) {
-      out.push(cur.trim());
-      cur = "";
-      continue;
-    }
-    cur += ch;
-  }
-  out.push(cur.trim());
-  return out;
-}
+const PROSPECT_CSV_FIELDS: Record<string, readonly string[]> = {
+  name: ["name", "dealership", "yard", "company"],
+  city: ["city", "town", "suburb"],
+  regionId: ["regionid", "region", "country"],
+  segment: ["segment", "icp"],
+  abilityToPay: ["abilitytopay", "ability to pay", "atp"],
+  score: ["score", "rating"],
+  stockHint: ["stockhint", "stock hint", "notes"],
+  phone: ["phone", "tel", "mobile", "cell"],
+  email: ["email", "e-mail", "mail"],
+  website: ["website", "url", "web"],
+  contactName: ["contactname", "contact", "contact name", "gm"],
+  status: ["status"],
+};
 
 /**
  * CSV columns (header required):
@@ -58,48 +53,52 @@ export function parseProspectCsv(csv: string): {
   imported: Prospect[];
   skipped: Array<{ row: number; reason: string }>;
 } {
-  const lines = csv
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length < 2) {
+  const mapped = mapCsvRows(csv, PROSPECT_CSV_FIELDS, {
+    defaultOrder: [
+      "name",
+      "city",
+      "regionId",
+      "segment",
+      "abilityToPay",
+      "score",
+      "stockHint",
+      "phone",
+      "email",
+      "website",
+      "contactName",
+      "status",
+    ],
+  });
+  if (mapped.length === 0) {
     return { imported: [], skipped: [{ row: 0, reason: "Need header + rows" }] };
   }
-
-  const header = parseCsvLine(lines[0]!).map((h) => h.toLowerCase());
-  const idx = (name: string) => header.indexOf(name);
 
   const imported: Prospect[] = [];
   const skipped: Array<{ row: number; reason: string }> = [];
 
-  for (let r = 1; r < lines.length; r++) {
-    const cols = parseCsvLine(lines[r]!);
-    const name = cols[idx("name")] ?? "";
-    const city = cols[idx("city")] ?? "";
-    const regionRaw = (cols[idx("regionid")] ?? "ZA").toUpperCase();
+  for (let r = 0; r < mapped.length; r++) {
+    const row = mapped[r]!;
+    const name = row.name ?? "";
+    const city = row.city ?? "";
+    const regionRaw = (row.regionId || "ZA").toUpperCase();
     if (!name.trim()) {
-      skipped.push({ row: r + 1, reason: "Missing name" });
+      skipped.push({ row: r + 2, reason: "Missing name" });
       continue;
     }
     if (!(regionRaw in REGIONS)) {
-      skipped.push({ row: r + 1, reason: `Unknown regionId ${regionRaw}` });
+      skipped.push({ row: r + 2, reason: `Unknown regionId ${regionRaw}` });
       continue;
     }
     const regionId = regionRaw as RegionId;
-    const segmentRaw = (cols[idx("segment")] ?? "volume_used") as IcpSegment;
-    const segment = SEGMENTS.includes(segmentRaw)
-      ? segmentRaw
-      : "volume_used";
-    const abilityRaw = (cols[idx("abilitytopay")] ?? "medium") as Prospect["abilityToPay"];
+    const segmentRaw = (row.segment || "volume_used") as IcpSegment;
+    const segment = SEGMENTS.includes(segmentRaw) ? segmentRaw : "volume_used";
+    const abilityRaw = (row.abilityToPay || "medium") as Prospect["abilityToPay"];
     const abilityToPay =
-      abilityRaw === "high" || abilityRaw === "enterprise"
-        ? abilityRaw
-        : "medium";
-    const statusRaw = (cols[idx("status")] ?? "scouted") as ProspectStatus;
+      abilityRaw === "high" || abilityRaw === "enterprise" ? abilityRaw : "medium";
+    const statusRaw = (row.status || "scouted") as ProspectStatus;
     const status = STATUSES.includes(statusRaw) ? statusRaw : "scouted";
-    const score = Number(cols[idx("score")] ?? 85) || 85;
-    const stockHint =
-      cols[idx("stockhint")] ?? "Online stock — after-hours enquiry risk";
+    const score = parseFlexibleNumber(row.score) || 85;
+    const stockHint = row.stockHint || "Online stock — after-hours enquiry risk";
     const location = `${city || "Unknown"}, ${REGIONS[regionId].name}`;
     const id = `${regionId.toLowerCase()}-${slug(name)}-${newId("p").slice(-4)}`;
 
@@ -114,10 +113,10 @@ export function parseProspectCsv(csv: string): {
       segment,
       abilityToPay,
       stockHint,
-      phone: cols[idx("phone")] || undefined,
-      email: cols[idx("email")] || undefined,
-      website: cols[idx("website")] || undefined,
-      contactName: cols[idx("contactname")] || "Sales manager / GM",
+      phone: row.phone || undefined,
+      email: row.email || undefined,
+      website: row.website || undefined,
+      contactName: row.contactName || "Sales manager / GM",
       researchNote: `${stockHint} · ICP: ${segment.replace(/_/g, " ")} · imported CSV.`,
       callReason: `I had a look at ${name.trim()}'s online stock — curious what happens when a buyer enquires after hours.`,
     });

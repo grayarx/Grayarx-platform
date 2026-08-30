@@ -74,7 +74,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "elevator",
     question: "What is GrayArx in 30 seconds?",
     answer:
-      "GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and a Monday ROI email. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.",
+      "GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and this week's numbers. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.",
     written:
       "AI dealership OS on WhatsApp — sales, parts, service — 14-day Pilot then Professional R14,990/mo.",
     keywords: ["what is grayarx", "elevator", "pitch", "overview", "in a nutshell"],
@@ -87,7 +87,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
       "14-day Pilot is R0 with a 150 WhatsApp cap. Then Starter OS R7,990/mo (1,000 WA), Professional OS R14,990/mo (3,500 WA — the usual close), or Enterprise from R29,990/mo. Not a per-seat CRM tax.",
     written:
       "Pilot R0/14d → Starter R7,990 · Professional R14,990 · Enterprise from R29,990.",
-    note: "Professional OS is the hero close after Monday proof. Do not quote the old Showroom R3,999 ladder.",
+    note: "Professional OS is the hero close after they see this week's numbers. Do not quote the old Showroom R3,999 ladder.",
     keywords: ["cost", "price", "pricing", "how much", "fee", "monthly", "subscription"],
   },
   {
@@ -95,7 +95,7 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "price_billing",
     question: "What’s in Starter vs Professional vs Enterprise OS?",
     answer:
-      "Starter OS = sales from live stock, showroom, missed-call recovery, Monday ROI, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.",
+      "Starter OS = sales from live stock, showroom, missed-call recovery, this week's numbers, 1,000 WhatsApp conversations. Professional adds parts, service, trade-in, finance pre-qual, CRM webhooks, 3,500 WA. Enterprise is multi-yard + SLA from R29,990. Pilot is the full OS slice for 14 days, capped at 150 WA.",
     note: "Internal billing ids may still be starter / professional / enterprise — always say the OS display names to dealers.",
     keywords: [
       "showroom vs",

@@ -11,8 +11,8 @@ export default function WeeklyBriefCard() {
   });
   const send = trpc.dealer.sendWeeklyBrief.useMutation({
     onSuccess: (r) => {
-      if (r.emailed) toast.success("Weekly brief emailed to your dealership contact");
-      else toast.message(r.reason === "no_contact_email" ? "Add a contact email on the dealership first" : r.reason === "module_disabled" ? "Weekly brief module is off" : "Brief ready — email not sent");
+      if (r.emailed) toast.success("This week's numbers emailed to your dealership contact");
+      else toast.message(r.reason === "no_contact_email" ? "Add a contact email on the dealership first" : r.reason === "module_disabled" ? "Weekly numbers module is off" : "Numbers ready — email not sent");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -28,7 +28,7 @@ export default function WeeklyBriefCard() {
               <Mail className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">Weekly DP brief</p>
+              <p className="text-sm font-semibold text-foreground">This week's numbers</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Your yard desk for the last {data.periodDays} days — email this to yourself or the owner.
               </p>

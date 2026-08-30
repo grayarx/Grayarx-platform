@@ -1,6 +1,14 @@
+import { mapCsvRows } from "@shared/smartCsv";
 import { getDb } from "./db";
 import { leadImports, leadImportErrors, leads } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+
+const LEAD_CSV_FIELDS: Record<string, readonly string[]> = {
+  email: ["email", "e-mail", "mail", "email address"],
+  phone: ["phone", "tel", "mobile", "cell", "phone number"],
+  name: ["name", "contact", "contact name", "contactname", "customer", "full name"],
+  dealershipName: ["dealership name", "dealership", "yard", "company"],
+};
 
 export interface ImportResult {
   importId: number;
@@ -39,34 +47,24 @@ export async function importLeadsFromCSV(
     // @ts-expect-error Drizzle MySQL returns insertId
     const importId = Number(importResult?.[0]?.insertId ?? importResult?.insertId ?? 0);
 
-    const lines = csvData.split("\n").filter((line) => line.trim());
-    if (lines.length < 2) {
+    const mapped = mapCsvRows(csvData, LEAD_CSV_FIELDS);
+    if (mapped.length === 0) {
       throw new Error("CSV must contain header and at least one data row");
     }
-
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-    const requiredFields = ["email", "phone"];
-    const missingFields = requiredFields.filter((f) => !headers.includes(f));
-
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
+    if (!mapped.some((r) => r.email) || !mapped.some((r) => r.phone)) {
+      throw new Error("Missing required fields: email, phone");
     }
 
     let successCount = 0;
     let errorCount = 0;
     const errors: Array<{ rowNumber: number; error: string; data: Record<string, any> }> = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map((v) => v.trim());
-      const row: Record<string, string> = {};
-
-      headers.forEach((header, index) => {
-        row[header] = values[index] || "";
-      });
+    for (let i = 0; i < mapped.length; i++) {
+      const row = mapped[i]!;
 
       try {
-        const dealershipName = row.dealership_name || row.dealershipname || "Imported";
-        const contactName = row.contact_name || row.contactname || row.name || "";
+        const dealershipName = row.dealershipName || "Imported";
+        const contactName = row.name || "";
         const email = row.email || "";
         const phone = row.phone || "";
 

@@ -3552,3 +3552,57 @@ export const dealershipPartsEnquiries = mysqlTable(
 
 export type DealershipPartEnquiry = typeof dealershipPartsEnquiries.$inferSelect;
 export type InsertDealershipPartEnquiry = typeof dealershipPartsEnquiries.$inferInsert;
+
+/**
+ * Workshop jobs — tenant-scoped like dealership_parts. WhatsApp bookService
+ * and the dealer Bookings Workshop tab share this diary.
+ */
+export const dealershipServiceJobs = mysqlTable(
+  "dealership_service_jobs",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    dealershipId: varchar("dealershipId", { length: 64 }).notNull(),
+    buyerName: varchar("buyerName", { length: 255 }).notNull(),
+    buyerPhone: varchar("buyerPhone", { length: 64 }).notNull(),
+    vehicleDesc: varchar("vehicleDesc", { length: 255 }).notNull(),
+    serviceType: varchar("serviceType", { length: 32 }).notNull(),
+    scheduledAt: timestamp("scheduledAt").notNull(),
+    status: varchar("status", { length: 32 }).notNull(),
+    source: varchar("source", { length: 16 }).notNull(),
+    nalaReply: text("nalaReply").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [
+    index("dealership_service_jobs_dealer").on(t.dealershipId),
+    index("dealership_service_jobs_sched").on(t.dealershipId, t.scheduledAt),
+  ],
+);
+
+export type DealershipServiceJob = typeof dealershipServiceJobs.$inferSelect;
+export type InsertDealershipServiceJob = typeof dealershipServiceJobs.$inferInsert;
+
+/** Parts booked out onto a workshop job (not a tax invoice). */
+export const dealershipJobParts = mysqlTable(
+  "dealership_job_parts",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    dealershipId: varchar("dealershipId", { length: 64 }).notNull(),
+    serviceJobId: varchar("serviceJobId", { length: 64 }).notNull(),
+    enquiryId: varchar("enquiryId", { length: 64 }),
+    partId: varchar("partId", { length: 64 }).notNull(),
+    sku: varchar("sku", { length: 128 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    qty: int("qty").notNull(),
+    retailPrice: decimal("retailPrice", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [
+    index("dealership_job_parts_job").on(t.serviceJobId),
+    index("dealership_job_parts_dealer").on(t.dealershipId),
+  ],
+);
+
+export type DealershipJobPart = typeof dealershipJobParts.$inferSelect;
+export type InsertDealershipJobPart = typeof dealershipJobParts.$inferInsert;

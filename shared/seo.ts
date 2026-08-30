@@ -7,14 +7,14 @@ export const SITE_ORIGIN = "https://www.grayarx.com";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/hero-car.jpg`;
 
 export const ICP_KEYWORDS =
-  "dealership OS, Nala WhatsApp, after-hours leads, car dealer software, CSV inventory showroom, missed-call recovery, parts and service desk, Monday ROI, free 14-day pilot GrayArx, South Africa Australia UK UAE USA New Zealand";
+  "dealership OS, Nala WhatsApp, after-hours leads, car dealer software, CSV inventory showroom, missed-call recovery, parts and service desk, this week's numbers, free 14-day pilot GrayArx, South Africa Australia UK UAE USA New Zealand";
 
 /** Public list prices for schema.org offers — keep in sync with docs/PRICING.md. */
 export const SEO_OS_OFFERS = [
   {
     name: "Pilot",
     price: "0",
-    description: "14 days, 150 WhatsApp conversations, then decide on Monday proof",
+    description: "14 days, 150 WhatsApp conversations, then decide on this week's numbers",
   },
   {
     name: "Starter OS",
@@ -88,7 +88,7 @@ export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
     path: "/help",
     title: "Help for dealers | GrayArx OS",
     description:
-      "GrayArx Dealership OS: CSV import, after-hours WhatsApp, parts, service, Monday ROI, 14-day Pilot FAQ, POPIA.",
+      "GrayArx Dealership OS: CSV import, after-hours WhatsApp, parts, service, this week's numbers, 14-day Pilot FAQ, POPIA.",
     keywords: "GrayArx help, Nala WhatsApp setup, CSV inventory import, dealership OS FAQ",
   },
   legal: {
@@ -180,7 +180,7 @@ export function buildHomeJsonLd(): Record<string, unknown> {
           "Parts desk and service bookings",
           "Trade-in intake",
           "Missed-call WhatsApp recovery",
-          "Monday ROI email",
+          "This week's numbers email",
           "Lead follow-up drip (Mia)",
           "Test-drive bookings",
           "Template fallback when LLM credits run out",

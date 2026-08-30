@@ -36,7 +36,7 @@ const MARQUEE_ITEMS = [
   "CSV stock live tonight",
   "Parts + service desk",
   "Missed-call recovery",
-  "Monday ROI email",
+  "This week's numbers",
   "Free 14-day Pilot",
   "ZA · AU · UK · UAE · US · NZ",
 ];
@@ -100,7 +100,7 @@ const PILOT_FEATURES = [
   "Parts + service desk",
   "Trade-in intake",
   "Missed-call recovery",
-  "Monday ROI email",
+  "This week's numbers",
   "Mia follow-up drip",
   "Test-drive bookings",
 ];
@@ -393,12 +393,12 @@ export default function Home() {
                   Free 14-day Pilot
                 </p>
                 <h2 className="font-display text-3xl md:text-5xl font-bold mb-5 tracking-tight leading-tight">
-                  Prove Monday numbers on{" "}
+                  Prove this week's numbers on{" "}
                   <span className="text-cyber-gradient">your stock</span>
                 </h2>
                 <p className="text-muted-foreground text-lg mb-8 leading-relaxed max-w-md">
                   14 days, 150 WhatsApp conversations. Nala OS — showroom, parts, service,
-                  missed-call recovery, Monday ROI. Then most yards close Professional at R14,990/mo.
+                  missed-call recovery, this week's numbers. Then most yards close Professional at R14,990/mo.
                 </p>
                 <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground mb-8">
                   {PILOT_FEATURES.slice(0, 8).map((item) => (

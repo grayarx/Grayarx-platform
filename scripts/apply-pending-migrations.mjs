@@ -28,6 +28,7 @@ const MIGRATIONS = [
   "0075_tier3_google_review_url.sql",
   "0076_dealership_parts.sql",
   "0077_prospect_research_attempts.sql",
+  "0078_dealership_service_jobs.sql",
 ];
 
 /** Run once: wipe Sipho prospects so only named/principal emails are re-added. */

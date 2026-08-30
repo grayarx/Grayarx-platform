@@ -232,7 +232,7 @@ export default function IcpYardsPanel() {
           <h2 className="font-display text-xl font-semibold">ICP yards ({totalSeeded} seeded)</h2>
           <p className="text-sm text-muted-foreground">
             Sipho researches dealer sites for a named firstname@ and switchboard. Paste still
-            overrides when the scrape only finds info@. High-ability first → Pilot → Monday proof →
+            overrides when the scrape only finds info@. High-ability first → Pilot → this week's numbers →
             Professional
             {regionPrice ? ` (${regionPrice})` : ""}.
           </p>

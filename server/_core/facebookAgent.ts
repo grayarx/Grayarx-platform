@@ -102,7 +102,7 @@ Learn more: www.grayarx.com`,
     title: "FAQ: How Much Does GrayArx Cost?",
     content: `💰 FAQ: How Much Does GrayArx Cost?
 
-We're an **AI dealership OS**. 14-day Pilot is R0 (150 WhatsApp conversations). After Monday proof, most yards close **Professional OS at R14,990/mo**. Starter OS is R7,990; Enterprise from R29,990.
+We're an **AI dealership OS**. 14-day Pilot is R0 (150 WhatsApp conversations). After they see this week's numbers, most yards close **Professional OS at R14,990/mo**. Starter OS is R7,990; Enterprise from R29,990.
 
 Nala answers after-hours WhatsApp from live stock, plus parts, service, trade-in, and missed-call recovery.
 

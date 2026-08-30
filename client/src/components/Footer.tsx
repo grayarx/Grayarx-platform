@@ -15,7 +15,7 @@ export default function Footer() {
               <Logo size={36} variant="nav" className="group-hover:opacity-95 transition-opacity" />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Nala Dealership OS — after-hours WhatsApp, live stock, parts, service, and Monday ROI.
+              Nala Dealership OS — after-hours WhatsApp, live stock, parts, service, and this week's numbers.
               ZA first; also AU, UK, UAE, US, and NZ.
             </p>
           </div>

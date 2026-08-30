@@ -54,7 +54,7 @@ export async function sendTestSalesEmail(recipientEmail: string): Promise<{ succ
             
             <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
             
-            <p>We're inviting dealerships to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock (WhatsApp, parts, service, Monday ROI). No card. After proof, most yards close Professional OS at R14,990/mo.</p>
+            <p>We're inviting dealerships to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock (WhatsApp, parts, service, this week's numbers). No card. After they see this week's numbers, most yards close Professional OS at R14,990/mo.</p>
             
             <a href="https://www.grayarx.com/onboarding" class="cta-button">Start Free Trial</a>
             

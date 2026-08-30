@@ -8,6 +8,8 @@ import {
   FileUp,
   Package,
   Plus,
+  Search,
+  Minus,
 } from "lucide-react";
 import DealerShell from "@/components/DealerShell";
 import { toast } from "sonner";
@@ -16,7 +18,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const SAMPLE = `sku,oemNumber,name,fits,make,model,yearFrom,yearTo,costPrice,retailPrice,qty,supplier
 OA-OF-POLO,03C115561H,Oil filter,Volkswagen Polo|Hyundai i20,Volkswagen,Polo,2018,2024,95,189,24,Local OEM
@@ -49,10 +65,42 @@ type ImportResult = {
   parts?: CatalogPart[];
 };
 
+type PartsEnquiry = {
+  id: string;
+  buyerName: string;
+  message: string;
+  status: string;
+  nalaReply: string;
+  createdAt: string;
+};
+
+type WorkshopJob = {
+  id: string;
+  buyerName: string;
+  vehicleDesc: string;
+  serviceType: string;
+  scheduledAt: string;
+  status: string;
+};
+
+type PartsSlip = {
+  yardName: string;
+  client: string;
+  vehicle: string;
+  sku: string;
+  name: string;
+  qty: number;
+  retail: number;
+  jobRef?: string;
+  createdAt: string;
+};
+
 type PartsPayload = {
   parts: CatalogPart[];
+  dealershipId?: string;
   lastImportAt?: string | null;
   csvTemplateFile?: string;
+  enquiries?: PartsEnquiry[];
 };
 
 const EMPTY_FORM = {
@@ -112,14 +160,36 @@ export default function DealerPartsPage() {
   const [lastImport, setLastImport] = useState<ImportResult | null>(null);
   const [template, setTemplate] = useState(TEMPLATE_CSV);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [dealershipId, setDealershipId] = useState<string | null>(null);
+  const [enquiries, setEnquiries] = useState<PartsEnquiry[]>([]);
+  const [search, setSearch] = useState("");
+  const [bookingPart, setBookingPart] = useState<CatalogPart | null>(null);
+  const [bookUnits, setBookUnits] = useState("1");
+  const [bookCustomer, setBookCustomer] = useState("");
+  const [bookVehicle, setBookVehicle] = useState("");
+  const [bookNotes, setBookNotes] = useState("");
+  const [bookJobId, setBookJobId] = useState("");
+  const [openJobs, setOpenJobs] = useState<WorkshopJob[]>([]);
+  const [lastSlip, setLastSlip] = useState<PartsSlip | null>(null);
+  const [bookingOut, setBookingOut] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadCatalog = useCallback(async () => {
     const data = (await partsFetch("/api/parts")) as PartsPayload;
     setParts(Array.isArray(data.parts) ? data.parts : []);
     setLastImportAt(data.lastImportAt ?? null);
+    setDealershipId(typeof data.dealershipId === "string" ? data.dealershipId : null);
+    setEnquiries(Array.isArray(data.enquiries) ? data.enquiries : []);
     if (typeof data.csvTemplateFile === "string" && data.csvTemplateFile.trim()) {
       setTemplate(data.csvTemplateFile);
+    }
+    try {
+      const diary = (await partsFetch("/api/service/calendar")) as {
+        openJobs?: WorkshopJob[];
+      };
+      setOpenJobs(Array.isArray(diary.openJobs) ? diary.openJobs : []);
+    } catch {
+      setOpenJobs([]);
     }
   }, []);
 
@@ -200,7 +270,8 @@ export default function DealerPartsPage() {
         setCsv("");
         setFileName(null);
       } else if (res.skipped.length > 0) {
-        toast.error("Nothing imported — see skipped rows below");
+        const why = res.skipped[0]?.reason || "could not read a sku/name/price column";
+        toast.error(`Nothing imported — ${res.skipped.length} skipped (${why})`);
       } else {
         toast.message("Nothing to import");
       }
@@ -254,21 +325,122 @@ export default function DealerPartsPage() {
     }
   };
 
+  const openBookOut = (p: CatalogPart) => {
+    setBookingPart(p);
+    setBookUnits("1");
+    setBookCustomer("");
+    setBookVehicle("");
+    setBookJobId("");
+    setLastSlip(null);
+    setBookNotes("Client approved on the phone — install on the car in workshop.");
+  };
+
+  const printSlip = (slip: PartsSlip) => {
+    const w = window.open("", "_blank", "width=480,height=640");
+    if (!w) {
+      window.print();
+      return;
+    }
+    w.document.write(`<!doctype html><html><head><title>Parts slip</title>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; padding: 24px; color: #111; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p, td { font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  td { padding: 4px 0; }
+  .muted { color: #555; font-size: 11px; }
+</style></head><body>
+  <h1>${slip.yardName}</h1>
+  <p class="muted">Parts slip — not a tax invoice</p>
+  <table>
+    <tr><td class="muted">Client</td><td>${slip.client}</td></tr>
+    <tr><td class="muted">Vehicle</td><td>${slip.vehicle}</td></tr>
+    <tr><td class="muted">SKU</td><td>${slip.sku}</td></tr>
+    <tr><td class="muted">Part</td><td>${slip.name}</td></tr>
+    <tr><td class="muted">Qty</td><td>${slip.qty}</td></tr>
+    <tr><td class="muted">Retail</td><td>R${Number(slip.retail).toLocaleString("en-ZA")}</td></tr>
+    <tr><td class="muted">Job ref</td><td>${slip.jobRef || "—"}</td></tr>
+  </table>
+  <p class="muted">${new Date(slip.createdAt).toLocaleString("en-ZA")}</p>
+</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const handleBookOut = async () => {
+    if (!bookingPart) return;
+    const units = Math.floor(Number(bookUnits));
+    if (!Number.isFinite(units) || units < 1) {
+      toast.error("Book out at least 1 unit");
+      return;
+    }
+    setBookingOut(true);
+    try {
+      const res = (await partsFetch("/api/parts", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "book_out",
+          partId: bookingPart.id,
+          sku: bookingPart.sku,
+          units,
+          customerName: bookCustomer.trim() || undefined,
+          vehicleDesc: bookVehicle.trim() || undefined,
+          notes: bookNotes.trim() || undefined,
+          serviceJobId: bookJobId || undefined,
+        }),
+      })) as { part?: CatalogPart; enquiry?: PartsEnquiry; slip?: PartsSlip; error?: string };
+      toast.success(
+        `Booked out ${units}× ${bookingPart.name} — ${res.part?.qty ?? "?"} left on this yard`,
+      );
+      if (res.slip) {
+        setLastSlip(res.slip);
+        printSlip(res.slip);
+      }
+      setBookingPart(null);
+      await loadCatalog();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not book out");
+    } finally {
+      setBookingOut(false);
+    }
+  };
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? parts.filter((p) => {
+        const hay = [p.sku, p.oemNumber, p.name, p.make, p.model, ...(p.fits || [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
+    : parts;
+
   const empty = !loading && parts.length === 0;
 
   return (
     <DealerShell
       title="Parts"
-      subtitle="Same idea as vehicle CSV — import your SKUs and prices. Nala quotes only what is on this list."
+      subtitle="This catalog is only for your dealership. Search and book out when the client approves a job."
     >
       <Card className="mb-6 border-primary/20 bg-primary/5">
         <CardContent className="py-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Required:</strong>{" "}
-          <span className="font-mono text-foreground">sku</span> +{" "}
-          <span className="font-mono text-foreground">name</span> and either{" "}
-          <span className="font-mono">retailPrice</span> or{" "}
-          <span className="font-mono">costPrice</span> (we mark up cost). GrayArx never
-          invents a parts price. Re-importing the same SKU updates qty and price.
+          <strong className="text-foreground">This yard only.</strong> SKUs you import
+          here never appear on another dealership. Nala quotes WhatsApp from this list;
+          the counter books out when a car is in workshop and the client says yes.
+          {dealershipId ? (
+            <span className="block mt-1 font-mono text-xs text-foreground">
+              Dealership id {dealershipId}
+            </span>
+          ) : null}
+          <span className="block mt-2">
+            Required to add stock:{" "}
+            <span className="font-mono text-foreground">sku</span> +{" "}
+            <span className="font-mono text-foreground">name</span> and either{" "}
+            <span className="font-mono">retailPrice</span> or{" "}
+            <span className="font-mono">costPrice</span>.
+          </span>
           {lastImportAt ? (
             <span className="block mt-1">
               Last import:{" "}
@@ -404,9 +576,9 @@ export default function DealerPartsPage() {
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Headers: sku, oemNumber, name, fits (use <strong>|</strong> for several
-              vehicles), make, model, yearFrom, yearTo, costPrice, retailPrice, qty,
-              supplier.
+              We fix messy files: commas inside names, Excel semicolons, R 1 899 /
+              1899,50 prices, and misspelt headers (sku, price, qty). fits can use{" "}
+              <strong>|</strong> or commas between vehicles.
             </p>
           </CardContent>
         </Card>
@@ -584,11 +756,23 @@ export default function DealerPartsPage() {
             <Package className="h-4 w-4 text-primary" />
             Current catalog
             <span className="text-xs font-normal text-muted-foreground">
-              {parts.length} SKU{parts.length === 1 ? "" : "s"}
+              {filtered.length}
+              {q ? ` of ${parts.length}` : ""} SKU{parts.length === 1 ? "" : "s"}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {parts.length > 0 ? (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search this yard — radiator, Hilux, SKU, OEM…"
+                className="pl-9"
+              />
+            </div>
+          ) : null}
           {loading ? (
             <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -597,6 +781,10 @@ export default function DealerPartsPage() {
           ) : parts.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Empty — import SKUs so Nala can quote this yard’s prices on WhatsApp.
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No SKU on this dealership matches “{search}”.
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-border">
@@ -608,10 +796,11 @@ export default function DealerPartsPage() {
                     <th className="text-left px-3 py-2.5 font-semibold">Fitment</th>
                     <th className="text-right px-3 py-2.5 font-semibold">Qty</th>
                     <th className="text-right px-3 py-2.5 font-semibold">Retail</th>
+                    <th className="text-right px-3 py-2.5 font-semibold">Counter</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {parts.map((p) => (
+                  {filtered.map((p) => (
                     <tr key={p.id} className="hover:bg-muted/20">
                       <td className="px-3 py-2.5 font-mono text-xs text-foreground whitespace-nowrap">
                         {p.sku}
@@ -631,6 +820,18 @@ export default function DealerPartsPage() {
                       <td className="px-3 py-2.5 text-right font-semibold text-primary whitespace-nowrap">
                         {formatZar(p.retailPrice)}
                       </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={p.qty < 1}
+                          onClick={() => openBookOut(p)}
+                        >
+                          <Minus className="mr-1 h-3.5 w-3.5" />
+                          Book out
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -639,6 +840,144 @@ export default function DealerPartsPage() {
           )}
         </CardContent>
       </Card>
+
+      {enquiries.filter((e) => e.status === "collected" || e.status === "held").length > 0 ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Recent counter movements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {enquiries
+                .filter((e) => e.status === "collected" || e.status === "held")
+                .slice(0, 12)
+                .map((e) => (
+                  <li key={e.id} className="rounded-lg border border-border px-3 py-2">
+                    <div className="flex justify-between gap-3 text-xs text-muted-foreground">
+                      <span className="uppercase">{e.status}</span>
+                      <span>{new Date(e.createdAt).toLocaleString("en-ZA")}</span>
+                    </div>
+                    <p className="mt-1 text-foreground">{e.nalaReply}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {e.buyerName} — {e.message}
+                    </p>
+                  </li>
+                ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Dialog open={!!bookingPart} onOpenChange={(open) => !open && setBookingPart(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book out — {bookingPart?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Car in for service, client approved on the phone. This drops qty on{" "}
+            <strong className="text-foreground">this dealership only</strong>.
+            {bookingPart ? (
+              <span className="block mt-1 font-mono text-xs">
+                {bookingPart.sku} · {bookingPart.qty} on the shelf · {formatZar(bookingPart.retailPrice)} each
+              </span>
+            ) : null}
+          </p>
+          <div className="grid gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="book-units">Units</Label>
+              <Input
+                id="book-units"
+                type="number"
+                min={1}
+                max={bookingPart?.qty ?? 1}
+                value={bookUnits}
+                onChange={(e) => setBookUnits(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="book-customer">Client name</Label>
+              <Input
+                id="book-customer"
+                value={bookCustomer}
+                onChange={(e) => setBookCustomer(e.target.value)}
+                placeholder="Thabo"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="book-vehicle">Vehicle in workshop</Label>
+              <Input
+                id="book-vehicle"
+                value={bookVehicle}
+                onChange={(e) => setBookVehicle(e.target.value)}
+                placeholder="2019 Hilux — radiator"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Open workshop job (optional)</Label>
+              <Select value={bookJobId || "none"} onValueChange={(v) => setBookJobId(v === "none" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="None — shelf only" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None — shelf only</SelectItem>
+                  {openJobs.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.vehicleDesc} — {job.buyerName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="book-notes">Note</Label>
+              <Textarea
+                id="book-notes"
+                value={bookNotes}
+                onChange={(e) => setBookNotes(e.target.value)}
+                className="h-20"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBookingPart(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="btn-gold"
+              disabled={bookingOut || !bookingPart || bookingPart.qty < 1}
+              onClick={handleBookOut}
+            >
+              {bookingOut ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Minus className="mr-2 h-4 w-4" />
+              )}
+              Book out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {lastSlip ? (
+        <Card className="mt-6 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Last parts slip</CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={() => printSlip(lastSlip)}>
+              Print slip
+            </Button>
+          </CardHeader>
+          <CardContent className="text-sm space-y-1">
+            <p>
+              {lastSlip.qty}× {lastSlip.name} ({lastSlip.sku}) · {formatZar(lastSlip.retail)}
+            </p>
+            <p className="text-muted-foreground">
+              {lastSlip.client} · {lastSlip.vehicle}
+              {lastSlip.jobRef ? ` · job ${lastSlip.jobRef}` : ""}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
     </DealerShell>
   );
 }

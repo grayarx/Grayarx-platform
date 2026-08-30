@@ -48,7 +48,7 @@ describe("ICP SEO", () => {
     expect(offers.lowPrice).toBe("0");
     expect(offers.highPrice).toBe("29990");
     expect((offers.offers as unknown[]).length).toBe(SEO_OS_OFFERS.length);
-    expect(JSON.stringify(app.featureList)).toContain("Monday ROI");
+    expect(JSON.stringify(app.featureList)).toContain("This week's numbers");
     expect(JSON.stringify(app.featureList)).toContain("Parts desk");
   });
 

@@ -24,7 +24,7 @@ import { SEO_PAGES } from "@shared/seo";
 const FAQS = [
   {
     q: "What does the pilot include?",
-    a: "A 14-day Pilot at R0 with a hard cap of 150 WhatsApp conversations. Nala Dealership OS on your stock: live showroom, after-hours WhatsApp, parts and service desks, trade-in intake, missed-call recovery, and a Monday ROI email. After proof, most yards close Professional OS at R14,990/mo (3,500 WA included). Starter OS is R7,990/mo; Enterprise is from R29,990/mo.",
+    a: "A 14-day Pilot at R0 with a hard cap of 150 WhatsApp conversations. Nala Dealership OS on your stock: live showroom, after-hours WhatsApp, parts and service desks, trade-in intake, missed-call recovery, and this week's numbers. After they see the numbers, most yards close Professional OS at R14,990/mo (3,500 WA included). Starter OS is R7,990/mo; Enterprise is from R29,990/mo.",
   },
   {
     q: "How do I add vehicles to my showroom?",

@@ -127,6 +127,18 @@ describe("parseInventoryCsv", () => {
     expect(res.validRows[0].dataWarnings.some((w) => /VIN/i.test(w))).toBe(true);
   });
 
+  it("imports SA Excel semicolon files with misspelt headers and decimal commas", () => {
+    const csv = [
+      "titel;make;model;year;prce;milage",
+      `"2022 Toyota Corolla 1.8";Toyota;Corolla;2022;R 329 900;42 000`,
+    ].join("\n");
+    const res = parseInventoryCsv(csv);
+    expect(res.validRows).toHaveLength(1);
+    expect(res.validRows[0].title).toBe("2022 Toyota Corolla 1.8");
+    expect(res.validRows[0].price).toBe(329900);
+    expect(res.validRows[0].km).toBe(42000);
+  });
+
   it("maps fix/pending/problem status values to fix", () => {
     const csv = [
       "title,price,status",

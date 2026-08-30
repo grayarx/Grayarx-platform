@@ -72,7 +72,7 @@ export function buildDealerWeeklyBrief(
 
 export function formatDealerWeeklyBriefText(b: DealerWeeklyBrief): string {
   return [
-    `GrayArx weekly brief — ${b.dealershipName}`,
+    `This week's numbers — ${b.dealershipName}`,
     `Last ${b.periodDays} days`,
     ``,
     `After-hours replies: ${b.afterHoursRepliesLast7Days}`,
