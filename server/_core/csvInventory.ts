@@ -187,6 +187,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
       validRows: [],
       skippedRows: [],
       duplicateRefs: [],
+      warningRows: 0,
       photoSummary: { avgScore: 0, rowsWithoutPhotos: 0, rowsBelowRecommended: 0 },
     };
   }
@@ -232,6 +233,7 @@ export function parseInventoryCsv(csv: string): ImportPreview {
         },
       ],
       duplicateRefs: [],
+      warningRows: 0,
       photoSummary: { avgScore: 0, rowsWithoutPhotos: 0, rowsBelowRecommended: 0 },
     };
   }

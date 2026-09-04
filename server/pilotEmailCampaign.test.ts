@@ -60,7 +60,7 @@ describe("pilot email campaign", () => {
     expect(html).toContain("Jubilee Motors");
     expect(html).toContain("logo-crest.png");
     expect(html).not.toContain("cid:grayarx-logo-icon");
-    expect(html).toContain("Apply for pilot access");
+    expect(html).toContain("Apply for the 14-day Pilot");
     expect(html).not.toContain("Segment:");
     expect(html).not.toContain("manus.space");
     expect(html).not.toContain("position:absolute");

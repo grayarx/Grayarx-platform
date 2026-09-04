@@ -146,6 +146,11 @@ export async function commitInventoryCsv(opts: {
   const failedRows: Array<{ title: string; reason: string }> = [];
   const seenRefs = new Set<string>();
   const syncedAt = new Date();
+  const insertOpts = {
+    ownerUserId: opts.ownerUserId,
+    dealershipId: opts.dealershipId,
+    syncedAt,
+  };
   const startedAt = Date.now();
   const MIRROR_DEADLINE_MS = 55_000;
 
@@ -243,7 +248,7 @@ export async function commitInventoryCsv(opts: {
           // No stock ref — fall back to single insert (rare).
           try {
             const result = await createVehicle(
-              rowToInsert(row, opts, primary),
+              rowToInsert(row, insertOpts, primary),
             );
             const vehicleId = (result as { insertId?: number })?.insertId;
             if (vehicleId && urls.length) {
@@ -258,7 +263,7 @@ export async function commitInventoryCsv(opts: {
           }
           continue;
         }
-        inserts.push(rowToInsert(row, opts, primary));
+        inserts.push(rowToInsert(row, insertOpts, primary));
         waveRefs.push(ref);
         waveUrlSets.push(urls);
       }
@@ -420,7 +425,7 @@ export async function commitInventoryCsv(opts: {
             : [];
       const resolved = await resolvePhotos(sourceUrls, row.title, row.externalRef);
       const primary = resolved[0] ?? row.imageUrl ?? null;
-      const result = await createVehicle(rowToInsert(row, opts, primary));
+      const result = await createVehicle(rowToInsert(row, insertOpts, primary));
       const vehicleId = (result as { insertId?: number })?.insertId;
       if (vehicleId && resolved.length > 0) {
         await addVehiclePhotosBulk(galleryRows(vehicleId, resolved));

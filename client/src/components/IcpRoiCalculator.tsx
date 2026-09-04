@@ -16,9 +16,9 @@ import { CASH_CTAS, CASH_ROI } from "@shared/cashvertising";
  * Interactive status-quo math for SA DPs — makes GrayArx a no-brainer on the call.
  */
 export default function IcpRoiCalculator({ compact = false }: { compact?: boolean }) {
-  const [deadLeadsPerWeek, setDeadLeadsPerWeek] = useState(ICP_ROI_DEFAULTS.deadLeadsPerWeek);
-  const [bookRatePct, setBookRatePct] = useState(ICP_ROI_DEFAULTS.bookRatePct);
-  const [grossProfitPerDealZar, setGross] = useState(ICP_ROI_DEFAULTS.grossProfitPerDealZar);
+  const [deadLeadsPerWeek, setDeadLeadsPerWeek] = useState<number>(ICP_ROI_DEFAULTS.deadLeadsPerWeek);
+  const [bookRatePct, setBookRatePct] = useState<number>(ICP_ROI_DEFAULTS.bookRatePct);
+  const [grossProfitPerDealZar, setGross] = useState<number>(ICP_ROI_DEFAULTS.grossProfitPerDealZar);
 
   const result = useMemo(
     () =>

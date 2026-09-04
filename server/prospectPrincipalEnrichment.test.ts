@@ -48,7 +48,7 @@ describe("principal email HTML extraction", () => {
   });
 });
 
-describe("live Jubilee contact page (network)", () => {
+describe.skipIf(!process.env.RUN_LIVE_PROSPECT_TESTS)("live Jubilee contact page (network)", () => {
   it(
     "finds a named email on jubileemotors.co.za",
     async () => {

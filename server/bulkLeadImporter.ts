@@ -117,7 +117,7 @@ export async function importLeadsFromCSV(
     await db
       .update(leadImports)
       .set({
-        totalRows: lines.length - 1,
+        totalRows: mapped.length,
         successCount,
         errorCount,
         status: errorCount === 0 ? "completed" : "completed",
@@ -129,7 +129,7 @@ export async function importLeadsFromCSV(
 
     return {
       importId,
-      totalRows: lines.length - 1,
+      totalRows: mapped.length,
       successCount,
       errorCount,
       errors,
