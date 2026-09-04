@@ -34,11 +34,34 @@ export default function AdminOnboarding() {
     onSuccess: (data, vars) => {
       if (vars.decision === "approved") {
         const dealershipId = (data as { dealershipId?: number })?.dealershipId;
-        toast.success(
-          dealershipId
-            ? `Dealership #${dealershipId} provisioned — WhatsApp will auto-link when Meta phone matches contact phone`
-            : "Submission approved",
-        );
+        const login = (data as {
+          publicShortcode?: string;
+          login?: {
+            email?: string;
+            temporaryPassword?: string | null;
+            created?: boolean;
+            linkedExisting?: boolean;
+            conflict?: boolean;
+          };
+        }).login;
+        if (login?.temporaryPassword) {
+          void navigator.clipboard.writeText(login.temporaryPassword).catch(() => undefined);
+        }
+        if (login?.conflict) {
+          toast.error(
+            `Yard #${dealershipId} is live, but ${login.email} is already on another dealership — invite them from Team instead`,
+          );
+        } else if (login?.temporaryPassword) {
+          toast.success(
+            `Yard #${dealershipId} provisioned. Login ${login.email} — temp password copied. They import CSV next.`,
+          );
+        } else {
+          toast.success(
+            dealershipId
+              ? `Dealership #${dealershipId} provisioned — WhatsApp auto-links when Meta phone matches contact phone`
+              : "Submission approved",
+          );
+        }
       } else if (vars.decision === "rejected") {
         toast.success("Submission rejected");
       } else {
@@ -78,7 +101,7 @@ export default function AdminOnboarding() {
   return (
     <AdminShell
       title="Onboarding queue"
-      subtitle="New dealership applications from the public /onboarding form. Approve to auto-provision their dealership, agents, and stock. Multi-branch: one dealership per branch, same groupKey."
+      subtitle="Applications from /onboarding. Approve creates the yard, a dealer login, and Pilot WhatsApp caps. They import CSV; WhatsApp auto-links when Meta’s display number matches their phone."
       actions={
         <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
           <SelectTrigger className="h-9 w-[160px]">
@@ -93,6 +116,15 @@ export default function AdminOnboarding() {
       }
     >
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
+      <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground mb-4 space-y-1">
+        <p className="text-foreground font-medium text-sm">When a client is ready</p>
+        <ol className="list-decimal list-inside space-y-1">
+          <li>They apply at /onboarding — you get an alert + they get a reference email.</li>
+          <li>Approve &amp; provision here — creates the yard, dealer login, and Pilot WhatsApp cap.</li>
+          <li>They import CSV (Inventory → Import). WhatsApp auto-links if Meta’s number matches their phone.</li>
+          <li>They send “Is this still available?” — Nala should reply with price and a viewing ask.</li>
+        </ol>
+      </div>
       {!isLoading && filtered.length === 0 && (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
