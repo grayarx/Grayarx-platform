@@ -22,6 +22,14 @@ import {
   isOutreachReadyForDealership,
   websiteHost,
 } from "../../shared/prospectEmailQuality";
+import { extractEmailsFromHtml } from "./prospectEmailExtract";
+import {
+  buildMarketDirectoryUrls,
+  liveMarketSearchLocation,
+  marketDirectorySiteQueries,
+  resolveLiveMarket,
+  type LiveMarketId,
+} from "../../shared/liveMarkets";
 
 export type DiscoveredPerson = {
   fullName: string;
@@ -158,9 +166,10 @@ export function extractPrincipalNamesFromText(text: string): DiscoveredPerson[] 
 export function buildPrincipalNameSearchQueries(
   dealershipName: string,
   city?: string | null,
+  market: LiveMarketId = "ZA",
 ): string[] {
   const name = `"${dealershipName}"`;
-  const loc = city ? `"${city}"` : `"South Africa"`;
+  const loc = liveMarketSearchLocation(market, city);
   const roles =
     '("Dealer Principal" OR "Managing Director" OR "General Manager" OR Owner OR Director OR Proprietor)';
   return [
@@ -168,10 +177,7 @@ export function buildPrincipalNameSearchQueries(
     `${name} ${roles} (email OR contact OR "@")`,
     `site:linkedin.com ${name} ${roles}`,
     `site:facebook.com ${name} (owner OR "dealer principal" OR director OR manager)`,
-    `site:brabys.com ${name}`,
-    `site:cylex.co.za ${name}`,
-    `site:hotfrog.co.za ${name}`,
-    `site:yellosa.co.za ${name}`,
+    ...marketDirectorySiteQueries(market, dealershipName),
     `${name} ("appointed" OR "promoted" OR "takes over" OR "dealer principal") ${loc}`,
     `${name} (staff OR team OR management OR directors) ${loc}`,
   ];
@@ -295,7 +301,7 @@ function peopleFromSearchText(
   return people;
 }
 
-async function fetchPageText(url: string, timeoutMs = 5_000): Promise<string> {
+async function fetchPageHtml(url: string, timeoutMs = 6_000): Promise<string> {
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -308,11 +314,51 @@ async function fetchPageText(url: string, timeoutMs = 5_000): Promise<string> {
       },
     });
     if (!res.ok) return "";
-    const html = await res.text();
-    return stripHtml(html).slice(0, 40_000);
+    return (await res.text()).slice(0, 80_000);
   } catch {
     return "";
   }
+}
+
+async function fetchPageText(url: string, timeoutMs = 6_000): Promise<string> {
+  const html = await fetchPageHtml(url, timeoutMs);
+  return stripHtml(html).slice(0, 40_000);
+}
+
+/** Direct local-directory URLs — no DuckDuckGo. ZA kept as the default. */
+export function buildSaDirectoryUrls(
+  dealershipName: string,
+  city?: string | null,
+): string[] {
+  return buildMarketDirectoryUrls({
+    market: "ZA",
+    dealershipName,
+    city,
+  });
+}
+
+export async function fetchSaDirectoryBundle(input: {
+  dealershipName: string;
+  city?: string | null;
+  timeoutMs?: number;
+  market?: LiveMarketId;
+  website?: string | null;
+}): Promise<{ html: string; text: string }> {
+  const market = resolveLiveMarket({
+    country: input.market,
+    website: input.website,
+    region: input.city,
+  });
+  const urls = buildMarketDirectoryUrls({
+    market,
+    dealershipName: input.dealershipName,
+    city: input.city,
+  });
+  const htmls = await Promise.all(
+    urls.map((u) => fetchPageHtml(u, input.timeoutMs ?? 6_000)),
+  );
+  const html = htmls.filter(Boolean).join("\n");
+  return { html, text: stripHtml(html).slice(0, 80_000) };
 }
 
 /**
@@ -323,10 +369,15 @@ async function fetchPageText(url: string, timeoutMs = 5_000): Promise<string> {
 export async function searchWebForPrincipalNames(
   dealershipName: string,
   city?: string | null,
-  opts?: { fast?: boolean },
+  opts?: { fast?: boolean; market?: LiveMarketId; website?: string | null },
 ): Promise<DiscoveredPerson[]> {
   const fast = opts?.fast === true;
-  const queries = buildPrincipalNameSearchQueries(dealershipName, city).slice(
+  const market = resolveLiveMarket({
+    country: opts?.market,
+    website: opts?.website,
+    region: city,
+  });
+  const queries = buildPrincipalNameSearchQueries(dealershipName, city, market).slice(
     0,
     fast ? 2 : 8,
   );
@@ -351,12 +402,26 @@ export async function searchWebForPrincipalNames(
       const followUrls = bundle.urls.slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
-          const text = await fetchPageText(url, 5_000);
+          const text = await fetchPageText(url, 6_000);
           if (text) addPeople(peopleFromSearchText(text, dealershipName));
         }),
       );
     } catch (err) {
       console.warn("[PrincipalNames] web search failed", q, err);
+    }
+  }
+  if (!fast) {
+    try {
+      const dir = await fetchSaDirectoryBundle({
+        dealershipName,
+        city,
+        timeoutMs: 6_000,
+        market,
+        website: opts?.website,
+      });
+      if (dir.text) addPeople(peopleFromSearchText(dir.text, dealershipName));
+    } catch (err) {
+      console.warn("[PrincipalNames] directory fetch failed", err);
     }
   }
   return merged.slice(0, 8);
@@ -555,16 +620,15 @@ export function buildPublishedEmailSearchQueries(input: {
   host: string;
   dealershipName: string;
   people?: DiscoveredPerson[];
+  market?: LiveMarketId;
 }): string[] {
   const name = `"${input.dealershipName}"`;
+  const market = input.market ?? "ZA";
   const queries: string[] = [
     `"@${input.host}" (email OR contact OR "dealer principal" OR director OR manager)`,
     `${name} "@${input.host}"`,
     `${name} (email OR mailto OR contact) -info@${input.host}`,
-    `site:brabys.com ${name}`,
-    `site:cylex.co.za ${name}`,
-    `site:hotfrog.co.za ${name}`,
-    `site:yellosa.co.za ${name}`,
+    ...marketDirectorySiteQueries(market, input.dealershipName),
     `site:facebook.com ${name} (@${input.host} OR email OR contact)`,
     `site:linkedin.com ${name} (@${input.host} OR email)`,
     `"${input.host}" ("dealer principal" OR "managing director") email`,
@@ -591,10 +655,12 @@ export async function searchWebForPublishedEmails(input: {
   const host = websiteHost(input.website);
   if (!host) return [];
   const fast = input.fast === true;
+  const market = resolveLiveMarket({ website: input.website });
   const queries = buildPublishedEmailSearchQueries({
     host,
     dealershipName: input.dealershipName,
     people: input.people,
+    market,
   }).slice(0, fast ? 2 : 10);
 
   const found = new Set<string>();
@@ -608,6 +674,32 @@ export async function searchWebForPublishedEmails(input: {
       }
     }
   };
+  const ingestHtml = (html: string) => {
+    if (!html) return;
+    ingest(stripHtml(html));
+    for (const email of extractEmailsFromHtml(html)) {
+      if (
+        isOutreachReadyForDealership(email, input.website) &&
+        emailMatchesWebsiteDomain(email, input.website)
+      ) {
+        found.add(email);
+      }
+    }
+  };
+
+  if (!fast) {
+    try {
+      const dir = await fetchSaDirectoryBundle({
+        dealershipName: input.dealershipName,
+        timeoutMs: 6_000,
+        website: input.website,
+        market,
+      });
+      ingestHtml(dir.html);
+    } catch (err) {
+      console.warn("[PrincipalNames] directory email fetch failed", err);
+    }
+  }
 
   for (const q of queries) {
     if (found.size >= 6) break;
@@ -618,8 +710,8 @@ export async function searchWebForPublishedEmails(input: {
       const followUrls = bundle.urls.slice(0, 4);
       await Promise.all(
         followUrls.map(async (url) => {
-          const text = await fetchPageText(url, 5_000);
-          if (text) ingest(text);
+          const html = await fetchPageHtml(url, 6_000);
+          ingestHtml(html);
         }),
       );
     } catch (err) {
@@ -801,6 +893,7 @@ export async function discoverPrincipalPeople(input: {
   city?: string | null;
   pageTexts?: string[];
   fast?: boolean;
+  region?: string | null;
   /** Founder / pool / pilot known names — tried before cold scrape. */
   knownPeople?: Array<{ fullName: string; role?: string | null }>;
 }): Promise<DiscoveredPerson[]> {
@@ -813,10 +906,14 @@ export async function discoverPrincipalPeople(input: {
   for (const text of input.pageTexts ?? []) {
     fromPages.push(...extractPrincipalNamesFromText(text));
   }
+  const market = resolveLiveMarket({
+    website: input.website,
+    region: input.region,
+  });
   const fromSearch = await searchWebForPrincipalNames(
     input.dealershipName,
     input.city,
-    { fast: input.fast },
+    { fast: input.fast, website: input.website, market },
   );
   const seen = new Set<string>();
   const merged: DiscoveredPerson[] = [];

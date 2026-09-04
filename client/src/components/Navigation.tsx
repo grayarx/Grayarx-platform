@@ -47,7 +47,7 @@ export default function Navigation() {
 
   const NAV_LINKS = [
     { href: "/", label: t("nav.home"), tip: "Platform overview and lead capture" },
-    { href: "/for-dealers", label: "For dealers", tip: "Nala OS ROI — 14-day Pilot, then Professional R14,990/mo" },
+    { href: "/for-dealers", label: "For dealers", tip: "What after-hours leakage costs — 14-day Pilot, then Professional R14,990/mo" },
     { href: "/showroom", label: t("nav.showroom"), tip: "Browse inventory — AI search and filters" },
     { href: "/compare", label: "Compare", tip: "Side-by-side comparison of up to 3 vehicles" },
     { href: "/trade-in", label: "Trade-In", tip: "Get an instant trade-in estimate from Tumi" },

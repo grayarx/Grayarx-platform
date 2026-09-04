@@ -186,7 +186,7 @@ export const siphoEnhancedRouter = router({
         score: 82,
         tier: "gold",
         emailDraft: {
-          subject: "Premium Auto Sales: 3 Ways to Increase Your Lead Quality by 40%",
+          subject: "Premium Auto Sales: what happens to your 9pm WhatsApps?",
           preview: "I've been analyzing leading dealerships in Johannesburg...",
         },
         createdAt: new Date(Date.now() - 3600000),
@@ -279,7 +279,7 @@ export const siphoEnhancedRouter = router({
           ],
         },
         emailDraft: {
-          subject: "Premium Auto Sales: 3 Ways to Increase Your Lead Quality by 40%",
+          subject: "Premium Auto Sales: what happens to your 9pm WhatsApps?",
           body: "Hi Premium Auto Sales Team...",
           cta: "Book a 15-minute demo",
         },

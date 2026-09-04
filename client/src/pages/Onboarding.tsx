@@ -14,6 +14,7 @@ import { CheckCircle2, ArrowRight } from "lucide-react";
 import { useSearch } from "wouter";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { SEO_PAGES } from "@shared/seo";
+import { CASH_ONBOARDING } from "@shared/cashvertising";
 
 const REGIONS = [
   "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
@@ -80,11 +81,10 @@ export default function Onboarding() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-8">
               <CheckCircle2 className="h-10 w-10 text-emerald-500" />
             </div>
-            <h1 className="font-display text-4xl font-bold">Thanks — we've got it.</h1>
+            <h1 className="font-display text-4xl font-bold">{CASH_ONBOARDING.thanksH1}</h1>
             <p className="text-muted-foreground mt-4">
-              Our team will review your application within one business day. You'll receive
-              a welcome email at <span className="text-primary">{form.ownerEmail}</span> with
-              next steps.
+              {CASH_ONBOARDING.thanksSub} You'll receive a welcome email at{" "}
+              <span className="text-primary">{form.ownerEmail}</span> with next steps.
             </p>
             <div className="card-premium rounded-2xl border border-primary/10 p-6 mt-8 text-left">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -126,11 +126,10 @@ export default function Onboarding() {
           <div className="text-center mb-10">
             <Logo variant="full" size={100} className="mx-auto" />
             <h1 className="font-display text-4xl md:text-5xl font-bold mt-6">
-              Onboard your dealership
+              {CASH_ONBOARDING.h1}
             </h1>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
-              14-day Pilot on your stock — Nala WhatsApp, live showroom, parts, service, missed-call
-              recovery. No card. We review every application within one business day.
+              {CASH_ONBOARDING.sub}
             </p>
             {referredBy ? (
               <p className="mt-3 text-xs text-primary/90 font-tech uppercase tracking-wider">
@@ -320,7 +319,7 @@ export default function Onboarding() {
                   })
                 }
               >
-                {submit.isPending ? "Submitting…" : "Submit application"}
+                {submit.isPending ? "Submitting…" : CASH_ONBOARDING.submit}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
 

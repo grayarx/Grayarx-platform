@@ -21,17 +21,17 @@ export const DEFAULT_LEAD: LeadContext = {
 };
 
 /**
- * WhatsApp / email follow-up — one hook, one outcome, one CTA. No feature lists.
+ * WhatsApp / email follow-up — PAS in three beats. No feature lists. No fake stats.
  */
 export function buildWhatsAppFollowUp(lead: LeadContext): string {
   return [
     `Hi ${lead.dealershipName} — ${lead.agentName} from GrayArx. ${lead.researchNote}.`,
     "",
-    "When a buyer messages on a Sunday evening, does someone get back to them that night — or does it wait until Monday?",
+    "When a buyer messages on a Sunday evening, does someone get back to them that night — or does it wait until Monday? That silence is a decision. The next yard that replies gets the drive.",
     "",
-    "We help yards turn those enquiries into booked test drives before the buyer moves on. Runs alongside what you already use — nothing to cancel.",
+    "We put Nala on your live CSV so those 9pm WhatsApps become booked test drives. Runs next to how you already list stock — nothing to cancel. 14-day Pilot is R0.",
     "",
-    `Worth a 15-minute look on your own stock? Reply YES or call ${lead.phoneNumber}.`,
+    `Give me 14 days on your stock? Reply YES or call ${lead.phoneNumber}.`,
   ].join("\n");
 }
 
@@ -54,5 +54,7 @@ export function buildCallScript(lead: LeadContext): string {
     `I'm trying to reach whoever handles online enquiries for ${lead.dealershipName}. Would that be you?`,
     "",
     "[STOP AND LISTEN — use smart reply; diagnose before prescribing]",
+    "",
+    `If yes — ${lead.callReason} What actually happens to a 9pm WhatsApp tonight?`,
   ].join("\n");
 }

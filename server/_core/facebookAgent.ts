@@ -13,89 +13,48 @@ import { TRPCError } from "@trpc/server";
 export const FACEBOOK_CONTENT_TEMPLATES = {
   about: {
     title: "About GrayArx",
-    content: `🚀 GrayArx — The Dealership AI Operating System
+    content: `GrayArx — Nala Dealership OS
 
-We're building autonomous AI agents that help South African dealerships capture more leads, qualify buyers faster, and close more deals.
+Every unanswered 9pm WhatsApp is a deal you already paid for.
 
-Our AI agents:
-✅ Mia (Email Agent) — Captures leads 24/7
-✅ Nala (WhatsApp Agent) — Answers buyers from your live stock
-✅ Lerato (Booking Agent) — Pencils in test drives (your team confirms)
-✅ Sipho (Prospector) — Scores dealerships for your team to follow up
-✅ Tumi (Trade-In Agent) — Instant valuations
-✅ Bongi (Fallback Agent) — After-hours support
+Independent yards drop a CSV. Nala answers after hours from live stock, books the test drive, and Monday you see this week's numbers. Runs next to your current listings — nothing to cancel.
 
-All agents speak all 11 South African official languages and are POPIA-compliant.
+14-day Pilot is R0 (150 WhatsApp cap, no card). Then most yards keep Professional OS at R14,990/mo because recovered gross already paid for the desk.
 
-📞 Call: 079 491 5187
-📧 Email: hello@grayarx.com
-🌐 Website: www.grayarx.com
-
-Join the GrayArx 14-day Pilot — Nala Dealership OS on your stock. Then Professional OS at R14,990/mo.`,
+Call: 079 491 5187
+Email: hello@grayarx.com
+www.grayarx.com/onboarding`,
   },
 
   mission: {
     title: "Our Mission",
-    content: `Our mission is simple: Help every South African dealership compete with the big players.
+    content: `Our mission is simple: stop independent yards losing after-hours deals to the dealer who replies.
 
-Dealerships shouldn't need a team of 20 to handle leads, calls, and bookings. They should have AI agents that work 24/7, never get tired, and never miss an opportunity.
+You should not need a night shift to answer “is this still available?” Nala does — from your live stock — so dinner is dinner.
 
-That's why we built GrayArx.
-
-🎯 We're committed to:
-✅ Making AI accessible to dealerships of all sizes
-✅ Supporting all 11 South African languages
-✅ Maintaining POPIA compliance
-✅ Delivering exceptional customer service
-✅ Continuously improving our agents
-
-Join us in transforming the dealership industry.
-
-Start your free trial: www.grayarx.com/onboarding`,
+14-day Pilot on your CSV: www.grayarx.com/onboarding`,
   },
 
   testimonial: {
-    title: "Customer Success Story",
-    content: `📈 Success Story: How One Dealership Captured 150 Leads in 30 Days
+    title: "Prove it on your stock — not on a quote we wrote",
+    content: `We do not invent case studies.
 
-Three weeks ago, a dealership in Gauteng started using GrayArx.
+The proof is this week's numbers on YOUR cars: drop a CSV, Nala answers 9pm WhatsApps, you see recovered drives vs the OS desk.
 
-Here's what happened:
+14 days. R0. No card. If the leakage is smaller than we both thought, you walk.
 
-Week 1: Mia captured 45 leads from their website and WhatsApp
-Week 2: Nala answered after-hours stock questions; Lerato pencilled 18 test-drive requests
-Week 3: The floor confirmed 12 test drives; 8 converted to sales
-
-Total: 150 leads processed, 8 sales, R2.4M in revenue attributed to GrayArx agents.
-
-Their feedback: "We didn't have to hire anyone. The agents just work. It's like having a sales team that never gets tired."
-
-This is typical. Most dealerships see results in the first week.
-
-Ready to see similar results? Start your free trial today.
-
-www.grayarx.com/onboarding`,
+www.grayarx.com/for-dealers`,
   },
 
   features: {
-    title: "Meet Mia — Your Email Agent",
-    content: `📧 Meet Mia — Your 24/7 Email Agent
+    title: "What happens to a 9pm WhatsApp today?",
+    content: `Most yards: it waits until 8am. The buyer does not.
 
-Mia captures every lead from your website, emails, and WhatsApp. Then she sends personalized follow-ups automatically.
+Nala answers from your live CSV. Mia drips the cold ones. Missed calls bounce to WhatsApp. Monday: this week's numbers.
 
-What Mia does:
-✅ Captures leads in real-time
-✅ Sends personalized follow-ups (Day 1, 3, 7)
-✅ Speaks all 11 South African languages
-✅ Qualifies buyers automatically
-✅ Hands off to Lerato for a pencilled test drive
-✅ Works 24/7/365
+That is the desk. Not a chatbot widget.
 
-Result: 3-5x more leads captured, 40% faster response times.
-
-Mia is just one of six agents. Imagine having this level of automation across your entire sales process.
-
-Learn more: www.grayarx.com`,
+Start the 14-day Pilot: www.grayarx.com/onboarding`,
   },
 
   faq: {
@@ -129,24 +88,14 @@ Learn more about our security: www.grayarx.com/security`,
   },
 
   cta: {
-    title: "Ready to Transform Your Dealership?",
-    content: `🚀 Ready to Transform Your Dealership?
+    title: "Warning: your 9pm WhatsApps are paying the next dealer",
+    content: `They already raised their hand. Silence is a decision.
 
-Stop losing leads. Start winning deals.
-
-GrayArx gives you:
-✅ 24/7 AI sales team
-✅ 3-5x more leads captured
-✅ 40% faster response times
-✅ 25% higher conversion rates
-✅ All 11 SA languages
-✅ POPIA compliant
-
-Start your GrayArx 14-day Pilot today — Nala OS on your stock, no card.
+Give us your CSV. Nala answers tonight from your stock. 14-day Pilot — R0, no card. Then this week's numbers decide.
 
 👉 www.grayarx.com/onboarding
 
-Questions? Call 079 491 5187 or email grayarx@gmail.com`,
+Questions? Call 079 491 5187 or email hello@grayarx.com`,
   },
 };
 

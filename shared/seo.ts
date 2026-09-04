@@ -63,14 +63,14 @@ export type SeoPageMeta = {
 export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
   home: {
     path: "/",
-    title: "GrayArx — WhatsApp dealership OS",
+    title: "Stop losing WhatsApp deals | GrayArx OS",
     description:
-      "Nala answers after-hours WhatsApp from live stock, books drives, parts and service. Free 14-day Pilot. Then Professional OS R14,990/mo.",
+      "After-hours WhatsApp dies unanswered. Nala replies from your live stock and books the drive. Free 14-day Pilot. Then Professional OS R14,990/mo.",
     keywords: ICP_KEYWORDS,
   },
   onboarding: {
     path: "/onboarding",
-    title: "Free 14-day OS pilot | GrayArx",
+    title: "Prove it on your stock | GrayArx OS",
     description:
       "Start a 14-day Pilot on your stock — Nala WhatsApp, CSV showroom, parts, service, missed-call recovery. No card. ZA, AU, UK, UAE, US, NZ.",
     keywords:
@@ -78,9 +78,9 @@ export const SEO_PAGES: Record<SeoPageKey, SeoPageMeta> = {
   },
   forDealers: {
     path: "/for-dealers",
-    title: "Dealership OS ROI | GrayArx",
+    title: "What after-hours leakage costs | GrayArx",
     description:
-      "After-hours WhatsApp leakage vs Nala OS. 14-day Pilot, then Starter R7,990 or Professional R14,990/mo on your CSV stock.",
+      "See unanswered after-hours WhatsApps vs Nala OS. 14-day Pilot, then Starter R7,990 or Professional R14,990/mo on your stock.",
     keywords:
       "dealership OS ROI, WhatsApp leads cost, car dealer software pricing, Nala Professional OS",
   },

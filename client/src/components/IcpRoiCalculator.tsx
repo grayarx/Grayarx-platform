@@ -10,6 +10,7 @@ import {
   computeIcpRoi,
   formatZarWhole,
 } from "@shared/icpRoi";
+import { CASH_CTAS, CASH_ROI } from "@shared/cashvertising";
 
 /**
  * Interactive status-quo math for SA DPs — makes GrayArx a no-brainer on the call.
@@ -43,13 +44,13 @@ export default function IcpRoiCalculator({ compact = false }: { compact?: boolea
         </div>
         <div>
           <p className="font-tech text-[10px] uppercase tracking-[0.28em] text-primary/80 mb-1">
-            Status-quo math
+            {CASH_ROI.eyebrow}
           </p>
           <h3 className="font-display text-xl md:text-2xl font-bold tracking-tight">
-            Is GrayArx a no-brainer for your yard?
+            {CASH_ROI.h3}
           </h3>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-            Use your numbers. Recovered after-hours deals vs Nala OS (Professional R14,990/mo).
+            {CASH_ROI.sub}
           </p>
         </div>
       </div>
@@ -135,11 +136,11 @@ export default function IcpRoiCalculator({ compact = false }: { compact?: boolea
       <div className="flex flex-wrap gap-3">
         <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
           <Link href="/onboarding">
-            Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
+            {CASH_CTAS.primary} <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
         <Button asChild variant="outline" className="btn-cyber h-11 bg-transparent">
-          <a href="#lead-capture">Talk to us</a>
+          <a href="#lead-capture">{CASH_CTAS.seeCost}</a>
         </Button>
       </div>
     </div>

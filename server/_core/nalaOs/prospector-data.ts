@@ -1,6 +1,6 @@
 import type { IcpSegment, Prospect } from "@nalaOs/prospector-types";
 import type { RegionId } from "@nalaOs/regions/config";
-import { SA_PROSPECT_POOL } from "../saProspectPool";
+import { poolEntryCountry, SA_PROSPECT_POOL } from "../saProspectPool";
 import { isOutreachReadyForDealership } from "../../../shared/prospectEmailQuality";
 import { mergeDiscoveredPhone } from "../../../shared/prospectPhone";
 
@@ -52,6 +52,7 @@ function build(seed: Seed): Prospect {
  * High-ICP pool: yards that feel after-hours lead loss AND can pay Professional+.
  * Phones/emails stay blank until research finds them on the dealer site (never invented).
  * ZA seeds get real websites from the Sipho research pool at hydrate so Generate can scrape.
+ * Other live markets (AU, GB, AE, US, NZ) hydrate from the same pool by country.
  * Paste remains an override when the site only lists info@.
  */
 const SEEDS: Seed[] = [
@@ -655,16 +656,18 @@ export function hydrateIcpResearchTargets(): void {
 
   for (const prospect of MOCK_PROSPECTS) {
     if (prospect.website?.trim()) continue;
-    if (prospect.regionId !== "ZA") continue;
+    const market = prospect.regionId;
     const match =
-      takePool((entry) => citiesMatch(prospect.city, entry.city)) ??
-      takePool(() => true);
+      takePool(
+        (entry) =>
+          poolEntryCountry(entry) === market && citiesMatch(prospect.city, entry.city),
+      ) ?? takePool((entry) => poolEntryCountry(entry) === market);
     if (!match?.website) continue;
     usedSites.add(match.website.trim().toLowerCase());
     prospect.name = match.name;
     prospect.website = match.website;
     prospect.city = match.city.split(",")[0]!.trim();
-    prospect.location = `${match.city}, ${match.province}, ZA`;
+    prospect.location = `${match.city}, ${match.province}, ${poolEntryCountry(match)}`;
     prospect.callReason = `I had a look at ${match.name}'s online stock — curious what happens when a buyer enquires after your team has gone home.`;
   }
 }

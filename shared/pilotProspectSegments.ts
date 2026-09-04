@@ -13,6 +13,7 @@ import {
   isOutreachReadyForDealership,
   type EnrichmentTarget,
 } from "./prospectEmailQuality";
+import { CASH_EMAIL_SEGMENTS } from "./cashvertising";
 
 export type PilotOutreachSegment =
   | "no_website_social_only"
@@ -48,14 +49,10 @@ export const PILOT_SEGMENT_LABELS: Record<PilotOutreachSegment, string> = {
 };
 
 export const PILOT_SEGMENT_SUBJECTS: Record<PilotOutreachSegment, string> = {
-  no_website_social_only:
-    "Turn your Facebook stock into a 24/7 showroom — GrayArx pilot (5 spots)",
-  basic_website_no_showroom:
-    "Add an AI showroom to your website — no rebuild required (pilot invite)",
-  after_hours_leak:
-    "Stop losing after-hours buyers — GrayArx pilot for Gauteng dealers",
-  whatsapp_manual:
-    "Your WhatsApp can book test drives automatically — pilot invite",
+  no_website_social_only: CASH_EMAIL_SEGMENTS.no_website_social_only.subject,
+  basic_website_no_showroom: CASH_EMAIL_SEGMENTS.basic_website_no_showroom.subject,
+  after_hours_leak: CASH_EMAIL_SEGMENTS.after_hours_leak.subject,
+  whatsapp_manual: CASH_EMAIL_SEGMENTS.whatsapp_manual.subject,
 };
 
 /**

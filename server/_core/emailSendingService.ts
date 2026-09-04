@@ -171,7 +171,7 @@ export const getProspectEmailHistory = async (prospectId: string) => {
   return [
     {
       emailId: "email-1",
-      subject: "Premium Auto Sales: 3 Ways to Increase Your Lead Quality by 40%",
+          subject: "Premium Auto Sales: what happens to your 9pm WhatsApps?",
       recipientEmail: "info@premiumautosales.co.za",
       sentAt: new Date(Date.now() - 86400000),
       status: "opened",
@@ -213,7 +213,7 @@ export const getEmailTemplates = async () => {
     {
       templateId: "template-1",
       name: "Initial Prospect Outreach",
-      subject: "{{companyName}}: 3 Ways to Increase Your Lead Quality by 40%",
+      subject: "{{companyName}}: what happens to your 9pm WhatsApps?",
       variables: ["companyName", "painPoints", "opportunities"],
     },
     {
@@ -225,7 +225,7 @@ export const getEmailTemplates = async () => {
     {
       templateId: "template-3",
       name: "Case Study",
-      subject: "{{companyName}}: See How Similar Dealerships Increased Sales by 40%",
+      subject: "{{companyName}}: Give me 14 days on your stock",
       variables: ["companyName", "caseStudyLink"],
     },
   ];

@@ -20,6 +20,18 @@ import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { HERO_SHOWCASE_CORVETTE } from "@shared/imagePipeline";
 import { SEO_PAGES, buildHomeJsonLd } from "@shared/seo";
+import {
+  CASH_CAPABILITIES,
+  CASH_CTAS,
+  CASH_FASCINATIONS,
+  CASH_FOR_YOU_IF,
+  CASH_HOME,
+  CASH_MARQUEE,
+  CASH_PAS,
+  CASH_PILOT_FEATURES,
+  CASH_PROOF_STEPS,
+  CASH_RISK_REVERSAL,
+} from "@shared/cashvertising";
 
 const HOME_JSON_LD = buildHomeJsonLd();
 
@@ -30,80 +42,8 @@ const fadeUp = {
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
 };
 
-const MARQUEE_ITEMS = [
-  "After-hours WhatsApp",
-  "Dealership OS — Nala",
-  "CSV stock live tonight",
-  "Parts + service desk",
-  "Missed-call recovery",
-  "This week's numbers",
-  "Free 14-day Pilot",
-  "ZA · AU · UK · UAE · US · NZ",
-];
-
-const PROOF_STEPS = [
-  {
-    icon: Upload,
-    title: "Drop your CSV",
-    desc: "DMS or spreadsheet — your stock becomes the source of truth.",
-  },
-  {
-    icon: Car,
-    title: "Showroom goes live",
-    desc: "Buyers browse your yard, not a random marketplace dump.",
-  },
-  {
-    icon: MessageCircle,
-    title: "WhatsApp after hours",
-    desc: "Nala answers when you are closed. Mia drips the cold ones. Missed calls bounce to WhatsApp.",
-  },
-  {
-    icon: Clock,
-    title: "Drives in your inbox",
-    desc: "Bookings and leads land where your team already works.",
-  },
-];
-
-const PAIN_MIRRORS = [
-  "Leads from AutoTrader go cold after 6pm",
-  "WhatsApp sits unread while you are with a customer",
-  "Follow-ups depend on whoever remembers",
-  "Your website still looks like 2014 stock photos",
-];
-
-const CAPABILITIES = [
-  {
-    icon: Zap,
-    title: "After-hours that actually reply",
-    desc: "Nala on WhatsApp + Mia drip so overnight interest becomes a booked drive — not a missed call list.",
-  },
-  {
-    icon: Car,
-    title: "Your stock, one truth",
-    desc: "CSV / DMS sync keeps showroom, chat, and WhatsApp on the same cars. Sold stays sold.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Buyer path that closes",
-    desc: "Trade-in → finance → pre-approval → booking on the car they want — without five browser tabs.",
-  },
-  {
-    icon: Shield,
-    title: "Built for dealers, not theatre",
-    desc: "POPIA-aware flows, 11 SA languages, and human control — ZA first, with yards in AU, UK, UAE, US, and NZ.",
-  },
-];
-
-const PILOT_FEATURES = [
-  "Nala on WhatsApp from live stock",
-  "CSV / DMS showroom",
-  "Parts + service desk",
-  "Trade-in intake",
-  "Missed-call recovery",
-  "This week's numbers",
-  "Mia follow-up drip",
-  "Test-drive bookings",
-];
+const STEP_ICONS = [Upload, Car, MessageCircle, Clock] as const;
+const CAPABILITY_ICONS = [Zap, Car, MessageCircle, Shield] as const;
 
 export default function Home() {
   useDocumentMeta({
@@ -128,7 +68,7 @@ export default function Home() {
         <div className="absolute inset-0 gradient-mesh opacity-40" />
       </div>
 
-      {/* ── Hero: ICP in three seconds ── */}
+      {/* Hero — Fear + specificity + risk reversal */}
       <section className="relative home-hero-stage overflow-hidden">
         <img
           src={HERO_SHOWCASE_CORVETTE}
@@ -148,25 +88,26 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
             >
+              <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-4">
+                {CASH_HOME.eyebrow}
+              </p>
               <p className="font-display text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white mb-8">
                 Gray<span className="text-cyber-gradient">Arx</span>
               </p>
 
               <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-white leading-[1.15] mb-5">
-                Your after-hours leads are{" "}
-                <span className="text-cyber-gradient">dying on WhatsApp</span>
+                {CASH_HOME.h1Before}
+                <span className="text-cyber-gradient">{CASH_HOME.h1Accent}</span>
               </h1>
 
               <p className="text-lg md:text-xl text-white/75 max-w-xl leading-relaxed mb-10">
-                Put CSV stock live — Nala answers buyers overnight, books the drive, and covers
-                parts, service, and missed calls on <em className="not-italic text-white">your</em>{" "}
-                cars.
+                {CASH_HOME.sub}
               </p>
 
               <div className="flex flex-wrap gap-4 mb-8">
                 <Button asChild className="btn-gold h-12 px-10 text-sm font-semibold uppercase tracking-wider">
                   <a href="#lead-capture">
-                    Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
+                    {CASH_CTAS.primary} <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
                 <Button
@@ -174,22 +115,21 @@ export default function Home() {
                   variant="outline"
                   className="btn-cyber h-12 px-8 text-sm font-semibold uppercase tracking-wider bg-transparent"
                 >
-                  <a href="#how-it-works">See how it works</a>
+                  <a href="#roi">{CASH_CTAS.seeCost}</a>
                 </Button>
               </div>
 
               <p className="font-tech text-[10px] uppercase tracking-[0.2em] text-white/45">
-                Free 14-day Pilot · No credit card · Live on your stock
+                {CASH_HOME.trustLine}
               </p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Marquee */}
       <div className="relative border-y border-primary/10 bg-black/60 backdrop-blur-sm overflow-hidden py-4">
         <div className="marquee-track">
-          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+          {[...CASH_MARQUEE, ...CASH_MARQUEE].map((item, i) => (
             <span
               key={`${item}-${i}`}
               className="font-tech flex items-center gap-6 px-8 text-[11px] uppercase tracking-[0.22em] text-muted-foreground whitespace-nowrap"
@@ -201,82 +141,110 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Proof path */}
-      <section id="how-it-works" className="relative py-20 md:py-28">
+      {/* Qualifier — independent WhatsApp-heavy yards */}
+      <section id="right-yards" className="relative py-20 md:py-24">
         <div className="container">
-          <motion.div {...fadeUp} className="max-w-2xl mb-14">
+          <motion.div {...fadeUp} className="max-w-2xl mb-12">
             <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-3">
-              Path to customers
+              {CASH_HOME.qualifierEyebrow}
             </p>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-tight">
-              From spreadsheet to{" "}
-              <span className="text-cyber-gradient">booked drive</span>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-4">
+              {CASH_HOME.qualifierH2}
             </h2>
-            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Recovered after-hours deals pay for the OS. This is the loop we run on your yard.
-            </p>
+            <p className="text-muted-foreground text-lg leading-relaxed">{CASH_HOME.qualifierSub}</p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-            {PROOF_STEPS.map((step, i) => (
-              <motion.div
-                key={step.title}
-                {...fadeUp}
-                transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-                className="relative border-l border-primary/25 pl-5 py-1"
-              >
-                <span className="font-tech text-[10px] text-primary/60 tracking-widest tabular-nums">
-                  0{i + 1}
-                </span>
-                <div className="mt-3 mb-3 text-primary">
-                  <step.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div {...fadeUp} className="mt-12 flex flex-wrap items-center gap-4">
-            <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
-              <a href="#lead-capture">
-                Put my stock live <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-            <Link
-              href="/onboarding"
-              className="font-tech text-xs uppercase tracking-[0.2em] text-primary/80 hover:text-primary"
-            >
-              Or open self-serve setup →
-            </Link>
+          <motion.div {...fadeUp} className="rounded-2xl border border-primary/20 bg-primary/5 p-7 md:p-8 max-w-3xl">
+            <p className="font-tech text-[10px] uppercase tracking-[0.22em] text-primary/80 mb-5">
+              {CASH_HOME.forYouLabel}
+            </p>
+            <ul className="space-y-3">
+              {CASH_FOR_YOU_IF.map((line) => (
+                <li key={line} className="flex items-start gap-3 text-sm md:text-base text-white/90">
+                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
           </motion.div>
         </div>
       </section>
 
       <div className="section-divider-glow mx-auto max-w-4xl" />
 
-      {/* Pain mirror */}
-      <section className="relative py-20 md:py-24">
+      {/* Path — simplicity + instant gratification */}
+      <section id="how-it-works" className="relative py-20 md:py-28">
+        <div className="container">
+          <motion.div {...fadeUp} className="max-w-2xl mb-14">
+            <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-3">
+              {CASH_HOME.pathEyebrow}
+            </p>
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-tight">
+              {CASH_HOME.pathH2Before}
+              <span className="text-cyber-gradient">{CASH_HOME.pathH2Accent}</span>
+            </h2>
+            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">{CASH_HOME.pathSub}</p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+            {CASH_PROOF_STEPS.map((step, i) => {
+              const Icon = STEP_ICONS[i] ?? Upload;
+              return (
+                <motion.div
+                  key={step.title}
+                  {...fadeUp}
+                  transition={{ ...fadeUp.transition, delay: i * 0.08 }}
+                  className="relative border-l border-primary/25 pl-5 py-1"
+                >
+                  <span className="font-tech text-[10px] text-primary/60 tracking-widest tabular-nums">
+                    0{i + 1}
+                  </span>
+                  <div className="mt-3 mb-3 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-lg font-semibold mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <motion.div {...fadeUp} className="mt-12 flex flex-wrap items-center gap-4">
+            <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
+              <a href="#lead-capture">
+                {CASH_CTAS.primary} <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Link
+              href="/onboarding"
+              className="font-tech text-xs uppercase tracking-[0.2em] text-primary/80 hover:text-primary"
+            >
+              {CASH_CTAS.selfServe}
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* PAS — agitate */}
+      <section className="relative py-20 md:py-24 border-t border-primary/10">
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             <motion.div {...fadeUp}>
               <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-3">
-                We know the yard
+                {CASH_HOME.pasEyebrow}
               </p>
               <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-5">
-                Built for the DP who still answers their own phone
+                {CASH_HOME.pasH2}
               </h2>
-              <p className="text-muted-foreground text-lg leading-relaxed mb-8">
-                Independent used and multi-brand stock. Heavy WhatsApp. GrayArx sits beside
-                AutoTrader and your DMS — sales, parts, and service in one OS, not a chatbot widget.
-              </p>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-6">{CASH_PAS.problem}</p>
+              <p className="text-white/85 text-base leading-relaxed mb-8">{CASH_PAS.solve}</p>
               <Button asChild className="btn-gold h-11 px-8 font-semibold uppercase tracking-wider text-sm">
-                <a href="#lead-capture">Start 14-day Pilot</a>
+                <a href="#lead-capture">{CASH_CTAS.primary}</a>
               </Button>
             </motion.div>
 
             <motion.ul {...fadeUp} className="space-y-4">
-              {PAIN_MIRRORS.map((line) => (
+              {CASH_PAS.agitate.map((line) => (
                 <li
                   key={line}
                   className="flex items-start gap-3 border-b border-primary/10 pb-4 text-base md:text-lg text-white/85"
@@ -290,7 +258,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* No-brainer ROI */}
+      {/* What you'll see */}
+      <section className="relative py-16 md:py-20 border-t border-primary/10">
+        <div className="container max-w-3xl">
+          <motion.div {...fadeUp}>
+            <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-3">
+              Inside the 14-day Pilot
+            </p>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-8">
+              What you will see on{" "}
+              <span className="text-cyber-gradient">your</span> stock
+            </h2>
+            <ol className="space-y-4">
+              {CASH_FASCINATIONS.map((line, i) => (
+                <li key={line} className="flex gap-4 border-l border-primary/30 pl-5 py-1">
+                  <span className="font-tech text-[10px] text-primary/70 tracking-widest tabular-nums mt-1">
+                    0{i + 1}
+                  </span>
+                  <p className="text-base md:text-lg text-white/90 leading-relaxed">{line}</p>
+                </li>
+              ))}
+            </ol>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Your numbers — ROI */}
       <section id="roi" className="relative py-16 md:py-24 border-t border-primary/10">
         <div className="container max-w-3xl">
           <motion.div {...fadeUp}>
@@ -310,44 +303,43 @@ export default function Home() {
         <div className="container">
           <motion.div {...fadeUp} className="max-w-2xl mb-14 md:mb-16">
             <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-4">
-              What you get
+              {CASH_HOME.capabilitiesEyebrow}
             </p>
             <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-tight">
-              The wedge that{" "}
-              <span className="text-cyber-gradient">pays for itself</span>
+              {CASH_HOME.capabilitiesH2Before}
+              <span className="text-cyber-gradient">{CASH_HOME.capabilitiesH2Accent}</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Not another chatbot widget. A dealership OS for after-hours leakage — Nala on
-              WhatsApp, with template fallback if the LLM is down. ZA first, live in AU, UK, UAE, US,
-              and NZ.
+              {CASH_HOME.capabilitiesSub}
             </p>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 gap-4 md:gap-5 max-w-5xl">
-            {CAPABILITIES.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                {...fadeUp}
-                transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-                className="group holo-card rounded-2xl p-8 md:p-9"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/5">
-                  <feature.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-display text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
-              </motion.div>
-            ))}
+            {CASH_CAPABILITIES.map((feature, i) => {
+              const Icon = CAPABILITY_ICONS[i] ?? Zap;
+              return (
+                <motion.div
+                  key={feature.title}
+                  {...fadeUp}
+                  transition={{ ...fadeUp.transition, delay: i * 0.08 }}
+                  className="group holo-card rounded-2xl p-8 md:p-9"
+                >
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/5">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Live stock social proof — buyers already shopping */}
       <section className="border-t border-primary/10 bg-[#08080a]/90">
         <HomeFeaturedDeals />
       </section>
 
-      {/* Compliance — light, below conversion narrative */}
       <section className="relative py-14 md:py-16 border-t border-primary/10">
         <div className="container">
           <motion.div
@@ -380,7 +372,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pilot CTA */}
+      {/* Risk reversal + form */}
       <section id="lead-capture" className="pb-24 md:pb-32">
         <div className="container">
           <motion.div
@@ -390,26 +382,33 @@ export default function Home() {
             <div className="relative grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <div>
                 <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-4">
-                  Free 14-day Pilot
+                  {CASH_HOME.ctaEyebrow}
                 </p>
                 <h2 className="font-display text-3xl md:text-5xl font-bold mb-5 tracking-tight leading-tight">
-                  Prove this week's numbers on{" "}
-                  <span className="text-cyber-gradient">your stock</span>
+                  {CASH_HOME.ctaH2Before}
+                  <span className="text-cyber-gradient">{CASH_HOME.ctaH2Accent}</span>
                 </h2>
                 <p className="text-muted-foreground text-lg mb-8 leading-relaxed max-w-md">
-                  14 days, 150 WhatsApp conversations. Nala OS — showroom, parts, service,
-                  missed-call recovery, this week's numbers. Then most yards close Professional at R14,990/mo.
+                  {CASH_HOME.ctaSub}
                 </p>
-                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground mb-8">
-                  {PILOT_FEATURES.slice(0, 8).map((item) => (
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
+                  {CASH_PILOT_FEATURES.map((item) => (
                     <li key={item} className="flex items-center gap-2">
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
                       {item}
                     </li>
                   ))}
                 </ul>
+                <ul className="space-y-2 text-sm text-white/70 mb-8">
+                  {CASH_RISK_REVERSAL.map((line) => (
+                    <li key={line} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      {line}
+                    </li>
+                  ))}
+                </ul>
                 <Button asChild variant="outline" className="btn-cyber h-11 bg-transparent">
-                  <Link href="/onboarding">Prefer self-serve onboarding →</Link>
+                  <Link href="/onboarding">{CASH_CTAS.selfServe}</Link>
                 </Button>
               </div>
               <LeadCaptureFormOptimized />

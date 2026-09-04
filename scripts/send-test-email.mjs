@@ -50,7 +50,11 @@ const htmlContent = `
             
             <p>All agents speak all 11 South African official languages and comply with POPIA.</p>
             
-            <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
+            <p><strong>Here's the leak:</strong> 9pm WhatsApps sit unread. The next yard that replies gets the drive you already paid to list.</p>
+            
+            <p><strong>The desk:</strong> drop your CSV. Nala answers from your live stock, books the test drive, and Monday you see this week's numbers. Runs next to your current listings — nothing to cancel.</p>
+            
+            <p>We're inviting independent yards to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock. No card. After they see this week's numbers, most yards close Professional OS at R14,990/mo because recovered gross already paid for it.</p>
             
             <p>We're offering a <strong>free 30-day trial</strong> — no credit card required.</p>
             

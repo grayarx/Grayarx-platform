@@ -17,4 +17,12 @@ describe("prospector yield seeds", () => {
       expect.arrayContaining(["SD Auto CC", "Corona Motors", "M5 Auto", "Jubilee Motors"]),
     );
   });
+
+  it("pool includes live-market yards outside South Africa", () => {
+    expect(SA_PROSPECT_POOL.some((p) => p.country === "AU" && p.website)).toBe(true);
+    expect(SA_PROSPECT_POOL.some((p) => p.country === "GB" && p.website)).toBe(true);
+    expect(SA_PROSPECT_POOL.some((p) => p.country === "US" && p.website)).toBe(true);
+    expect(SA_PROSPECT_POOL.some((p) => p.country === "NZ" && p.website)).toBe(true);
+    expect(SA_PROSPECT_POOL.some((p) => p.country === "AE" && p.website)).toBe(true);
+  });
 });

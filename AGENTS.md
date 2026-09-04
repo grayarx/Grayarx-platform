@@ -31,8 +31,8 @@
 
 ### Outbound prospect email
 - Emails must be **named + on the dealership’s own domain + MX**. Site-builder addresses (`webadmin@vmgsoftware…`) and invented `principal@` / `jane.doe@` are blocked and purged.
-- Sipho searches **everywhere public** for principals — dealer site team/about pages, open web, LinkedIn/Facebook snippets, SA directories (Brabys/Cylex/Hotfrog), press — then finds emails: optional Hunter (`HUNTER_API_KEY`) → **published named@dealer-domain** → SMTP if :25 is open. Not LinkedIn-only. See `principalNameEmailGuess.ts`. Hunter free often hits `upgrade-required` — **do not buy Starter**; paid Hunter is optional.
-- **Always-on drip:** every ~10 min Sipho **imports known-good named emails** from the research pool, then deep-digs **2** dealers. Principals appear one-by-one when found. Generate is an optional fast burst. See `principalEnrichmentScheduler.ts` / `importOutreachReadyKnownProspects`.
+- Sipho searches **everywhere public** for principals — dealer site team/about pages, open web, LinkedIn/Facebook snippets, **local directories in ZA / AU / UK / UAE / US / NZ**, press — then finds emails: optional Hunter (`HUNTER_API_KEY`) → **published named@dealer-domain** → SMTP if :25 is open. Not LinkedIn-only. See `principalNameEmailGuess.ts` / `shared/liveMarkets.ts`. Hunter free often hits `upgrade-required` — **do not buy Starter**; paid Hunter is optional.
+- **Always-on drip:** every ~8 min Sipho **imports known-good named emails** from the research pool, then deep-digs **4** dealers **round-robin across live markets** (Cloudflare/[at] decode, in-page team links, local directories). Principals appear one-by-one when found. Generate is an optional fast burst. See `principalEnrichmentScheduler.ts` / `importOutreachReadyKnownProspects`.
 - Generate prospects: **1 deep dig + fast waves**; seeds known `principalName` / pilot contact names into email guess. Failed dealers get a **2h** in-memory cooldown so the active queue moves. See `scoutResearchJob.ts`.
 - Founder paste: `/admin/prospector` → **Paste principal** (`prospects.addPrincipal`) for instant named@dealer cards when scrape only finds info@.
 - Poll `prospects.scoutJobStatus` while Generate is running.
@@ -68,7 +68,7 @@
 - Dealer invite: `/onboarding?ref={shortcode}` stamped into onboarding notes for founder attribution.
 
 ### SEO (ICP)
-- Copy SOT: `shared/seo.ts` (Nala Dealership OS — 14-day Pilot R0 / Starter R7,990 / Professional R14,990 / Enterprise from R29,990; ZA + AU/GB/AE/US/NZ). Shell meta + JSON-LD in `client/index.html` must match Home. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`. Do not index `/admin` or `/dealer`.
+- Copy SOT: `shared/seo.ts` (Nala Dealership OS — 14-day Pilot R0 / Starter R7,990 / Professional R14,990 / Enterprise from R29,990; ZA + AU/GB/AE/US/NZ). Dealer pitch SOT: `shared/cashvertising.ts`. Public copy must not name competitor brands. Shell meta + JSON-LD in `client/index.html` must match Home. Sitemap includes `/onboarding` + `/legal` + `/for-dealers`. Do not index `/admin` or `/dealer`.
 - `useDocumentMeta` sets canonical + Twitter + optional JSON-LD.
 - Founder call kit: `docs/FOUNDER_SALES_CALL_KIT.md`. Public ROI: `/for-dealers` + home `#roi`. Hero close is Professional OS after they see this week's numbers.
 - Anonymous visitors: `featureAccess.*` hooks must stay `enabled: !!user`. `main.tsx` `isPublicUnauthedPath` must include marketing routes (`/for-dealers`, showroom, etc.) so a stray UNAUTHED tRPC error does not force `/login`.

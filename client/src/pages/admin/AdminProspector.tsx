@@ -263,7 +263,7 @@ export default function AdminProspector() {
           </Button>
           <Button
             className="btn-gold"
-            onClick={() => scout.mutate({ region: "Gauteng", count: 5 })}
+            onClick={() => scout.mutate({ region: "ZA · AU · GB · AE · US · NZ", count: 6 })}
             disabled={scout.isPending}
           >
             {scout.isPending ? (
@@ -365,9 +365,10 @@ export default function AdminProspector() {
         <div className="text-center py-16">
           <p className="text-muted-foreground">No prospects yet.</p>
           <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">
-            Sipho researches continuously (~every 10 min): imports known named
-            emails, then digs the next dealers. New cards appear when he finds a
-            real firstname@dealer-domain inbox.
+            Sipho researches continuously (~every 8 min) across ZA, AU, UK, UAE,
+            US, and NZ: imports known named emails, then deep-digs the next
+            dealers (team pages, local directories, obfuscated inboxes). New
+            cards appear when he finds a real firstname@dealer-domain inbox.
             <span className="block mt-1">
               Generate is optional — a short burst if you want more checked now.
             </span>
@@ -379,7 +380,7 @@ export default function AdminProspector() {
           <Loader2 className="h-4 w-4 animate-spin shrink-0" />
           <span>
             Sipho is deep-researching dealer websites for named emails and switchboards
-            (first 3 yards: full contact/about crawl; remaining: fast 5-page scan).
+            (first 5 yards: full contact/about crawl; remaining: fast scan).
             {typeof scoutJob.researchRemaining === "number"
               ? ` ${scoutJob.researchRemaining} left in queue.`
               : ""}

@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { CASH_FLOATING } from "@shared/cashvertising";
 
 /** Sticky pilot CTA — converts anonymous showroom browsers into pilot applications. */
 export default function FloatingPilotCTA() {
@@ -37,13 +38,13 @@ export default function FloatingPilotCTA() {
           <X className="h-4 w-4" />
         </button>
         <p className="font-tech text-[9px] uppercase tracking-[0.25em] text-primary/80 mb-1 pr-6">
-          Dealership OS
+          {CASH_FLOATING.eyebrow}
         </p>
         <p className="font-display font-semibold text-sm mb-3 leading-snug">
-          Nala on WhatsApp from your live stock — 14-day Pilot, no card.
+          {CASH_FLOATING.body}
         </p>
         <Button asChild className="btn-gold w-full h-10 text-xs font-semibold uppercase tracking-wider">
-          <Link href="/onboarding">Apply for pilot</Link>
+          <Link href="/onboarding">{CASH_FLOATING.cta}</Link>
         </Button>
       </div>
     </div>

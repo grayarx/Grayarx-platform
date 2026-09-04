@@ -9,10 +9,10 @@ import type { Express, NextFunction, Request, Response } from "express";
 import { isLivenessPath } from "./livenessHealth";
 
 /** Steady drip cadence. */
-export const PRINCIPAL_ENRICH_INTERVAL_MS = 10 * 60 * 1000;
+export const PRINCIPAL_ENRICH_INTERVAL_MS = 8 * 60 * 1000;
 
 /** Dealers to deep-research per tick (after importing ready known emails). */
-export const PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT = 2;
+export const PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT = 4;
 
 let isRunning = false;
 let lastRunCache: number | null = null;

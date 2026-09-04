@@ -1,6 +1,6 @@
 # “Still in a contract” — outreach sequence
 
-Use when a dealer replies that they are locked into AutoTrader, a DMS, WhatsApp vendor, CRM, or OEM deal.
+Use when a dealer replies that they are locked into listing sites, a DMS, WhatsApp vendor, CRM, or OEM deal.
 
 **Core reframe:** GrayArx is a **second layer**, not a cancellation.
 
@@ -14,7 +14,7 @@ Hi [Name],
 
 Totally get it — stay in your current contract.
 
-GrayArx is built to run **alongside** what you already pay for. We don’t ask you to cancel AutoTrader, your DMS, or WhatsApp Business.
+GrayArx is built to run **alongside** what you already pay for. We don’t ask you to cancel your listings, your DMS, or WhatsApp Business.
 
 What the pilot actually does:
 - Catch **after-hours** WhatsApp / web enquiries you’re missing  
