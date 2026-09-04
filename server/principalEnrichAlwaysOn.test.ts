@@ -7,9 +7,9 @@ import { SA_PROSPECT_POOL } from "./_core/saProspectPool";
 import { isOutreachReadyForDealership } from "../shared/prospectEmailQuality";
 
 describe("Sipho always-on drip", () => {
-  it("researches a small batch every ~10 min", () => {
-    expect(PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT).toBe(2);
-    expect(PRINCIPAL_ENRICH_INTERVAL_MS).toBe(10 * 60 * 1000);
+  it("researches a small batch every ~8 min", () => {
+    expect(PRINCIPAL_ENRICH_ALWAYS_ON_LIMIT).toBe(4);
+    expect(PRINCIPAL_ENRICH_INTERVAL_MS).toBe(8 * 60 * 1000);
   });
 
   it("SA pool still has outreach-ready named emails to import", () => {

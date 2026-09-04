@@ -74,9 +74,9 @@ export const DEALER_QA_ENTRIES: DealerQaEntry[] = [
     theme: "elevator",
     question: "What is GrayArx in 30 seconds?",
     answer:
-      "GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and this week's numbers. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.",
+      "GrayArx stops after-hours WhatsApps dying on your phone. You drop a CSV; Nala answers from your live stock, books the drive, and shows this week's numbers. 14-day Pilot is R0 — then most yards keep Professional OS at R14,990/mo because recovered deals already paid for it.",
     written:
-      "AI dealership OS on WhatsApp — sales, parts, service — 14-day Pilot then Professional R14,990/mo.",
+      "After-hours WhatsApp from live stock — 14-day Pilot R0, then Professional R14,990/mo.",
     keywords: ["what is grayarx", "elevator", "pitch", "overview", "in a nutshell"],
   },
   {

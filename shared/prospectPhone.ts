@@ -120,6 +120,29 @@ export function pickPreferredSaPhone(
   return extracted[0]!.display;
 }
 
+const INTL_TEL_RE =
+  /tel:\s*(\+\s*(?:61|44|1|971|64)[\d\s().-]{8,18})/gi;
+
+/** Explicit +61 / +44 / +1 / +971 / +64 from tel: hrefs — never invent. */
+export function extractIntlTelHrefs(html: string): string[] {
+  const found = new Set<string>();
+  let m: RegExpExecArray | null;
+  INTL_TEL_RE.lastIndex = 0;
+  while ((m = INTL_TEL_RE.exec(html)) !== null) {
+    const compact = m[1]!.replace(/[^\d+]/g, "");
+    if (compact.length < 10 || compact.length > 16) continue;
+    found.add(compact.startsWith("+") ? compact : `+${compact}`);
+  }
+  return [...found];
+}
+
+export function pickPreferredDealerPhone(
+  html: string,
+  opts?: { pageUrl?: string },
+): string | null {
+  return pickPreferredSaPhone(html, opts) ?? extractIntlTelHrefs(html)[0] ?? null;
+}
+
 /**
  * Keep a good existing number. Never replace it with empty.
  * Same digits → prefer the normalized display. Landline beats mobile.
@@ -128,11 +151,18 @@ export function mergeDiscoveredPhone(
   existing: string | null | undefined,
   discovered: string | null | undefined,
 ): string | null {
-  const prev = normalizeSaPhone(existing);
-  const next = normalizeSaPhone(discovered);
-  if (!next) return prev;
+  const prevSa = normalizeSaPhone(existing);
+  const nextSa = normalizeSaPhone(discovered);
+  if (nextSa || prevSa) {
+    if (!nextSa) return prevSa;
+    if (!prevSa) return nextSa;
+    if (saPhoneDigits(prevSa) === saPhoneDigits(nextSa)) return nextSa;
+    if (isSaLandline(nextSa) && !isSaLandline(prevSa)) return nextSa;
+    return prevSa;
+  }
+  const prev = (existing ?? "").trim();
+  const next = (discovered ?? "").trim();
+  if (!next) return prev || null;
   if (!prev) return next;
-  if (saPhoneDigits(prev) === saPhoneDigits(next)) return next;
-  if (isSaLandline(next) && !isSaLandline(prev)) return next;
   return prev;
 }

@@ -8,6 +8,15 @@ import IcpRoiCalculator from "@/components/IcpRoiCalculator";
 import { Button } from "@/components/ui/button";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { SEO_PAGES } from "@shared/seo";
+import {
+  CASH_CTAS,
+  CASH_FASCINATIONS,
+  CASH_FOR_DEALERS,
+  CASH_FOR_DEALERS_PROOF,
+  CASH_FOR_YOU_IF,
+  CASH_PAS,
+  CASH_RISK_REVERSAL,
+} from "@shared/cashvertising";
 
 const fadeUp = {
   initial: { opacity: 0, y: 28 },
@@ -15,14 +24,6 @@ const fadeUp = {
   viewport: { once: true, margin: "-60px" },
   transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] as const },
 };
-
-const PROOF = [
-  "CSV / DMS stock live on your showroom the same day",
-  "WhatsApp after hours — Nala answers; missed calls bounce to WhatsApp",
-  "Parts desk, service bookings, and trade-in intake on Professional OS",
-  "This week's numbers so you see recovered deals vs the R14,990 desk",
-  "14-day Pilot (150 WA cap) — then Starter R7,990 or Professional R14,990/mo",
-];
 
 export default function ForDealers() {
   useDocumentMeta({
@@ -41,26 +42,46 @@ export default function ForDealers() {
         <div className="container max-w-3xl">
           <motion.div {...fadeUp}>
             <p className="font-tech text-[10px] uppercase tracking-[0.3em] text-primary/80 mb-4">
-              For dealership principals
+              {CASH_FOR_DEALERS.eyebrow}
             </p>
             <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-5">
-              Make GrayArx a{" "}
-              <span className="text-cyber-gradient">no-brainer</span> with your own math
+              {CASH_FOR_DEALERS.h1Before}
+              <span className="text-cyber-gradient">{CASH_FOR_DEALERS.h1Accent}</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl">
-              Yards lose deals after 6pm on WhatsApp. Put your stock live, catch those leads
-              overnight, and book the drive — 14-day Pilot until you see this week's numbers on your cars.
+              {CASH_FOR_DEALERS.sub}
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Button asChild className="btn-gold h-12 px-8 font-semibold uppercase tracking-wider text-sm">
                 <Link href="/onboarding">
-                  Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
+                  {CASH_CTAS.primary} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="btn-cyber h-12 bg-transparent">
-                <a href="#roi">Run the numbers</a>
+                <a href="#roi">{CASH_CTAS.seeCost}</a>
               </Button>
             </div>
+            <p className="text-base text-white/80 leading-relaxed border-l border-primary/40 pl-5">
+              {CASH_PAS.problem} {CASH_PAS.solve}
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="pb-16">
+        <div className="container max-w-3xl">
+          <motion.div {...fadeUp} className="rounded-2xl border border-primary/20 bg-primary/5 p-6 md:p-8">
+            <p className="font-tech text-[10px] uppercase tracking-[0.22em] text-primary/80 mb-4">
+              This desk fits if
+            </p>
+            <ul className="space-y-3">
+              {CASH_FOR_YOU_IF.map((line) => (
+                <li key={line} className="flex items-start gap-2 text-sm text-white/90">
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
           </motion.div>
         </div>
       </section>
@@ -73,24 +94,42 @@ export default function ForDealers() {
         </div>
       </section>
 
-      <section className="pb-20 border-t border-primary/10 pt-16">
+      <section className="pb-16 border-t border-primary/10 pt-16">
         <div className="container max-w-3xl">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl md:text-3xl font-bold mb-6">
-              What you get in the 14-day Pilot
+              Inside the Pilot — what you will actually see
             </h2>
-            <ul className="space-y-3 mb-10">
-              {PROOF.map((line) => (
+            <ol className="space-y-4 mb-12">
+              {CASH_FASCINATIONS.map((line, i) => (
+                <li key={line} className="flex gap-4 border-l border-primary/30 pl-5">
+                  <span className="font-tech text-[10px] text-primary/70 tracking-widest tabular-nums mt-1">
+                    0{i + 1}
+                  </span>
+                  <p className="text-base text-white/90 leading-relaxed">{line}</p>
+                </li>
+              ))}
+            </ol>
+            <h2 className="font-display text-2xl md:text-3xl font-bold mb-6">
+              {CASH_FOR_DEALERS.proofH2}
+            </h2>
+            <ul className="space-y-3 mb-8">
+              {CASH_FOR_DEALERS_PROOF.map((line) => (
                 <li key={line} className="flex items-start gap-3 text-base text-white/85">
                   <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <span>{line}</span>
                 </li>
               ))}
             </ul>
-            <p className="text-sm text-muted-foreground mb-8">
-              We sit beside AutoTrader and your DMS — not a rip-replace. After the Pilot, most
-              yards close Professional OS (R14,990/mo). Month-to-month once you see proof.
-            </p>
+            <ul className="space-y-2 mb-8 text-sm text-muted-foreground">
+              {CASH_RISK_REVERSAL.map((line) => (
+                <li key={line} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-muted-foreground mb-8">{CASH_FOR_DEALERS.reasonWhy}</p>
           </motion.div>
         </div>
       </section>
@@ -102,13 +141,8 @@ export default function ForDealers() {
             className="grid lg:grid-cols-2 gap-12 items-start rounded-2xl border border-primary/20 holo-card p-8 md:p-12"
           >
             <div>
-              <h2 className="font-display text-3xl font-bold mb-4">
-                Ready when your next after-hours lead hits
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Tell us the yard. We’ll get CSV + WhatsApp live and prove one recovered path on
-                your stock.
-              </p>
+              <h2 className="font-display text-3xl font-bold mb-4">{CASH_FOR_DEALERS.closeH2}</h2>
+              <p className="text-muted-foreground leading-relaxed">{CASH_FOR_DEALERS.closeSub}</p>
             </div>
             <LeadCaptureFormOptimized />
           </motion.div>

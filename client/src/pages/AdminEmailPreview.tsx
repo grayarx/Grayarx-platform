@@ -55,9 +55,11 @@ const emailTemplates = {
             
             <p>All agents speak all 11 South African official languages and comply with POPIA.</p>
             
-            <p><strong>The result?</strong> Dealerships see 3-5x more leads captured, 40% faster response times, and 25% higher conversion rates.</p>
+            <p><strong>Here's the leak:</strong> 9pm WhatsApps sit unread. The next yard that replies gets the drive you already paid to list.</p>
             
-            <p>We're inviting dealerships to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock (WhatsApp, parts, service, this week's numbers). No card. After they see this week's numbers, most yards close Professional OS at R14,990/mo.</p>
+            <p><strong>The desk:</strong> drop your CSV. Nala answers from your live stock, books the test drive, and Monday you see this week's numbers. Runs next to your current listings — nothing to cancel.</p>
+            
+            <p>We're inviting independent yards to a <strong>14-day GrayArx Pilot</strong> — Nala Dealership OS on your stock. No card. After they see this week's numbers, most yards close Professional OS at R14,990/mo because recovered gross already paid for it.</p>
             
             <a href="https://www.grayarx.com/onboarding" class="cta-button">Join the Pilot</a>
             
@@ -105,8 +107,8 @@ const emailTemplates = {
             <h2>Following Up — Let's Schedule Your Demo</h2>
             <p>Hi there,</p>
             <p>I wanted to follow up on our initial conversation about GrayArx.</p>
-            <p>Many dealerships are already seeing 3-5x more leads captured with our AI agents running 24/7.</p>
-            <p>Would you like to schedule a quick 30-minute demo to see how it works for your dealership?</p>
+            <p>When a buyer WhatsApps at 9pm, silence is a decision. The next yard that replies gets the drive.</p>
+            <p>Give us 14 days on your stock — R0, no card. This week's numbers decide.</p>
             
             <a href="https://www.grayarx.com/book-demo" class="cta-button">Book Your Demo</a>
             

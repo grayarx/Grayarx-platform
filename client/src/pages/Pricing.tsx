@@ -50,7 +50,7 @@ export default function Pricing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild className="btn-gold h-12 px-8 font-semibold">
               <Link href="/onboarding">
-                Start 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
+                Start my 14-day Pilot <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-12 px-8">

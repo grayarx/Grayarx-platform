@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CASH_SALES_SUBJECTS } from "../../shared/cashvertising";
 
 const companyResearchSchema = z.object({
   companyName: z.string(),
@@ -77,7 +78,6 @@ export const researchCompany = async (
     reviews: [
       { platform: "Google", rating: 4.2, count: 156 },
       { platform: "Facebook", rating: 4.5, count: 89 },
-      { platform: "AutoTrader", rating: 4.3, count: 234 },
     ],
   };
 };
@@ -111,7 +111,7 @@ export const analyzeWebsite = async (url: string): Promise<WebsiteAnalysis> => {
       "Advanced analytics and reporting",
       "Automated follow-up sequences",
     ],
-    competitorMentions: ["Junk Mail", "Cars.co.za", "AutoTrader"],
+    competitorMentions: [],
   };
 };
 
@@ -172,34 +172,34 @@ export const generateEmailDraft = async (
     `Identified pain points: ${painPoints.join(", ")}`,
   ];
 
-  const subject = `${companyInfo.name}: 3 Ways to Increase Your Lead Quality by 40%`;
+  const subject = CASH_SALES_SUBJECTS.sipho(companyInfo.name);
 
   const body = `Hi ${companyInfo.name} Team,
 
-I've been analyzing leading dealerships in ${companyInfo.location}, and your operation stands out. You've built a solid reputation with ${companyInfo.reviews?.[0]?.count || "100"}+ reviews averaging ${companyInfo.reviews?.[0]?.rating || 4.3} stars.
+Quick question: when a buyer WhatsApps ${companyInfo.name} at 9pm, what actually happens tonight?
 
-I noticed a few areas where we could help you capture more qualified leads and close more deals:
+I've been looking at yards in ${companyInfo.location}. You're already in the game — ${companyInfo.reviews?.[0]?.count || "solid"}+ reviews. The leak is usually after hours, not at lunch.
 
-1. **${painPoints[0] || "Manual Lead Management"}** - You're currently handling leads manually. Our AI agents qualify and follow up with prospects 24/7, even while your team sleeps.
+What I noticed:
 
-2. **${painPoints[1] || "Limited Inventory Visibility"}** - Your inventory updates take time. We automate this and make your vehicles discoverable across multiple channels.
+1. **${painPoints[0] || "After-hours WhatsApp sitting unread"}** — the buyer who already raised their hand will not wait until 8am. The next yard that replies gets the drive.
 
-3. **${painPoints[2] || "No Multilingual Support"}** - South Africa has 11 official languages. Our agents speak them all, helping you reach more customers.
+2. **${painPoints[1] || "Stock and chat living in different places"}** — if WhatsApp can't see tonight's CSV, you quote cars you already moved.
 
-The result? Dealerships using GrayArx see:
-• 40% more qualified leads
-• 60% faster response times
-• 3x more test drives booked
-• 24/7 customer engagement
+3. **${painPoints[2] || "Follow-up that depends on who remembers"}** — that is not a process. It is a leak.
 
-I'd love to show you how this works. We offer a free 14-day trial with no credit card required.
+GrayArx is Nala Dealership OS: drop your CSV, Nala answers from YOUR stock, books the test drive, and Monday you see this week's numbers. Runs next to your current listings and DMS — nothing to cancel.
+
+14-day Pilot is R0 (150 WhatsApp cap, no card). Then this week's numbers decide — most yards keep Professional OS at R14,990/mo because recovered gross already paid for the desk.
+
+Worth 14 days on your stock?
 
 Best regards,
 Sipho
 GrayArx Prospector Agent
 The Dealership AI Operating System`;
 
-  const cta = "Book a 15-minute demo";
+  const cta = "Start the 14-day Pilot — no card";
 
   return {
     subject,

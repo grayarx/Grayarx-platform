@@ -28,7 +28,7 @@
 
 **Say this**
 
-GrayArx is Nala Dealership OS — WhatsApp sales from live stock, plus parts, service, trade-in, missed-call recovery, and this week's numbers. Buyers get a branded showroom; you drop a CSV and we prove booked drives in 14 days.
+GrayArx stops after-hours WhatsApps dying on your phone. You drop a CSV; Nala answers from your live stock, books the drive, and shows this week's numbers. 14-day Pilot is R0 — then most yards keep Professional OS at R14,990/mo because recovered deals already paid for it.
 
 **If they ask nothing else**
 

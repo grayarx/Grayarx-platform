@@ -4,7 +4,7 @@
  */
 
 export type ValueInputs = {
-  /** Online enquiries per week (AutoTrader + Cars + WhatsApp + web) */
+  /** Online enquiries per week (listings + WhatsApp + web) */
   weeklyEnquiries: number;
   /** Share that arrive after hours / weekends (0–1) */
   afterHoursShare: number;
@@ -110,7 +110,7 @@ export function calculateValue(partial?: Partial<ValueInputs>): ValueReport {
     headlines,
     oneLiner: `Not using GrayArx costs this yard about R${Math.round(gpLostMonthly).toLocaleString("en-ZA")}/mo in leaked after-hours and missed-call deals — GrayArx is R${inputs.grayArxMonthlyZar.toLocaleString("en-ZA")}/mo.`,
     dealerPitch: [
-      "You already pay AutoTrader for traffic. GrayArx stops that traffic dying overnight.",
+      "You already pay for listing traffic. GrayArx stops that traffic dying overnight.",
       "Free 14-day pilot on YOUR stock — Monday numbers decide, not a sales deck.",
       "One OS: sales + parts (optional) + service + trade-in + finance link + missed calls.",
       "Your prices, your SKUs, your CRM kept — we add the AI that answers first.",

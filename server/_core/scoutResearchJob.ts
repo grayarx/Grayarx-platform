@@ -18,12 +18,14 @@ import {
   markProspectResearchAttempted,
   persistResearchAttempt,
   hydrateResearchCooldownsFromDb,
+  poolEntryCountry,
 } from "./saProspectPool";
+import { LIVE_MARKET_NAME } from "../../shared/liveMarkets";
 import { enrichDealershipPrincipal } from "./prospectPrincipalEnrichment";
 import { persistHitToIcpYard, researchIcpContacts } from "./icpContactResearch";
 
 /** First N Generate dealers use full contact/about/team crawl (not the 5-page fast cap). */
-export const GENERATE_DEEP_COUNT = 3;
+export const GENERATE_DEEP_COUNT = 5;
 
 let scoutJobRunning = false;
 let lastScoutJobAt: number | null = null;
@@ -131,7 +133,7 @@ export async function runScoutResearchJob(input: {
             dealershipName: p.name,
             website: p.website,
             city: p.city,
-            region: p.province,
+            region: `${p.province}, ${LIVE_MARKET_NAME[poolEntryCountry(p)]}`,
             phone: p.phone,
             brandsCarried: p.brands.join(", "),
             estimatedMonthlyVolume: p.estimatedMonthlyVolume,
@@ -178,7 +180,7 @@ export async function runScoutResearchJob(input: {
         await createProspects([
           {
             dealershipName: p.name,
-            region: p.province,
+            region: `${p.province}, ${LIVE_MARKET_NAME[poolEntryCountry(p)]}`,
             city: p.city,
             phone: result.phone ?? p.phone,
             email: hit.email,

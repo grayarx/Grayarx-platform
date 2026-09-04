@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractIntlTelHrefs,
   extractSaPhonesFromHtml,
   mergeDiscoveredPhone,
   normalizeSaPhone,
+  pickPreferredDealerPhone,
   pickPreferredSaPhone,
 } from "../shared/prospectPhone";
 
@@ -48,5 +50,12 @@ describe("SA phone extraction from HTML", () => {
     expect(mergeDiscoveredPhone("011 811 4008", "")).toBe("011 811 4008");
     expect(mergeDiscoveredPhone(null, "011 615 0228")).toBe("011 615 0228");
     expect(mergeDiscoveredPhone("082 111 2222", "011 811 4008")).toBe("011 811 4008");
+  });
+
+  it("keeps explicit international tel: hrefs when the yard is not SA", () => {
+    const html = `<a href="tel:+61393182744">Call Melbourne</a>`;
+    expect(extractIntlTelHrefs(html)[0]).toMatch(/^\+613/);
+    expect(pickPreferredDealerPhone(html)).toMatch(/^\+613/);
+    expect(mergeDiscoveredPhone(null, "+61393182744")).toBe("+61393182744");
   });
 });

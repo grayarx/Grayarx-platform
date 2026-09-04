@@ -12,12 +12,15 @@ import {
   updateProspectContact,
   logAgentActivity,
 } from "../db";
+import { LIVE_MARKET_NAME } from "../../shared/liveMarkets";
 import {
   SA_PROSPECT_POOL,
   isOnResearchCooldown,
   markProspectResearchAttempted,
   persistResearchAttempt,
   hydrateResearchCooldownsFromDb,
+  poolEntryCountry,
+  roundRobinByMarket,
 } from "./saProspectPool";
 import { PILOT_PROSPECTS } from "../../shared/pilotProspectSegments";
 import {
@@ -85,7 +88,7 @@ export async function importOutreachReadyKnownProspects(): Promise<{
     const assessment = assessProspectEmail(p.email);
     toCreate.push({
       dealershipName: p.name,
-      region: p.province,
+      region: `${p.province}, ${LIVE_MARKET_NAME[poolEntryCountry(p)]}`,
       city: p.city,
       phone: p.phone,
       email: p.email,
@@ -210,22 +213,19 @@ export async function collectPrincipalEnrichmentTargets(
     });
   }
 
-  // 2) SA pool — prefer rows with a known principalName (higher yield)
-  const poolCandidates = shuffleInPlace(
-    SA_PROSPECT_POOL.filter((p) => {
-      if (!p.website?.trim()) return false;
-      if (!needsEnrichmentEmail(p.email, p.website)) return false; // ready ones imported separately
-      if (isOnResearchCooldown(p.name, p.website)) return false;
-      const existingRow = byName.get(p.name.toLowerCase().trim());
-      if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
-        return false;
-      }
-      if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) return false;
-      return true;
-    }),
-  );
-  // Stable preference: known-name rows first within the shuffle buckets
-  poolCandidates.sort((a, b) => Number(Boolean(b.principalName)) - Number(Boolean(a.principalName)));
+  // 2) Live-market pool — round-robin ZA / AU / GB / AE / US / NZ
+  const poolFiltered = SA_PROSPECT_POOL.filter((p) => {
+    if (!p.website?.trim()) return false;
+    if (!needsEnrichmentEmail(p.email, p.website)) return false; // ready ones imported separately
+    if (isOnResearchCooldown(p.name, p.website)) return false;
+    const existingRow = byName.get(p.name.toLowerCase().trim());
+    if (existingRow && !needsEnrichmentEmail(existingRow.email, existingRow.website)) {
+      return false;
+    }
+    if (existingRow && !staleEnrichment(existingRow.enrichedAt ?? null, now)) return false;
+    return true;
+  });
+  const poolCandidates = roundRobinByMarket(poolFiltered, poolFiltered.length);
   for (const p of poolCandidates) {
     if (targets.length >= limit) break;
     if (targets.some((t) => t.dealershipName.toLowerCase() === p.name.toLowerCase())) continue;
@@ -235,7 +235,7 @@ export async function collectPrincipalEnrichmentTargets(
       dealershipName: p.name,
       website: p.website,
       city: p.city,
-      region: p.province,
+      region: `${p.province}, ${LIVE_MARKET_NAME[poolEntryCountry(p)]}`,
       phone: p.phone,
       brandsCarried: p.brands.join(", "),
       estimatedMonthlyVolume: p.estimatedMonthlyVolume,

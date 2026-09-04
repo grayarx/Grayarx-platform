@@ -8,6 +8,7 @@ import {
   hydrateIcpResearchTargets,
   MOCK_PROSPECTS,
 } from "@nalaOs/prospector-data";
+import { LIVE_MARKET_IDS } from "../../shared/liveMarkets";
 import { isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
 import { createProspects, listProspects, updateProspectContact } from "../db";
 import { enrichDealershipPrincipal } from "./prospectPrincipalEnrichment";
@@ -64,12 +65,26 @@ async function runIcpResearchUnlocked(opts?: {
   const limit = Math.min(Math.max(opts?.limit ?? ICP_RESEARCH_BATCH, 1), 12);
   const deep = opts?.deep !== false;
 
-  const targets = MOCK_PROSPECTS.filter((p) => {
+  const needy = MOCK_PROSPECTS.filter((p) => {
     if (!p.website?.trim()) return false;
     const needsEmail = !isOutreachReadyForDealership(p.email, p.website);
     const needsPhone = !p.phone?.trim();
     return needsEmail || needsPhone;
-  }).slice(0, limit);
+  });
+  const queues = LIVE_MARKET_IDS.map((id) => needy.filter((p) => p.regionId === id));
+  const targets: typeof needy = [];
+  while (targets.length < limit) {
+    let added = false;
+    for (const q of queues) {
+      if (targets.length >= limit) break;
+      const next = q.shift();
+      if (next) {
+        targets.push(next);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
 
   let emailsFound = 0;
   let phonesFound = 0;
@@ -82,6 +97,7 @@ async function runIcpResearchUnlocked(opts?: {
         dealershipName: p.name,
         website: p.website,
         city: p.city,
+        region: p.location,
         phone: p.phone,
       },
       { deep, fast: !deep },

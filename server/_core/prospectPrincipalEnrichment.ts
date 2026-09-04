@@ -9,18 +9,23 @@
 
 import { invokeLLM } from "./llm";
 import {
+  isSaLandline,
+  mergeDiscoveredPhone,
+  pickPreferredDealerPhone,
+} from "../../shared/prospectPhone";
+import dns from "node:dns/promises";
+import {
+  extractContactishUrls,
+  extractEmailsFromHtml as extractEmailsFromHtmlRaw,
+  jsonLdPeopleAsText,
+} from "./prospectEmailExtract";
+import {
   assessProspectEmail,
   emailDomain,
   emailMatchesWebsiteDomain,
   isOutreachReadyForDealership,
   type ProspectEmailAssessment,
 } from "../../shared/prospectEmailQuality";
-import {
-  isSaLandline,
-  mergeDiscoveredPhone,
-  pickPreferredSaPhone,
-} from "../../shared/prospectPhone";
-import dns from "node:dns/promises";
 
 async function domainHasMx(email: string): Promise<boolean> {
   const domain = emailDomain(email);
@@ -33,8 +38,10 @@ async function domainHasMx(email: string): Promise<boolean> {
   }
 }
 
-const FETCH_TIMEOUT_MS = 4_000;
-const FETCH_TIMEOUT_FAST_MS = 3_000;
+const FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_FAST_MS = 5_000;
+const PAGE_CONCURRENCY = 4;
+const MAX_EXTRA_URLS = 10;
 const MAX_HTML_CHARS = 80_000;
 const MAX_TEXT_FOR_LLM = 12_000;
 
@@ -63,6 +70,11 @@ export const CONTACT_PATHS = [
   "/directors",
   "/our-people",
   "/people",
+  "/contact.html",
+  "/about.html",
+  "/team.html",
+  "/meet-our-team",
+  "/management-team",
 ];
 
 /** Fewer pages for interactive / budgeted runs — still covers common SA dealer contact URLs */
@@ -159,20 +171,9 @@ function isBlockedEmail(email: string): boolean {
   return BLOCKED_EMAIL_SUBSTRINGS.some((b) => lower.includes(b));
 }
 
-/** Pure: pull emails from HTML (mailto + plain text). */
+/** Pure: mailto, plain text, Cloudflare, [at] obfuscation, JSON-LD. */
 export function extractEmailsFromHtml(html: string): string[] {
-  const found = new Set<string>();
-  const mailtoRe = /mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
-  let m: RegExpExecArray | null;
-  while ((m = mailtoRe.exec(html)) !== null) {
-    found.add(m[1]!.toLowerCase());
-  }
-  const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-  const plain = html.match(emailRe) ?? [];
-  for (const e of plain) {
-    found.add(e.toLowerCase());
-  }
-  return [...found].filter((e) => {
+  return extractEmailsFromHtmlRaw(html).filter((e) => {
     if (isBlockedEmail(e)) return false;
     const a = assessProspectEmail(e);
     return a.quality !== "invalid";
@@ -189,6 +190,36 @@ function htmlToRoughText(html: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_TEXT_FOR_LLM);
+}
+
+function canonicalPageUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    const path = u.pathname.replace(/\/+$/, "");
+    return `${u.origin}${path}`;
+  } catch {
+    return url.replace(/\/+$/, "");
+  }
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]!);
+    }
+  }
+  const n = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: n }, () => worker()));
+  return out;
 }
 
 async function fetchPage(
@@ -335,51 +366,76 @@ export async function enrichDealershipPrincipal(
   const allEmails = new Set<string>();
   let bestPageUrl = base;
   let bestPageText = "";
+  const pageTexts: string[] = [];
   let pagesTried = 0;
   let anyOk = false;
   let discoveredPhone: string | null = null;
   let foundNamedOnPage = false;
+  let extraUrlsAdded = 0;
 
-  for (const path of paths) {
-    if (foundNamedOnPage && discoveredPhone && !CONTACTISH_PATH.test(path)) {
-      break;
-    }
-    const url = `${base}${path}`;
-    pagesTried += 1;
-    const page = await fetchPage(url, timeoutMs);
-    if (!page.ok || !page.html) continue;
-    anyOk = true;
-    const pagePhone = pickPreferredSaPhone(page.html, {
-      pageUrl: `${page.finalUrl} ${path}`,
-    });
-    if (pagePhone) {
-      const preferSwitchboard =
-        CONTACTISH_PATH.test(path) || CONTACTISH_PATH.test(page.finalUrl);
-      if (!discoveredPhone) {
-        discoveredPhone = pagePhone;
-      } else if (preferSwitchboard && isSaLandline(pagePhone) && !isSaLandline(discoveredPhone)) {
-        discoveredPhone = pagePhone;
-      } else {
-        discoveredPhone = mergeDiscoveredPhone(discoveredPhone, pagePhone);
+  const seen = new Set<string>();
+  const queue: string[] = [];
+  const enqueue = (url: string) => {
+    const key = canonicalPageUrl(url);
+    if (seen.has(key)) return;
+    seen.add(key);
+    queue.push(key);
+  };
+  for (const path of paths) enqueue(`${base}${path}`);
+
+  while (queue.length > 0) {
+    if (fast && foundNamedOnPage && discoveredPhone) break;
+    const batch = queue.splice(0, PAGE_CONCURRENCY);
+    pagesTried += batch.length;
+    const pages = await mapPool(batch, PAGE_CONCURRENCY, (url) => fetchPage(url, timeoutMs));
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i]!;
+      const requested = batch[i]!;
+      if (!page.ok || !page.html) continue;
+      anyOk = true;
+      const pagePhone = pickPreferredDealerPhone(page.html, {
+        pageUrl: `${page.finalUrl} ${requested}`,
+      });
+      if (pagePhone) {
+        const preferSwitchboard =
+          CONTACTISH_PATH.test(requested) || CONTACTISH_PATH.test(page.finalUrl);
+        if (!discoveredPhone) {
+          discoveredPhone = pagePhone;
+        } else if (preferSwitchboard && isSaLandline(pagePhone) && !isSaLandline(discoveredPhone)) {
+          discoveredPhone = pagePhone;
+        } else {
+          discoveredPhone = mergeDiscoveredPhone(discoveredPhone, pagePhone);
+        }
       }
-    }
-    const emails = extractEmailsFromHtml(page.html);
-    for (const e of emails) allEmails.add(e);
-    const ranked = rankEmails(emails.filter((e) => emailMatchesWebsiteDomain(e, base)));
-    if (ranked.some((r) => r.email && isOutreachReadyForDealership(r.email, base))) {
-      bestPageUrl = page.finalUrl;
-      bestPageText = htmlToRoughText(page.html);
-      foundNamedOnPage = true;
-      if (discoveredPhone) continue;
-    } else if (!bestPageText) {
-      bestPageUrl = page.finalUrl;
-      bestPageText = htmlToRoughText(page.html);
+      const emails = extractEmailsFromHtml(page.html);
+      for (const e of emails) allEmails.add(e);
+      const text = [htmlToRoughText(page.html), jsonLdPeopleAsText(page.html)]
+        .filter(Boolean)
+        .join(". ");
+      if (text) pageTexts.push(text);
+      const ranked = rankEmails(emails.filter((e) => emailMatchesWebsiteDomain(e, base)));
+      if (ranked.some((r) => r.email && isOutreachReadyForDealership(r.email, base))) {
+        bestPageUrl = page.finalUrl;
+        bestPageText = text || htmlToRoughText(page.html);
+        foundNamedOnPage = true;
+      } else if (!bestPageText) {
+        bestPageUrl = page.finalUrl;
+        bestPageText = text || htmlToRoughText(page.html);
+      }
+      if (extraUrlsAdded < MAX_EXTRA_URLS) {
+        for (const extra of extractContactishUrls(page.html, base)) {
+          if (extraUrlsAdded >= MAX_EXTRA_URLS) break;
+          const before = seen.size;
+          enqueue(extra);
+          if (seen.size > before) extraUrlsAdded += 1;
+        }
+      }
     }
   }
 
   discoveredPhone = mergeDiscoveredPhone(
     discoveredPhone,
-    pickPreferredSaPhone(bestPageText),
+    pickPreferredDealerPhone(bestPageText),
   );
   const phone = mergeDiscoveredPhone(candidate.phone, discoveredPhone);
   const phoneNote = phone ? ` Switchboard: ${phone}.` : "";
@@ -407,7 +463,7 @@ export async function enrichDealershipPrincipal(
   if (outreach.length === 0) {
     // Broad public search (site + open web + LinkedIn/Facebook + SA directories + press),
     // then map names → named@dealer-domain without inventing filler.
-    const pageTexts = [bestPageText].filter(Boolean);
+    const pageTextsForGuess = (pageTexts.length ? pageTexts : [bestPageText]).filter(Boolean);
     try {
       const {
         discoverPrincipalPeople,
@@ -417,9 +473,10 @@ export async function enrichDealershipPrincipal(
         dealershipName: candidate.dealershipName,
         website: base,
         city: candidate.city,
-        pageTexts,
+        pageTexts: pageTextsForGuess,
         fast,
         knownPeople: candidate.knownPeople,
+        region: candidate.region,
       });
       const guessed = await verifyGuessedPrincipalEmail({
         people,

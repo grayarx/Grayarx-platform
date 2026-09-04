@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrincipalNameSearchQueries,
   buildPublishedEmailSearchQueries,
+  buildSaDirectoryUrls,
   extractBraveSearchBundle,
   extractEmailsFromText,
   extractPrincipalNamesFromText,
@@ -89,6 +90,21 @@ describe("principal name → email guess", () => {
     expect(qs.some((q) => q.includes("site:cylex.co.za"))).toBe(true);
     expect(qs.some((q) => /appointed|promoted/.test(q))).toBe(true);
     expect(qs.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("uses Australian directories when the market is AU", () => {
+    const qs = buildPrincipalNameSearchQueries("M&G Motors", "Melbourne", "AU");
+    expect(qs.some((q) => q.includes("yellowpages.com.au"))).toBe(true);
+    expect(qs.some((q) => q.includes("Australia"))).toBe(true);
+    expect(qs.every((q) => !q.includes("brabys.com"))).toBe(true);
+  });
+
+  it("builds direct SA directory URLs without a search engine", () => {
+    const urls = buildSaDirectoryUrls("Voncal Auto", "Pretoria");
+    expect(urls.some((u) => u.includes("brabys.com"))).toBe(true);
+    expect(urls.some((u) => u.includes("cylex.co.za"))).toBe(true);
+    expect(urls.some((u) => u.includes("yellosa.co.za"))).toBe(true);
+    expect(urls.every((u) => /^https:\/\//.test(u))).toBe(true);
   });
 
   it("builds published-email queries across directories and social", () => {

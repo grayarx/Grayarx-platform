@@ -94,7 +94,7 @@ const DEALER_NAV: Array<{
     keywords: [/\bphotos?\b/i, /\bimages?\b/i],
     href: "/dealer/csv-photo",
     label: "Photos",
-    blurb: "8-angle uploads, AutoTrader image saves, and photo health.",
+    blurb: "8-angle uploads, listing-export image saves, and photo health.",
   },
   {
     keywords: [/\btrade[\s-]?in/i, /\btradeins?\b/i],

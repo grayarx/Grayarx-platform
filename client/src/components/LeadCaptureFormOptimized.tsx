@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Sparkles, Loader2, TrendingUp, Users, Zap } from "lucide-react";
+import { CASH_CTAS, CASH_FORM } from "@shared/cashvertising";
 
 export default function LeadCaptureFormOptimized() {
   const [submitting, setSubmitting] = useState(false);
@@ -109,14 +110,14 @@ export default function LeadCaptureFormOptimized() {
           <div className="flex items-center gap-3 mb-3">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">
-              Limited Founding Spots Available
+              {CASH_FORM.scarcity}
             </span>
           </div>
           <h3 className="font-display text-3xl md:text-4xl font-bold mb-2">
-            Start your 14-day Pilot
+            {CASH_FORM.h3}
           </h3>
           <p className="text-muted-foreground text-sm">
-            3 fields. 2 minutes. Nala OS on your stock — no card.
+            {CASH_FORM.sub}
           </p>
         </div>
 
@@ -129,7 +130,7 @@ export default function LeadCaptureFormOptimized() {
               required
               value={form.dealershipName}
               onChange={(e) => setForm({ ...form, dealershipName: e.target.value })}
-              placeholder="e.g., Premium Motors"
+              placeholder="e.g. ABC Motors"
               className="h-11"
             />
           </div>
@@ -192,32 +193,25 @@ export default function LeadCaptureFormOptimized() {
               Setting up your trial...
             </>
           ) : (
-            "Get Free Trial Now"
+            CASH_CTAS.formSubmit
           )}
         </Button>
 
         {/* TRUST SIGNALS */}
         <div className="pt-4 border-t border-primary/20 space-y-3">
           <p className="text-xs text-center text-muted-foreground font-medium">
-            ✓ No credit card required · ✓ Setup in 24h · ✓ POPIA compliant
+            {CASH_FORM.trust}
           </p>
         </div>
       </form>
 
-      {/* TESTIMONIAL SECTION */}
       <div className="glass rounded-xl p-6 border border-primary/20">
-        <p className="text-sm italic text-muted-foreground mb-3">
-          "GrayArx captured 47 qualified leads in our first month. Our sales team can't keep up with the quality."
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-2">
+          {CASH_FORM.proofTitle}
         </p>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">JM</span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold">John Mthembu</p>
-            <p className="text-xs text-muted-foreground">Sales Director, Premium Motors</p>
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {CASH_FORM.proofBody}
+        </p>
       </div>
     </div>
   );

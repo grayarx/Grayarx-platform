@@ -1,5 +1,10 @@
 import { assessProspectEmail, isOutreachReadyForDealership } from "../../shared/prospectEmailQuality";
 import {
+  LIVE_MARKET_IDS,
+  inferLiveMarketFromWebsite,
+  type LiveMarketId,
+} from "../../shared/liveMarkets";
+import {
   RESEARCH_COOLDOWN_MS,
   hydrateResearchCooldownsFromDb,
   isResearchOnCooldown,
@@ -25,6 +30,8 @@ export interface SAProspectEntry {
    */
   principalName?: string;
   principalRole?: string;
+  /** Live market — ZA default when omitted (legacy SA rows). */
+  country?: LiveMarketId;
 }
 
 export const SA_PROSPECT_POOL: SAProspectEntry[] = [
@@ -863,6 +870,220 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
     estimatedMonthlyVolume: 170,
     website: "https://www.southgatemotors.co.za",
   },
+
+  // ─── Australia ────────────────────────────────────────────────────────────
+  {
+    name: "M&G Motors",
+    city: "Braybrook, Melbourne",
+    province: "Victoria",
+    email: "sales@mgmotors.com.au",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 80,
+    website: "https://mgmotors.com.au",
+    country: "AU",
+  },
+  {
+    name: "Dealer Direct Car Sales",
+    city: "Sunshine North, Melbourne",
+    province: "Victoria",
+    email: "info@dealerdirectcarsales.com.au",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "budget",
+    estimatedMonthlyVolume: 40,
+    website: "https://www.dealerdirectcarsales.com.au",
+    country: "AU",
+  },
+  {
+    name: "Nippon Imports",
+    city: "Sydney",
+    province: "New South Wales",
+    email: "info@nipponimports.com.au",
+    phone: "",
+    brands: ["Japanese used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 50,
+    website: "https://www.nipponimports.com.au",
+    country: "AU",
+  },
+  {
+    name: "Karuma Autohaus",
+    city: "Mordialloc, Melbourne",
+    province: "Victoria",
+    email: "sales@karumaautohaus.com",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 25,
+    website: "https://karumaautohaus.com",
+    country: "AU",
+  },
+
+  // ─── United Kingdom ───────────────────────────────────────────────────────
+  {
+    name: "Dace Motor Group",
+    city: "Stockport",
+    province: "England",
+    email: "info@dacemotorgroup.co.uk",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 120,
+    website: "https://www.dacemotorgroup.co.uk",
+    country: "GB",
+  },
+  {
+    name: "Cargiant",
+    city: "London",
+    province: "England",
+    email: "info@cargiant.co.uk",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 200,
+    website: "https://www.cargiant.co.uk",
+    country: "GB",
+  },
+  {
+    name: "Big Motoring World",
+    city: "West Malling",
+    province: "England",
+    email: "info@bigmotoringworld.co.uk",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 180,
+    website: "https://www.bigmotoringworld.co.uk",
+    country: "GB",
+  },
+  {
+    name: "UK Carheroes",
+    city: "Birmingham",
+    province: "England",
+    email: "info@ukcarheroes.co.uk",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "budget",
+    estimatedMonthlyVolume: 35,
+    website: "https://ukcarheroes.co.uk",
+    country: "GB",
+  },
+
+  // ─── United Arab Emirates ─────────────────────────────────────────────────
+  {
+    name: "Al Nabooda Select",
+    city: "Dubai",
+    province: "Dubai",
+    email: "info@alnaboodaselect.com",
+    phone: "",
+    brands: ["Audi", "Porsche", "Volkswagen"],
+    segment: "luxury",
+    estimatedMonthlyVolume: 40,
+    website: "https://alnaboodaselect.com",
+    country: "AE",
+  },
+  {
+    name: "Al Nabooda Automobiles",
+    city: "Dubai",
+    province: "Dubai",
+    email: "info@nabooda-auto.com",
+    phone: "",
+    brands: ["Audi", "Porsche", "Volkswagen"],
+    segment: "luxury",
+    estimatedMonthlyVolume: 80,
+    website: "https://nabooda-auto.com",
+    country: "AE",
+  },
+
+  // ─── United States ────────────────────────────────────────────────────────
+  {
+    name: "IMD Motors",
+    city: "Dallas",
+    province: "Texas",
+    email: "info@imdmotorsinc.com",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 60,
+    website: "https://www.imdmotorsinc.com",
+    country: "US",
+  },
+  {
+    name: "Texas Cars Direct",
+    city: "Dallas",
+    province: "Texas",
+    email: "info@texascarsdirect.com",
+    phone: "",
+    brands: ["Luxury used"],
+    segment: "luxury",
+    estimatedMonthlyVolume: 45,
+    website: "https://www.texascarsdirect.com",
+    country: "US",
+  },
+  {
+    name: "OpenRoad Auto Group",
+    city: "Miami",
+    province: "Florida",
+    email: "info@openroad-autos.com",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 40,
+    website: "https://openroad-autos.com",
+    country: "US",
+  },
+  {
+    name: "Premier Autos of Dallas",
+    city: "Addison",
+    province: "Texas",
+    email: "info@premierautosofdallas.com",
+    phone: "",
+    brands: ["Luxury used"],
+    segment: "luxury",
+    estimatedMonthlyVolume: 35,
+    website: "https://www.premierautosofdallas.com",
+    country: "US",
+  },
+
+  // ─── New Zealand ──────────────────────────────────────────────────────────
+  {
+    name: "Turners Cars",
+    city: "Auckland",
+    province: "Auckland",
+    email: "info@turners.co.nz",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 200,
+    website: "https://www.turners.co.nz",
+    country: "NZ",
+  },
+  {
+    name: "Andrew Simms",
+    city: "Auckland",
+    province: "Auckland",
+    email: "info@andrewsimms.co.nz",
+    phone: "",
+    brands: ["Mitsubishi", "Kia"],
+    segment: "volume",
+    estimatedMonthlyVolume: 150,
+    website: "https://www.andrewsimms.co.nz",
+    country: "NZ",
+  },
+  {
+    name: "Andrew Simms Used Manukau",
+    city: "Manukau",
+    province: "Auckland",
+    email: "info@andrewsimmsused.co.nz",
+    phone: "",
+    brands: ["Multi-brand used"],
+    segment: "volume",
+    estimatedMonthlyVolume: 80,
+    website: "https://www.andrewsimmsused.co.nz",
+    country: "NZ",
+  },
 ];
 
 /**
@@ -870,6 +1091,45 @@ export const SA_PROSPECT_POOL: SAProspectEntry[] = [
  * Does NOT require a pre-known named email — Sipho enriches from the site.
  * Skips names on short research cooldown (tried recently, no named email yet).
  */
+export function poolEntryCountry(p: SAProspectEntry): LiveMarketId {
+  return p.country ?? inferLiveMarketFromWebsite(p.website) ?? "ZA";
+}
+
+function shuffleRows<T>(rows: T[]): T[] {
+  const copy = [...rows];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+  }
+  return copy;
+}
+
+export function roundRobinByMarket(
+  available: SAProspectEntry[],
+  batchSize: number,
+): SAProspectEntry[] {
+  const queues = LIVE_MARKET_IDS.map((id) => {
+    const rows = available.filter((p) => poolEntryCountry(p) === id);
+    const named = shuffleRows(rows.filter((p) => p.principalName));
+    const rest = shuffleRows(rows.filter((p) => !p.principalName));
+    return [...named, ...rest];
+  });
+  const batch: SAProspectEntry[] = [];
+  while (batch.length < batchSize) {
+    let added = false;
+    for (const q of queues) {
+      if (batch.length >= batchSize) break;
+      const next = q.shift();
+      if (next) {
+        batch.push(next);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return batch;
+}
+
 export function pickNextProspectsForResearch(
   existingNames: string[],
   batchSize = 8,
@@ -881,14 +1141,7 @@ export function pickNextProspectsForResearch(
       Boolean(p.website?.trim()) &&
       !isOnResearchCooldown(p.name, p.website),
   );
-
-  const shuffled = [...available];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  const batch = shuffled.slice(0, batchSize);
+  const batch = roundRobinByMarket(available, batchSize);
   const researchRemaining = Math.max(0, available.length - batch.length);
   return { batch, researchRemaining };
 }
