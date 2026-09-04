@@ -2472,7 +2472,15 @@ export async function provisionOnboardingSubmission(
   id: number,
   reviewerId?: number,
   opts?: { groupKey?: string | null },
-): Promise<{ dealershipId: number; created: boolean; publicShortcode?: string }> {
+): Promise<{
+  dealershipId: number;
+  created: boolean;
+  publicShortcode?: string;
+  ownerEmail: string;
+  ownerName: string;
+  dealershipName: string;
+  csvUrl: string | null;
+}> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
@@ -2496,7 +2504,16 @@ export async function provisionOnboardingSubmission(
     if (opts?.groupKey != null) {
       await setDealershipGroupKey(sub.provisionedDealershipId, opts.groupKey);
     }
-    return { dealershipId: sub.provisionedDealershipId, created: false };
+    const existingYard = await getDealershipById(sub.provisionedDealershipId);
+    return {
+      dealershipId: sub.provisionedDealershipId,
+      created: false,
+      publicShortcode: existingYard?.publicShortcode ?? undefined,
+      ownerEmail: sub.ownerEmail,
+      ownerName: sub.ownerName,
+      dealershipName: sub.dealershipName,
+      csvUrl: sub.csvUrl ?? null,
+    };
   }
 
   const { resolveOnboardingWhatsappPhoneNumberId } = await import(
@@ -2534,7 +2551,15 @@ export async function provisionOnboardingSubmission(
       (` shortcode=${created.publicShortcode}`),
   );
 
-  return { dealershipId: created.id, created: true, publicShortcode: created.publicShortcode };
+  return {
+    dealershipId: created.id,
+    created: true,
+    publicShortcode: created.publicShortcode,
+    ownerEmail: sub.ownerEmail,
+    ownerName: sub.ownerName,
+    dealershipName: sub.dealershipName,
+    csvUrl: sub.csvUrl ?? null,
+  };
 }
 
 // Approval queue

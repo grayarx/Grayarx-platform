@@ -116,7 +116,8 @@ const INTENT_KEYWORDS: Record<Exclude<Intent, "general">, string[]> = {
   ],
   availability: [
     "available", "still for sale", "in stock", "beskikbaar", "iyatholakala", "fumaneha",
-    "disponível", "disponivel", "still have",
+    "disponível", "disponivel", "still have", "still there", "is it sold", "sold already",
+    "on the floor", "still on the lot",
   ],
 };
 

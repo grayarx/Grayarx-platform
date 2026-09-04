@@ -3637,7 +3637,21 @@ export const appRouter = router({
           const result = await provisionOnboardingSubmission(input.id, ctx.user.id as any, {
             groupKey: input.groupKey,
           });
-          return { ok: true, dealershipId: result.dealershipId, created: result.created };
+          const { finishOnboardingProvision } = await import("./_core/onboardingProvision");
+          const finished = await finishOnboardingProvision(result);
+          return {
+            ok: true,
+            dealershipId: finished.dealershipId,
+            created: finished.created,
+            publicShortcode: finished.publicShortcode,
+            login: {
+              email: finished.login.email,
+              created: finished.login.created,
+              linkedExisting: finished.login.linkedExisting,
+              conflict: finished.login.conflict,
+              temporaryPassword: finished.login.temporaryPassword,
+            },
+          };
         }
         await updateOnboardingStatus(input.id, input.decision, ctx.user.id as any);
         return { ok: true };

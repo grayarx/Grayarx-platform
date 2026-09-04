@@ -9,6 +9,15 @@ import {
   recordLlmPolish,
   recordTemplateReply,
 } from "@nalaOs/billing/usage";
+import { ensureWhatsAppSpacing } from "@shared/nalaGrammarPolish";
+
+/** If the model flattened a two-bubble template, keep the locked copy. */
+export function applyPolishedLayout(template: string, polished: string): string | null {
+  const spaced = ensureWhatsAppSpacing(polished);
+  if (!spaced) return null;
+  if (template.includes("\n\n") && !spaced.includes("\n\n")) return null;
+  return spaced;
+}
 
 export type PolishResult = {
   reply: string;
@@ -60,7 +69,7 @@ export async function polishNalaReply(input: {
           {
             role: "system",
             content:
-              "You are Nala, a South African dealership WhatsApp assistant. Rewrite the TEMPLATE for natural WhatsApp tone. Keep every fact: prices, stock numbers, times, links, names. Do NOT invent vehicles, parts, or prices. Output only the rewritten message.",
+              "You are Nala, a dealership WhatsApp assistant. Rewrite the TEMPLATE in natural WhatsApp tone. Keep every fact: prices, stock, times, links, names. Keep the same blank lines (\\n\\n) between sections. Do NOT invent vehicles, parts, or prices. Do not collapse the message into one paragraph. Output only the rewritten message.",
           },
           {
             role: "user",
@@ -109,9 +118,20 @@ export async function polishNalaReply(input: {
       };
     }
 
+    const laidOut = applyPolishedLayout(input.templateReply, content);
+    if (!laidOut) {
+      recordTemplateReply(input.dealershipId);
+      return {
+        reply: input.templateReply,
+        mode: "template",
+        reason: "OpenAI polish flattened WhatsApp spacing — template kept.",
+        polished: false,
+      };
+    }
+
     recordLlmPolish(input.dealershipId);
     return {
-      reply: content,
+      reply: laidOut,
       mode: "llm_polish",
       reason: decision.reason,
       polished: true,

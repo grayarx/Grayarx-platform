@@ -124,6 +124,34 @@ describe("answerShowroomQuestion — all languages", () => {
     expect(reply).toContain("Petrol");
   });
 
+  it("English availability names price and asks for a viewing day", () => {
+    const { answered, intent, reply } = answerShowroomQuestion(
+      { ...vehicle, price: 450_000 },
+      "is it still available",
+      "en",
+    );
+    expect(answered).toBe(true);
+    expect(intent).toBe("availability");
+    expect(reply).toContain("2001 Ford Mustang");
+    expect(reply).toMatch(/450/);
+    expect(reply).toContain("\n\n");
+    expect(reply.toLowerCase()).toMatch(/viewing|day that works/);
+  });
+
+  it("English general reply leads with live specs, not a name stall", () => {
+    const { answered, intent, reply } = answerShowroomQuestion(
+      { ...vehicle, price: 450_000, km: 80_000 },
+      "tell me about this car",
+      "en",
+    );
+    expect(answered).toBe(false);
+    expect(intent).toBe("general");
+    expect(reply).toMatch(/450/);
+    expect(reply).toMatch(/80[\s\u00a0]?000/);
+    expect(reply.toLowerCase()).toMatch(/viewing|finance|trade-in/);
+    expect(reply.toLowerCase()).not.toContain("what's your name so the team");
+  });
+
   it("greets in all official languages without English fallback", () => {
     const langs = ["en", "af", "zu", "xh", "st", "nso", "tn", "ts", "ss", "ve", "nr"] as const;
     for (const lang of langs) {

@@ -60,7 +60,7 @@ export function updateConvState(phone: string, patch: Partial<ConvState>): ConvS
 
 // ── CTA + greeting strings ───────────────────────────────────────────────────
 const VEHICLE_CTA: Record<LanguageCode, string> = {
-  en: "If you'd like to come in for a test drive, I can arrange that — just say the word. Or if you'd like to explore finance options first, I can point you in the right direction. What would you prefer?",
+  en: "Reply with a day that works for a viewing — or say finance / trade-in if you'd rather start there.",
   af: "As jy vir 'n toetsrit wil inkom, kan ek dit vir jou reël — sê net die woord. Of as jy eers finansieringsopsies wil verken, wys ek jou graag die pad. Wat verkies jy?",
   zu: "Uma ungathanda ukuza ukuqhuba, ngingakulungisela lokho — sho nje. Noma uma ungathanda ukuhlola izindlela zezimali kuqala, ngingakukhomba indlela efanele. Ufuna ini?",
   xh: "Ukuba ungathanda ukuza uqhube, ndinokukwenzela elo — sho nje. Okanye ukuba ungathanda ukuphonononga iindlela zemali kuqala, ndinokukubonisa indlela efanele. Uthanda ntoni?",
@@ -603,8 +603,8 @@ export function buildNoVehicleWhatsAppReply(
 
   // ── Unknown input — invite them to share more ────────────────────────────
   const FALLBACK_REPLY: Record<LanguageCode, string> = {
-    en: "I'm not sure I understood that — could you tell me a bit more about what you're looking for? Whether it's a specific car, financing, a trade-in, or just browsing — I'm happy to help!",
-    af: "Ek is nie seker ek het dit verstaan nie — kan jy my 'n bietjie meer vertel oor waarna jy soek? Of dit 'n spesifieke motor is, finansiering, 'n ruiltransaksie, of net blaai — ek help graag!",
+    en: "I didn't catch a specific car yet.\n\nReply with make and model — or bakkie / SUV / budget — and I'll check live stock. I can also book a viewing, start finance, or take a trade-in.",
+    af: "Ek het nog nie 'n spesifieke motor gevat nie.\n\nStuur merk en model — of bakkie / SUV / begroting — en ek kyk lewendige voorraad. Ek kan ook 'n toetsrit sluit, finansiering begin, of 'n ruilwaarde neem.",
     zu: "Angiqiniseki ukuthi ngikuzwile — ungangitshela okwengeziwe ngalokho okufunayo? Noma ingabe imoto ethile, imali, ukuguqulela, noma ukubheka nje — ngijabule ukukusiza!",
     xh: "Andiqinisekanga ukuba ndikuva kakuhle — ungandixelela okungakumbi ngento oyifunayo? Nokuba yimoto ethile, imali, ukutshintsha, okanye nje ukujonga — ndivuya ukukunceda!",
     st: "Ha ke tsebe hantle se o se bolelang — na o ka mpolela haholoanyane ka se o se batlang? Nokha e le koloi e itseng, lichelete, ho rekiša kapa ho sheba feela — ke thabile ho o thusa!",
@@ -620,8 +620,8 @@ export function buildNoVehicleWhatsAppReply(
 }
 
 const GREETING_INTRO: Record<LanguageCode, string> = {
-  en: "Hi there! 👋 Welcome to {dealership} — I'm {agent}, and I'm here to help you find your perfect car.\n\nAre you looking for something specific, or would you like me to show you some of our best deals? I can also help with trade-ins or arranging finance — just let me know what's on your mind!\n\n_We process your messages to help with this enquiry (POPIA). Reply STOP anytime to opt out of automated follow-ups._",
-  af: "Hallo! 👋 Welkom by {dealership} — ek is {agent}, en ek is hier om jou te help om jou perfekte motor te vind.\n\nSoek jy iets spesifieks, of wil jy hê ek wys jou van ons beste aanbiedings? Ek kan ook help met ruiltransaksies of finansiering — laat my net weet wat op jou gedagtes is!\n\n_Ons verwerk jou boodskappe om hierdie navraag te help (POPIA). Antwoord STOP om uit te teken._",
+  en: "Hi — I'm {agent} at {dealership}. After hours I answer from live stock, not a brochure.\n\nTell me the make or model (or bakkie / SUV) and I'll check what's on the floor. I can also lock a viewing, start finance, or take a trade-in.\n\n_We process your messages to help with this enquiry (POPIA). Reply STOP anytime to opt out of automated follow-ups._",
+  af: "Hallo — ek is {agent} by {dealership}. Ná-ure antwoord ek uit lewendige voorraad, nie 'n brosjure nie.\n\nSê die merk of model (of bakkie / SUV) en ek kyk wat op die vloer is. Ek kan ook 'n toetsrit sluit, finansiering begin, of 'n ruilwaarde neem.\n\n_Ons verwerk jou boodskappe om hierdie navraag te help (POPIA). Antwoord STOP om uit te teken._",
   zu: "Sawubona! 👋 Siyakwamukela ku-{dealership} — ngingu-{agent}, futhi ngilapha ukukusiza ukuthola imoto yakho ephelele.\n\nUfuna into ethile, noma ungathanda ukubona izivumelwano zethu ezihamba phambili? Ngingasiza futhi nge-trade-in noma imali — ngitshele nje ukuthi kukhona ini engqondweni yakho!",
   xh: "Molo! 👋 Siyakwamkela e-{dealership} — ndingu-{agent}, kwaye ndilapha ukukunceda ukufumana imoto yakho epheleleyo.\n\nUfuna into ethile, okanye ungathanda ukubona iindawo zethu ezihamba phambili? Ndinakho ukukunceda ngokutshintsha okanye imali — nditshele nje ukuba kukho ntoni engqondweni yakho!",
   st: "Dumela! 👋 Re a o amohela ho {dealership} — ke {agent}, mme ke here ho o thusa ho fumana koloi ya hao e kantle.\n\nO batla se seng se ikgethang, kapa o batla nna ke o bontše dithekiso tsa rona tse ntle? Ke ka o thusa le ka ho rekiša koloi ya hao kapa lichelete — mpolele feela se o nahanang ka sona!",
