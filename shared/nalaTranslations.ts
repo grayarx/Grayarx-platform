@@ -149,9 +149,9 @@ export const REPLY_COLOR_UNKNOWN: LangStrings = {
 };
 
 export const REPLY_PRICE: LangStrings = {
-  en: "The **{name}** is listed at **{price}**. I can help with finance pre-approval or a test drive.",
-  af: "Die **{name}** is gelys teen **{price}**. Ek kan help met finansiering of 'n toetsrit.",
-  zu: "I-**{name}** ibhalwe ngo-**{price}**. Ngingasiza ngemali yangaphambili noma ukushayela.",
+  en: "The **{name}** is listed at **{price}**.\n\nWant a viewing this week, or finance pre-approval against that price?",
+  af: "Die **{name}** is gelys teen **{price}**.\n\nWil jy 'n toetsrit hierdie week, of finansiering teen daardie prys?",
+  zu: "I-**{name}** ibhalwe ngo-**{price}**.\n\nUfuna ukubona kulo sonto, noma imali yangaphambili ngaleyo ntengo?",
   xh: "I-**{name}** ibhalwe ngo-**{price}**. Ndingakunceda ngemali okanye ukushayela.",
   st: "**{name}** e thathamisitsoe ka **{price}**. Nka u thusa ka lichelete kapa tekete ea ho leka.",
   nso: "**{name}** e supilwe ka **{price}**. Ke ka go thuša ka tšhelete goba go leka koloi.",
@@ -164,9 +164,9 @@ export const REPLY_PRICE: LangStrings = {
 };
 
 export const REPLY_KM: LangStrings = {
-  en: "The **{name}** has **{km}** on the clock.",
-  af: "Die **{name}** het **{km}** op die teller.",
-  zu: "I-**{name}** ino-**{km}**.",
+  en: "The **{name}** has **{km}** on the clock.\n\nStill on the floor — want to come see it?",
+  af: "Die **{name}** het **{km}** op die teller.\n\nDis op die vloer — wil jy kom kyk?",
+  zu: "I-**{name}** ino-**{km}**.\n\nIsesitokisini — ufuna ukuyibona?",
   xh: "I-**{name}** ino-**{km}**.",
   st: "**{name}** e na le **{km}**.",
   nso: "**{name}** e na le **{km}**.",
@@ -179,9 +179,9 @@ export const REPLY_KM: LangStrings = {
 };
 
 export const REPLY_FUEL: LangStrings = {
-  en: "Fuel type: **{fuel}**.",
-  af: "Brandstof: **{fuel}**.",
-  zu: "Uhlobo lwamafutha: **{fuel}**.",
+  en: "The **{name}** is **{fuel}**, listed at **{price}**.\n\nWant a viewing, or finance against that price?",
+  af: "Die **{name}** is **{fuel}**, gelys teen **{price}**.\n\nWil jy kom kyk, of finansiering teen daardie prys?",
+  zu: "I-**{name}** ingu-**{fuel}**, ibhalwe ngo-**{price}**.\n\nUfuna ukuyibona, noma imali ngaleyo ntengo?",
   xh: "Uhlobo lwamafutha: **{fuel}**.",
   st: "Mofuta: **{fuel}**.",
   nso: "Mafura: **{fuel}**.",
@@ -194,9 +194,9 @@ export const REPLY_FUEL: LangStrings = {
 };
 
 export const REPLY_TRANSMISSION: LangStrings = {
-  en: "Transmission: **{transmission}**.",
-  af: "Ratkas: **{transmission}**.",
-  zu: "Ukudluliswa kwamandla: **{transmission}**.",
+  en: "The **{name}** is **{transmission}**.\n\nWant a viewing to feel it on the road?",
+  af: "Die **{name}** is **{transmission}**.\n\nWil jy 'n toetsrit om dit op die pad te voel?",
+  zu: "I-**{name}** ingu-**{transmission}**.\n\nUfuna ukuyishayela ukuze uzwe emgwaqeni?",
   xh: "Ukutshintsha: **{transmission}**.",
   st: "Sebopeho sa gear: **{transmission}**.",
   nso: "Sebopešo sa gear: **{transmission}**.",
@@ -209,9 +209,9 @@ export const REPLY_TRANSMISSION: LangStrings = {
 };
 
 export const REPLY_LOCATION_KNOWN: LangStrings = {
-  en: "You'll find this **{name}** at **{location}**.",
-  af: "Jy sal hierdie **{name}** by **{location}** kry.",
-  zu: "Uzothola i-**{name}** e-**{location}**.",
+  en: "You'll find this **{name}** at **{location}**.\n\nReply with a day that works and I'll lock a viewing.",
+  af: "Jy sal hierdie **{name}** by **{location}** kry.\n\nStuur 'n dag wat werk en ek sluit 'n toetsrit.",
+  zu: "Uzothola i-**{name}** e-**{location}**.\n\nThumela usuku olukusebenzayo ngizokubhukhela ukuyibona.",
   xh: "Ufumana le **{name}** e-**{location}**.",
   st: "U tla fumana **{name}** ho **{location}**.",
   nso: "O tla hwetša **{name}** go **{location}**.",
@@ -239,9 +239,9 @@ export const REPLY_LOCATION_UNKNOWN: LangStrings = {
 };
 
 export const REPLY_TEST_DRIVE: LangStrings = {
-  en: "Tap **Test drive** below and I'll get you booked in for the **{name}**.",
-  af: "Tik **Test drive** hieronder en ek reël 'n toetsrit vir die **{name}**.",
-  zu: "Chofoza **Test drive** ngezansi ukuze ubhukhe i-**{name}**.",
+  en: "I can book a viewing for the **{name}**.\n\nReply with a day and time that works — evenings and weekends are fine — or tap **Test drive** if you see it.",
+  af: "Ek kan 'n toetsrit reël vir die **{name}**.\n\nStuur 'n dag en tyd wat werk — aand en naweke is reg — of tik **Test drive** as jy dit sien.",
+  zu: "Ngingakubhukhela ukubona i-**{name}**.\n\nThumela usuku nesikhathi — kusihlwa namaholide kulungile — noma chofoza **Test drive** uma ukubona.",
   xh: "Cofa **Test drive** ngezantsi ukuze ubhukishe i-**{name}**.",
   st: "Tobetsa **Test drive** ka tlase ho beela **{name}**.",
   nso: "Tobetsa **Test drive** ka fase go beela **{name}**.",
@@ -254,9 +254,9 @@ export const REPLY_TEST_DRIVE: LangStrings = {
 };
 
 export const REPLY_FINANCE: LangStrings = {
-  en: "Tap **Pre-approval** below for finance on the **{name}** at **{price}**.",
-  af: "Tik **Pre-approval** hieronder vir finansiering op die **{name}** teen **{price}**.",
-  zu: "Chofoza **Pre-approval** ngezansi ngemali ye-**{name}** ngo-**{price}**.",
+  en: "Finance is available on the **{name}** at **{price}**.\n\nReply with a monthly budget, or tap **Pre-approval** and I'll start the form.",
+  af: "Finansiering is beskikbaar op die **{name}** teen **{price}**.\n\nStuur 'n maandelikse begroting, of tik **Pre-approval** en ek begin die vorm.",
+  zu: "Imali iyatholakala ku-**{name}** ngo-**{price}**.\n\nThumela isabelomali senyanga, noma chofoza **Pre-approval** ngizoqala ifomu.",
   xh: "Cofa **Pre-approval** ngezantsi ngemali ye-**{name}** ngo-**{price}**.",
   st: "Tobetsa **Pre-approval** ka tlase bakeng sa **{name}** ka **{price}**.",
   nso: "Tobetsa **Pre-approval** ka fase bakeng sa **{name}** ka **{price}**.",
@@ -269,9 +269,9 @@ export const REPLY_FINANCE: LangStrings = {
 };
 
 export const REPLY_TRADE_IN: LangStrings = {
-  en: "Tap **Trade-in value** below — Tumi estimates your current car in seconds.",
-  af: "Tik **Trade-in value** hieronder — Tumi skat jou motor binne sekondes.",
-  zu: "Chofoza **Trade-in value** ngezansi — uTumi uyakulinganisa imoto yakho.",
+  en: "Send make, model, year and km and Tumi will estimate your trade-in — or tap **Trade-in value** if you see it.",
+  af: "Stuur merk, model, jaar en km en Tumi skat jou ruilwaarde — of tik **Trade-in value** as jy dit sien.",
+  zu: "Thumela uhlobo, imodeli, unyaka ne-km uTumi azolinganisela intengo yokuguqula — noma chofoza **Trade-in value** uma ukubona.",
   xh: "Cofa **Trade-in value** ngezantsi — uTumi uyakulinganisa imoto yakho.",
   st: "Tobetsa **Trade-in value** ka tlase — Tumi o lekanya koloi ea hao.",
   nso: "Tobetsa **Trade-in value** ka fase — Tumi o lekanya koloi ya gago.",
@@ -284,33 +284,33 @@ export const REPLY_TRADE_IN: LangStrings = {
 };
 
 export const REPLY_AVAILABILITY: LangStrings = {
-  en: "Yes — the **{name}** is currently **available** in our live stock.",
-  af: "Ja — die **{name}** wys tans as **beskikbaar** in ons voorraad.",
-  zu: "Yebo — i-**{name}** iyatholakala manje esitokisini sethu.",
-  xh: "Ewe — i-**{name}** iyafumaneka ngoku.",
-  st: "Ee — **{name}** e fumaneha hajoale.",
-  nso: "Ee — **{name}** e hwetšagala bjale.",
-  tn: "Ee — **{name}** e bonala jaanong.",
-  ts: "Ina — **{name}** yi kumeka sweswi.",
-  ss: "Yebo — le **{name}** iyatholakala njengamanje.",
-  ve: "Ee — **{name}** i wanala zwino.",
-  nr: "Yebo — i-**{name}** iyatholakala njengamanje.",
-  pt: "Sim — o **{name}** está **disponível** no nosso stock.",
+  en: "Yes — the **{name}** is on the floor now, listed at **{price}**.\n\nReply with a day that works and I'll lock a viewing.",
+  af: "Ja — die **{name}** is nou op die vloer, gelys teen **{price}**.\n\nStuur 'n dag wat werk en ek sluit 'n toetsrit.",
+  zu: "Yebo — i-**{name}** isesitokisini manje, ibhalwe ngo-**{price}**.\n\nThumela usuku olukusebenzayo ngizokubhukhela ukuyibona.",
+  xh: "Ewe — i-**{name}** iyafumaneka ngoku ngo-**{price}**.\n\nThumela usuku olusebenzayo ndiza kukubhukishela ukuyibona.",
+  st: "Ee — **{name}** e fumaneha hajoale ka **{price}**.\n\nRomela letsatsi le sebetsang ke tla u beela ho e bona.",
+  nso: "Ee — **{name}** e hwetšagala bjale ka **{price}**.\n\nRomela letšatši le šomago ke tla go beela go e bona.",
+  tn: "Ee — **{name}** e bonala jaanong ka **{price}**.\n\nRomela letsatsi le le dirang ke tla go beela go e bona.",
+  ts: "Ina — **{name}** yi kumeka sweswi hi **{price}**.\n\nRhumela siku leri tirhaka ndzi ta ku veka ku yi vona.",
+  ss: "Yebo — le **{name}** iyatholakala njengamanje nge-**{price}**.\n\nThumela lusuku lolusebentako ngitawukubhukhela kuyibona.",
+  ve: "Ee — **{name}** i wanala zwino nga **{price}**.\n\nRumela ḓuvha ḽine ḽa shuma ndi ḓo u bulokha u ḽi vhona.",
+  nr: "Yebo — i-**{name}** iyatholakala njengamanje ngo-**{price}**.\n\nThumela ilanga elisebenzayo ngizokubhukhela ukuyibona.",
+  pt: "Sim — o **{name}** está no piso agora, listado a **{price}**.\n\nDiga um dia que lhe sirva e marco a visita.",
 };
 
 export const REPLY_GENERAL: LangStrings = {
-  en: "Thanks for your question about the **{name}**. What's your name so the team can follow up?",
-  af: "Dankie vir jou vraag oor die **{name}**. Wat is jou naam sodat die span kan opvolg?",
-  zu: "Ngiyabonga ngombuzo wakho mayelana ne-**{name}**. Igama lakho ngubani?",
-  xh: "Enkosi ngombuzo wakho malunga ne-**{name}**. Ngubani igama lakho?",
-  st: "Ke a leboha ka potso ea hao mabapi le **{name}**. Lebitso la hao ke mang?",
-  nso: "Ke a leboga ka potšišo ya gago mabapi le **{name}**. Leina la gago ke mang?",
-  tn: "Ke a leboga ka potso ya gago mabapi le **{name}**. Leina la gago ke mang?",
-  ts: "Ndza khensa hi xivutiso xa wena hi **{name}**. Vito ra wena i mani?",
-  ss: "Ngiyabonga ngembuto yakho nge **{name}**. Ligama lakho ngubani?",
-  ve: "Ndo livhuwa nga mbudziso yavho nga **{name}**. Dzina lavho ndi ani?",
-  nr: "Ngiyathokoza ngombuzo wakho nge **{name}**. Igama lakho ngubani?",
-  pt: "Obrigado pela pergunta sobre o **{name}**. Qual é o seu nome?",
+  en: "The **{name}** is listed at **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nIt's on the floor. Want a viewing, finance, or a trade-in figure?",
+  af: "Die **{name}** is gelys teen **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nDis op die vloer. Wil jy kom kyk, finansiering, of 'n ruilwaarde?",
+  zu: "I-**{name}** ibhalwe ngo-**{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nIsesitokisini. Ufuna ukuyibona, imali, noma intengo yokuguqula?",
+  xh: "I-**{name}** ibhalwe ngo-**{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nIyafumaneka. Ufuna ukuyibona, imali, okanye ixabiso lokutshintsha?",
+  st: "**{name}** e thathamisitsoe ka **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nE teng. U batla ho e bona, lichelete, kapa theko ea ho rekiša?",
+  nso: "**{name}** e supilwe ka **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nE gona. O nyaka go e bona, tšhelete, goba theko ya go rekiša?",
+  tn: "**{name}** e supilwe ka **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nE teng. O batla go e bona, madi, kgotsa theko ya go rekisa?",
+  ts: "**{name}** yi kombisiwile hi **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nYi kona. U lava ku yi vona, mali, kumbe nxavo wa ku hoxisa?",
+  ss: "Le **{name}** libhalwe nge-**{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nIyatholakala. Ufuna kuyibona, imali, noma intengo yekugucula?",
+  ve: "**{name}** i re nga **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nI hone. Ni funa u i vhona, tshelede, kana theko ya u shandukisa?",
+  nr: "I-**{name}** ibhalwe ngo-**{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nIyatholakala. Ufuna ukuyibona, imali, noma intengo yokuguqula?",
+  pt: "O **{name}** está listado a **{price}** — **{km}**, **{fuel}**, **{transmission}**.\n\nEstá no piso. Quer uma visita, financiamento ou valor de troca?",
 };
 
 export function nalaText(

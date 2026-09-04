@@ -9,7 +9,7 @@ import {
   setDealershipPlan,
   usageSnapshot,
 } from "@nalaOs/billing/usage";
-import { polishNalaReply } from "@nalaOs/billing/polish";
+import { applyPolishedLayout, polishNalaReply } from "@nalaOs/billing/polish";
 
 describe("plan metering + template auto-swap", () => {
   it("loads Professional caps when plan is set", () => {
@@ -87,5 +87,19 @@ describe("plan metering + template auto-swap", () => {
     assert.equal(result.mode, "template");
     assert.equal(result.polished, false);
     if (prev !== undefined) process.env.OPENAI_API_KEY = prev;
+  });
+
+  it("keeps locked template when polish flattens WhatsApp blank lines", () => {
+    const template = "Yes — the Hilux is on the floor.\n\nReply with a day that works.";
+    assert.equal(
+      applyPolishedLayout(template, "Yes the Hilux is on the floor. Reply with a day."),
+      null,
+    );
+    const kept = applyPolishedLayout(
+      template,
+      "Yes — the Hilux is on the floor.\n\nWant Saturday?",
+    );
+    assert.ok(kept);
+    assert.match(kept, /\n\n/);
   });
 });
