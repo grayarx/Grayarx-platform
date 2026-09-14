@@ -25,7 +25,7 @@ Re-render with `node docs/facebook-ads/render.mjs`.
 **Primary text**
 
 ```
-GrayArx is the dealership operating system: Nala answers after-hours WhatsApp from your live stock, your CSV showroom stays true, and parts, service, trade-in, missed calls, and this week’s numbers sit on one desk.
+GrayArx is the dealership operating system: after-hours WhatsApp answered from your live stock, a CSV showroom that stays true, and parts, service, trade-in, unanswered calls sent to WhatsApp, and this week’s numbers on one desk.
 
 WhatsApp 082 053 2685
 hello@grayarx.com
@@ -49,7 +49,7 @@ Dealership OS on one desk
 ## On the image
 
 - What it is: dealership operating system
-- What it runs: after-hours WhatsApp, live CSV showroom, parts + service, trade-in, missed-call recovery, this week’s numbers
+- What it runs: after-hours WhatsApp, live CSV showroom, parts + service, trade-in, unanswered calls to WhatsApp, this week’s numbers
 - How to reach: WhatsApp 082 053 2685 · hello@grayarx.com · www.grayarx.com
 
 ## Do not
