@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./shared.css" />
+    <style>
+      .frame {
+        width: 1080px;
+        height: 1080px;
+      }
+      .bg {
+        background-image: url("../../../client/public/corvette-exterior.jpg");
+        background-position: 62% 48%;
+        transform: scale(1.08);
+      }
+      .veil {
+        background:
+          linear-gradient(90deg, rgba(8, 8, 8, 0.94) 0%, rgba(8, 8, 8, 0.78) 42%, rgba(8, 8, 8, 0.28) 72%, rgba(8, 8, 8, 0.45) 100%),
+          linear-gradient(180deg, rgba(8, 8, 8, 0.35) 0%, transparent 28%, rgba(8, 8, 8, 0.55) 100%);
+      }
+      .pad {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        padding: 56px 64px 52px;
+        display: flex;
+        flex-direction: column;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .eyebrow {
+        margin-top: 54px;
+      }
+      h1 {
+        margin-top: 18px;
+        max-width: 720px;
+        font-size: 76px;
+      }
+      .sub {
+        margin-top: 22px;
+        max-width: 560px;
+        font-size: 28px;
+      }
+      .chat {
+        width: 520px;
+        margin-top: auto;
+        margin-bottom: 28px;
+      }
+      .chat-body {
+        padding: 16px 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .cta {
+        align-self: flex-start;
+        padding: 16px 28px;
+        font-size: 22px;
+      }
+      .proof {
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="bg"></div>
+      <div class="veil"></div>
+      <div class="gold-edge"></div>
+      <div class="pad">
+        <div class="top">
+          <div class="brand">
+            <img src="../../../client/public/logo-crest.png" alt="GrayArx" />
+            <div class="wordmark">
+              <strong>GRAYARX</strong>
+              <span>Nala Dealership OS</span>
+            </div>
+          </div>
+        </div>
+        <div class="eyebrow">For dealer principals</div>
+        <h1>That 9pm WhatsApp just paid the <em>next yard</em>.</h1>
+        <p class="sub">Nala answers from your live stock and books the drive.</p>
+        <div class="chat">
+          <div class="chat-head">
+            <span>WhatsApp · after hours</span>
+            <span>21:04</span>
+          </div>
+          <div class="chat-body">
+            <div class="bubble them">
+              Is this still available?
+              <small>Unread on your phone</small>
+            </div>
+            <div class="bubble us">
+              Yes — on the floor. Drive booked for 09:00.
+              <small>Nala · from your CSV</small>
+            </div>
+          </div>
+        </div>
+        <div class="cta">Start 14-day Pilot — R0, no card</div>
+        <div class="proof">CSV live the same day</div>
+      </div>
+    </div>
+  </body>
+</html>

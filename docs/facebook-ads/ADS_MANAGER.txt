@@ -1,0 +1,31 @@
+GRAYARX — Facebook Ads Manager paste
+
+OBJECTIVE
+Leads or Traffic
+
+DESTINATION URL
+https://www.grayarx.com/onboarding?utm_source=facebook&utm_medium=cpc&utm_campaign=afterhours_pilot
+
+CTA BUTTON
+Sign Up
+
+PRIMARY TEXT
+Your after-hours WhatsApp is feeding the dealer who replies.
+
+That 9pm “is this still available?” already paid for a listing. Silence hands the test drive to the next yard.
+
+Drop your CSV. Nala answers tonight from your live stock and books the drive. 14-day Pilot. R0. No card.
+
+HEADLINE
+Stop losing 9pm WhatsApp deals
+
+DESCRIPTION
+14-day Pilot · R0 · No card
+
+DISPLAY LINK
+grayarx.com
+
+IMAGES
+Feed:        uploads/grayarx-fb-feed-1080.jpg          (1080×1080)
+Landscape:   uploads/grayarx-fb-landscape-1200x628.jpg (1200×628)
+Stories:     uploads/grayarx-fb-story-1080x1920.jpg    (1080×1920)

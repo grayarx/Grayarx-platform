@@ -1,0 +1,175 @@
+:root {
+  --gold: #c9a24a;
+  --gold-soft: #e0c57a;
+  --gold-deep: #a07c2e;
+  --ink: #faf8f4;
+  --muted: #c8c2b4;
+  --charcoal: #0b0b0b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overflow: hidden;
+  background: var(--charcoal);
+  color: var(--ink);
+  font-family: Inter, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background: #0b0b0b center / cover no-repeat;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+}
+
+.gold-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(180deg, #e0c57a, #c9a24a 40%, #8a6a24);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wordmark strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--gold-soft);
+}
+
+.wordmark span {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.eyebrow {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+h1 {
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  color: #fff;
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--gold-soft);
+}
+
+.sub {
+  color: var(--muted);
+  line-height: 1.35;
+  font-weight: 450;
+}
+
+.chat {
+  background: rgba(12, 12, 12, 0.72);
+  border: 1px solid rgba(201, 162, 74, 0.35);
+  border-radius: 22px;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(201, 162, 74, 0.22);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.bubble.them {
+  background: #1f2c34;
+  color: #e9edef;
+  border-bottom-left-radius: 4px;
+}
+
+.bubble.us {
+  margin-left: auto;
+  background: #005c4b;
+  color: #e9edef;
+  border-bottom-right-radius: 4px;
+}
+
+.bubble small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, #e0c57a, #c9a24a);
+  color: #1a1408;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(201, 162, 74, 0.28);
+}
+
+.proof {
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
