@@ -8,52 +8,75 @@
         width: 1200px;
         height: 628px;
       }
+      .frame::before {
+        inset: 16px;
+      }
+      .frame::after {
+        inset: 20px;
+      }
       .bg {
         background-image: url("../../../client/public/corvette-exterior.jpg");
-        background-position: 78% 46%;
+        background-position: 82% 44%;
       }
       .veil {
-        background: linear-gradient(90deg, rgba(8, 8, 8, 0.96) 0%, rgba(8, 8, 8, 0.82) 46%, rgba(8, 8, 8, 0.18) 78%, rgba(8, 8, 8, 0.35) 100%);
+        background: linear-gradient(90deg, rgba(6, 6, 6, 0.97) 0%, rgba(6, 6, 6, 0.9) 48%, rgba(6, 6, 6, 0.22) 80%, rgba(6, 6, 6, 0.4) 100%);
       }
       .pad {
-        position: relative;
-        z-index: 2;
-        height: 100%;
-        padding: 40px 48px 36px;
-        display: flex;
-        flex-direction: column;
+        padding: 36px 48px 28px;
+      }
+      .copy {
         max-width: 680px;
       }
       .brand img {
-        width: 58px;
-        height: 58px;
+        width: 52px;
+        height: 52px;
       }
       .wordmark strong {
-        font-size: 18px;
+        font-size: 16px;
+      }
+      .wordmark span {
+        font-size: 10px;
       }
       .eyebrow {
-        margin-top: 28px;
-        font-size: 13px;
+        margin-top: 18px;
+        font-size: 11px;
       }
       h1 {
-        margin-top: 12px;
-        font-size: 52px;
+        margin-top: 10px;
+        font-size: 36px;
         max-width: 620px;
       }
       .sub {
-        margin-top: 14px;
-        font-size: 22px;
-        max-width: 520px;
-      }
-      .cta {
-        margin-top: auto;
-        align-self: flex-start;
-        padding: 13px 24px;
+        margin-top: 10px;
         font-size: 18px;
+        max-width: 560px;
       }
-      .proof {
-        margin-top: 12px;
-        font-size: 14px;
+      .rule {
+        margin: 14px 0 10px;
+      }
+      .services {
+        column-gap: 20px;
+        row-gap: 6px;
+      }
+      .services li {
+        font-size: 16px;
+      }
+      .contact {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 14px;
+      }
+      .contact .row {
+        flex-direction: column;
+        gap: 4px;
+      }
+      .contact .label {
+        width: auto;
+        font-size: 10px;
+      }
+      .contact .value {
+        font-size: 16px;
       }
     </style>
   </head>
@@ -61,20 +84,31 @@
     <div class="frame">
       <div class="bg"></div>
       <div class="veil"></div>
-      <div class="gold-edge"></div>
       <div class="pad">
+        <div class="copy">
         <div class="brand">
           <img src="../../../client/public/logo-crest.png" alt="GrayArx" />
           <div class="wordmark">
             <strong>GRAYARX</strong>
-            <span>Nala Dealership OS</span>
+            <span>Dealership operating system</span>
           </div>
         </div>
         <div class="eyebrow">For dealer principals</div>
-        <h1>Unanswered 9pm WhatsApps pay the <em>next yard</em>.</h1>
-        <p class="sub">Nala replies from your live stock. 14-day Pilot. R0. No card.</p>
-        <div class="cta">Start 14-day Pilot — no card</div>
-        <div class="proof">CSV live the same day · 150 WhatsApp cap</div>
+        <h1>WhatsApp, live stock, parts, and booked drives — <em>one desk</em>.</h1>
+        <p class="sub">After-hours Nala, CSV showroom, service, trade-in, missed calls, this week’s numbers.</p>
+        <div class="rule"></div>
+        <ul class="services">
+          <li>After-hours WhatsApp</li>
+          <li>Live CSV showroom</li>
+          <li>Parts + service desk</li>
+          <li>Trade-in + missed calls</li>
+        </ul>
+        </div>
+        <div class="contact">
+          <div class="row"><span class="label">WhatsApp</span><span class="value">082 053 2685</span></div>
+          <div class="row"><span class="label">Email</span><span class="value">hello@grayarx.com</span></div>
+          <div class="row"><span class="label">Web</span><span class="value">www.grayarx.com</span></div>
+        </div>
       </div>
     </div>
   </body>

@@ -1,26 +1,26 @@
 GRAYARX — Facebook Ads Manager paste
 
 OBJECTIVE
-Leads or Traffic
+Leads, Traffic, or Messages (WhatsApp)
 
 DESTINATION URL
-https://www.grayarx.com/onboarding?utm_source=facebook&utm_medium=cpc&utm_campaign=afterhours_pilot
+https://www.grayarx.com/?utm_source=facebook&utm_medium=cpc&utm_campaign=dealership_os
 
 CTA BUTTON
-Sign Up
+Contact Us   (or Call Now / WhatsApp)
 
 PRIMARY TEXT
-Your after-hours WhatsApp is feeding the dealer who replies.
+GrayArx is the dealership operating system: Nala answers after-hours WhatsApp from your live stock, your CSV showroom stays true, and parts, service, trade-in, missed calls, and this week’s numbers sit on one desk.
 
-That 9pm “is this still available?” already paid for a listing. Silence hands the test drive to the next yard.
-
-Drop your CSV. Nala answers tonight from your live stock and books the drive. 14-day Pilot. R0. No card.
+WhatsApp 082 053 2685
+hello@grayarx.com
+www.grayarx.com
 
 HEADLINE
-Stop losing 9pm WhatsApp deals
+Dealership OS on one desk
 
 DESCRIPTION
-14-day Pilot · R0 · No card
+082 053 2685 · hello@grayarx.com
 
 DISPLAY LINK
 grayarx.com

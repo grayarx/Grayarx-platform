@@ -1,6 +1,8 @@
 # GrayArx Facebook ad — upload pack
 
-Pixel-ready creatives + paste fields for Meta Ads Manager. Pitch matches `shared/cashvertising.ts`: after-hours WhatsApp leakage → 14-day Pilot on the dealer’s stock. No competitor brands. No invented testimonials.
+Pixel-ready creatives + paste fields for Meta Ads Manager. The **image** explains the desk and carries contact details (a picture cannot be clicked). Meta’s own CTA button sits under the image in Ads Manager.
+
+Pitch matches `shared/cashvertising.ts`. Contact matches `client/src/lib/contact.ts`. No competitor brands. No invented testimonials. No fake buttons on the creative.
 
 ## Files to upload
 
@@ -10,50 +12,49 @@ Pixel-ready creatives + paste fields for Meta Ads Manager. Pitch matches `shared
 | Link / landscape | `uploads/grayarx-fb-landscape-1200x628.jpg` | 1200×628 |
 | Stories / Reels | `uploads/grayarx-fb-story-1080x1920.jpg` | 1080×1920 |
 
-Matching PNGs are generated during render then discarded. JPG, sRGB, under the 30 MB cap. Re-render with `node docs/facebook-ads/render.mjs`.
+Re-render with `node docs/facebook-ads/render.mjs`.
 
 ## Ads Manager paste
 
-**Objective:** Leads or Traffic (not Engagement).
+**Objective:** Leads, Traffic, or Messages.
 
-**Destination:** https://www.grayarx.com/onboarding?utm_source=facebook&utm_medium=cpc&utm_campaign=afterhours_pilot
+**Destination:** https://www.grayarx.com/?utm_source=facebook&utm_medium=cpc&utm_campaign=dealership_os
 
-**CTA button:** Sign Up (or Get Started)
+**CTA button:** Contact Us (Call Now or WhatsApp if the campaign is messages)
 
 **Primary text**
 
 ```
-Your after-hours WhatsApp is feeding the dealer who replies.
+GrayArx is the dealership operating system: Nala answers after-hours WhatsApp from your live stock, your CSV showroom stays true, and parts, service, trade-in, missed calls, and this week’s numbers sit on one desk.
 
-That 9pm “is this still available?” already paid for a listing. Silence hands the test drive to the next yard.
-
-Drop your CSV. Nala answers tonight from your live stock and books the drive. 14-day Pilot. R0. No card.
+WhatsApp 082 053 2685
+hello@grayarx.com
+www.grayarx.com
 ```
 
 **Headline** (≤40 characters)
 
 ```
-Stop losing 9pm WhatsApp deals
+Dealership OS on one desk
 ```
 
-**Description** (optional)
+**Description**
 
 ```
-14-day Pilot · R0 · No card
+082 053 2685 · hello@grayarx.com
 ```
 
 **Display link:** grayarx.com
 
-## Audience (starting point)
+## On the image
 
-- Location: South Africa (then AU / GB / AE / US / NZ as separate ad sets)
-- Age: 28–65
-- People who run dealerships / used-car yards — job titles: Dealer Principal, Owner, Sales Manager, General Manager
-- Interests: used cars, motor trade, WhatsApp Business (keep interest stacks tight; job title + geography first)
+- What it is: dealership operating system
+- What it runs: after-hours WhatsApp, live CSV showroom, parts + service, trade-in, missed-call recovery, this week’s numbers
+- How to reach: WhatsApp 082 053 2685 · hello@grayarx.com · www.grayarx.com
 
 ## Do not
 
 - Invent conversion % or testimonials
 - Name other listing sites or software brands
+- Put a fake “click here” / Pilot button on the JPG — it will not be clickable
 - Send traffic to `/admin` or `/dealer`
-- Promise a chatbot widget — this is Nala on their stock, then this week’s numbers

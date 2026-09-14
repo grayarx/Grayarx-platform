@@ -1,10 +1,10 @@
 :root {
   --gold: #c9a24a;
-  --gold-soft: #e0c57a;
-  --gold-deep: #a07c2e;
-  --ink: #faf8f4;
-  --muted: #c8c2b4;
-  --charcoal: #0b0b0b;
+  --gold-soft: #e8d5a3;
+  --gold-deep: #8a6a24;
+  --ink: #f7f1e4;
+  --muted: #b7b09f;
+  --charcoal: #070707;
 }
 
 * {
@@ -27,10 +27,28 @@ body {
   overflow: hidden;
 }
 
+.frame::before,
+.frame::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.frame::before {
+  inset: 22px;
+  border: 1px solid rgba(201, 162, 74, 0.55);
+}
+
+.frame::after {
+  inset: 26px;
+  border: 1px solid rgba(201, 162, 74, 0.18);
+}
+
 .bg {
   position: absolute;
   inset: 0;
-  background: #0b0b0b center / cover no-repeat;
+  background: #070707 center / cover no-repeat;
 }
 
 .veil {
@@ -38,13 +56,12 @@ body {
   inset: 0;
 }
 
-.gold-edge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  background: linear-gradient(180deg, #e0c57a, #c9a24a 40%, #8a6a24);
+.pad {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
@@ -54,122 +71,126 @@ body {
 }
 
 .brand img {
-  width: 72px;
-  height: 72px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(201, 162, 74, 0.45);
 }
 
 .wordmark {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .wordmark strong {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.28em;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.34em;
   color: var(--gold-soft);
 }
 
 .wordmark span {
-  font-size: 12px;
-  letter-spacing: 0.18em;
+  font-size: 11px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .eyebrow {
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+h1 {
+  font-family: "Noto Serif", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: #fffaf0;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.sub {
+  color: var(--muted);
+  line-height: 1.4;
+  font-weight: 430;
+}
+
+.rule {
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.services-label {
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--gold);
 }
 
-h1 {
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  line-height: 0.98;
-  color: #fff;
+.services {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 10px;
 }
 
-h1 em {
-  font-style: normal;
-  color: var(--gold-soft);
-}
-
-.sub {
-  color: var(--muted);
-  line-height: 1.35;
-  font-weight: 450;
-}
-
-.chat {
-  background: rgba(12, 12, 12, 0.72);
-  border: 1px solid rgba(201, 162, 74, 0.35);
-  border-radius: 22px;
-  backdrop-filter: blur(10px);
-  overflow: hidden;
-}
-
-.chat-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(201, 162, 74, 0.22);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold-soft);
-}
-
-.bubble {
-  max-width: 88%;
-  padding: 12px 14px;
-  border-radius: 16px;
+.services li {
+  list-style: none;
   font-size: 20px;
-  line-height: 1.3;
+  line-height: 1.25;
+  color: #f3ead6;
+  padding-left: 16px;
+  position: relative;
 }
 
-.bubble.them {
-  background: #1f2c34;
-  color: #e9edef;
-  border-bottom-left-radius: 4px;
+.services li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.52em;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
 }
 
-.bubble.us {
-  margin-left: auto;
-  background: #005c4b;
-  color: #e9edef;
-  border-bottom-right-radius: 4px;
+.contact {
+  margin-top: auto;
+  border-top: 1px solid rgba(201, 162, 74, 0.45);
+  background: linear-gradient(180deg, rgba(12, 10, 6, 0.35), transparent);
+  display: grid;
+  gap: 8px;
 }
 
-.bubble small {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  opacity: 0.72;
+.contact .row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
 }
 
-.cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(180deg, #e0c57a, #c9a24a);
-  color: #1a1408;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(201, 162, 74, 0.28);
-}
-
-.proof {
-  font-size: 16px;
-  letter-spacing: 0.08em;
+.contact .label {
+  width: 92px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--gold-soft);
+  color: var(--gold);
+}
+
+.contact .value {
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: #fffaf0;
 }

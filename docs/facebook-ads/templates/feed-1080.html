@@ -10,58 +10,55 @@
       }
       .bg {
         background-image: url("../../../client/public/corvette-exterior.jpg");
-        background-position: 62% 48%;
-        transform: scale(1.08);
+        background-position: 72% 46%;
       }
       .veil {
         background:
-          linear-gradient(90deg, rgba(8, 8, 8, 0.94) 0%, rgba(8, 8, 8, 0.78) 42%, rgba(8, 8, 8, 0.28) 72%, rgba(8, 8, 8, 0.45) 100%),
-          linear-gradient(180deg, rgba(8, 8, 8, 0.35) 0%, transparent 28%, rgba(8, 8, 8, 0.55) 100%);
+          linear-gradient(90deg, rgba(6, 6, 6, 0.94) 0%, rgba(6, 6, 6, 0.82) 42%, rgba(6, 6, 6, 0.22) 76%, rgba(6, 6, 6, 0.5) 100%),
+          linear-gradient(180deg, rgba(6, 6, 6, 0.4) 0%, transparent 28%, rgba(6, 6, 6, 0.82) 100%);
       }
       .pad {
-        position: relative;
-        z-index: 2;
-        height: 100%;
-        padding: 56px 64px 52px;
-        display: flex;
-        flex-direction: column;
-      }
-      .top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        padding: 58px 64px 50px;
       }
       .eyebrow {
-        margin-top: 54px;
+        margin-top: 42px;
       }
       h1 {
-        margin-top: 18px;
-        max-width: 720px;
-        font-size: 76px;
+        margin-top: 16px;
+        max-width: 700px;
+        font-size: 54px;
       }
       .sub {
-        margin-top: 22px;
-        max-width: 560px;
-        font-size: 28px;
-      }
-      .chat {
-        width: 520px;
-        margin-top: auto;
-        margin-bottom: 28px;
-      }
-      .chat-body {
-        padding: 16px 16px 18px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .cta {
-        align-self: flex-start;
-        padding: 16px 28px;
-        font-size: 22px;
-      }
-      .proof {
         margin-top: 16px;
+        max-width: 620px;
+        font-size: 23px;
+      }
+      .rule {
+        margin: 24px 0 16px;
+      }
+      .services {
+        max-width: 720px;
+      }
+      .services li {
+        font-size: 22px;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+      }
+      .contact {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 20px 4px 0;
+        max-width: none;
+      }
+      .contact .row {
+        flex-direction: column;
+        gap: 6px;
+      }
+      .contact .label {
+        width: auto;
+      }
+      .contact .value {
+        font-size: 22px;
       }
     </style>
   </head>
@@ -69,38 +66,32 @@
     <div class="frame">
       <div class="bg"></div>
       <div class="veil"></div>
-      <div class="gold-edge"></div>
       <div class="pad">
-        <div class="top">
-          <div class="brand">
-            <img src="../../../client/public/logo-crest.png" alt="GrayArx" />
-            <div class="wordmark">
-              <strong>GRAYARX</strong>
-              <span>Nala Dealership OS</span>
-            </div>
+        <div class="brand">
+          <img src="../../../client/public/logo-crest.png" alt="GrayArx" />
+          <div class="wordmark">
+            <strong>GRAYARX</strong>
+            <span>Dealership operating system</span>
           </div>
         </div>
         <div class="eyebrow">For dealer principals</div>
-        <h1>That 9pm WhatsApp just paid the <em>next yard</em>.</h1>
-        <p class="sub">Nala answers from your live stock and books the drive.</p>
-        <div class="chat">
-          <div class="chat-head">
-            <span>WhatsApp · after hours</span>
-            <span>21:04</span>
-          </div>
-          <div class="chat-body">
-            <div class="bubble them">
-              Is this still available?
-              <small>Unread on your phone</small>
-            </div>
-            <div class="bubble us">
-              Yes — on the floor. Drive booked for 09:00.
-              <small>Nala · from your CSV</small>
-            </div>
-          </div>
+        <h1>WhatsApp, live stock, parts, and booked drives — <em>one desk</em>.</h1>
+        <p class="sub">Nala answers after hours from your cars. The floor keeps showroom, service, trade-in, and this week’s numbers in one place.</p>
+        <div class="rule"></div>
+        <div class="services-label">What the desk runs</div>
+        <ul class="services" style="margin-top: 14px">
+          <li>After-hours WhatsApp</li>
+          <li>Live CSV showroom</li>
+          <li>Parts + service desk</li>
+          <li>Trade-in intake</li>
+          <li>Missed-call recovery</li>
+          <li>This week’s numbers</li>
+        </ul>
+        <div class="contact">
+          <div class="row"><span class="label">WhatsApp</span><span class="value">082 053 2685</span></div>
+          <div class="row"><span class="label">Email</span><span class="value">hello@grayarx.com</span></div>
+          <div class="row"><span class="label">Web</span><span class="value">www.grayarx.com</span></div>
         </div>
-        <div class="cta">Start 14-day Pilot — R0, no card</div>
-        <div class="proof">CSV live the same day</div>
       </div>
     </div>
   </body>

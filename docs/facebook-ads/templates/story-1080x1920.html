@@ -11,72 +11,61 @@
       .bg {
         background-image: url("./story-car.jpg");
         background-size: cover;
-        background-position: 52% 35%;
-      }
-      .top-scrim {
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 280px;
-        background: linear-gradient(180deg, #0b0b0b 70%, transparent);
-        z-index: 1;
+        background-position: 52% 30%;
       }
       .veil {
         background:
-          linear-gradient(180deg, rgba(8, 8, 8, 0.15) 0%, rgba(8, 8, 8, 0.08) 32%, rgba(8, 8, 8, 0.5) 58%, rgba(8, 8, 8, 0.94) 74%, #0b0b0b 100%);
+          linear-gradient(180deg, #070707 0%, rgba(7, 7, 7, 0.35) 22%, rgba(7, 7, 7, 0.2) 38%, rgba(7, 7, 7, 0.72) 58%, #070707 78%);
       }
       .pad {
-        position: relative;
-        z-index: 2;
-        height: 100%;
-        padding: 220px 72px 340px;
-        display: flex;
-        flex-direction: column;
+        padding: 210px 80px 320px;
       }
       .brand img {
-        width: 88px;
-        height: 88px;
+        width: 84px;
+        height: 84px;
       }
       .wordmark strong {
-        font-size: 26px;
+        font-size: 24px;
       }
       .wordmark span {
-        font-size: 14px;
+        font-size: 13px;
       }
       .eyebrow {
         margin-top: auto;
-        font-size: 16px;
+        font-size: 15px;
       }
       h1 {
-        margin-top: 20px;
-        font-size: 84px;
+        margin-top: 18px;
+        font-size: 64px;
       }
       .sub {
-        margin-top: 24px;
-        font-size: 32px;
-        max-width: 820px;
+        margin-top: 20px;
+        font-size: 28px;
+        max-width: 860px;
       }
-      .chat {
-        margin-top: 36px;
-        width: 100%;
+      .rule {
+        margin: 32px 0 20px;
       }
-      .chat-body {
-        padding: 18px;
-        display: flex;
-        flex-direction: column;
+      .services-label {
+        font-size: 14px;
+      }
+      .services {
+        margin-top: 18px;
+        row-gap: 14px;
+      }
+      .services li {
+        font-size: 26px;
+      }
+      .contact {
+        padding-top: 28px;
         gap: 12px;
       }
-      .bubble {
-        font-size: 24px;
+      .contact .label {
+        width: 120px;
+        font-size: 13px;
       }
-      .cta {
-        margin-top: 36px;
-        align-self: flex-start;
-        padding: 18px 32px;
-        font-size: 24px;
-      }
-      .proof {
-        margin-top: 18px;
-        font-size: 18px;
+      .contact .value {
+        font-size: 26px;
       }
     </style>
   </head>
@@ -84,37 +73,32 @@
     <div class="frame">
       <div class="bg"></div>
       <div class="veil"></div>
-      <div class="top-scrim"></div>
-      <div class="gold-edge"></div>
       <div class="pad">
         <div class="brand">
           <img src="../../../client/public/logo-crest.png" alt="GrayArx" />
           <div class="wordmark">
             <strong>GRAYARX</strong>
-            <span>Nala Dealership OS</span>
+            <span>Dealership operating system</span>
           </div>
         </div>
         <div class="eyebrow">For dealer principals</div>
-        <h1>That 9pm WhatsApp just paid the <em>next yard</em>.</h1>
-        <p class="sub">Nala answers from your live stock and books the drive tonight.</p>
-        <div class="chat">
-          <div class="chat-head">
-            <span>WhatsApp · after hours</span>
-            <span>21:04</span>
-          </div>
-          <div class="chat-body">
-            <div class="bubble them">
-              Is this still available?
-              <small>Unread on your phone</small>
-            </div>
-            <div class="bubble us">
-              Yes — on the floor. Drive booked for 09:00.
-              <small>Nala · from your CSV</small>
-            </div>
-          </div>
+        <h1>WhatsApp, live stock, parts, and booked drives — <em>one desk</em>.</h1>
+        <p class="sub">Nala answers after hours from your cars. Showroom, service, trade-in, and this week’s numbers stay on one floor.</p>
+        <div class="rule"></div>
+        <div class="services-label">What the desk runs</div>
+        <ul class="services">
+          <li>After-hours WhatsApp</li>
+          <li>Live CSV showroom</li>
+          <li>Parts + service desk</li>
+          <li>Trade-in intake</li>
+          <li>Missed-call recovery</li>
+          <li>This week’s numbers</li>
+        </ul>
+        <div class="contact">
+          <div class="row"><span class="label">WhatsApp</span><span class="value">082 053 2685</span></div>
+          <div class="row"><span class="label">Email</span><span class="value">hello@grayarx.com</span></div>
+          <div class="row"><span class="label">Web</span><span class="value">www.grayarx.com</span></div>
         </div>
-        <div class="cta">Start 14-day Pilot — R0, no card</div>
-        <div class="proof">No credit card · CSV live the same day</div>
       </div>
     </div>
   </body>
