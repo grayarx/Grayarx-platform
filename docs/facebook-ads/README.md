@@ -2,7 +2,7 @@
 
 Pixel-ready creatives + paste fields for Meta Ads Manager. The **image** explains the desk and carries contact details (a picture cannot be clicked). Meta’s own CTA button sits under the image in Ads Manager.
 
-Pitch matches `shared/cashvertising.ts`. Contact matches `client/src/lib/contact.ts`. No competitor brands. No invented testimonials. No fake buttons on the creative.
+No competitor brands. No invented testimonials. No fake buttons. No internal agent names.
 
 ## Files to upload
 
@@ -25,10 +25,10 @@ Re-render with `node docs/facebook-ads/render.mjs`.
 **Primary text**
 
 ```
-GrayArx is the dealership operating system: after-hours WhatsApp answered from your live stock, a CSV showroom that stays true, and parts, service, trade-in, unanswered calls sent to WhatsApp, and this week’s numbers on one desk.
+GrayArx is the dealership operating system: WhatsApp answered 24/7 from your live stock, a CSV showroom that stays true, and parts, service, trade-in, unanswered calls sent to WhatsApp, and this week’s numbers on one desk.
 
 WhatsApp 082 053 2685
-hello@grayarx.com
+grayarx@gmail.com
 www.grayarx.com
 ```
 
@@ -41,7 +41,7 @@ Dealership OS on one desk
 **Description**
 
 ```
-082 053 2685 · hello@grayarx.com
+082 053 2685 · grayarx@gmail.com
 ```
 
 **Display link:** grayarx.com
@@ -49,8 +49,8 @@ Dealership OS on one desk
 ## On the image
 
 - What it is: dealership operating system
-- What it runs: after-hours WhatsApp, live CSV showroom, parts + service, trade-in, unanswered calls to WhatsApp, this week’s numbers
-- How to reach: WhatsApp 082 053 2685 · hello@grayarx.com · www.grayarx.com
+- What it runs: 24/7 WhatsApp, live CSV showroom, parts + service, trade-in, unanswered calls to WhatsApp, this week’s numbers
+- How to reach: WhatsApp 082 053 2685 · grayarx@gmail.com · www.grayarx.com
 
 ## Do not
 
